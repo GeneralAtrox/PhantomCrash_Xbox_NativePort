@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "audited_on": "2026-09-26",
+  "ghidra_root": "C:\\Tools\\ghidra_12.1.2_PUBLIC_20260605\\ghidra_12.1.2_PUBLIC",
+  "tested_ghidra_version": "12.1.2",
+  "java_home": "C:\\Program Files\\Microsoft\\jdk-21.0.11.10-hotspot",
+  "tools": [
+    {
+      "name": "ghidra-xbe",
+      "repository": "https://github.com/XboxDev/ghidra-xbe.git",
+      "commit": "1928314b23f9339ead092653a6865cb828a4d061",
+      "upstream_release": "build-202602250354 (targets Ghidra 12.0.3)",
+      "status": "enabled_external",
+      "role": "XBE loader for Ghidra: sections, kernel import thunks, and XbSymbolDatabase SDK symbol matching",
+      "note": "No upstream build targets Ghidra 12.1.2; rebuild locally with scripts/build-ghidra-xbe.ps1."
+    },
+    {
+      "name": "XbSymbolDatabase",
+      "repository": "https://github.com/Cxbx-Reloaded/XbSymbolDatabase.git",
+      "commit": "20eced544726f5558c5a408458f38a086cc4e543",
+      "status": "enabled_external",
+      "role": "OOVPA signature database identifying statically linked Xbox SDK functions (D3D8, DSOUND, XAPI, ...). Also planned for the xemu_decomp SDK call tracer."
+    }
+  ]
+}

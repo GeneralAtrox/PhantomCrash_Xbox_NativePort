@@ -1,0 +1,14 @@
+{
+ "notes": [
+  "Named sound effects, converted from Media/sound/sys.bin (entry numbers of the original bank).",
+  "The menu plays entry 3 when the cursor moves (0xdf410), 4 when SCREEN ADJUST moves the picture sideways, 5 on confirm, 8 on cancel and for an unavailable item, and the title 14 on START. A message box plays 12 as it opens (0xbec0f)."
+ ],
+ "effects": {
+  "cursor": { "file": "sound/sfx/sys/03.wav", "volume": 1.0 },
+  "adjust": { "file": "sound/sfx/sys/04.wav", "volume": 1.0 },
+  "confirm": { "file": "sound/sfx/sys/05.wav", "volume": 1.0 },
+  "cancel": { "file": "sound/sfx/sys/08.wav", "volume": 1.0 },
+  "title_start": { "file": "sound/sfx/sys/14.wav", "volume": 1.0 },
+  "window": { "file": "sound/sfx/sys/12.wav", "volume": 1.0 }
+ }
+}

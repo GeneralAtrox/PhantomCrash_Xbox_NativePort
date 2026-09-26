@@ -1,0 +1,13 @@
+{
+ "notes": [
+  "Screens the menus lead to that are not ported yet. Each shows its label and returns (return_to, by default the main menu) on a cancel or confirm press.",
+  "music is the track the original starts for that scene (tables/music.json scene_music: new game 28 stops the music; load 17 and VS 44 play 5GARAGE)."
+ ],
+ "return_to": "main_menu",
+ "buttons": ["confirm", "cancel"],
+ "screens": {
+  "new_game": { "label": "NEW GAME", "music": "" },
+  "load_game": { "label": "LOAD GAME", "music": "garage" },
+  "vs_mode": { "label": "VS MODE", "music": "garage" }
+ }
+}

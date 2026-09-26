@@ -1,0 +1,23 @@
+# Technical references and attribution
+
+This project contains an original, purpose-built implementation. The following
+projects are used as external tools or technical references:
+
+- [Record of Lodoss War modern port](https://github.com/GeneralAtrox/RecordOfLodossWar_DC_ModernSourcePort), same
+  author: project conventions, and host, frame-pacing and movie-playback code
+  reused as the port grows.
+- [xemu](https://github.com/xemu-project/xemu) via the
+  [xemu_decomp](https://github.com/GeneralAtrox/xemu_decomp) fork,
+  GPL-2.0-or-later: reference emulator for runtime observation.
+- [ghidra-xbe](https://github.com/XboxDev/ghidra-xbe): XBE loader for Ghidra,
+  fetched into the ignored `.tools` directory at a pinned commit and built
+  locally; not vendored.
+- [XbSymbolDatabase](https://github.com/Cxbx-Reloaded/XbSymbolDatabase):
+  Xbox SDK signature database, fetched at a pinned commit and built locally;
+  not vendored.
+- [Cxbx-Reloaded](https://github.com/Cxbx-Reloaded/Cxbx-Reloaded): reading
+  reference for Xbox D3D8/DirectSound behaviour only.
+
+XDVDFS and XBE layouts are implemented from their publicly documented
+structures (see the [Xbox Dev Wiki](https://xboxdevwiki.net)). No game assets
+from any of these projects are included.
