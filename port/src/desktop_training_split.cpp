@@ -20,12 +20,13 @@ void TrainingScreen::tick_split(const float seconds) {
   const StageDoors *doors = battle_->doors();
   for (SplitView &split : splits_) {
     const RobotMover &mover = battle_->robots().at(static_cast<std::size_t>(split.robot)).mover;
-    split.camera.tick(mover.position(), mover.aim_heading(), mover.pitch(),
-                      battle_->settings().arena.half_size, seconds, !split.placed);
+    split.camera.tick(mover.position(), mover.aim_heading(), mover.pitch(), battle_->stage(),
+                      seconds, !split.placed);
     split.placed = true;
     const CameraShot chase = split.camera.chase();
-    if (const auto hit = doors ? doors->segment_hit(chase.target, chase.eye) : std::nullopt) {
-      split.camera.block_eye(chase.target, *hit);
+    if (const auto hit =
+            doors ? doors->segment_hit(split.camera.anchor(), chase.eye) : std::nullopt) {
+      split.camera.block_eye(split.camera.anchor(), *hit);
     }
   }
 }

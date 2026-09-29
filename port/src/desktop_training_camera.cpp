@@ -74,13 +74,13 @@ void TrainingScreen::tick_camera(const InputFrame &input, const float seconds) {
     }
   }
   const RobotMover &mover = battle_->player().mover;
-  camera_.tick(mover.position(), mover.aim_heading(), mover.pitch(),
-               battle_->settings().arena.half_size, seconds, snap_camera_);
+  camera_.tick(mover.position(), mover.aim_heading(), mover.pitch(), battle_->stage(), seconds,
+               snap_camera_);
   // The eye stays in front of a shut door (a port choice).
   const StageDoors *doors = battle_->doors();
   if (const auto hit =
-          doors ? doors->segment_hit(camera_.chase().target, camera_.chase().eye) : std::nullopt) {
-    camera_.block_eye(camera_.chase().target, *hit);
+          doors ? doors->segment_hit(camera_.anchor(), camera_.chase().eye) : std::nullopt) {
+    camera_.block_eye(camera_.anchor(), *hit);
   }
   // A fixed camera needs a clear line to the robot (0x053db4, 0x06fd32).
   const SightTest sees = [this](const Vec3 from, const Vec3 to) {

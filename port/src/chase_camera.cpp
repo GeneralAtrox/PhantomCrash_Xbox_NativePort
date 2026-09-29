@@ -30,7 +30,7 @@ ChaseCameraSettings parse_chase_camera(const json::JsonValue &value) {
 }
 
 void ChaseCamera::tick(const Vec3 position, const float heading, const float pitch,
-                       const float half_size, const float seconds, const bool snap) {
+                       const StageCollision &stage, const float seconds, const bool snap) {
   if (snap) {
     heading_ = heading;
     pitch_ = pitch;
@@ -41,11 +41,14 @@ void ChaseCamera::tick(const Vec3 position, const float heading, const float pit
   }
   const Vec3 forward = heading_forward(heading_);
   eye_ = position + Vec3{0.0F, settings_.height, 0.0F} - forward * settings_.distance;
-  const float limit = half_size - settings_.wall_margin;
-  eye_.x = std::clamp(eye_.x, -limit, limit);
-  eye_.z = std::clamp(eye_.z, -limit, limit);
+  anchor_ = position + Vec3{0.0F, settings_.look_height, 0.0F};
   target_ = position + forward * settings_.look_ahead +
             Vec3{0.0F, settings_.look_height + pitch_ * settings_.pitch_follow, 0.0F};
+  // Converted stages extend beyond the fallback training arena. Follow in
+  // world coordinates and shorten the view only where the stage obstructs it.
+  if (const auto hit = stage.segment_hit(anchor_, eye_)) {
+    block_eye(anchor_, *hit);
+  }
 }
 
 void ChaseCamera::block_eye(const Vec3 from, const Vec3 hit) {

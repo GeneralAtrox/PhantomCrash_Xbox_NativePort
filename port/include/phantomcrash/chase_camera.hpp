@@ -2,6 +2,7 @@
 
 #include "phantomcrash/json.hpp"
 #include "phantomcrash/math3d.hpp"
+#include "phantomcrash/stage_collision.hpp"
 
 #include <optional>
 
@@ -20,7 +21,7 @@ struct ChaseCameraSettings {
   float look_ahead{8.0F};        // ... and this far along the aim
   float follow_per_second{8.0F}; // how fast the camera swings after the aim
   float pitch_follow{6.0F};      // look height per radian of aim pitch
-  float wall_margin{1.5F};       // the eye stays this far inside the walls
+  float wall_margin{1.5F};       // clearance from a wall toward the robot
 };
 
 [[nodiscard]] ChaseCameraSettings parse_chase_camera(const json::JsonValue &value);
@@ -39,9 +40,14 @@ public:
   explicit ChaseCamera(const ChaseCameraSettings &settings) : settings_(settings) {}
 
   // Follows a robot at `position` aiming along `heading` and `pitch`;
-  // `half_size` bounds the eye inside the arena. `snap` jumps there.
-  void tick(Vec3 position, float heading, float pitch, float half_size, float seconds,
+  // The active stage brings the eye in front of walls. `snap` jumps there.
+  void tick(Vec3 position, float heading, float pitch, const StageCollision &stage, float seconds,
             bool snap = false);
+
+  // The point above the robot used to keep walls and doors out of the view.
+  [[nodiscard]] Vec3 anchor() const noexcept {
+    return anchor_;
+  }
 
   // Something solid at `hit` between `from` and the eye: the eye comes
   // in front of it, wall_margin nearer `from`.
@@ -70,6 +76,7 @@ private:
   float pitch_{};
   Vec3 eye_{0.0F, 5.0F, 10.0F};
   Vec3 target_{};
+  Vec3 anchor_{};
   std::optional<CameraShot> shot_;
 };
 
