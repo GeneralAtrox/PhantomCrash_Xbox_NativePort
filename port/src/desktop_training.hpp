@@ -60,6 +60,9 @@ struct TrainingContext {
 // runs until it walks back into one, or until the exit button.
 class TrainingScreen final : public Screen {
 public:
+  [[nodiscard]] bool mouse_aim() const override {
+    return true;
+  }
   TrainingScreen(TextureCache &textures, const GlyphFont &font, const TrainingContext &context,
                  const TrainingLesson &lesson);
 

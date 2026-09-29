@@ -111,10 +111,18 @@ MovementTuning loaded_movement(const PartTables &tables, const RobotLoadout &loa
   const float dash_motion = motion != nullptr ? (*motion)[1] : 0.0F;
   const float walk_rate = walk_motion > 0.0F ? walk * motion_rate_scale / walk_motion : speed;
   const float dash_rate = dash_motion > 0.0F ? dash * motion_rate_scale / dash_motion : speed;
-  base.walk_speed *= walk_rate;
-  base.back_speed *= walk_rate;
-  base.dash_speed *= dash_rate;
-  base.dash_back_speed *= dash_rate;
+  // A motionless roller/hover dash still translates. Its clamped speed is
+  // in km/h, not an animation playback rate or the unclamped load factor.
+  const float walk_units = walk * motion_rate_scale * part_frames_per_second;
+  const float dash_units = dash * motion_rate_scale * part_frames_per_second;
+  const float back_share = base.walk_speed > 0.0F ? base.back_speed / base.walk_speed : 1.0F;
+  const float dash_back_share =
+      base.dash_speed > 0.0F ? base.dash_back_speed / base.dash_speed : 1.0F;
+  base.walk_speed = walk_motion > 0.0F ? base.walk_speed * walk_rate : walk_units;
+  base.back_speed = walk_motion > 0.0F ? base.back_speed * walk_rate : walk_units * back_share;
+  base.dash_speed = dash_motion > 0.0F ? base.dash_speed * dash_rate : dash_units;
+  base.dash_back_speed =
+      dash_motion > 0.0F ? base.dash_back_speed * dash_rate : dash_units * dash_back_share;
   if (walk_motion > 0.0F) {
     base.walk_motion_rate = walk_rate;
   }

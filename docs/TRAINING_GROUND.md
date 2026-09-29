@@ -122,6 +122,14 @@ The port builds each part model's volume once (`shadow_volume.cpp`).
 Not ported: layer 7's static volumes (VS 0x152), which only draw a marker
 cube on the training ground.
 
+City conversion excludes layer 7 from the colour model. Rendering those
+volumes as ordinary meshes produced the large grey surfaces over streets
+and buildings. Object slots are resolved relative to the model resource's
+`first_mesh_slot`, not the smallest slot in the stage object list: Shinjuku
+day's resource starts at slot 31 but its object list starts at 91. Its sky
+slots 143 and 144 therefore select meshes 112 and 113. The stage table in
+`data/world/stages.json` uses those resource-relative sky node names.
+
 ### The screen pass
 
 Once a frame, just before the cockpit's view layer 0xb, 0x0b7900 draws the

@@ -318,6 +318,10 @@ buttons and tuning are in `data\world\training.json` and
 Start it with `--start training_free` (or `training_basic`,
 `training_attack`, `training_optic`); it needs the models from a current
 `convert` and the robots from `convert-robots`.
+After updating the city stage converter, run
+`python .\tools\phantomcrash.py convert-robots` to refresh existing city models.
+This resolves object slots from each model resource and excludes static shadow
+volumes from solid scenery; static city shadow rendering is not yet implemented.
 VS MODE needs two controllers (the keyboard counts as one). The
 layouts, sounds and timings are in `data\ui\title.json`,
 `data\ui\main_menu.json` and `data\audio\`.
@@ -350,6 +354,15 @@ and their settings are saved.
 Text uses the game's own font from the converted `tables\font.json`; after
 updating the converter, run `python .\tools\phantomcrash.py convert
 --replace` again to get it.
+
+**Settings > Keyboard / Controller Controls...** edits keyboard keys, controller
+buttons, stick directions and triggers. Select an action, choose an input and
+click Assign; OK applies and saves the bindings with your settings on exit.
+Restore defaults resets the bindings and mouse options; Cancel discards edits.
+In battle, move the mouse to aim and use left/right click to fire the left/right
+arm weapons. F10 releases the mouse for the menus; click the game to capture it
+again. Mouse sensitivity, Y inversion and mouse capture can be changed in the
+same dialog. WASD still moves/turns; controller aiming remains on the right stick.
 
 Controls: keyboard Enter = START, Z/Space = A, X/Backspace = B, Esc = BACK,
 arrows or WASD = D-pad; gamepads map by position (south = A). F11 or Alt+Enter toggles

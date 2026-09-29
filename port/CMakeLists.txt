@@ -144,6 +144,7 @@ add_library(phantomcrash_core
   src/robot_parts.cpp
   src/screen_adjust.cpp
   src/settings.cpp
+  src/host_controls.cpp
   src/quest_json.cpp
   src/skeleton.cpp
   src/sound_config.cpp
@@ -183,6 +184,7 @@ if(BUILD_TESTING)
     tests/guide_tests.cpp
     tests/front_end_tests.cpp
     tests/host_tests.cpp
+    tests/host_controls_tests.cpp
     tests/robot_preview_tests.cpp
     tests/rumble_tests.cpp
     tests/intro_tests.cpp
@@ -287,6 +289,8 @@ if(PHANTOMCRASH_BUILD_DESKTOP)
     src/desktop_front_end.cpp
     src/desktop_host.cpp
     src/desktop_input.cpp
+    src/desktop_input_bindings.cpp
+    src/desktop_controls_dialog.cpp
     src/desktop_intro.cpp
     src/desktop_main.cpp
     src/desktop_name_entry.cpp
@@ -365,6 +369,10 @@ if(PHANTOMCRASH_BUILD_DESKTOP)
   endif()
 
   if(BUILD_TESTING)
+    add_executable(phantomcrash_input_tests tests/core_tests.cpp tests/desktop_input_tests.cpp
+      src/desktop_input.cpp src/desktop_input_bindings.cpp)
+    target_link_libraries(phantomcrash_input_tests PRIVATE phantomcrash_core SDL3::SDL3)
+    add_test(NAME phantomcrash_input_tests COMMAND phantomcrash_input_tests)
     add_test(NAME phantomcrash_port_smoke COMMAND phantomcrash_port --smoke-test 60
              WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
     # Title, menu, submenu and a placeholder screen, driven by injected presses.

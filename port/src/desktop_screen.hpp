@@ -23,6 +23,9 @@ public:
   virtual void advance(double /*elapsed_seconds*/) {}
   virtual void draw(const Viewport &viewport) = 0;
   virtual void set_paused(bool /*paused*/) {}
+  [[nodiscard]] virtual bool mouse_aim() const {
+    return false;
+  }
 
   // The music track this screen wants (empty: silence; "keep": whatever
   // plays on), and its volume.

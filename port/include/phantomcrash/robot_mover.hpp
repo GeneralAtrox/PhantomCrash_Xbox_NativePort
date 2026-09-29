@@ -80,13 +80,14 @@ struct MovementTuning {
 
 // One tick of a robot's controls, from the pad or from the AI.
 struct RobotControl {
-  std::array<float, 2> move{}; // left stick, +y forward, +x right
-  float twist{};               // right stick x: turn the upper body
-  float pitch{};               // right stick y: aim up and down
-  bool jump{};                 // A held
-  bool dash{};                 // left stick clicked this tick
-  int dodge{};                 // -1 left, +1 right (white / black pressed)
-  bool reset_twist{};          // right stick clicked this tick
+  std::array<float, 2> move{};      // left stick, +y forward, +x right
+  float twist{};                    // right stick x: turn the upper body
+  float pitch{};                    // right stick y: aim up and down
+  std::array<float, 2> mouse_aim{}; // direct yaw/pitch displacement, radians
+  bool jump{};                      // A held
+  bool dash{};                      // left stick clicked this tick
+  int dodge{};                      // -1 left, +1 right (white / black pressed)
+  bool reset_twist{};               // right stick clicked this tick
 };
 
 enum class MoveMode { stand, walk, turn, dash, jump, dodge, brake, hit, scripted };

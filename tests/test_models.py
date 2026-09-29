@@ -51,6 +51,17 @@ def test_model_rejects_bad_data():
         model.parse(build_model() + b"\0\0\0\0")
 
 
+def test_gltf_exports_only_instantiated_stage_meshes(tmp_path):
+    mesh = model.parse(build_model()).meshes[0]
+    source = model.Model(0x80000101, [mesh, mesh, mesh, mesh])
+    target = tmp_path / "stage.gltf"
+    gltf.write(source, target, ["tex/0.png"], mesh_indices={0, 2})
+    doc = json.loads(target.read_text())
+    assert [node["name"] for node in doc["nodes"]] == ["mesh0_node0", "mesh2_node0"]
+    assert doc["scenes"][0]["nodes"] == [0, 1]
+    assert len(doc["meshes"]) == 2
+
+
 def test_gltf_mirrors_z_and_keeps_materials(tmp_path):
     target = tmp_path / "quad.gltf"
     summary = gltf.write(model.parse(build_model()), target, ["tex/0.png"])

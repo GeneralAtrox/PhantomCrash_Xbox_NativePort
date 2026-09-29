@@ -298,14 +298,18 @@ def write(
     target: Path,
     texture_uris: list[str] | None = None,
     mesh_limit: int | None = None,
+    mesh_indices: set[int] | None = None,
 ) -> dict:
     """Write ``target`` (``.gltf``) and its ``.bin``; ``texture_uris[i]`` is the
     image, relative to ``target``, of texture ``i`` of the model's pack.
     ``mesh_limit`` keeps only the first meshes (a robot part's mesh 0 is the
-    one drawn; the others are its shadow and distance versions)."""
+    one drawn; the others are its shadow and distance versions).
+    ``mesh_indices`` selects the meshes instantiated by a stage's object list,
+    preserving their source indices in node names."""
     writer = _Writer(texture_uris)
     for number, mesh in enumerate(model.meshes[:mesh_limit]):
-        writer.add_mesh(mesh, number)
+        if mesh_indices is None or number in mesh_indices:
+            writer.add_mesh(mesh, number)
     bin_path = target.with_suffix(".bin")
     doc = writer.finish(bin_path.name)
     target.parent.mkdir(parents=True, exist_ok=True)

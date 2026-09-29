@@ -148,6 +148,7 @@ RobotControl battle_control(const InputFrame &input, const BattleButtons &button
   control.move = input.left_stick;
   control.twist = input.right_stick[0];
   control.pitch = input.right_stick[1];
+  control.mouse_aim = input.mouse_aim;
   if (step != nullptr) {
     control.move[1] = std::clamp(control.move[1], -step->walk_limit, step->walk_limit);
     if (step->turn_only != 0 && control.move[0] * static_cast<float>(step->turn_only) < 0.0F) {
@@ -171,6 +172,8 @@ FireControl battle_fire(const InputFrame &input, const BattleButtons &buttons) {
     fire.fire[slot] = (input.held & buttons.fire[slot]) != 0;
   }
   fire.camouflage = input.any_pressed(buttons.camouflage);
+  fire.fire[static_cast<std::size_t>(WeaponSlot::left_arm)] |= input.mouse_fire_left;
+  fire.fire[static_cast<std::size_t>(WeaponSlot::right_arm)] |= input.mouse_fire_right;
   return fire;
 }
 

@@ -149,6 +149,9 @@ Settings settings_from_json(const json::JsonValue &value) {
   settings.fullscreen = value.boolean_or("fullscreen", settings.fullscreen);
   settings.frame_counter = value.boolean_or("frame_counter", settings.frame_counter);
   settings.pause_unfocused = value.boolean_or("pause_unfocused", settings.pause_unfocused);
+  if (const auto *controls = value.find("host_controls")) {
+    settings.host_controls = host_controls_from_json(*controls);
+  }
   settings.rumble_robots = std::clamp(
       static_cast<int>(std::lround(value.number_or("rumble_robots", settings.rumble_robots))), 0,
       max_rumble_robots);
@@ -192,6 +195,7 @@ json::JsonValue settings_to_json(const Settings &settings) {
       {"fullscreen", JsonValue{settings.fullscreen}},
       {"frame_counter", JsonValue{settings.frame_counter}},
       {"pause_unfocused", JsonValue{settings.pause_unfocused}},
+      {"host_controls", host_controls_to_json(settings.host_controls)},
       {"rumble_robots", JsonValue{static_cast<std::int64_t>(settings.rumble_robots)}},
       {"game", game_to_json(settings.game)},
       {"quest", quest_to_json(settings.quest)},

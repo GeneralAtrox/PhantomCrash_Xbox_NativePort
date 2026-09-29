@@ -193,6 +193,7 @@ void RobotMover::bump_head() {
 }
 
 void RobotMover::tick_twist(const RobotControl &control, const float seconds) {
+  heading_ = wrap_angle(heading_ + control.mouse_aim[0]);
   if (control.reset_twist && twist_reset_left_ <= 0.0F) {
     twist_reset_from_ = twist_;
     twist_reset_left_ = tuning_.twist_reset_seconds;
@@ -209,8 +210,9 @@ void RobotMover::tick_twist(const RobotControl &control, const float seconds) {
         std::clamp(twist_ + radians(tuning_.twist_degrees_per_second) * control.twist * seconds,
                    -limit, limit);
   }
-  pitch_ = std::clamp(pitch_ + tuning_.pitch_per_second * control.pitch * seconds,
-                      -tuning_.pitch_limit, tuning_.pitch_limit);
+  pitch_ =
+      std::clamp(pitch_ + control.mouse_aim[1] + tuning_.pitch_per_second * control.pitch * seconds,
+                 -tuning_.pitch_limit, tuning_.pitch_limit);
 }
 
 void RobotMover::tick_ground(const RobotControl &control, const float seconds) {

@@ -48,7 +48,7 @@
    "collision": "collision/binlink/379.json",
    "enemy_path": "enepath/b00_shinjuku_enepath.json",
    "scene_stage": 0,
-   "sky_nodes": ["mesh52_node0", "mesh53_node0"],
+   "sky_nodes": ["mesh112_node0", "mesh113_node0"],
    "lighting": {
     "preset": "Fix1",
     "ambient": [0.23, 0.23, 0.23],
@@ -65,7 +65,7 @@
    "collision": "collision/binlink/379.json",
    "enemy_path": "enepath/b00_shinjuku_enepath.json",
    "scene_stage": 1,
-   "sky_nodes": ["mesh45_node0", "mesh46_node0", "mesh47_node0", "mesh85_node0", "mesh86_node0"],
+   "sky_nodes": ["mesh105_node0", "mesh106_node0", "mesh107_node0", "mesh145_node0", "mesh146_node0"],
    "lighting": {
     "preset": "Mizuko1",
     "ambient": [0.2039, 0.2133, 0.2353],
@@ -116,7 +116,7 @@
    "collision": "collision/binlink/381.json",
    "enemy_path": "enepath/b02_umihotaru_enepath.json",
    "scene_stage": 4,
-   "sky_nodes": ["mesh86_node0", "mesh87_node0", "mesh88_node0", "mesh89_node0"],
+   "sky_nodes": ["mesh205_node0", "mesh206_node0", "mesh207_node0", "mesh208_node0"],
    "lighting": {
     "preset": "Mizuko1",
     "ambient": [0.2912, 0.3, 0.3],
@@ -133,7 +133,7 @@
    "collision": "collision/binlink/381.json",
    "enemy_path": "enepath/b02_umihotaru_enepath.json",
    "scene_stage": 5,
-   "sky_nodes": ["mesh87_node0", "mesh88_node0", "mesh89_node0"],
+   "sky_nodes": ["mesh210_node0", "mesh211_node0", "mesh212_node0"],
    "lighting": {
     "preset": "Mizuko1",
     "ambient": [0.1725, 0.1804, 0.2039],

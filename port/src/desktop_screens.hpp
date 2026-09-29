@@ -70,6 +70,7 @@ public:
   [[nodiscard]] Viewport placed(const Viewport &viewport) const;
   void draw(const Viewport &viewport);
   void set_paused(bool paused);
+  [[nodiscard]] bool mouse_aim() const;
   // Each controller port's motors for this tick (rumble.hpp): off without
   // the vibration option.
   [[nodiscard]] std::array<RumbleMotors, controller_ports> rumble() const {

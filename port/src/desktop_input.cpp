@@ -8,101 +8,6 @@
 namespace phantomcrash {
 namespace {
 
-constexpr Sint16 axis_threshold = 16000;
-
-constexpr std::array<std::pair<SDL_Scancode, Buttons>, 26> keys{{
-    {SDL_SCANCODE_RETURN, button::start},
-    {SDL_SCANCODE_KP_ENTER, button::start},
-    {SDL_SCANCODE_Z, button::a},
-    {SDL_SCANCODE_SPACE, button::a},
-    {SDL_SCANCODE_X, button::b},
-    {SDL_SCANCODE_BACKSPACE, button::b},
-    {SDL_SCANCODE_C, button::x},
-    {SDL_SCANCODE_V, button::y},
-    {SDL_SCANCODE_ESCAPE, button::back},
-    {SDL_SCANCODE_UP, button::up},
-    {SDL_SCANCODE_DOWN, button::down},
-    {SDL_SCANCODE_LEFT, button::left},
-    {SDL_SCANCODE_RIGHT, button::right},
-    {SDL_SCANCODE_W, button::up},
-    {SDL_SCANCODE_S, button::down},
-    {SDL_SCANCODE_A, button::left},
-    {SDL_SCANCODE_D, button::right},
-    {SDL_SCANCODE_Q, button::left_trigger},
-    {SDL_SCANCODE_R, button::white},
-    {SDL_SCANCODE_F, button::black},
-    {SDL_SCANCODE_LSHIFT, button::left_thumb},
-    {SDL_SCANCODE_T, button::right_thumb},
-    {SDL_SCANCODE_1, button::pad_up}, // the battle camera's views
-    {SDL_SCANCODE_2, button::pad_down},
-    {SDL_SCANCODE_3, button::pad_left},
-    {SDL_SCANCODE_4, button::pad_right},
-}};
-
-// Past this, a stick counts as pushed; inside it reads zero.
-constexpr float stick_dead_zone = 0.2F;
-
-float stick_axis(const Sint16 raw) {
-  const float value = std::clamp(static_cast<float>(raw) / 32767.0F, -1.0F, 1.0F);
-  if (std::abs(value) < stick_dead_zone) {
-    return 0.0F;
-  }
-  return (value - std::copysign(stick_dead_zone, value)) / (1.0F - stick_dead_zone);
-}
-
-constexpr std::array<std::pair<SDL_GamepadButton, Buttons>, 14> pad_buttons{{
-    {SDL_GAMEPAD_BUTTON_SOUTH, button::a},
-    {SDL_GAMEPAD_BUTTON_EAST, button::b},
-    {SDL_GAMEPAD_BUTTON_WEST, button::x},
-    {SDL_GAMEPAD_BUTTON_NORTH, button::y},
-    {SDL_GAMEPAD_BUTTON_START, button::start},
-    {SDL_GAMEPAD_BUTTON_BACK, button::back},
-    {SDL_GAMEPAD_BUTTON_LEFT_SHOULDER, button::white},
-    {SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER, button::black},
-    {SDL_GAMEPAD_BUTTON_DPAD_UP, button::up | button::pad_up},
-    {SDL_GAMEPAD_BUTTON_DPAD_DOWN, button::down | button::pad_down},
-    {SDL_GAMEPAD_BUTTON_DPAD_LEFT, button::left | button::pad_left},
-    {SDL_GAMEPAD_BUTTON_DPAD_RIGHT, button::right | button::pad_right},
-    {SDL_GAMEPAD_BUTTON_LEFT_STICK, button::left_thumb},
-    {SDL_GAMEPAD_BUTTON_RIGHT_STICK, button::right_thumb},
-}};
-
-Buttons key_button(const SDL_Scancode scancode) {
-  if (scancode == SDL_SCANCODE_E) {
-    return button::right_trigger;
-  }
-  for (const auto &[key, mask] : keys) {
-    if (key == scancode) {
-      return mask;
-    }
-  }
-  return 0;
-}
-
-Buttons pad_button(const Uint8 value) {
-  for (const auto &[pad, mask] : pad_buttons) {
-    if (pad == value) {
-      return mask;
-    }
-  }
-  return 0;
-}
-
-// Triggers and the left stick as digital buttons.
-Buttons pad_axes(SDL_Gamepad *pad) {
-  Buttons held = 0;
-  const auto axis = [&](SDL_GamepadAxis which) { return SDL_GetGamepadAxis(pad, which); };
-  held |= axis(SDL_GAMEPAD_AXIS_LEFT_TRIGGER) > axis_threshold ? button::left_trigger : 0;
-  held |= axis(SDL_GAMEPAD_AXIS_RIGHT_TRIGGER) > axis_threshold ? button::right_trigger : 0;
-  held |= axis(SDL_GAMEPAD_AXIS_LEFTY) < -axis_threshold ? button::up : 0;
-  held |= axis(SDL_GAMEPAD_AXIS_LEFTY) > axis_threshold ? button::down : 0;
-  held |= axis(SDL_GAMEPAD_AXIS_LEFTX) < -axis_threshold ? button::left : 0;
-  held |= axis(SDL_GAMEPAD_AXIS_LEFTX) > axis_threshold ? button::right : 0;
-  return held;
-}
-
-// A mouse event's window position in render pixels (the window may be
-// scaled by the display).
 std::array<float, 2> render_pixels(const SDL_WindowID window, const float x, const float y) {
   std::array<float, 2> pixels{x, y};
   if (SDL_Renderer *renderer = SDL_GetRenderer(SDL_GetWindowFromID(window))) {
@@ -123,16 +28,35 @@ DesktopInput::~DesktopInput() {
 void DesktopInput::handle(const SDL_Event &event) {
   switch (event.type) {
   case SDL_EVENT_KEY_DOWN:
+    if (event.key.scancode == SDL_SCANCODE_F10 && !event.key.repeat) {
+      mouse_released_ = !mouse_released_;
+      capture_mouse(mouse_window_, mouse_gameplay_);
+      break;
+    }
     // Alt combinations belong to the window (Alt+Enter, Alt+F4).
     if (!event.key.repeat && !(event.key.mod & SDL_KMOD_ALT)) {
       latched_[0] |= key_button(event.key.scancode);
     }
     break;
   case SDL_EVENT_MOUSE_MOTION:
+    if (mouse_captured_) {
+      mouse_delta_[0] += event.motion.xrel;
+      mouse_delta_[1] += event.motion.yrel;
+    }
     pointer_pixels_ = render_pixels(event.motion.windowID, event.motion.x, event.motion.y);
     pointer_moved_ = true;
     break;
   case SDL_EVENT_MOUSE_BUTTON_DOWN:
+    if (mouse_gameplay_ && mouse_released_) {
+      mouse_released_ = false;
+      suppress_mouse_fire_ = true;
+      capture_mouse(mouse_window_, true);
+      break;
+    }
+    if (mouse_captured_) {
+      mouse_pressed_ |= SDL_BUTTON_MASK(event.button.button);
+      break;
+    }
     if (event.button.button == SDL_BUTTON_LEFT) {
       pointer_pixels_ = render_pixels(event.button.windowID, event.button.x, event.button.y);
       clicked_ = true;
@@ -223,10 +147,7 @@ DesktopInput::PortButtons DesktopInput::held_buttons() const {
   }
   for (std::size_t index = 0; index < gamepads_.size(); ++index) {
     Buttons &port = held[static_cast<std::size_t>(port_of(index))];
-    for (const auto &[which, mask] : pad_buttons) {
-      port |= SDL_GetGamepadButton(gamepads_[index], which) ? mask : 0;
-    }
-    port |= pad_axes(gamepads_[index]);
+    port |= pad_held(gamepads_[index]);
   }
   return held;
 }
@@ -248,37 +169,6 @@ void DesktopInput::fill_ports(const bool focused, const PortButtons &held, Input
   latched_ = {};
 }
 
-void DesktopInput::sticks(const Buttons held, InputFrame &frame) const {
-  for (auto *pad : gamepads_) {
-    const std::array<float, 2> left{stick_axis(SDL_GetGamepadAxis(pad, SDL_GAMEPAD_AXIS_LEFTX)),
-                                    -stick_axis(SDL_GetGamepadAxis(pad, SDL_GAMEPAD_AXIS_LEFTY))};
-    const std::array<float, 2> right{stick_axis(SDL_GetGamepadAxis(pad, SDL_GAMEPAD_AXIS_RIGHTX)),
-                                     -stick_axis(SDL_GetGamepadAxis(pad, SDL_GAMEPAD_AXIS_RIGHTY))};
-    if (std::hypot(left[0], left[1]) > std::hypot(frame.left_stick[0], frame.left_stick[1])) {
-      frame.left_stick = left;
-    }
-    if (std::hypot(right[0], right[1]) > std::hypot(frame.right_stick[0], frame.right_stick[1])) {
-      frame.right_stick = right;
-    }
-  }
-  if (frame.left_stick == std::array<float, 2>{}) {
-    // The keys' directions only: the controller's D-pad changes camera views.
-    const Buttons moving = held & ~((held & button::pad) >> 8);
-    const auto axis = [&](const Buttons minus, const Buttons plus) {
-      return ((moving & plus) != 0 ? 1.0F : 0.0F) - ((moving & minus) != 0 ? 1.0F : 0.0F);
-    };
-    frame.left_stick = {axis(button::left, button::right), axis(button::down, button::up)};
-  }
-  int count = 0;
-  const bool *keyboard = SDL_GetKeyboardState(&count);
-  if (frame.right_stick == std::array<float, 2>{} && keyboard != nullptr &&
-      count > SDL_SCANCODE_L) {
-    const auto key = [&](const SDL_Scancode code) { return keyboard[code] ? 1.0F : 0.0F; };
-    frame.right_stick = {key(SDL_SCANCODE_L) - key(SDL_SCANCODE_J),
-                         key(SDL_SCANCODE_I) - key(SDL_SCANCODE_K)};
-  }
-}
-
 InputFrame DesktopInput::sample(const bool focused, const Viewport &viewport) {
   PortButtons ports = focused ? held_buttons() : PortButtons{};
   Buttons held = 0;
@@ -290,11 +180,26 @@ InputFrame DesktopInput::sample(const bool focused, const Viewport &viewport) {
     latched |= (focused ? latched_[port] : 0) | injected_[port];
   }
   InputFrame frame = edges_.update(held, latched, controllers());
+  if (focused && mouse_captured_ && controls_) {
+    constexpr float radians_per_degree = 0.01745329252F;
+    const float sensitivity = controls_->mouse_degrees_per_pixel * radians_per_degree;
+    frame.mouse_aim = {mouse_delta_[0] * sensitivity,
+                       mouse_delta_[1] * sensitivity * (controls_->invert_mouse_y ? 1.0F : -1.0F)};
+    const Uint32 buttons = SDL_GetMouseState(nullptr, nullptr);
+    if (suppress_mouse_fire_) {
+      suppress_mouse_fire_ = buttons != 0;
+    } else {
+      frame.mouse_fire_left = ((buttons | mouse_pressed_) & SDL_BUTTON_LMASK) != 0;
+      frame.mouse_fire_right = ((buttons | mouse_pressed_) & SDL_BUTTON_RMASK) != 0;
+    }
+  }
+  mouse_delta_ = {};
+  mouse_pressed_ = 0;
   fill_ports(focused, ports, frame);
   if (focused) {
-    sticks(held, frame);
+    sticks(held, frame, true);
   } else {
-    sticks(held & button::directions, frame); // scripted runs hold directions
+    sticks(held & button::directions, frame, false); // scripted runs hold directions
     frame.right_stick = {};
   }
   if (scripted_pointer_) {

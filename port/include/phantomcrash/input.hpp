@@ -68,6 +68,10 @@ struct InputFrame {
   // pushed, the held directions give the left stick full deflection.
   std::array<float, 2> left_stick{};
   std::array<float, 2> right_stick{};
+  // Relative mouse aim in radians, consumed once per logic tick.
+  std::array<float, 2> mouse_aim{};
+  bool mouse_fire_left{};
+  bool mouse_fire_right{};
   // The mouse in canvas units (the original's 640x480 space, after the
   // screen offset) while it is over the window, whether it moved since the
   // previous tick, and whether the left button went down.

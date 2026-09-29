@@ -1,6 +1,7 @@
 #include "desktop_settings_menu.hpp"
 
 #include "desktop_frame_rate_dialog.hpp"
+#include "desktop_controls_dialog.hpp"
 
 #include <algorithm>
 #include <stdexcept>
@@ -21,6 +22,7 @@ struct SettingsMenu::Impl {
   static constexpr UINT frame_cap_command = 0x7202;
   static constexpr UINT frame_counter_command = 0x7203;
   static constexpr UINT pause_unfocused_command = 0x7204;
+  static constexpr UINT controls_command = 0x7205;
   static constexpr UINT first_level_command = 0x7300;
   static constexpr UINT last_level_command = 0x73ff;
 
@@ -67,6 +69,9 @@ struct SettingsMenu::Impl {
       break;
     case frame_cap_command:
       edit_frame_rate_cap(window, settings.frame_rate);
+      break;
+    case controls_command:
+      edit_host_controls(window, settings.host_controls);
       break;
     default:
       return false;
@@ -142,6 +147,7 @@ SettingsMenu::SettingsMenu(void *native_window, const Settings &initial)
       !AppendMenuW(state.menu, MF_STRING, Impl::frame_cap_command, L"Frame &Rate Cap...") ||
       !AppendMenuW(state.menu, MF_STRING, Impl::frame_counter_command, L"Frame Rate &Counter") ||
       !AppendMenuW(state.menu, MF_SEPARATOR, 0, nullptr) ||
+      !AppendMenuW(state.menu, MF_STRING, Impl::controls_command, L"&Keyboard / Controller Controls...") ||
       !AppendMenuW(state.menu, MF_STRING, Impl::pause_unfocused_command,
                    L"&Pause When Unfocused")) {
     throw std::runtime_error("Unable to fill the Settings menu");

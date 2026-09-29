@@ -140,6 +140,8 @@ int run(const Options &options) {
   double benchmark_clock = 0.0;
   bool running = true;
   while (running) {
+    input.configure(menu.settings().host_controls);
+    input.capture_mouse(host.window(), screens.mouse_aim() && host.focused() && !smoke);
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
       if (event.type == SDL_EVENT_QUIT) {

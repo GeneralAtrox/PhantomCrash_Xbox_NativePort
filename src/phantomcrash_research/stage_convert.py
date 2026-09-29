@@ -3,7 +3,7 @@ and by night (stages 0-5 of the stage table at ``0x2212ac``).
 
 Output, under the converted assets:
 
-- ``models/stages/<resource>.gltf``: the stage model (every mesh), with
+- ``models/stages/<resource>.gltf``: the stage's instantiated objects, with
   ``textures/stages/<pack>/<index>.png``, its texture pack. Stage ``s``'s
   model is resource ``0x2212ac[s]`` (186-191); its pack is resource
   1558 + s. That pairing is a researcher reading: the training ground's is
@@ -15,7 +15,9 @@ Output, under the converted assets:
 - ``tables/stages.json``: per stage its model, texture pack, sky meshes and
   enemy path. The sky meshes are the object list's (``0x2212ec``, 16-byte
   entries ``{slot, kind, ...}`` up to slot -1) entries of kind 1, drawn in
-  view layer 1 around the camera; slot ``first + n`` is mesh ``n``.
+  view layer 1 around the camera; slot ``resource.first_mesh_slot + n`` is
+  mesh ``n``. Layer 7 contains static stencil volumes, not colour geometry;
+  these are excluded until the static-volume pass is implemented.
 """
 
 from __future__ import annotations
@@ -33,6 +35,7 @@ STAGE_TEXTURE_BASE = 1558  # stage s's texture pack: 1558 + s
 OBJECT_ENTRY = struct.Struct("<4I")
 OBJECT_END = 0xFFFFFFFF
 OBJECT_SKY = 1  # the entry's kind: view layer 1, the sky
+OBJECT_STATIC_VOLUME = 7  # VS 0x152; see docs/TRAINING_GROUND.md, Shadows
 # The areas' enemy paths (resources 0x697-0x699): area a's by day and night.
 AREA_PATHS = (0x697, 0x698, 0x699)
 
@@ -58,6 +61,7 @@ def convert_stages(
     """``read(resource)`` gives a binlink resource's bytes; ``pack_name`` the
     stem of the pack it is in (``b00_shinjuku``)."""
     image = game_tables._Image(executable)
+    resources = {resource.id: resource for resource in game_tables.load(executable).resources}
     models = struct.unpack_from(f"<{CITY_STAGES}I", image.data, image.offset(STAGE_MODELS, 4 * CITY_STAGES))
     paths: dict[int, str] = {}
     for resource in AREA_PATHS:
@@ -81,10 +85,11 @@ def convert_stages(
                            fmt.width, fmt.height, texture.rgba(textures))
             count = max(count, texture.index + 1)
         uris = [f"../../textures/stages/{pack_id}/{index}.png" for index in range(count)]
-        summary = gltf.write(model.parse(data), output / "models" / "stages" / f"{model_id}.gltf", uris)
         objects = _objects(image, stage)
-        first = min(slot for slot, _ in objects) if objects else 0
-        sky = [f"mesh{slot - first}_node0" for slot, kind in objects if kind == OBJECT_SKY]
+        parsed = model.parse(data)
+        selected, sky = colour_meshes(objects, resources[model_id].first_mesh_slot, len(parsed.meshes))
+        summary = gltf.write(parsed, output / "models" / "stages" / f"{model_id}.gltf", uris,
+                             mesh_indices=selected)
         path = paths.get(AREA_PATHS[stage // 2])
         records.append({
             "stage": stage,
@@ -97,3 +102,16 @@ def convert_stages(
     write_json(output / "tables" / "stages.json", records)
     report(f"{len(records):>4} city stages, {len(paths)} area paths")
     return records
+
+
+def colour_meshes(objects: list[tuple[int, int]], first_slot: int | None,
+                  mesh_count: int) -> tuple[set[int], list[str]]:
+    """Resolve the loader's global slots, keeping stencil geometry out of colour draws."""
+    if first_slot is None or not objects:
+        raise ValueError("Stage model has no mesh slots or objects")
+    resolved = [(slot - first_slot, kind) for slot, kind in objects]
+    if any(index < 0 or index >= mesh_count for index, _ in resolved):
+        raise ValueError("Stage object slot is outside its model resource")
+    selected = {index for index, kind in resolved if kind != OBJECT_STATIC_VOLUME}
+    sky = [f"mesh{index}_node0" for index, kind in resolved if kind == OBJECT_SKY]
+    return selected, sky

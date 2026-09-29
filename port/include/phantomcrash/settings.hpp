@@ -1,4 +1,5 @@
 #pragma once
+#include "phantomcrash/host_controls.hpp"
 
 #include "phantomcrash/area_roster.hpp"
 #include "phantomcrash/frame_rate.hpp"
@@ -155,6 +156,7 @@ inline constexpr int default_rumble_robots = 10;
 inline constexpr int max_rumble_robots = 16;
 
 struct Settings {
+  HostControls host_controls;
   // VSync on and no cap by default: presentation follows the display. VSync
   // off with no cap is the unlimited mode.
   FrameRateSettings frame_rate{true, false, 60};

@@ -15,6 +15,10 @@
 
 namespace phantomcrash {
 
+bool ScreenRunner::mouse_aim() const {
+  return screen_ && screen_->mouse_aim();
+}
+
 std::unique_ptr<Screen> ScreenRunner::make_battle(const std::string &name) {
   if (const auto lesson = training_.lessons.find(name); lesson != training_.lessons.end()) {
     return make_training(training_, lesson->second);

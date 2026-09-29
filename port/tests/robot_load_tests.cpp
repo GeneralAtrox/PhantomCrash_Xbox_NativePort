@@ -110,8 +110,24 @@ TEST_CASE("the load sets the leg motions' rates and the speeds with them") {
   CHECK(moved.jump_speed < strides.jump_speed);
 
   RobotLoadout roller = loadout;
-  roller.legs = 1; // no root motion for its dash: the factor scales the speed
+  roller.legs = 1; // no root motion: translate at the clamped legs speed
   const MovementTuning rolled = loaded_movement(tables, roller, load, strides);
-  CHECK(close_to(rolled.dash_speed, 32.0F * load.speed_factor));
+  CHECK(close_to(rolled.dash_speed, legs_speeds(tables, roller, load).dash / 3.6F));
   CHECK(rolled.dash_motion_rate == 1.0F);
+  LoadStats overloaded = load;
+  overloaded.speed_factor = 0.000001F;
+  const MovementTuning slow = loaded_movement(tables, roller, overloaded, strides);
+  CHECK(close_to(slow.dash_speed, legs_speeds(tables, roller, overloaded).dash / 3.6F));
+  RobotMover mover(slow);
+  mover.place({}, 0.0F);
+  RobotControl forward;
+  forward.move[1] = 1.0F;
+  for (int frame = 0; frame < 120; ++frame) {
+    mover.tick(forward, 1.0F / 60.0F);
+  }
+  const Vec3 after_dash = mover.position();
+  for (int frame = 0; frame < 60; ++frame) {
+    mover.tick(forward, 1.0F / 60.0F);
+  }
+  CHECK(length(mover.position() - after_dash) > 5.0F);
 }

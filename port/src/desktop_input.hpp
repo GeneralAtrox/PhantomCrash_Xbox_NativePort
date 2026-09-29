@@ -3,6 +3,7 @@
 #include "phantomcrash/canvas.hpp"
 #include "phantomcrash/input.hpp"
 #include "phantomcrash/rumble.hpp"
+#include "phantomcrash/host_controls.hpp"
 
 #include <SDL3/SDL.h>
 
@@ -21,8 +22,9 @@ namespace phantomcrash {
 // trigger, R/F = white/black, Left Shift / T = left/right stick click,
 // J/L/I/K = the right stick.
 // Gamepad: face buttons by position (south = A), shoulders = white/black.
-// Mouse: its position over the window and left clicks, for the screens that
-// take them (the town map).
+// Settings > Keyboard / Controller Controls edits these defaults and the
+// mouse sensitivity. Mouse: relative aim and left/right arm fire in battle;
+// F10 releases it for menus. Elsewhere, pointer/clicks serve the town map.
 // Ports (the VS mode's players): the keyboard is port 1 and the gamepads the
 // next ones; with four gamepads they take the four ports, the keyboard
 // sharing the first.
@@ -34,6 +36,9 @@ public:
   DesktopInput &operator=(const DesktopInput &) = delete;
 
   void handle(const SDL_Event &event);
+  void configure(const HostControls &controls);
+  // F10 releases the mouse; clicking the game captures it again.
+  void capture_mouse(SDL_Window *window, bool gameplay);
   // A tap of `buttons` on `port` for the next logic tick (scripted smoke
   // runs); a port pressed this way counts as connected from then on.
   void press(Buttons buttons, int port = 0);
@@ -66,7 +71,28 @@ private:
   [[nodiscard]] PortButtons held_buttons() const;
   void fill_ports(bool focused, const PortButtons &held, InputFrame &frame);
   // The analog sticks, or the held directions as the left stick.
-  void sticks(Buttons held, InputFrame &frame) const;
+  void sticks(Buttons held, InputFrame &frame, bool focused) const;
+  [[nodiscard]] Buttons key_button(SDL_Scancode key) const;
+  [[nodiscard]] Buttons pad_button(Uint8 button) const;
+  [[nodiscard]] Buttons pad_held(SDL_Gamepad *pad) const;
+  struct Binding {
+    std::string action;
+    Buttons mask{};
+    std::vector<SDL_Scancode> keys;
+    SDL_GamepadButton button{SDL_GAMEPAD_BUTTON_INVALID};
+    SDL_GamepadAxis axis{SDL_GAMEPAD_AXIS_INVALID};
+    float sign{1.0F};
+  };
+  [[nodiscard]] float value(const Binding &binding, SDL_Gamepad *pad) const;
+  std::vector<Binding> bindings_;
+  std::optional<HostControls> controls_;
+  SDL_Window *mouse_window_{};
+  bool mouse_gameplay_{};
+  bool mouse_released_{};
+  bool mouse_captured_{};
+  bool suppress_mouse_fire_{};
+  std::array<float, 2> mouse_delta_{};
+  Uint32 mouse_pressed_{};
 
   std::vector<SDL_Gamepad *> gamepads_;
   struct PadRumble {
