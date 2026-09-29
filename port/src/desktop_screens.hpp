@@ -81,7 +81,7 @@ public:
     std::string label;
     std::string screen;
   };
-  // The training ground's lessons, FreePlay first.
+  // The training ground's lessons (FreePlay first) and the quick rental match.
   [[nodiscard]] std::vector<Level> levels() const;
   // Opens `name` straight away, with no story event in between (debugging).
   void jump(const std::string &name) {

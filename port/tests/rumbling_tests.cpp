@@ -248,3 +248,53 @@ TEST_CASE("a ranker's contest keeps one gate for the ranker") {
   tap(rumbling, button::right);
   CHECK(rumbling.gate() == 2);
 }
+
+TEST_CASE("the quick rental restarts its contest while preserving the player's garage") {
+  Fixture fixture;
+  const QuickRental preset =
+      parse_rumbling_battle(
+          DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT).document("world/rumbling.json"))
+          .quick_rental;
+  CHECK(preset.screen == "rumbling_d_rental");
+  fixture.garage.robots.resize(static_cast<std::size_t>(preset.robot + 1));
+  RobotRecord &rental = fixture.garage.robots[static_cast<std::size_t>(preset.robot)];
+  for (const PartSlot slot : {PartSlot::body, PartSlot::legs, PartSlot::chip}) {
+    rental.parts[static_cast<std::size_t>(slot)] = RobotPart{0, 0};
+  }
+  QuestSave quest = riding_quest();
+  quest.player_name = "Pilot";
+  quest.day = 12;
+  quest.live_epoch = 123;
+  quest.rosters[0].day = quest.day;
+  const Garage owned = quest.garage;
+  const auto entry =
+      prepare_quick_rental(preset, fixture.tables, fixture.rules, fixture.garage, quest);
+  CHECK(entry.has_value());
+  CHECK(entry->rental);
+  CHECK(entry->rental_robot == preset.robot);
+  CHECK(entry->contest == contest_on(fixture.tables, preset.day, preset.area, false));
+  CHECK(entry->area == preset.area);
+  CHECK(quest.day == preset.day);
+  CHECK(quest.money == 4000); // the fixture's normal 1000 NY entry fee
+  CHECK(quest.player_name == "Pilot");
+  CHECK(quest.garage == owned);
+  CHECK(quest.live_epoch == 0);
+  CHECK(quest.rosters[0].day == -1);
+
+  quest.money = 0;
+  const QuestSave poor = quest;
+  CHECK(!prepare_quick_rental(preset, fixture.tables, fixture.rules, fixture.garage, quest));
+  CHECK(quest == poor);
+}
+
+TEST_CASE("an unavailable quick rental leaves the saved quest untouched") {
+  const Fixture fixture;
+  const QuickRental preset =
+      parse_rumbling_battle(
+          DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT).document("world/rumbling.json"))
+          .quick_rental;
+  QuestSave quest = riding_quest();
+  const QuestSave before = quest;
+  CHECK(!prepare_quick_rental(preset, fixture.tables, fixture.rules, fixture.garage, quest));
+  CHECK(quest == before);
+}

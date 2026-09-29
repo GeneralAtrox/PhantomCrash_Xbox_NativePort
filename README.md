@@ -103,6 +103,16 @@ project folder with `--root`, passing any extra arguments through. It pauses to
 show the error if the build fails or the game exits with an error. Run
 `build-port.ps1` once first to configure the build.
 
+`Start Game Quick.bat` uses the same launcher and opens the garage with your
+saved quest, skipping the intro and title. It uses the normal settings/save
+file; append `--settings <file.json>` to use a different one.
+For a rental match, choose **Tools > Level Select > Class D: Fire Balloons
+(rental SV)**. This testing shortcut restarts Day 1's Shinjuku contest and its
+opponents with a rental SV, keeping your pilot, money (less the normal entry
+fee, zero for this contest), and garage. The current quest still saves normally
+on exit. The destination and rental are editable in `battle.quick_rental` in
+`data/world/rumbling.json`; `--start rumbling_d_rental` also opens it directly.
+
 The port finds `data\` by searching upward from the working directory and the
 executable, or takes `--root <folder>`. Other options: `--fullscreen`,
 `--windowed`, `--size <width>x<height>`, `--start <screen>` to begin on

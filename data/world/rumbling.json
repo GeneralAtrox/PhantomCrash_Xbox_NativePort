@@ -111,6 +111,14 @@
  },
  "battle": {
   "return_to": "club_wired",
+  "quick_rental": {
+   "label": "Class D: Fire Balloons (rental SV)",
+   "screen": "rumbling_d_rental",
+   "day": 0,
+   "area": 0,
+   "gate": 0,
+   "robot": 84
+  },
   "lesson": {
    "title": "RUMBLING",
    "mode": 3

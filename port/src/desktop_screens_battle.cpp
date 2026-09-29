@@ -24,9 +24,18 @@ std::unique_ptr<Screen> ScreenRunner::make_battle(const std::string &name) {
                                            quest_.garage.riding, game_->part_tables());
     return make_training(battle_training_, test_drive_.lesson);
   }
-  if (name == "rumbling_battle") {
+  if (name == "rumbling_battle" || name == rumbling_battle_.quick_rental.screen) {
+    std::optional<RumblingEntry> quick;
+    if (name == rumbling_battle_.quick_rental.screen) {
+      quick = prepare_quick_rental(rumbling_battle_.quick_rental, game_->contests(),
+                                   game_->regulation_check().rules, game_->garage_tables(), quest_);
+      if (!quick) {
+        SDL_Log("Quick rental unavailable: check the preset, converted tables and entry fee");
+        return game_->make("rumbling", "", place_before_, quest_);
+      }
+    }
     // The RUMBLING screen that entered is still the one showing.
-    const RumblingEntry *entry = screen_ ? screen_->rumbling_entry() : nullptr;
+    const RumblingEntry *entry = quick ? &*quick : screen_ ? screen_->rumbling_entry() : nullptr;
     if (entry == nullptr) {
       return nullptr;
     }
@@ -36,6 +45,10 @@ std::unique_ptr<Screen> ScreenRunner::make_battle(const std::string &name) {
     RumblingWorld *live = rumbling_world();
     if (live == nullptr) {
       return make_training(battle_training_, rumbling_battle_.lesson);
+    }
+    // A direct Level Select entry has not passed through the menu's roster update.
+    if (quick) {
+      live->update(quest_, 0.0);
     }
     join_rumbling(*entry);
     return make_training(battle_training_, rumbling_battle_.lesson, live->lend(entry->area, quest_),
@@ -104,6 +117,10 @@ std::vector<ScreenRunner::Level> ScreenRunner::levels() const {
   std::vector<Level> out;
   for (auto &entry : found) {
     out.push_back(std::move(entry.second));
+  }
+  const QuickRental &rental = rumbling_battle_.quick_rental;
+  if (!rental.screen.empty()) {
+    out.push_back({rental.label, rental.screen});
   }
   return out;
 }
