@@ -47,10 +47,12 @@ Sprite placed(Sprite sprite, const std::array<float, 2> &position) {
 
 SoundConfigScreen::SoundConfigScreen(TextureCache &textures, const GlyphFont &font,
                                      SoundConfigScript script, const GameOptions options,
-                                     const std::string &now_playing)
+                                     const FrameStyle &frame,
+                                     const std::vector<MusicCredit> &credits)
     : MenuScreen(textures, std::move(script), options), font_(font),
       help_runs_(help_runs(font, menu_.script().items)),
-      now_playing_run_(glyph_run(font, now_playing)) {
+      band_(font, frame, credits, credit_band(menu_.script())) {
+  band_.preload(textures_);
   static_cast<void>(textures_.get(font_.image));
   static_cast<void>(textures_.get(menu_.script().digits.image));
   preload(textures_, menu_.script().layers);
@@ -85,17 +87,19 @@ void SoundConfigScreen::draw(const Viewport &viewport) {
   const auto cursor = static_cast<std::size_t>(menu_.cursor());
   list.ticker(help_style(script.help, script.items[cursor].help), help_runs_[cursor],
               menu_.help_seconds());
-  list.ticker(script.now_playing, now_playing_run_, menu_.seconds());
+  band_.draw(list, QuestSave{});
   list.flush();
   fill_black(textures_, menu_.black_alpha());
 }
 
 ButtonConfigScreen::ButtonConfigScreen(TextureCache &textures, const GlyphFont &font,
                                        ButtonConfigScript script, const GameOptions options,
-                                       const std::string &now_playing)
+                                       const FrameStyle &frame,
+                                       const std::vector<MusicCredit> &credits)
     : MenuScreen(textures, std::move(script), options), font_(font),
       help_runs_(help_runs(font, menu_.script().rows)),
-      now_playing_run_(glyph_run(font, now_playing)) {
+      band_(font, frame, credits, credit_band(menu_.script())) {
+  band_.preload(textures_);
   static_cast<void>(textures_.get(font_.image));
   preload(textures_, menu_.script().layers);
   static_cast<void>(textures_.get(menu_.script().icons[0].image));
@@ -140,7 +144,7 @@ void ButtonConfigScreen::draw(const Viewport &viewport) {
   const auto selected = static_cast<std::size_t>(cursor);
   list.ticker(help_style(script.help, script.rows[selected].help), help_runs_[selected],
               menu_.help_seconds());
-  list.ticker(script.now_playing, now_playing_run_, menu_.seconds());
+  band_.draw(list, QuestSave{});
   list.flush();
   fill_black(textures_, menu_.black_alpha());
 }

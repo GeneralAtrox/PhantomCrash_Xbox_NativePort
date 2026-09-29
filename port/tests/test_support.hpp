@@ -54,6 +54,15 @@ struct Failure : std::runtime_error {
     }                                                                                              \
   } while (false)
 
+// A check the rest of the case depends on: it stops there when it fails.
+#define REQUIRE(condition)                                                                         \
+  do {                                                                                             \
+    CHECK(condition);                                                                              \
+    if (!(condition)) {                                                                            \
+      return;                                                                                      \
+    }                                                                                              \
+  } while (false)
+
 #define CHECK_THROWS(expression)                                                                   \
   do {                                                                                             \
     bool thrown = false;                                                                           \

@@ -61,6 +61,14 @@ void IntroScreen::tick(const InputFrame &input, const double tick_seconds) {
     return;
   }
   const bool movie_ended = movie_failed_ || current_->finished();
+  if (const auto *step = sequence_.step();
+      step != nullptr && step->loop && !movie_failed_ && current_->finished()) {
+    // A looping movie starts again for as long as its step lasts.
+    if (const auto file = sequence_.movie_file()) {
+      open_movie(*current_, *file);
+      movie_failed_ = !current_->is_open();
+    }
+  }
   sequence_.update(tick_seconds, input, movie_ended);
   if (sequence_.generation() != seen_generation_) {
     enter_step();

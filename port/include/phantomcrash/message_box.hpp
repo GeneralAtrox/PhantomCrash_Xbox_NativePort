@@ -16,6 +16,10 @@ struct ChoiceSprites {
   Sprite selected; // drawn over `normal` while chosen
 };
 
+// "normal" and "selected"; the selected one sits where the normal one does
+// unless it gives a position. Throws std::runtime_error naming the member.
+[[nodiscard]] ChoiceSprites parse_choice(const json::JsonValue &value);
+
 // The look of the game's SYSTEM INFORMATION window (data/ui/message_box.json;
 // the original's 0xbec0f, 0xbe09e and 0xbdfbd). It grows from a small scale,
 // playing a sound, and shows its lines and buttons once it is full size.
@@ -37,10 +41,12 @@ struct MessageBoxStyle {
 [[nodiscard]] MessageBoxStyle parse_message_box(const json::JsonValue &document);
 
 // One message box on screen. A question offers YES (choice 0) and NO
-// (choice 1); a notice only OK. The owner handles input and sounds.
+// (choice 1); a notice only OK; a plain box only its lines, for a screen
+// that draws its own options over it (0xbdfac). The owner handles input
+// and sounds.
 class MessageBox final {
 public:
-  enum class Kind { question, notice };
+  enum class Kind { question, notice, plain };
 
   explicit MessageBox(MessageBoxStyle style) : style_(std::move(style)) {}
 

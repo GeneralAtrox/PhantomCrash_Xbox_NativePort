@@ -33,21 +33,27 @@ result (`0xa1bf7`).
 | 9 (`0x570c0`, `0x571a3`) | Save checks: an existing save (`0x6b040`), free space (`0x6b0cf`, `0x6b1ed`) and message boxes (strings at `0x21cc44`); a cancel goes back to the title. No music. | 0 → 46, 1 → 40 |
 | 46 (`0x9f250`, `0x9f381`) | Creates the save (0x5fea4-byte state, `0x6b99b`), with a free-blocks check (`0x6c3d6` < 0x1000) and messages (`0x2002cc`, `0x254dd0`). LOAD GAME (17) also comes here. | 0 → 25, 1 → 39 (garage) |
 | 25 (`0x2e692`, `0x2e663`) | Plays movie 0, `opening.sfd` (`0xaebf6(0)`), which can be skipped (`0x2e4fd`). Then points name entry at the player's name, save + 0x280c, mode 0 (`0x2c5b4`). | 0 → 22, 1 → 40 |
-| 22 (`0x2c614`) | NAME ENTRY (see below). Entered from 25 it returns result 0. | 0 → 8 |
+| 22 (`0x2c614`) | NAME ENTRY (see below). Its result depends on the scene that opened it. | 0 → 8, 1 → 19, … (`0xa2e70`) |
 | 8 (`0x1bec1`, `0x1bd93`) | Club Wired's menu (`club_wird_tex`, 4TOWNMAP), with six help lines (`0x1db1c0`): Rumbling, "The shop guide, Pepper, will show you around", records, schedule, change alias (back to name entry), exit. | 3, 19, 29, 32, 22, 41 |
 | 19 (`0x299fe`) | Pepper's guide: a question menu ("What is Rumbling?", …) from the table at `0x1de070` (35 records of {short group, short id, char* title, int}). It returns to the scene that opened it. | caller |
-| ~50–158 | Story events (below). Each loads EVENTSEG (`0xa3e32`), runs one event, unloads it and goes to scene 159. | 159 |
+| 48–157 | Story events (below). Each loads EVENTSEG (`0xa3e32`), runs one event, unloads it and goes to scene 159, then on to the scene it interrupted. | 159 |
 
-The game's first conversation is event scene 144 (`0xa83f7`, event
-`0xca100`, script at `0xdb1ae8`):
+Story events are not edges of the scene table. On a scene change,
+`0xd1861(from, to)` looks for an event record whose from and to scenes
+match, that is enabled, has not been seen, and whose required events have
+been; if one does, it plays first. So NEW GAME runs:
+
+movie (25) → **event 48** → NAME ENTRY (22) → **event 49** → Pepper's guide
+(19) → event 50 (19 → 41, once 49 has played) …
+
+Event 48 (script `0xdb4a38`) is the first conversation, Salsa and Pepper:
 
 > "Welcome to Shinjuku Wired, where apathy and freedom abound…" · "I am
-> Salsa, the store guide, a Cat Chip." · "Pepper! Will you get up now?" ·
-> "Oh...hi there. Welcome to the battlefields of Rumbling…"
+> Salsa, the store guide, a Cat Chip." · … Pepper asks the player to enter
+> their Alias "in that machine over there".
 
-Still open: what starts scene 144 after name entry. No fixed scene-table
-edge leads to it, so it comes from a story dispatcher; scene 159 is next to
-look at.
+That opens NAME ENTRY, which, called from scene 48, returns result 1: scene
+19. Event 49 (22 → 19, 4TOWNMAP) plays on that move.
 
 ## Name entry (scene 22)
 
@@ -57,104 +63,233 @@ look at.
 - A 15 × 6 grid on each of three pages. The character under the cursor is
   `0x1f99e8[page * 90 + row * 15 + column]` (a string, mapped to a glyph by
   `0xbde14`). Names hold up to 8 glyphs, in the buffer at `0x1f94d4`.
-- Controls: the cursor helper with flags `0x17`/`0x12`; A types a
-  character; L (`0x400`) deletes (sys effect 21) and R (`0x800`) steps
-  forward (sys 5); START jumps to End (sys 9). Changing page restarts its
-  help line (three lines at `0x1fa324`, a text box at y 37).
-- End checks the name (`0x2d723`). An empty or taken name opens a message
-  ("Do you wish to end the name entry without giving your Scoobee a name?",
-  "A Scoobee of the same name is already…"). The result then depends on the
+- Controls (`0x2cd21`, `0x2d194`). The masks are the original's: A `0x100`,
+  B `0x200`, X `0x400`, Y `0x800`, L `0x4000`, R `0x8000`, START `0x10`,
+  BACK `0x20`.
+  - The D-pad moves the cursor: columns wrap (flags `0x17`, sys 4), rows
+    stop at the ends (`0x12`, sys 3), and row 6 is the tab row. On the tab
+    row, left and right choose the page at once (sys 9, help restarted), and
+    up goes back to the grid. End has no grid, so up from End returns to the
+    page and row before it.
+  - A or START (`0x110`) types the character under the cursor, or ends the
+    entry on End; typing at the eighth place replaces it.
+  - X deletes (sys 21), Y adds a space (sys 5), and L / R change page (the
+    "LIST CHANGE" hint), wrapping only on a new press.
+  - B or BACK (`0x220`) jumps to End (sys 9).
+- End checks the name (`0x2d723`): a name of only spaces is no name. For the
+  player (mode 0) that empties the name and shows the notice "No input.
+  Although this is the Trash Area, we do maintain the minimum supervision…"
+  until A. The Chip and Scoobee modes have their own boxes ("Please name the
+  CHIP.", "Do you wish to end the name entry without giving your Scoobee a
+  name?"). The result then depends on the
   calling scene: 8 → 0, 48 → 1, 4 → 2, 34 → 3, 15 → 4, 14 → 5, 33 → 6, and
   anything else → 0.
 - Mode 0-3 (`0x2c5d9`) picks which name is edited: player, Chip, Scoobee
   or program.
 - The CURRENT MUSIC ticker is at y 419 (`0x2a85a(…, 0x1a3, 0x17)`).
+- Draw (`0x2d9ca`) and animation (`0x2ca50`, `0x2cb9e`):
+  - The grid frame and tabs fade in over 20 frames.
+  - Halfway, the controls box with the button hints slides in from x 640 to
+    289 (30 a frame), then its hints fade in.
+  - The name box then grows over 10 frames (`0xbe87c`: wider than full,
+    then taller), and YOUR NAME and the name appear.
+  - Each page's characters fade in over 10 frames as the previous page's
+    fade out. The cursors pulse at sin(phase) × 128 alpha.
+
+Ported: `data/ui/name_entry.json`, `NameEntry` (core) and `NameEntryScreen`.
+Where the entry goes depends on the screen before it (`exits`: after event
+48, Pepper's guide; otherwise Club Wired). It saves the name in the
+settings' quest save.
 
 ## Event scripts (EVENTSEG)
 
 `EVENTSEG` (`0xd4c820`–`0xec66a8`, 1.5 MB) is loaded on demand. Each event
-scene's creator makes a task (`0xd19ea`) whose setup (`0xd1615`) reads its
-record in the event table at `0x1d0e00`. There are 110 records of 36 bytes,
-keyed by scene id:
+scene's creator makes a task (`0xd19ea(1, task, start, end)`); its runner
+pushes the script address and calls `0xd0f07`. Every event runs exactly one
+script (110 events, 110 scripts). The event table at `0x1d0e00` has 110
+records of 36 bytes:
 
-- +0x16: the background index into `0x1d0dd0`, the talk_* backgrounds
-  (`talk_garage`, `talk_clubwired`, …);
-- +0x17: the cast, up to 6 character indices ending with -1;
-- +0x1e: the music (0xCA keeps the current track);
-- +0x20: a float.
+| Offset | Meaning |
+|---|---|
+| +0, +4, +8 | scene id, from scene, to scene |
+| +0xc, +0xd | the range of events (table indices) that must have played |
+| +0xe–+0x13 | further conditions (day, garage, …; not ported) |
+| +0x14 | enabled |
+| +0x16 | background, into `0x1d0dd0`: {back, front} sprites × 6; the back is the 640 × 480 picture, the front its lower strip at y 296, layer 0x101 |
+| +0x17 | cast: up to 6 talk-character indices, -1 ending |
+| +0x1e | music (-1 none, 0xCA keeps the current track) |
+| +0x20 | music volume (float) |
 
-It loads the talk UI (`0x1d0d88`: scr_common, talk_tex and the six
-backgrounds) and the cast's sheets into six slots (`0xd158a`, `0xd106a`),
-then starts the interpreter on the event's script (`0xd0f07` → `0xc57e0`).
+The event fades in over 0.5 s showing only the background, runs the script,
+then fades out the same way. Music starts when the event is created.
 
-The interpreter (`0xc5a1a`) steps through 52-byte commands; the first u32 is
-the opcode, dispatched through `0x291310`. Opcode 2 yields until the next
-frame and opcode 13 ends the script.
+Talk characters are at `0x1c42e8 + 40n` (28: resource 1608 + n, `mht25_yuki`
+… `sht23`, and nine pose ids; a missing pose shows pose 0, `0xc7a77`). Poses
+are at `0x1c4748 + 28 × id`: body, mouth closed / half / open and blink
+sprites, plus byte offsets for the face parts. Cast 12 is Pepper
+(`mht37_pepper`), 7 Mion. Salsa is a portrait sprite (`fight_chara00`), not
+a character.
 
-| Op | Handler | Meaning (so far) |
+### The interpreter (`0xc5a1a`)
+
+Commands are 13 ints (52 bytes). Each frame it runs from a checkpoint and
+stops at the first command that is not done, so a page's window, portraits
+and text are redrawn every frame. A finished wait moves the checkpoint past
+it and ends the frame. The script ends when it reaches op 13 with every
+command done.
+
+| Op | Handler | Meaning |
 |---|---|---|
-| 0 | `0xc5b0b` | reset state |
-| 1 | `0xc5b9d` | message: a speaker record, then text typed a glyph at a time (A or B shows all), optional ruby |
-| 2 | `0xc604b` | wait N frames, or for a press when N < 0; clears per-page state |
-| 3 | `0xc620c` | draw a sprite |
-| 4 | `0xc62ff` | draw a character: {character, pose, x, y, layer, flags 1 fade in / 2 fade out / 4 no mouth} |
-| 5 | `0xc6a0f` | wait for a press |
-| 6-9 | `0xc6aef`… | small state and flag changes |
-| 10 | `0xc6bc4` | input wait with a result |
-| 11, 12 | `0xc6c7f`, `0xc6d4e` | clear flags 2 and 1 |
+| 1 | `0xc5b9d` | text: glyph codes, frames per character, flags (bit 31 unskippable, 0x20 the ▼'s fade), x, y, colour, size, layer 0x101 + n. Records come in pairs (ruby, then text; no ruby is used). The text is always drawn 18 units high (the call hard-codes 0x12); the size sizes only the ruby, at half |
+| 2 | `0xc604b` | wait N frames; clears the page's fades, blinks and mouths |
+| 3 | `0xc620c` | a sprite: id, x, y, layer, colour, scale |
+| 4 | `0xc62ff` | a character: character, pose, x, y, layer, colour, flags 1 fade in / 2 fade out / 4 no mouth |
+| 10 | `0xc6bc4` | wait for confirm (from its second frame; sys 19) |
 | 13 | `0xc6e1b` | end |
 
-Opcode 4 in detail: `0xc79c0` gives a character's record at
-`0x1c42e8 + 40n` (28 characters: a resource id and nine pose indices), and
-`0xc7a77(character, pose)` gives the pose's sprite set. That set holds the
-body, the mouth closed / half / open, the blink, and each overlay's byte
-offsets.
+- **Typing:** a character every N frames with sys 16, except spaces;
+  glyphs past 0x92 (letters) set the mouth flag (`0xa69cbc` |= 8). Confirm
+  while typing shows all of it the next frame with sys 20. Holding a
+  trigger or stick click (0xc0c0) hides the text and runs through the
+  pages. The original does not reset its character count after a skip,
+  which could cut the next text short; the port resets it.
+- **Codes:** `0xFFFE` new line, `0xFFFB` the player's name (cyan), `0xFFF7`
+  back to the text's colour, `0xFFEE`–`0xFFF6` colours (`0xFFF3` grey, used
+  for asides). Colour codes take no typing step.
+- **Characters:** a fade takes 30 frames and is shared by the page's
+  characters. Fully shown, each cast slot blinks (open 60 + up to 60
+  frames, closed 8 + up to 4) and, unless flag 4, steps its mouth closed →
+  half → open → half, holding each shape 5 frames while the flag is set.
 
-- **Blink:** drawn for about 4 frames at random intervals of up to a
-  second.
-- **Mouth:** while text types (flag 8 at `0xa69cbc`) the mouth steps
-  closed → half → open → half, one frame every 5 ticks.
-- **Fades:** they scale the alpha over the fade time.
+Ported: the converter writes `tables/events.json` and `tables/talk.json`;
+`data/story/talk.json` holds the timings, buttons and sounds and
+`data/story/scenes.json` the scene ids of the ported screens. `EventPlayer`
+and `TalkScene` (core) play a script; `TalkScreen` draws it. NEW GAME now
+runs movie → event 48 → NAME ENTRY → event 49 → Pepper's guide, and the
+quest save records the events played.
 
-Text is stored as the system font's glyph indices, u16 each, not Shift-JIS,
-which is why string searches miss it. Codes: `0xFFFF` ends a record,
-`0xFFFE` breaks the line, `0xFFEF`/`0xFFF0`/`0xFFF5`/`0xFFF6` start colours
-and `0xFFF7` resets them, `0xFFF3` is probably a pause, and `▼` waits for a
-button. Speaker names ("Salsa", "Pepper") are records of their own.
+Event conditions (`0xd1861`): besides the event index range (+0xc/+0xd,
+ported as `requires_seen`) a record may set a test function (+0xf, 0–0x4a,
+table `0x40e888`, argument +0x11), the chapter (+0x10, 0–0x37) and three
+more bytes (+0x11 0–3, +0x12 0–0x1b, +0x13 0–1); a byte outside its range
+means "no condition". None of these checks are ported, so an event that
+sets one does not play (`unported_conditions`): event 152 on the first
+Club Wired → town map, for instance, waits for its test 22.
 
-Still open:
+## The town frame and the radio
 
-- Event 144's cast byte is 7, which is `mht32_mion_tex`, yet the lines are
-  spoken by Salsa and Pepper. Either the cast index is mapped differently or
-  opcode 4 names the character directly. It will show up once the
-  converter decodes whole scripts.
-- Salsa (a Cat Chip) may speak without a sprite.
+Every town screen draws the day and money at fixed places (`0xb1b56`,
+`0xb1cdd`): "DAY-" at (51, 49) and the day + 1 in two zero-padded digits
+ending at x 108; the money (cfg+0x9d0) right-aligned at x 253 in up to nine
+digits with commas, then "NY" (font 3: digits 11 wide, comma 5; too big a
+number shows nines). Money is stored in tens of NY and drawn times ten
+(`phantomcrash/money.hpp`). NEW GAME's 200,000NY (stored 20000, set by
+`0x2bec6`, which keeps the money word's cleared-game bit) and day 0 are in
+`data/story/new_game.json`; [PART_RECORDS.md](PART_RECORDS.md#the-new-games-robot-and-money)
+shows that a new game gives the player no robot. The CURRENT MUSIC meter's seven bars (grey `0xe93`, orange `0xe94`)
+move with the music; their motion is the port's: each bar is a band of
+pitches, bass on the left, measured against its own last three seconds so
+every bar gets used (`MusicSpectrum`, `data/ui/frame.json`). The credit line scrolls at
+y 339 (`0x2a85a`, run with the radio by the task `0x9e652`/`0x9e780`).
 
-## What to build
+Opening Club Wired shuffles the songs and keeps sixteen; on the town
+screens a new one starts after five seconds of silence
+(`data/audio/radio.json`). `data/ui/frame.json` holds the frame's sprites.
 
-In order, all on the existing 2D stack:
+The RIDING SV plate (`0x6dd74` → `0x6db03`; Club Wired `0x1c844`, Pepper's
+guide the same call) shows the Scoobee being ridden: the low five bits of
+save+0x9c8, sign-extended, pick one of ten garage records (save+0x25f0 +
+slot × 0x36) and the plate draws only for slots 0–9; a new save sets −1
+(`0xb9668`), so a new game shows none. The plate (`0xc08`,
+`scr_common_tex` [720, 0, 984, 32]) slides in from x −320 to 0 at y 399
+over 8 frames, starting when the screen has faded in; the record's name
+(+0x22, up to 9 glyphs, #f0f0f0) sits at (+106, +5). The port keeps the
+name (`riding` in the quest save) beside the hangar ridden
+(`garage.riding`); the picture is cut at x 0 while the plate slides, as on
+the original's 4:3 screen.
 
-1. **Converter:**
-   - Decode EVENTSEG into `tables/events.json`: per event, its record
-     (background, cast, music) and its commands with the text as Unicode.
-   - Decode the character table and pose sprite sets (`characters.json`).
-   - Decode the talk backgrounds and the name-entry grid.
+## The garage
 
-   Every file stays editable, so mods can rewrite a conversation.
-2. **Core `EventPlayer`:** the opcodes above, the typewriter, waits, and the
-   pose, blink and mouth state, unit-tested against decoded scripts.
-3. **Desktop talk screen:** the background, the message window
-   (`talk_tex`), the speaker name, the characters on their layers, and the
-   CURRENT MUSIC band.
-4. **Name entry:** screen, data file and tests, reusing DrawList, the font
-   and the message box.
-5. **NEW GAME flow:**
-   - Save checks as message boxes. The PC version has no memory-unit
-     limits, so scenes 9 and 46 reduce to "create the save" plus their
-     failure messages.
-   - The opening movie through the intro movie player, then name entry,
-     then Club Wired, then event 144.
-6. **Club Wired menu** and Pepper's guide (scene 19) with the same pieces.
+The quest's `"garage"` (`port/include/phantomcrash/garage.hpp`) is the
+port's model of the save's hangars and parts stock: ten hangars (save +
+0x25f0, 0x36 bytes each; the first three owned in a new game, from
+`data/story/new_game.json`), each with its seven part slots (body, legs,
+both arms, both shoulders, CHIP) and its modules as stock entries, its
+name, paint and emblem; and a stock of up to 255 entries, each a part,
+CHIP or module record with its level, its name (the CHIP's is set by NAME
+ENTRY) and the hangar it is fitted in. The paints and emblems owned are
+kept beside them. The layout is the port's own (researcher-assigned
+names); the save offsets are only where the original keeps the same
+things. A dealer's SV (`tables/garage.json` robots, 0x19f920) is fitted by
+putting each of its parts and modules in the stock and in the hangar
+(`install_robot`, after 0x1da04).
 
-A 3D renderer (SDL3 GPU, the mech models, motions, shaders) is needed later
-for the garage (39), the hangar and battles, not for NEW GAME.
+## The cleared flag
+
+The top bit of the money word (cfg+0x9d0) marks a cleared game: scene 37
+(the staff roll, `staff.sfd`) sets it (`0x6df71`), a new save clears it
+(`0xb94e0` → `0x6df99`) and `0x6dfc1` reads it. The port keeps it as
+`cleared` in the quest save. Pepper's guide uses it (above). The contest
+schedule (`0x6ce91`, contest 49 → 52) and `0x2e3f8` also read it; neither
+is ported yet. The port's staff roll (`data/story/staff_roll.json`, played
+by the intro step machine) sets it as it starts; the final contest that
+leads to it is not ported, so `--start staff_roll` or a save sets it for
+now.
+
+## Club Wired (scene 8)
+
+`0x1ba45` / `0x1bec1`: a wheel of six items (Rumbling, Training, Record,
+Schedule, Change alias, Exit), eight slots 45° apart turned about a pivot
+over 8 frames, the short way round; no input while it turns. Left/right
+move with sys 23 and wrap; confirm plays 5 (26 on Exit) and fades out to
+the item's scene; cancel moves to Exit; arriving from the town map plays
+25. The cursor starts on the item of the scene before. The help panel's
+line scrolls per item. See `data/ui/club_wired.json`.
+
+## Pepper's guide (scene 19)
+
+`0x298a4` loads `scr_common_tex`, `talk_tex` and `club_beginner_tex`, puts
+Pepper (cast 12) in the talk character slots (`0xd158a`) and shows her with
+one talk character command (`0x40e778` via `0xc57e0`: pose 2 at (329, 37),
+layer 10, fading in), so she blinks as in a talk scene. The questions are
+the table at `0x1de070`: 35 records {short group, short target, char*
+text, int}; group 35 is the top list, and a record whose target is 159
+opens the group numbered by its own index. `0x29247` counts a group and
+`0x29264` finds its n-th record.
+
+Controls (`0x29587`): five rows; the selected record is (scroll + row) mod
+count and the list scrolls round (`0xdf6d0`), a short list wrapping the
+cursor. Each level's row and scroll, the level and the group live in
+globals (`0x415e84`–`0x415e9c`), so an answer comes back to its question.
+Confirm (sys 5) opens a topic, or sets the lesson (`0x2928c`) and fades out
+to the target; End (record ≥ 0x22) fades out to scene 8, or 41 when the
+guide was opened from event 49 (the previous scene, `0x415e80`, is not
+updated when coming back from scenes 0x69–0x80 or 42). Cancel in a topic
+plays 8 and goes up, resetting that level; at the top it moves to End (sys
+3) unless there. Once the game is cleared (below), "What is a Ranker?" and
+"Who is Mona Lisa?" lead to events 157 and 128 instead of 112 and 127
+(`cleared_next`).
+
+Draw (`0x292da`): the background and CURRENT MUSIC strip (list
+`0x1ddef8`), the window `0x43b` at (54, 86) scaled 1.1 × 1 about its
+centre, the top band `0x43d`, the arrows (`0x1ddfa4`, `0x1ddfdc`) when a
+list is longer than five, the pulsing cursor bar `0x43a` at (71, row × 30 +
+142), the questions (`0x293fa`, same place, 18-unit font, white) and, in a
+topic, the B BACK hint (`0x6ded3`). The answers are events 105–128 and 157,
+from and to scene 159; the port returns them to the screen that opened them
+(`return_scene` in `data/story/scenes.json`). The lessons (targets 42) are
+a tutorial placeholder. See `data/ui/pepper_guide.json`.
+
+## Still to build
+
+1. The tutorial battle (scene 42): the training ground's stage draws
+   (docs/TRAINING_GROUND.md); the mechs, the battle and Pepper's lesson
+   script are still to come.
+2. The save checks (scenes 9 and 46) as message boxes; the PC version has
+   no memory-unit limits, so they reduce to "create the save".
+3. The rest of the event conditions (+0xe–+0x13) as the scenes that need
+   them are ported.
+
+The 3D renderer (Direct3D 11 on SDL's device, glTF models) started with the
+training ground; the mech models, motions and effects follow, for the
+garage (39), the hangar and battles.

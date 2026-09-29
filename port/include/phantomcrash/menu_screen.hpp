@@ -5,11 +5,21 @@
 #include "phantomcrash/json.hpp"
 #include "phantomcrash/sprite_layer.hpp"
 
+#include <array>
+#include <map>
 #include <optional>
 #include <string>
 #include <vector>
 
 namespace phantomcrash {
+
+// Where a menu leaves for, and whether it shows the day and money, as
+// entered from one screen: the OPTION and LOAD GAME screens return to the
+// garage's system menu when opened from it, and show the town's frame there.
+struct MenuEntry {
+  std::string exit_to;
+  bool hud{};
+};
 
 // What the OPTION screen and its sub-screens have in common in their data
 // files: music, the 0.5 s black fades (0x9f734 in, 0x9f6e0 out), where EXIT
@@ -20,6 +30,8 @@ struct MenuBasics {
   double fade_in{};
   double fade_out{};
   std::string exit_to;
+  bool hud{};                                    // the day and money
+  std::map<std::string, MenuEntry> entered_from; // screen -> its exit and hud
   Buttons confirm_buttons{};
   Buttons cancel_buttons{};
   double repeat_delay{};
@@ -32,12 +44,17 @@ struct MenuBasics {
 // Throws std::runtime_error naming the member at fault.
 void parse_menu_basics(const json::JsonValue &document, MenuBasics &basics);
 
-// The per-item help line along the top and the current music's credit in the
-// CURRENT MUSIC band (0x2a85a).
+// The exit and hud of a menu entered from `origin`: its entered_from entry,
+// or its own.
+[[nodiscard]] MenuEntry menu_entry(const MenuBasics &basics, const std::string &origin);
+
+// The per-item help line along the top, the current music's credit in the
+// CURRENT MUSIC band (0x2a85a) and where the band's meter sits, if it has one.
 struct MenuTickers {
   TickerStyle help;
   TickerStyle now_playing;
   std::string now_playing_format; // "{title}" and "{artist}" are replaced
+  std::optional<std::array<float, 2>> meter;
 };
 
 [[nodiscard]] MenuTickers parse_menu_tickers(const json::JsonValue &document);

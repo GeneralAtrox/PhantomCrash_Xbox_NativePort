@@ -32,6 +32,9 @@ struct JsonValue {
     return std::holds_alternative<std::string>(value);
   }
   [[nodiscard]] bool is_number() const noexcept;
+  [[nodiscard]] bool is_null() const noexcept {
+    return std::holds_alternative<std::nullptr_t>(value);
+  }
 
   // Typed access; each throws std::runtime_error when the type differs.
   [[nodiscard]] double number() const;

@@ -42,6 +42,12 @@ struct GlyphQuad {
 [[nodiscard]] std::vector<GlyphQuad> layout_run(const GlyphFont &font, const std::vector<int> &run,
                                                 float x, float y);
 
+// A glyph's whole cell at (x, y), as the original draws text in fixed
+// 18 x 18 cells (0xbdc9b), and a run of them `advance` apart (0xbd720).
+[[nodiscard]] GlyphQuad glyph_cell(const GlyphFont &font, int glyph, float x, float y);
+[[nodiscard]] std::vector<GlyphQuad>
+layout_cells(const GlyphFont &font, const std::vector<int> &run, float x, float y, float advance);
+
 // Text that scrolls left through a clip rectangle and repeats (0x0be4b0):
 // the help line and the current music on the option screen.
 struct TickerStyle {

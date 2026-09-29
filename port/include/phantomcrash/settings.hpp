@@ -1,13 +1,22 @@
 #pragma once
 
+#include "phantomcrash/area_roster.hpp"
 #include "phantomcrash/frame_rate.hpp"
 #include "phantomcrash/input.hpp"
 #include "phantomcrash/json.hpp"
+#include "phantomcrash/garage.hpp"
+#include "phantomcrash/music_library.hpp"
+#include "phantomcrash/vs_scoobee.hpp"
 
 #include <array>
 #include <cstddef>
+#include <cstdint>
 #include <filesystem>
+#include <map>
+#include <optional>
+#include <string>
 #include <string_view>
+#include <vector>
 
 namespace phantomcrash {
 
@@ -42,6 +51,12 @@ struct ControlOptions {
   // Action -> bindable button; always a permutation (0x1dd500 is the default).
   std::array<int, control_action_count> bindings{5, 4, 1, 3, 7, 6, 0, 2};
 
+  // 0x027d5a turns CONTROL TYPE into bit 0 of the robots' control flags
+  // (+0x2740), set for Standard.
+  [[nodiscard]] bool standard() const noexcept {
+    return type == 0;
+  }
+
   bool operator==(const ControlOptions &) const = default;
 };
 
@@ -66,7 +81,79 @@ struct GameOptions {
 [[nodiscard]] int *game_value(GameOptions &options, std::string_view name);
 [[nodiscard]] const int *game_value(const GameOptions &options, std::string_view name);
 
+// The quest's save data. The port keeps it with the settings until it has
+// save files; NEW GAME starts a fresh one (the original's scenes 9 and 46).
+// The most money a game holds, in NY (0xb1ebb clamps every payment to it).
+inline constexpr std::int64_t money_limit = 99'999'999;
+
+struct QuestSave {
+  // The player's name from NAME ENTRY (the original's save + 0x280c, eight
+  // characters at most), as UTF-8; empty until entered.
+  std::string player_name;
+  // The story events (original scene ids) already played; each plays once.
+  std::vector<int> seen_events;
+  // The day, counted from 0 (shown from DAY-01), and the money in NY, as
+  // the HUD shows them. NEW GAME sets them from data/story/new_game.json.
+  int day{};
+  std::int64_t money{};
+  // The game has been cleared: the staff roll (scene 37) has played. The
+  // original keeps it in the money word's top bit (set 0x6df71, cleared by
+  // a new game 0x6df99, read 0x6dfc1).
+  bool cleared{};
+  // The name of the Scoobee being ridden (its hangar record + 0x22, 18
+  // bytes), shown on the RIDING SV plate; empty while none is (a new game
+  // rides none, 0xb9668).
+  std::string riding;
+  // When the game was last saved, local time as "YYYY-MM-DD HH:MM:SS"; the
+  // LOAD GAME list shows it (the original keeps a FILETIME in each slot's
+  // header). Empty until the settings are first written with a game.
+  std::string saved;
+  // The NY the town map has paid for spinning the rider round, 10 a turn up
+  // to 100 a day (the original's + 0x113c8, read by 0x3eff2; sleep resets it).
+  int spin_paid{};
+  // The nights slept (+ 0x5ffc, up to 9999), and the laps of the 60-day
+  // calendar a cleared game has made (+ 0x604c): data/ui/sleep.json.
+  int total_days{};
+  int laps{};
+  // The contests won (the original's flag bytes at + 0x990, one per
+  // contest): the schedule marks them CLEAR.
+  std::vector<int> won_contests;
+  // The contests' team places beaten (the original's bytes at + team x 9,
+  // set by a battle's end, 0x07675e), as beaten_key(team, place). The day's
+  // rosters draw the unbeaten more often and a team's leader only once all
+  // its members are beaten.
+  std::vector<int> beaten;
+  // Each RUMBLING area's opponents for the day (area_roster.hpp), live
+  // while the game runs (rumbling_world.hpp).
+  std::array<AreaRoster, roster_areas> rosters{};
+  // The live RUMBLING that last wrote the rosters, in this run only (not
+  // saved): a quest it did not write (a new game, a loaded one) is taken up
+  // as it is; a screen's older copy of its own gives way to it.
+  std::int64_t live_epoch{};
+  // The counts RECORDS shows, by the names data/ui/records.json gives them
+  // (the original's words at + 0x5fe0 to + 0x6014): battles, shots down,
+  // prize money, saves, play time in seconds. Missing counts are 0.
+  std::map<std::string, std::int64_t> records;
+  // The tracks owned and the battle programs (BATTLE MUSIC).
+  MusicLibrary music;
+  // The hangars, the parts stock and the Scoobee ridden. A save without
+  // one has a new game's (data/story/new_game.json).
+  Garage garage{new_game_garage(garage_new_game_hangars)};
+
+  bool operator==(const QuestSave &) const = default;
+};
+
 // Desktop settings chosen from the window menu, kept between runs.
+inline constexpr std::size_t save_slot_count = 3;
+
+// A game as the settings file writes it. Missing members keep their
+// defaults.
+[[nodiscard]] QuestSave quest_from_json(const json::JsonValue &value);
+[[nodiscard]] json::JsonValue quest_to_json(const QuestSave &quest);
+
+inline constexpr int default_rumble_robots = 10;
+inline constexpr int max_rumble_robots = 16;
+
 struct Settings {
   // VSync on and no cap by default: presentation follows the display. VSync
   // off with no cap is the unlimited mode.
@@ -74,7 +161,22 @@ struct Settings {
   bool fullscreen{};
   bool frame_counter{};
   bool pause_unfocused{true};
+  // The live RUMBLING's robots in each area, the player's place among them
+  // (data/world/rumbling.json roster "live_size"); 0 keeps the original's
+  // roster size. A port addition.
+  int rumble_robots{default_rumble_robots};
   GameOptions game;
+  QuestSave quest;
+  // The games SAVE has written to its slots, for LOAD GAME (the original's
+  // phantomcrash.sav holds three, 0x06b3ed).
+  std::array<std::optional<QuestSave>, save_slot_count> save_slots{};
+  // The settings file, or its save slots, could not be read: LOAD GAME and
+  // SAVE only say so (the original's corrupt phantomcrash.sav, 0x21ccdc).
+  // Not written; the slots are written again as they now are.
+  bool save_slots_unreadable{};
+  // The Scoobees KEEP SV has kept for the VS mode, oldest first; they
+  // belong to no one game (the original's memory unit files).
+  std::vector<VsScoobee> vs_scoobees;
 
   bool operator==(const Settings &) const = default;
 };

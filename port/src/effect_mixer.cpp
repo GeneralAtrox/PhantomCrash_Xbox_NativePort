@@ -1,0 +1,123 @@
+#include "phantomcrash/effect_mixer.hpp"
+
+#include <algorithm>
+#include <utility>
+
+namespace phantomcrash {
+
+float pan_left(const float pan) noexcept {
+  return std::clamp(1.0F - pan, 0.0F, 1.0F);
+}
+
+float pan_right(const float pan) noexcept {
+  return std::clamp(1.0F + pan, 0.0F, 1.0F);
+}
+
+EffectMixer::EffectMixer(const std::size_t voices) : voices_(std::max<std::size_t>(voices, 1)) {}
+
+EffectMixer::Voice &EffectMixer::free_voice() {
+  Voice *oldest = nullptr;
+  for (Voice &voice : voices_) {
+    if (voice.samples == nullptr) {
+      return voice;
+    }
+    if (!voice.loop && (oldest == nullptr || voice.started < oldest->started)) {
+      oldest = &voice;
+    }
+  }
+  if (oldest != nullptr) {
+    return *oldest;
+  }
+  return *std::ranges::min_element(voices_, {}, &Voice::started);
+}
+
+void EffectMixer::play(std::shared_ptr<const EffectSamples> samples, const std::string &name,
+                       const float volume, const SoundMix mix, const bool loop,
+                       const std::uint64_t key) {
+  if (samples == nullptr || samples->frames() == 0) {
+    return;
+  }
+  Voice *voice = nullptr;
+  if (key != 0) {
+    const auto found = std::ranges::find(voices_, key, &Voice::key);
+    voice = found != voices_.end() ? &*found : nullptr;
+  }
+  if (voice == nullptr) {
+    voice = &free_voice();
+  }
+  *voice = Voice{std::move(samples), name, volume, mix, loop, key, 0, ++count_};
+}
+
+void EffectMixer::set_mix(const std::uint64_t key, const SoundMix mix) {
+  for (Voice &voice : voices_) {
+    if (key != 0 && voice.key == key) {
+      voice.mix = mix;
+    }
+  }
+}
+
+void EffectMixer::stop_key(const std::uint64_t key) {
+  for (Voice &voice : voices_) {
+    if (key != 0 && voice.key == key) {
+      voice = Voice{};
+    }
+  }
+}
+
+void EffectMixer::stop_name(const std::string &name) {
+  for (Voice &voice : voices_) {
+    if (voice.samples != nullptr && voice.name == name) {
+      voice = Voice{};
+    }
+  }
+}
+
+void EffectMixer::stop_all() {
+  std::ranges::fill(voices_, Voice{});
+}
+
+bool EffectMixer::playing(const std::uint64_t key) const {
+  return std::ranges::any_of(voices_, [&](const Voice &voice) {
+    return key != 0 && voice.key == key && voice.samples != nullptr;
+  });
+}
+
+std::size_t EffectMixer::active() const {
+  return static_cast<std::size_t>(
+      std::ranges::count_if(voices_, [](const Voice &voice) { return voice.samples != nullptr; }));
+}
+
+void EffectMixer::mix(float *out, const std::size_t frames) {
+  std::fill(out, out + frames * 2, 0.0F);
+  for (Voice &voice : voices_) {
+    if (voice.samples == nullptr) {
+      continue;
+    }
+    const EffectSamples &sound = *voice.samples;
+    const auto channels = static_cast<std::size_t>(sound.channels);
+    const std::size_t length = sound.frames();
+    const float level = voice.volume * voice.mix.gain * gain_;
+    const float left = level * pan_left(voice.mix.pan);
+    const float right = level * pan_right(voice.mix.pan);
+    for (std::size_t frame = 0; frame < frames; ++frame) {
+      if (voice.at >= length) {
+        if (!voice.loop) {
+          voice = Voice{};
+          break;
+        }
+        voice.at = 0;
+      }
+      const float *source = sound.samples.data() + voice.at * channels;
+      const float first = source[0];
+      const float second = channels > 1 ? source[1] : first;
+      out[frame * 2] += first * left;
+      out[frame * 2 + 1] += second * right;
+      ++voice.at;
+    }
+  }
+  for (std::size_t index = 0; index < frames * 2; ++index) {
+    out[index] = std::clamp(out[index], -1.0F, 1.0F);
+  }
+}
+
+} // namespace phantomcrash

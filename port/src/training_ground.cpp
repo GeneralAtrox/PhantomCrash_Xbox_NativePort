@@ -1,0 +1,149 @@
+#include "phantomcrash/training_ground.hpp"
+
+#include "phantomcrash/json_fields.hpp"
+
+#include <algorithm>
+#include <cmath>
+#include <stdexcept>
+
+namespace phantomcrash {
+namespace {
+
+Vec3 vec3_or(const json::JsonValue &value, const char *key, const Vec3 fallback) {
+  const json::JsonValue *found = value.find(key);
+  if (found == nullptr) {
+    return fallback;
+  }
+  const auto v = json::numbers<3>(*found, key);
+  return {v[0], v[1], v[2]};
+}
+
+float float_or(const json::JsonValue &value, const char *key, const float fallback) {
+  return static_cast<float>(value.number_or(key, fallback));
+}
+
+ScreenPass parse_screen(const json::JsonValue &value) {
+  constexpr float byte_max = 255.0F;
+  ScreenPass screen;
+  if (const json::JsonValue *tint = value.find("tint_argb")) {
+    const auto argb = json::numbers<4>(*tint, "tint_argb");
+    screen.tint = {argb[1] / byte_max, argb[2] / byte_max, argb[3] / byte_max};
+  }
+  if (const json::JsonValue *blur = value.find("depth_of_field")) {
+    screen.depth_of_field = blur->boolean_or("enabled", true);
+    screen.focus = float_or(*blur, "focus", screen.focus);
+    screen.focus_scale = float_or(*blur, "focus_scale", screen.focus_scale);
+    screen.focus_base = float_or(*blur, "focus_base", screen.focus_base);
+    screen.ramp = float_or(*blur, "ramp", screen.ramp);
+    screen.depth_near = float_or(*blur, "depth_near", screen.depth_near);
+    screen.depth_far = float_or(*blur, "depth_far", screen.depth_far);
+    screen.blur_texels = float_or(*blur, "blur_texels", screen.blur_texels);
+  }
+  return screen;
+}
+
+StageLighting parse_lighting(const json::JsonValue &value) {
+  StageLighting lighting;
+  if (const json::JsonValue *light = value.find("lighting")) {
+    lighting.ambient = vec3_or(*light, "ambient", lighting.ambient);
+    lighting.sun_direction = normalize(vec3_or(*light, "sun_direction", lighting.sun_direction));
+    lighting.sun_colour = vec3_or(*light, "sun_colour", lighting.sun_colour);
+    lighting.clear_colour = vec3_or(*light, "clear_colour", lighting.clear_colour);
+    if (const json::JsonValue *shadow = light->find("shadow_colour")) {
+      lighting.shadow_colour = json::numbers<4>(*shadow, "shadow_colour");
+    }
+  }
+  if (const json::JsonValue *fog = value.find("fog")) {
+    lighting.fog = fog->boolean_or("enabled", lighting.fog);
+    lighting.fog_colour = vec3_or(*fog, "colour", lighting.fog_colour);
+    lighting.fog_start = float_or(*fog, "start", lighting.fog_start);
+    lighting.fog_end = float_or(*fog, "end", lighting.fog_end);
+  }
+  if (const json::JsonValue *screen = value.find("screen")) {
+    lighting.screen = parse_screen(*screen);
+  }
+  return lighting;
+}
+
+} // namespace
+
+std::map<std::string, StageDefinition> parse_stages(const json::JsonValue &document) {
+  std::map<std::string, StageDefinition> stages;
+  for (const auto &[name, value] : json::required(document, "stages").object()) {
+    try {
+      StageDefinition stage;
+      stage.name = name;
+      stage.model = value.string_or("model", "");
+      stage.collision = value.string_or("collision", "");
+      stage.enemy_path = value.string_or("enemy_path", "");
+      if (const json::JsonValue *sky = value.find("sky_nodes")) {
+        for (const auto &node : sky->array()) {
+          stage.sky_nodes.push_back(node.string());
+        }
+      }
+      stage.lighting = parse_lighting(value);
+      stage.scene_stage = static_cast<int>(value.number_or("scene_stage", -1.0));
+      stage.door_model = value.string_or("door_model", "");
+      stages.emplace(name, std::move(stage));
+    } catch (const std::exception &error) {
+      throw std::runtime_error("stages.json, stage " + name + ": " + error.what());
+    }
+  }
+  return stages;
+}
+
+void apply_stage(SceneTuning &scenes, const StageDefinition &stage) {
+  if (stage.scene_stage >= 0) {
+    scenes.stage = stage.scene_stage;
+  }
+  if (!stage.door_model.empty()) {
+    scenes.doors.model = stage.door_model;
+  }
+}
+
+TrainingScript parse_training(const json::JsonValue &document) {
+  try {
+    TrainingScript script;
+    script.stage = json::required(document, "stage").string();
+    script.music = document.string_or("music", "");
+    script.return_to = document.string_or("return_to", "pepper_guide");
+    for (const auto &[name, value] : json::required(document, "lessons").object()) {
+      script.lessons[name] = {value.string_or("title", name),
+                              static_cast<int>(value.number_or("mode", 3)),
+                              static_cast<int>(value.number_or("screens", 1))};
+    }
+    if (const json::JsonValue *robots = document.find("robots"); robots && robots->is_object()) {
+      for (const auto &[name, value] : robots->object()) {
+        script.robots[name] = parse_robot_parts(value);
+      }
+    }
+    if (const json::JsonValue *battle = document.find("battle")) {
+      script.battle = parse_training_battle(*battle);
+    }
+    return script;
+  } catch (const std::exception &error) {
+    throw std::runtime_error(std::string("training.json: ") + error.what());
+  }
+}
+
+RobotLoadout training_loadout(const TrainingScript &script, const std::string &name,
+                              const TrainingRobot &robot) {
+  RobotLoadout loadout;
+  loadout.chip = robot.chip;
+  loadout.chip_level = robot.chip_level;
+  if (const auto parts = script.robots.find(name); parts != script.robots.end()) {
+    loadout.body = parts->second.body;
+    loadout.body_level = robot.body_level;
+    loadout.legs = parts->second.legs;
+    loadout.legs_level = robot.legs_level;
+  }
+  const auto &weapons = script.battle.settings.weapons;
+  for (const std::string &weapon : robot.weapons) {
+    if (const auto found = weapons.find(weapon); found != weapons.end() && found->second.part) {
+      loadout.weapons.push_back(*found->second.part);
+    }
+  }
+  return loadout;
+}
+
+} // namespace phantomcrash

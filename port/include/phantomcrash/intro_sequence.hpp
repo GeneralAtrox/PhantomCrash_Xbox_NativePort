@@ -6,6 +6,7 @@
 #include <array>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace phantomcrash {
@@ -22,6 +23,9 @@ struct SkipRule {
   Buttons buttons{button::any};
   double after{};                 // seconds into the step before skipping is allowed
   std::optional<double> fade_out; // replaces the step's fade-out when skipped
+  std::string sound;              // played on the skip, if any
+  // Skipping ends the whole sequence and goes here instead of the next step.
+  std::optional<std::string> then;
 };
 
 struct IntroStep {
@@ -36,6 +40,9 @@ struct IntroStep {
   double hold{};
   double fade_out{};
   double end_hold{}; // movies: keep the last frame this long after a natural end
+  // Movies: start again whenever the movie ends; the step then lasts `hold`
+  // seconds from its start before its fade-out.
+  bool loop{};
   SkipRule skip;
 };
 
@@ -71,14 +78,18 @@ public:
   [[nodiscard]] std::optional<std::string> next_movie_file() const;
   // True while the current movie should keep playing (not ended or skipped).
   [[nodiscard]] bool movie_playing() const noexcept {
-    return phase_ == Phase::main;
+    return phase_ == Phase::fade_in || phase_ == Phase::main;
   }
   // Opacity of an image step's layers.
   [[nodiscard]] float image_alpha() const noexcept;
   // Black drawn over everything: a movie's fade-out.
   [[nodiscard]] float black_alpha() const noexcept;
   [[nodiscard]] const std::string &then() const noexcept {
-    return script_.then;
+    return jump_ ? *jump_ : script_.then;
+  }
+  // The sounds to play since the last call.
+  [[nodiscard]] std::vector<std::string> take_sounds() {
+    return std::exchange(sounds_, {});
   }
 
 private:
@@ -99,6 +110,8 @@ private:
   double fade_seconds_{}; // length of the current fade-out
   float fade_from_{1.0F}; // image opacity when the fade-out began
   int generation_{};
+  std::optional<std::string> jump_; // a skip's own destination, once taken
+  std::vector<std::string> sounds_;
 };
 
 } // namespace phantomcrash

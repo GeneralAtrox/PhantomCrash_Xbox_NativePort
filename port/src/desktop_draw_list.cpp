@@ -2,20 +2,48 @@
 
 #include "desktop_text.hpp"
 
+#include <SDL3/SDL.h>
+
 #include <algorithm>
+#include <cmath>
 #include <utility>
 
 namespace phantomcrash {
 
-void DrawList::sprite(const Sprite &source) {
-  commands_.push_back(
-      {source.layer, [this, copy = source] { draw_sprite(textures_, copy, viewport_, seconds_); }});
+void DrawList::sprite(const Sprite &source, const float alpha) {
+  if (alpha <= 0.0F) {
+    return;
+  }
+  commands_.push_back({source.layer, [this, copy = source, alpha] {
+                         draw_sprite(textures_, copy, viewport_, seconds_, alpha);
+                       }});
+}
+
+void DrawList::sprite(const Sprite &source, const std::array<float, 4> &clip, const float alpha) {
+  if (alpha <= 0.0F) {
+    return;
+  }
+  commands_.push_back({source.layer, [this, copy = source, clip, alpha] {
+                         const auto [left, top, right, bottom] = clip;
+                         const auto x0 = static_cast<int>(std::lround(viewport_.to_pixel_x(left)));
+                         const auto y0 = static_cast<int>(std::lround(viewport_.to_pixel_y(top)));
+                         const auto x1 = static_cast<int>(std::lround(viewport_.to_pixel_x(right)));
+                         const auto y1 =
+                             static_cast<int>(std::lround(viewport_.to_pixel_y(bottom)));
+                         const SDL_Rect pixels{x0, y0, x1 - x0, y1 - y0};
+                         SDL_SetRenderClipRect(textures_.renderer(), &pixels);
+                         draw_sprite(textures_, copy, viewport_, seconds_, alpha);
+                         SDL_SetRenderClipRect(textures_.renderer(), nullptr);
+                       }});
 }
 
 void DrawList::text(const int layer, std::vector<GlyphQuad> glyphs, const std::uint32_t colour,
-                    const std::optional<std::array<float, 4>> &clip) {
-  commands_.push_back({layer, [this, glyphs = std::move(glyphs), colour, clip] {
-                         draw_glyphs(textures_, font_, glyphs, viewport_, colour, clip);
+                    const std::optional<std::array<float, 4>> &clip, const float alpha) {
+  if (alpha <= 0.0F) {
+    return;
+  }
+  commands_.push_back({layer, [this, glyphs = std::move(glyphs), colour, clip, alpha] {
+                         draw_glyphs(textures_, font_, glyphs, viewport_, colour, clip, alpha);
                        }});
 }
 
@@ -51,7 +79,7 @@ void DrawList::message_box(const MessageBox &box) {
   if (box.kind() == MessageBox::Kind::question) {
     choice(style.yes, box.choice() == 0);
     choice(style.no, box.choice() == 1);
-  } else {
+  } else if (box.kind() == MessageBox::Kind::notice) {
     choice(style.ok, true);
   }
 }

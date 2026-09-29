@@ -7,23 +7,20 @@
 #include <utility>
 
 namespace phantomcrash {
-namespace {
-
+using json::member;
 using json::numbers;
 using json::required;
 
 ChoiceSprites parse_choice(const json::JsonValue &value) {
   ChoiceSprites choice;
-  choice.normal = parse_sprite(required(value, "normal"));
-  choice.selected = parse_sprite(required(value, "selected"));
+  choice.normal = member(value, "normal", parse_sprite);
+  choice.selected = member(value, "selected", parse_sprite);
   // The selected sprite sits where the normal one does unless it says otherwise.
   if (required(value, "selected").find("position") == nullptr) {
     choice.selected.position = choice.normal.position;
   }
   return choice;
 }
-
-} // namespace
 
 MessageBoxStyle parse_message_box(const json::JsonValue &document) {
   const char *entry = "window";

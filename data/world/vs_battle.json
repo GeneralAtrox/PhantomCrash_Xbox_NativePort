@@ -1,0 +1,9 @@
+{
+ "notes": [
+  "The battle VS MODE (data/ui/vs_mode.json) leads to: the original's scene 6 on the chosen stage (vs_mode's session stage, area * 2 + night) with each entered player's Scoobee. Until the area stages and the versus rules (wins, losses and the round's end) are ported it runs on the training ground's FreePlay (world/training.json) split into a screen for each player, the first entered player's Scoobee as the player's robot and the other screens following the drones, and returns to the VS mode's area select."
+ ],
+ "battle": {
+  "return_to": "vs_mode",
+  "lesson": {"title": "VS MODE", "mode": 3}
+ }
+}

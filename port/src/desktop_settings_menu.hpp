@@ -3,13 +3,18 @@
 #include "phantomcrash/settings.hpp"
 
 #include <memory>
+#include <optional>
+#include <string>
+#include <vector>
 
 namespace phantomcrash {
 
-// The window's Settings menu (after the Lodoss stage menu): Fullscreen,
+// The window's menu bar (after the Lodoss stage menu). Settings: Fullscreen,
 // VSync, Frame Rate Cap..., Frame Rate Counter and Pause When Unfocused.
+// Tools: Level Select, which jumps straight to a screen for testing.
 // Commands arrive through the window procedure; the game loop reads
-// settings() each frame. Windows only; elsewhere it holds the settings.
+// settings() and take_level() each frame. Windows only; elsewhere it holds
+// the settings.
 class SettingsMenu final {
 public:
   SettingsMenu(void *native_window, const Settings &initial);
@@ -25,6 +30,10 @@ public:
   // True once after the user interacts with the menu, so the loop can drop
   // the time spent inside the menu instead of catching up.
   bool take_interaction();
+  // Tools > Level Select's entries, in order.
+  void set_levels(const std::vector<std::string> &labels);
+  // The entry picked from Level Select since the last call, if any.
+  [[nodiscard]] std::optional<int> take_level();
 
 private:
   struct Impl;

@@ -7,6 +7,9 @@ namespace phantomcrash {
 namespace {
 
 constexpr int music_chunk_bytes = 64 * 1024;
+// Frames of queued music kept for music_heard(): about 3 s, well over the
+// queue ahead plus a chunk.
+constexpr std::size_t heard_frames = std::size_t{1} << 17U;
 
 std::uint32_t read_u32(const std::uint8_t *bytes) {
   return bytes[0] | (bytes[1] << 8) | (bytes[2] << 16) |
@@ -63,7 +66,7 @@ bool parse_wav(SDL_IOStream *file, SDL_AudioSpec &spec, Sint64 &start, Sint64 &e
 
 AudioMixer::AudioMixer(const DataRoots &roots, const json::JsonValue &music,
                        const json::JsonValue &effects)
-    : roots_(roots) {
+    : roots_(roots), heard_(heard_frames) {
   if (const auto *tracks = music.find("tracks")) {
     for (const auto &[name, value] : tracks->object()) {
       tracks_[name] = {value.string_or("file", ""), value.boolean_or("loop", true),
@@ -81,20 +84,12 @@ AudioMixer::AudioMixer(const DataRoots &roots, const json::JsonValue &music,
     SDL_Log("No audio device for music and effects: %s", SDL_GetError());
     return;
   }
-  const SDL_AudioSpec initial{SDL_AUDIO_S16LE, 1, 44100};
-  for (auto &voice : voices_) {
-    voice = SDL_CreateAudioStream(&initial, nullptr);
-    if (voice != nullptr) {
-      SDL_BindAudioStream(device_, voice);
-    }
-  }
+  open_effects();
 }
 
 AudioMixer::~AudioMixer() {
   stop_music();
-  for (auto *voice : voices_) {
-    SDL_DestroyAudioStream(voice);
-  }
+  SDL_DestroyAudioStream(effects_stream_);
   if (device_ != 0) {
     SDL_CloseAudioDevice(device_);
   }
@@ -103,6 +98,7 @@ AudioMixer::~AudioMixer() {
 void AudioMixer::stop_music() {
   SDL_DestroyAudioStream(music_);
   music_ = nullptr;
+  queued_frames_ = 0;
   if (music_file_ != nullptr) {
     SDL_CloseIO(music_file_);
     music_file_ = nullptr;
@@ -126,29 +122,35 @@ bool AudioMixer::open_music(const Track &track) {
     SDL_Log("Music stream failed: %s", SDL_GetError());
     return false;
   }
-  music_track_volume_ = track.volume;
+  music_track_volume_ = track.volume * music_volume_;
   SDL_SetAudioStreamGain(music_, music_track_volume_ * music_gain_);
   music_loop_ = track.loop;
   music_bytes_per_second_ = SDL_AUDIO_FRAMESIZE(spec) * spec.freq;
+  music_spec_ = spec;
   SDL_SeekIO(music_file_, data_start_, SDL_IO_SEEK_SET);
   return true;
 }
 
-void AudioMixer::play_music(const std::string &track) {
+void AudioMixer::play_music(const std::string &track, const float volume, const bool loop) {
   if (track == track_) {
     return;
   }
   track_ = track;
+  music_volume_ = volume;
   stop_music();
   if (track.empty() || device_ == 0) {
     return;
   }
-  const auto found = tracks_.find(track);
-  if (found == tracks_.end()) {
-    SDL_Log("No music track named %s", track.c_str());
-    return;
+  Track file{track, loop, 1.0F};
+  if (track.find('/') == std::string::npos) {
+    const auto found = tracks_.find(track);
+    if (found == tracks_.end()) {
+      SDL_Log("No music track named %s", track.c_str());
+      return;
+    }
+    file = found->second;
   }
-  if (!open_music(found->second)) {
+  if (!open_music(file)) {
     stop_music();
     return;
   }
@@ -166,6 +168,9 @@ void AudioMixer::update() {
     if (position >= data_end_) {
       if (!music_loop_) {
         SDL_FlushAudioStream(music_);
+        if (SDL_GetAudioStreamQueued(music_) == 0) {
+          stop_music();
+        }
         return;
       }
       SDL_SeekIO(music_file_, data_start_, SDL_IO_SEEK_SET);
@@ -180,64 +185,50 @@ void AudioMixer::update() {
       return;
     }
     SDL_PutAudioStreamData(music_, buffer.data(), static_cast<int>(got));
+    keep_heard(buffer.data(), got);
   }
 }
 
-AudioMixer::Effect *AudioMixer::effect(const std::string &name) {
-  auto &loaded = effects_[name];
-  if (loaded.loaded) {
-    return loaded.samples.empty() ? nullptr : &loaded;
+void AudioMixer::keep_heard(const std::uint8_t *bytes, const std::size_t size) {
+  const int channels = std::max(music_spec_.channels, 1);
+  const auto frame = static_cast<std::size_t>(SDL_AUDIO_FRAMESIZE(music_spec_));
+  if (frame == 0) {
+    return;
   }
-  loaded.loaded = true;
-  std::pair<std::string, float> source{name, 1.0F};
-  if (name.find('/') == std::string::npos) {
-    const auto file = effect_files_.find(name);
-    if (file == effect_files_.end()) {
-      SDL_Log("No sound effect named %s", name.c_str());
-      return nullptr;
+  const std::size_t sample_bytes = frame / static_cast<std::size_t>(channels);
+  for (std::size_t at = 0; at + frame <= size; at += frame) {
+    float sum = 0.0F;
+    for (int channel = 0; channel < channels; ++channel) {
+      const std::uint8_t *sample = bytes + at + static_cast<std::size_t>(channel) * sample_bytes;
+      if (music_spec_.format == SDL_AUDIO_S16LE) {
+        sum += static_cast<float>(static_cast<std::int16_t>(read_u16(sample))) / 32768.0F;
+      } else if (music_spec_.format == SDL_AUDIO_U8) {
+        sum += (static_cast<float>(*sample) - 128.0F) / 128.0F;
+      } else {
+        float value = 0.0F;
+        std::memcpy(&value, sample, sizeof(value));
+        sum += value;
+      }
     }
-    source = file->second;
+    heard_[queued_frames_++ & (heard_frames - 1)] = sum / static_cast<float>(channels);
   }
-  loaded.volume = source.second;
-  const auto path = roots_.find_asset(source.first);
-  Uint8 *samples = nullptr;
-  Uint32 length = 0;
-  if (!path || !SDL_LoadWAV(path->string().c_str(), &loaded.spec, &samples, &length)) {
-    SDL_Log("Sound effect %s could not be loaded", source.first.c_str());
-    return nullptr;
-  }
-  loaded.samples.assign(samples, samples + length);
-  SDL_free(samples);
-  return &loaded;
 }
 
-void AudioMixer::play_sound(const std::string &name) {
-  Effect *sound = device_ != 0 ? effect(name) : nullptr;
-  if (sound == nullptr) {
-    return;
+bool AudioMixer::music_heard(std::vector<float> &samples, int &rate) const {
+  if (music_ == nullptr || music_track_volume_ * music_gain_ <= 0.0F) {
+    return false;
   }
-  // An idle voice, or else the one that started longest ago.
-  std::size_t chosen = 0;
-  for (std::size_t index = 0; index < voice_count; ++index) {
-    if (voices_[index] != nullptr && SDL_GetAudioStreamQueued(voices_[index]) == 0) {
-      chosen = index;
-      break;
-    }
-    if (voice_started_[index] < voice_started_[chosen]) {
-      chosen = index;
-    }
+  // What is heard now is the last frame queued less those still waiting.
+  const auto waiting = static_cast<std::uint64_t>(std::max(SDL_GetAudioStreamQueued(music_), 0)) /
+                       static_cast<std::uint64_t>(SDL_AUDIO_FRAMESIZE(music_spec_));
+  const std::uint64_t now = queued_frames_ - std::min(waiting, queued_frames_);
+  const std::uint64_t count = std::min<std::uint64_t>(samples.size(), heard_frames);
+  for (std::uint64_t index = 0; index < count; ++index) {
+    const std::uint64_t at = now - count + index; // wraps below 0 before the track's start
+    samples[index] = at < now ? heard_[at & (heard_frames - 1)] : 0.0F;
   }
-  SDL_AudioStream *voice = voices_[chosen];
-  if (voice == nullptr) {
-    return;
-  }
-  voice_started_[chosen] = SDL_GetTicksNS();
-  voice_volume_[chosen] = sound->volume;
-  SDL_ClearAudioStream(voice);
-  SDL_SetAudioStreamFormat(voice, &sound->spec, nullptr);
-  SDL_SetAudioStreamGain(voice, sound->volume * effect_gain_);
-  SDL_PutAudioStreamData(voice, sound->samples.data(), static_cast<int>(sound->samples.size()));
-  SDL_FlushAudioStream(voice);
+  rate = music_spec_.freq;
+  return true;
 }
 
 void AudioMixer::set_volumes(const float music, const float effects) {
@@ -249,10 +240,8 @@ void AudioMixer::set_volumes(const float music, const float effects) {
   }
   if (effects != effect_gain_) {
     effect_gain_ = effects;
-    for (std::size_t index = 0; index < voice_count; ++index) {
-      if (voices_[index] != nullptr) {
-        SDL_SetAudioStreamGain(voices_[index], voice_volume_[index] * effect_gain_);
-      }
+    if (effects_stream_ != nullptr) {
+      SDL_SetAudioStreamGain(effects_stream_, effect_gain_);
     }
   }
 }

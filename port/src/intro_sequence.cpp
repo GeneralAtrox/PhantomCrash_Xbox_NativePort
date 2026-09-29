@@ -31,6 +31,12 @@ IntroStep parse_step(const json::JsonValue &value) {
     }
     step.rotate = value.boolean_or("rotate", false);
     step.end_hold = value.number_or("end_hold", 0.0);
+    step.loop = value.boolean_or("loop", false);
+    step.fade_in = value.number_or("fade_in", 0.0);
+    step.hold = value.number_or("hold", 0.0);
+    if (step.loop && step.hold <= 0.0) {
+      throw std::runtime_error("a looping movie needs a hold above zero");
+    }
   } else if (type == "image") {
     step.type = IntroStep::Type::image;
     for (const auto &layer : required(value, "layers").array()) {
@@ -53,6 +59,10 @@ IntroStep parse_step(const json::JsonValue &value) {
     step.skip.after = skip->number_or("after", 0.0);
     if (const auto *fade = skip->find("fade_out")) {
       step.skip.fade_out = fade->number();
+    }
+    step.skip.sound = skip->string_or("sound", "");
+    if (const auto *then = skip->find("then")) {
+      step.skip.then = then->string();
     }
   } else {
     step.skip.buttons = 0;
@@ -123,13 +133,11 @@ void IntroSequence::begin(const std::size_t index) {
   elapsed_ = step_elapsed_ = 0.0;
   fade_from_ = 1.0F;
   const auto *current = step();
-  phase_ = current != nullptr && current->type == IntroStep::Type::image && current->fade_in > 0.0
-               ? Phase::fade_in
-               : Phase::main;
+  phase_ = current != nullptr && current->fade_in > 0.0 ? Phase::fade_in : Phase::main;
 }
 
 void IntroSequence::next() {
-  begin(index_ + 1);
+  begin(jump_ ? active_.size() : index_ + 1);
 }
 
 void IntroSequence::end_step(const bool skipped) {
@@ -160,6 +168,10 @@ void IntroSequence::update(const double tick_seconds, const InputFrame &input,
                         step_elapsed_ >= current.skip.after &&
                         input.any_pressed(current.skip.buttons);
   if (can_skip) {
+    if (!current.skip.sound.empty()) {
+      sounds_.push_back(current.skip.sound);
+    }
+    jump_ = current.skip.then;
     end_step(true);
     return;
   }
@@ -171,7 +183,9 @@ void IntroSequence::update(const double tick_seconds, const InputFrame &input,
     }
     break;
   case Phase::main:
-    if (current.type == IntroStep::Type::movie ? movie_finished : elapsed_ >= current.hold) {
+    if (current.loop                             ? step_elapsed_ >= current.hold
+        : current.type == IntroStep::Type::movie ? movie_finished
+                                                 : elapsed_ >= current.hold) {
       end_step(false);
     }
     break;
@@ -210,7 +224,13 @@ float IntroSequence::image_alpha() const noexcept {
 
 float IntroSequence::black_alpha() const noexcept {
   const auto *current = step();
-  if (current == nullptr || current->type != IntroStep::Type::movie || phase_ != Phase::fade_out) {
+  if (current == nullptr || current->type != IntroStep::Type::movie) {
+    return 0.0F;
+  }
+  if (phase_ == Phase::fade_in) {
+    return static_cast<float>(1.0 - std::clamp(elapsed_ / current->fade_in, 0.0, 1.0));
+  }
+  if (phase_ != Phase::fade_out) {
     return 0.0F;
   }
   return static_cast<float>(std::clamp(elapsed_ / fade_seconds_, 0.0, 1.0));

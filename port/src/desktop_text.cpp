@@ -1,14 +1,16 @@
 #include "desktop_text.hpp"
 
+#include <algorithm>
 #include <cmath>
 
 namespace phantomcrash {
 
 void draw_glyphs(TextureCache &textures, const GlyphFont &font,
                  const std::vector<GlyphQuad> &glyphs, const Viewport &viewport,
-                 const std::uint32_t colour, const std::optional<std::array<float, 4>> &clip) {
+                 const std::uint32_t colour, const std::optional<std::array<float, 4>> &clip,
+                 const float alpha) {
   SDL_Texture *texture = textures.get(font.image);
-  if (texture == nullptr || glyphs.empty()) {
+  if (texture == nullptr || glyphs.empty() || alpha <= 0.0F) {
     return;
   }
   SDL_Renderer *renderer = textures.renderer();
@@ -23,7 +25,7 @@ void draw_glyphs(TextureCache &textures, const GlyphFont &font,
   }
   SDL_SetTextureColorMod(texture, static_cast<Uint8>(colour >> 16U),
                          static_cast<Uint8>(colour >> 8U), static_cast<Uint8>(colour));
-  SDL_SetTextureAlphaMod(texture, 255);
+  SDL_SetTextureAlphaMod(texture, static_cast<Uint8>(std::min(alpha, 1.0F) * 255.0F + 0.5F));
   for (const auto &glyph : glyphs) {
     const auto [left, top, right, bottom] = glyph.rect;
     const SDL_FRect source{left, top, right - left, bottom - top};

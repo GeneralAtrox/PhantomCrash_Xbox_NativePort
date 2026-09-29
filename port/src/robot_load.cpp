@@ -1,0 +1,163 @@
+// A robot's weight and the speed and jump its legs manage under it
+// (0x075f93, 0x075a36, 0x07c148, 0x07c1c4, 0x07c34e).
+#include "phantomcrash/robot_load.hpp"
+
+#include <algorithm>
+#include <cmath>
+
+namespace phantomcrash {
+namespace {
+
+// The legs' level trims up to a tenth off both factors (0x17ac38).
+constexpr float level_trim = 0.1F;
+// Overloaded, the factors fall with (capacity / weight) to this power.
+constexpr float overload_power = 10.0F;
+// The reference frame of the jump factor: body 0 and legs 0 at level 0.
+constexpr int reference_part = 0;
+// The dash value's range and the walk's, half of it (0x199f7c, 0x1b5ae0,
+// 0x17cd04, 0x19c64c).
+constexpr float dash_min = 20.0F;
+constexpr float dash_max = 2000.0F;
+constexpr float walk_min = 10.0F;
+constexpr float walk_max = 1000.0F;
+constexpr float walk_share = 0.5F;
+// The jump height's range (0x19f89c, 0x17ccd4).
+constexpr float jump_min = 2.5F;
+constexpr float jump_max = 100.0F;
+// Values over the model's motion speed give the playback rate (0x1b5ab4).
+constexpr float motion_rate_scale = 1.0F / 216.0F;
+
+template <typename Record>
+const Record *record(const std::vector<Record> &records, const int index) {
+  return index >= 0 && index < static_cast<int>(records.size())
+             ? &records[static_cast<std::size_t>(index)]
+             : nullptr;
+}
+
+float weight_of(const ArmourRecord *part, const int level) {
+  return part != nullptr ? part->weight.value(level) : 0.0F;
+}
+
+// 0x07c148 and 0x07c1c4: the frame's share of the weight, trimmed by the
+// legs' level and cut by any overload.
+float factor(const float frame, const LoadStats &load, const int legs_level) {
+  if (load.weight <= 0.0F) {
+    return 1.0F;
+  }
+  const float trim = 1.0F - static_cast<float>(legs_level) / part_level_max * level_trim;
+  float out = trim * std::sqrt(frame / load.weight);
+  if (load.capacity < load.weight) {
+    out *= std::pow(load.capacity / load.weight, overload_power);
+  }
+  return out;
+}
+
+} // namespace
+
+LoadStats load_stats(const PartTables &tables, const RobotLoadout &loadout) {
+  const ArmourRecord *body = record(tables.bodies, loadout.body);
+  const ArmourRecord *legs = record(tables.legs, loadout.legs);
+  LoadStats load;
+  load.weight = weight_of(body, loadout.body_level) + weight_of(legs, loadout.legs_level);
+  if (const ChipRecord *chip = tables.chip(loadout.chip)) {
+    load.weight += chip->weight.value(loadout.chip_level);
+  }
+  for (const PartRef &part : loadout.weapons) {
+    if (const WeaponRecord *weapon = tables.weapon(part)) {
+      load.weight += weapon->weight.value(part.level);
+    }
+  }
+  load.capacity = legs != nullptr ? legs->capacity.value(loadout.legs_level) : 0.0F;
+  const float frame = weight_of(body, 0) + weight_of(legs, 0);
+  const float reference = weight_of(record(tables.bodies, reference_part), 0) +
+                          weight_of(record(tables.legs, reference_part), 0);
+  load.speed_factor = factor(frame, load, loadout.legs_level);
+  load.jump_factor = factor(reference, load, loadout.legs_level);
+  return load;
+}
+
+LegsSpeeds legs_speeds(const PartTables &tables, const RobotLoadout &loadout,
+                       const LoadStats &load) {
+  const ArmourRecord *legs = record(tables.legs, loadout.legs);
+  if (legs == nullptr) {
+    return {};
+  }
+  LegsSpeeds speeds;
+  speeds.dash =
+      std::clamp(legs->speed.value(loadout.legs_level) * load.speed_factor, dash_min, dash_max);
+  speeds.walk = std::clamp(speeds.dash * walk_share, walk_min, walk_max);
+  speeds.jump =
+      std::clamp(legs->jump.value(loadout.legs_level) * load.jump_factor, jump_min, jump_max);
+  return speeds;
+}
+
+MovementTuning loaded_movement(const PartTables &tables, const RobotLoadout &loadout,
+                               const LoadStats &load, MovementTuning base) {
+  const float speed = load.speed_factor;
+  base.turn_degrees_per_second *= speed;
+  base.dash_turn_degrees_per_second *= speed;
+  const float jump = std::sqrt(std::max(0.0F, load.jump_factor));
+  base.jump_speed *= jump;
+  base.jump_boost *= jump;
+  const ArmourRecord *legs = record(tables.legs, loadout.legs);
+  if (legs == nullptr) {
+    return base;
+  }
+  const LegsSpeeds speeds = legs_speeds(tables, loadout, load);
+  const float dash = speeds.dash;
+  const float walk = speeds.walk;
+  const auto *motion = record(tables.leg_motion_speeds, legs->model);
+  const float walk_motion = motion != nullptr ? (*motion)[0] : 0.0F;
+  const float dash_motion = motion != nullptr ? (*motion)[1] : 0.0F;
+  const float walk_rate = walk_motion > 0.0F ? walk * motion_rate_scale / walk_motion : speed;
+  const float dash_rate = dash_motion > 0.0F ? dash * motion_rate_scale / dash_motion : speed;
+  base.walk_speed *= walk_rate;
+  base.back_speed *= walk_rate;
+  base.dash_speed *= dash_rate;
+  base.dash_back_speed *= dash_rate;
+  if (walk_motion > 0.0F) {
+    base.walk_motion_rate = walk_rate;
+  }
+  if (dash_motion > 0.0F) {
+    base.dash_motion_rate = dash_rate;
+  }
+  return base;
+}
+
+RobotLoadout hangar_loadout(const Garage &garage, const int hangar) {
+  if (hangar < 0 || hangar >= static_cast<int>(garage.hangars.size())) {
+    return {};
+  }
+  return hangar_loadout(garage, garage.hangars[static_cast<std::size_t>(hangar)]);
+}
+
+RobotLoadout hangar_loadout(const Garage &garage, const Hangar &fitted) {
+  RobotLoadout loadout;
+  const auto entry = [&garage, &fitted](const PartSlot slot) -> const StockItem * {
+    const auto found = garage.stock.find(fitted.part(slot));
+    return found != garage.stock.end() ? &found->second : nullptr;
+  };
+  if (const StockItem *chip = entry(PartSlot::chip)) {
+    loadout.chip = chip->id;
+    loadout.chip_level = chip->level;
+  }
+  if (const StockItem *body = entry(PartSlot::body)) {
+    loadout.body = body->id;
+    loadout.body_level = body->level;
+  }
+  if (const StockItem *legs = entry(PartSlot::legs)) {
+    loadout.legs = legs->id;
+    loadout.legs_level = legs->level;
+  }
+  for (const PartSlot slot : {PartSlot::right_arm, PartSlot::left_arm, PartSlot::right_shoulder,
+                              PartSlot::left_shoulder}) {
+    if (const StockItem *weapon = entry(slot)) {
+      const WeaponTable table =
+          weapon->kind == PartKind::arm ? WeaponTable::arm : WeaponTable::shoulder;
+      loadout.weapons.push_back({table, weapon->id, weapon->level});
+    }
+  }
+  return loadout;
+}
+
+} // namespace phantomcrash

@@ -8,7 +8,9 @@ The workflow follows the Record of Lodoss War project: extract and study the
 user's disc, understand behaviour with Ghidra and the
 [xemu_decomp](https://github.com/GeneralAtrox/xemu_decomp) emulator fork,
 then reimplement it as a native SDL3 + Direct3D 11 program with modern
-resolution, widescreen and frame-rate support.
+resolution, widescreen and frame-rate support. Menus and movies stay 4:3;
+the in-game 3D goes widescreen, with a choice of 4:3 or widescreen HUD
+positions (`docs\WIDESCREEN.md`).
 
 ## Workspace
 
@@ -61,6 +63,9 @@ extraction):
 - `sound\sfx\<bank>\<nn>.wav`: every sound-effect bank entry as 16-bit PCM;
 - `tables\*.json`: the resource, sprite, scene-music and movie tables read
   from `default.xbe`.
+- `models\model\<name>.gltf`: the standalone models of `Media\model`
+  (stages, the garage, the town) as glTF 2.0, textured from the converted
+  PNGs ([the training ground notes](docs/TRAINING_GROUND.md)).
 
 Movies (`.sfd`) and music (`.wav`) are already open formats and stay in
 `files\Media`. `convert` also refuses a non-empty output; pass `--replace` to
@@ -102,10 +107,21 @@ The port finds `data\` by searching upward from the working directory and the
 executable, or takes `--root <folder>`. Other options: `--fullscreen`,
 `--windowed`, `--size <width>x<height>`, `--start <screen>` to begin on
 `title`, `main_menu`, `option`, `sound_config`, `button_config`,
-`screen_adjust` or a placeholder instead of the intro, and
-`--smoke-test [frames] [--capture <file.bmp>] [--press <frame>:<button>]` for
-a hidden, bounded run that can press buttons and save its last frame. A smoke
-run steps one 60 Hz logic tick per frame, so `--press` frames are game ticks.
+`screen_adjust`, `new_game`, `name_entry`, a talk scene (`event_48`) or a
+placeholder instead of the intro, `--settings <file.json>` to read (and
+save) that settings file instead of the one in your app data folder,
+`--rumble-robots <0-16>` for this run's live RUMBLING robots an area (the
+settings file's `rumble_robots`, 10 by default; 0 keeps the original's
+roster sizes), and
+`--smoke-test [frames] [--capture <file.bmp>] [--press <frame>[-<last>]:<button>]`
+`[--mouse <frame>:<x>,<y>[:click]]`
+for a hidden, bounded run that can press (or, with a range, hold) buttons,
+move the mouse to a point in the 640x480 space (and click there) and save
+its last frame. A smoke run steps one 60 Hz logic tick per frame, so
+`--press` and `--mouse` frames are game ticks. `--benchmark [seconds]`
+(20 by default) runs visibly without vsync or the frame cap, and prints
+the frame times once done; its `--press` frames are game ticks too
+(docs/TRAINING_GROUND.md, Performance).
 
 The port boots into the intro from `data\boot\intro.json`: Phantagram,
 Genki, the Sofdec/ADX screen and Dolby (first boot only), then an attract
@@ -113,11 +129,202 @@ movie. Any button skips the current step; one tap skips one step. Movies are
 read from the extracted `Media\movie` folder, or from `mods\` first.
 
 After the intro comes the title screen (press START) and the main menu, with
-the title music and menu sounds. QUEST MODE opens NEW GAME / LOAD GAME; the
-modes themselves are not ported yet, so they show a placeholder that returns
-to the menu. VS MODE needs two controllers (the keyboard counts as one). The
+the title music and menu sounds. QUEST MODE opens NEW GAME / LOAD GAME.
+
+NEW GAME stops the music and plays the opening movie (any button skips it;
+`data\story\new_game.json`). Then comes the first conversation, Salsa and
+Pepper at Club Wired (story event 48): the text types with its tick and
+Pepper blinks and talks. A or START shows the whole page, then turns it;
+holding L or R (Q/E) fast-forwards. The scripts are the converted
+`tables\events.json` and `tables\talk.json`, the timings
+`data\story\talk.json`. Then NAME ENTRY opens:
+
+- the D-pad moves over the Alphabet and Symbols grids and the tab row;
+- A types, X deletes, Y adds a space, L/R change page and B jumps to End.
+
+Ending with no name shows the original's "No input." notice. Otherwise the
+name is saved with the settings, event 49 plays, and Pepper's guide opens:
+a BEGINNERS CLUB list of questions (up/down scroll round, A opens a topic
+or plays Pepper's answer and comes back, B closes a topic or jumps to End).
+End leads on (event 50, then a town map placeholder, then Club Wired). Club
+Wired's wheel turns with left/right; A opens the item (Training is
+Pepper's guide again, Change alias NAME ENTRY), B jumps to Exit. These town
+screens, the talk scenes and NAME ENTRY share the town frame: the day, the
+money, the CURRENT MUSIC meter and the credit of the radio song, which
+Club Wired deals from the game's songs; the meter's seven bars follow the
+music heard, bass to treble, each against its own band's recent level so
+all of them move (`data\ui\frame.json`,
+`data\audio\radio.json`, `data\ui\club_wired.json`,
+`data\ui\pepper_guide.json`). With a Scoobee ridden (`"riding"` in the
+save's quest) the RIDING SV plate slides in on Club Wired and Pepper's
+guide; once the game is cleared (`"cleared"`), two of Pepper's answers
+change, as in the original. A new game has neither. The staff roll
+(`data\story\staff_roll.json`, `--start staff_roll`) marks the game cleared
+as it starts: the staff and epilogue movies, then THE END looping for 30
+seconds (A or START ends it after two seconds and goes to sleep; left to
+run out, the Kudryavka and cloud movies play first). The final contest that
+leads there is not ported yet, so a cleared game otherwise comes from a
+save: copy
+`port\tests\cleared_save.json` and pass the copy to `--settings` (the game
+saves back into that file). Each event plays once per game;
+the save remembers which have played. The
+screen is `data\ui\name_entry.json`. LOAD GAME (`data\ui\load_game.json`)
+shows the three save slots with the date and time each was saved and the
+chosen one's name, money, Scoobee and day; with no save, only the "No Game
+Records" notice. Choosing a slot loads its game, shows the original's
+"Finished loading" notice and leads on to the garage. The garage's SYSTEM
+menu has SAVE (`data\ui\save_game.json`, the same screen): an empty slot
+is written at once, a used one after asking. The slots are kept with the
+settings as `save_slots`. The port also keeps the game being played with
+the settings when it closes; until something is saved, LOAD GAME shows
+that game in the first slot.
+The garage (`data\ui\garage.json`) is Club Wired's wheel menu with the
+garage's picture and eight items: Hangar, battle music, modules, records,
+schedule, sleep, system and out to the town map; X jumps to the hangar and
+Y to sleep. Sleep, the schedule, the records, the system menu and battle
+music are ported (`data\ui\sleep.json`, `schedule.json`, `records.json`,
+`system.json`, `battle_music.json`; the schedule and records go back to
+wherever they were opened from). The hangar (`data\ui\hangar.json`,
+`--start hangar`) shows the ten hangars and EXIT as cards on a wheel:
+each card says whether the hangar is for sale, empty or ridden, its
+maker's emblem, its Scoobee's name and what keeps it from a battle
+(Equipment Imperfection, Underkill, Overweight). A hangar for sale is
+bought for 10,000 NY; an owned one's menu boards its Scoobee, test-drives
+the ridden one, shows its specs or assembles it. ASSEMBLE
+(`data\ui\assemble.json`, `--start assemble`) fits the stock into the
+hangar: a grid of body, legs, arm and back weapons, CHIP, options, paint
+and sticker, with NAME, DIS (take everything off), SPEC and EXIT. ARM and
+BACK first ask for the right or left side. The list greys out what cannot
+be fitted: another hangar holds it, it is of another maker than the robot
+(`same_maker`), a module needs more socket holes than are free, or a
+weapon sits on the other side. Gold is fitted here. A line's details show
+its own stats and the whole robot's before and after, with arrows, and
+confirm fits it or takes it off. A body with fewer socket holes takes the
+modules off. NAME names the hangar's Scoobee in NAME ENTRY. SV SPEC
+(`data\ui\sv_spec.json`, `--start sv_spec`) shows the SV chosen where it
+was opened from (a hangar, ASSEMBLE, a dealer's or the used SVs' offer):
+its name, its CHIP's name and the maker's badge, then on one page the
+durability, run and max speed, jump height, O.C time, weight, capacity
+and socket holes, and on the other its four weapons. Left and right turn
+the page. The SV stands beside the window in 3D, or shows its parts one by
+one when it has no body or legs (`data\ui\robot_preview.json`). TEST DRIVE
+(`data\world\test_drive.json`) takes the ridden Scoobee onto the
+training ground's FreePlay: its body, legs and CHIP at their levels, its
+paint, and each fitted weapon with its record's stats. BACK returns to the
+hangar. The contest's own opponents wait for the battle roster. MODULES
+(`data\ui\stock_module.json`, `--start modules`) is STOCK MODULE: the
+parts shop's category grid and lists over the player's own parts, CHIPs,
+modules, paints and stickers, with the hangar each is fitted in and its
+stats, trading nothing. The body, legs, arm or shoulder under the cursor is
+shown in 3D in the picture window. Start the
+garage with `--start garage`.
+RUMBLING (`data\ui\rumbling.json`, `--start rumbling`) is how Club
+Wired enters the day's contests: left and right choose Shinjuku, Shibuya,
+Aqualine or EXIT, each with its venue's picture by day or night (CLOSED
+when nothing is held), the contest, its class, the play fee and CLEAR once
+won. A opens the area's menu over its map: INSIDE RUMBLING enters with the
+ridden Scoobee, SV RENTAL with one of the rental SVs, SELECT SV opens the
+hangar and comes back to this menu, INFORMATION shows the contest's
+regulations and fee (the schedule's popup draws the same details), and
+EXIT goes back to the areas. Entering checks the regulation (the fee, a
+ridden Scoobee with a body, legs and CHIP, the class's maker, leg types and
+its no-overclock or rentals-only rule), then asks for one of the stage's
+gates and pays the fee. An Area Ranker's contest opens once its area's
+class leaders are beaten and the First Ranker's after three Area Rankers,
+and the ranker holds one gate. The rules are `data\world\rumbling.json`.
+Each day draws every area's opponents from its contest's teams (members
+until a team is beaten, then its leader; the extra team past the contest's
+reserve; the champion once all are beaten), saved with the game.
+WIRE HEADS DATA steps through them with left and right: pilot and chip
+faces, alias, SV and chip names, team and prize money (the ranker alone in
+a ranker's contest).
+The RUMBLING is live, a port addition (`data\world\rumbling.json` "live"):
+from the first screen of a game (not the intro, title or menus) each area's
+opponents fight one another on its stage off screen, 30 times a second,
+with the drones' simple AI (face the nearest other robot within range,
+keep a distance, fire what is loaded). One shot down (or out of rounds)
+leaves, and after `arrival_seconds` the next is drawn from those not out.
+An area holds `rumble_robots` robots, the player's place among them (so
+nine opponents by default). The area map shows each one where it stands by
+its maker and legs type, turned the way it faces, and WIRE HEADS DATA
+lights the shown one with a ring and gives its armour as it stands.
+Entering an area joins its battle as it is, on the area's stage by day or
+night; the player walks out of the gate among them. Those the player
+shoots down are beaten and their prize money paid on leaving. Positions,
+armour, rounds and shields are saved with the rosters, and a loaded game
+takes them up where they stood.
+KEEP SV (`data\ui\keep_sv.json`, `--start keep_sv`), from the system
+menu, keeps copies of the hangars' Scoobees for the VS mode. Its cards show
+each kept Scoobee's maker (or damaged, when its body is not in the
+tables); left and right move along them, the row scrolling past the fifth,
+and the chosen one's name and saving date show below. A kept Scoobee's
+menu opens SV SPEC on it or deletes it after asking. SAVE opens the hangar
+with its own EXIT card and a KEEP SV, SV SPEC and CANCEL menu
+(`origins` in `hangar.json`); it takes only an armed, complete Scoobee,
+and KEEP comes back and saves it, asking before it overwrites one of the
+same name. The kept Scoobees are stored in the settings file as
+`vs_scoobees`, as the original stored them on the memory unit.
+The town map (`data\ui\town_map.json`) links the places: left and right
+step round the garage, Club Wired, Wild Machines, PlusTech, Sonic Amp and
+the three dealers, the chosen place's sign pops up and the rider rides to
+it, and confirm goes there. The map starts on the place it was opened
+from. Sonic Amp (`data\ui\sonic_amp.json`) sells and previews tracks. The
+three SV dealers (`data\ui\dealer.json`; `--start dealer_ventuno`,
+`dealer_kojima` or `dealer_american_stars`) offer the day's three SVs from
+the calendar: the company profile, each SV's name plate and price, and
+BUY, which fits the SV into an empty hangar of the player's, asks whether
+to board it and has NAME ENTRY name its CHIP. The hangars and the parts
+stock they fill are saved with the quest (`"garage"`); the SVs, lineups,
+modules, paints and emblems are in the converted `tables\garage.json`.
+Wild Machines and PlusTech open their top menus (`data\ui\wild_machines.json`,
+`plustech.json`). Wild Machines sells used SVs (`used_sv.json`), CHIPs
+(`chip_shop.json`, BUY CHIP and SELL CHIP) and parts (`module_shop.json`,
+BUY MODULE and SELL MODULE): a grid of categories (bodies, legs, arm and
+backpack weapons, options, colouring patterns, stickers), the day's goods
+or the player's in a list, and the chosen one's stats (the lines by kind
+are in `part_stats.json`), bought into the stock or sold for half their
+price. The shops share the notice box, the stats panel and the windows
+popping open. PlusTech's UPLIFT (`uplift.json`) shows the player's CHIPs on
+SELL CHIP's cards and raises the chosen one's level for the difference in
+price. CUSTOMIZE (`customize.json`) lists the player's bodies, legs and
+weapons and tunes one lighter or heavier on the level meter, for the
+difference in price; a body tuned below its modules' socket holes has them
+taken off. SV SPEC is a placeholder that comes back; the first visit to each shop plays its story event. The mouse works there
+too: moving it onto a place's number chooses the place, and clicking a
+number, a name or the open sign goes there. The original spins the rider
+with the right thumbstick. Here he turns to face the mouse instead, and
+each full circle round him pays 10 NY, up to 100 NY per game. Start it
+with `--start town_map`.
+Pepper's four lessons (FreePlay, basic controls, attack methods, Optic
+Camouflage) start the tutorial battle on the training ground, the first 3D
+screen: the stage and the robots drawn with Direct3D 11 at the window's
+full resolution, the player's Scoobee posed from its skeletons and motions
+under a chase camera, and drones walking the stage's enemy path. Pepper's
+messages lead through each lesson's steps (walking, turning, dashing,
+jumping, dodging, twisting; kills with each weapon; Optic Camouflage) and
+hand back to her at the end; FreePlay runs until BACK. The lessons, weapons,
+buttons and tuning are in `data\world\training.json` and
+`data\world\stages.json` ([the training ground notes](docs/TRAINING_GROUND.md)).
+Start it with `--start training_free` (or `training_basic`,
+`training_attack`, `training_optic`); it needs the models from a current
+`convert` and the robots from `convert-robots`.
+VS MODE needs two controllers (the keyboard counts as one). The
 layouts, sounds and timings are in `data\ui\title.json`,
 `data\ui\main_menu.json` and `data\audio\`.
+
+VS MODE (`data\ui\vs_mode.json`, `--start vs_mode`) takes up to four
+players on the controller ports: the keyboard is port 1 and the gamepads
+the ports after it (with four gamepads, they take all four). Each port
+enters with A, and once two have entered Are you ready? leads to the
+Scoobee select. There each player chooses from their own strip, which
+holds the three preset Scoobees and the ones kept by KEEP SV. Then any
+player chooses the area and its time of day, or RANDOM; with three or more
+players only the arena is offered. The panels, strips, pictures and timings
+follow the original's scene 44. The versus battle is not ported yet: it
+runs as the training ground's FreePlay, one split screen per player, with
+the first player's Scoobee (`data\world\vs_battle.json`), then returns
+to the area select. `--press frame:button@port` presses a button on port
+1 to 4 in scripted runs.
 
 OPTION opens the option screen with its scrolling help line and the credit
 for the current music. VIBRATION asks YES/NO and is saved with the settings
@@ -135,7 +342,7 @@ updating the converter, run `python .\tools\phantomcrash.py convert
 --replace` again to get it.
 
 Controls: keyboard Enter = START, Z/Space = A, X/Backspace = B, Esc = BACK,
-arrows = D-pad; gamepads map by position (south = A). F11 or Alt+Enter toggles
+arrows or WASD = D-pad; gamepads map by position (south = A). F11 or Alt+Enter toggles
 fullscreen. The window's Settings menu has VSync, a frame-rate cap from 30 to
 144 FPS (VSync off with no cap is unlimited), a frame counter and Pause When
 Unfocused; choices are saved in `%APPDATA%\PhantomCrash\PhantomCrash Port`.

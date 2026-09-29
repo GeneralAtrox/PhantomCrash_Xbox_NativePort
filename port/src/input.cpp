@@ -8,7 +8,7 @@
 namespace phantomcrash {
 namespace {
 
-constexpr std::array<std::pair<std::string_view, Buttons>, 21> names{{
+constexpr std::array<std::pair<std::string_view, Buttons>, 25> names{{
     {"a", button::a},
     {"b", button::b},
     {"x", button::x},
@@ -25,6 +25,10 @@ constexpr std::array<std::pair<std::string_view, Buttons>, 21> names{{
     {"right_trigger", button::right_trigger},
     {"left_thumb", button::left_thumb},
     {"right_thumb", button::right_thumb},
+    {"pad_up", button::pad_up},
+    {"pad_down", button::pad_down},
+    {"pad_left", button::pad_left},
+    {"pad_right", button::pad_right},
     {"confirm", button::confirm},
     {"cancel", button::cancel},
     {"directions", button::directions},
@@ -39,6 +43,14 @@ InputFrame InputEdges::update(const Buttons held, const Buttons latched_presses,
   InputFrame frame{held, latched_presses | (held & ~previous_), controllers};
   previous_ = held;
   return frame;
+}
+
+InputFrame port_frame(const InputFrame &frame, const int port) {
+  if (port < 0 || port >= controller_ports) {
+    return {};
+  }
+  const PortInput &own = frame.ports[static_cast<std::size_t>(port)];
+  return InputFrame{own.held, own.pressed, own.connected ? 1 : 0};
 }
 
 std::optional<Buttons> button_from_name(const std::string_view name) {

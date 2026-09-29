@@ -2,6 +2,7 @@
 
 #include "desktop_frame_rate_dialog.hpp"
 
+#include <algorithm>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -20,12 +21,15 @@ struct SettingsMenu::Impl {
   static constexpr UINT frame_cap_command = 0x7202;
   static constexpr UINT frame_counter_command = 0x7203;
   static constexpr UINT pause_unfocused_command = 0x7204;
+  static constexpr UINT first_level_command = 0x7300;
+  static constexpr UINT last_level_command = 0x73ff;
 
   Settings settings;
   bool interacted{};
   bool visible{};
+  std::optional<int> level;
   HWND window{};
-  HMENU bar{}, menu{};
+  HMENU bar{}, menu{}, levels{};
 
   void check(UINT command, bool on) const {
     CheckMenuItem(menu, command, MF_BYCOMMAND | (on ? MF_CHECKED : MF_UNCHECKED));
@@ -43,6 +47,11 @@ struct SettingsMenu::Impl {
                 label.c_str());
   }
   bool command(UINT id) {
+    if (id >= first_level_command && id <= last_level_command) {
+      level = static_cast<int>(id - first_level_command);
+      interacted = true;
+      return true;
+    }
     switch (id) {
     case fullscreen_command:
       settings.fullscreen = !settings.fullscreen;
@@ -137,6 +146,13 @@ SettingsMenu::SettingsMenu(void *native_window, const Settings &initial)
                    L"&Pause When Unfocused")) {
     throw std::runtime_error("Unable to fill the Settings menu");
   }
+  HMENU tools = CreatePopupMenu();
+  state.levels = CreatePopupMenu();
+  if (!tools || !state.levels ||
+      !AppendMenuW(tools, MF_POPUP, reinterpret_cast<UINT_PTR>(state.levels), L"&Level Select") ||
+      !AppendMenuW(state.bar, MF_POPUP, reinterpret_cast<UINT_PTR>(tools), L"&Tools")) {
+    throw std::runtime_error("Unable to create the Tools menu");
+  }
   state.refresh();
   if (!SetWindowSubclass(hwnd, &Impl::message, 1, reinterpret_cast<DWORD_PTR>(&state))) {
     throw std::runtime_error("Unable to connect the Settings menu");
@@ -166,6 +182,38 @@ void SettingsMenu::set_visible(const bool visible) {
 bool SettingsMenu::take_interaction() {
   return std::exchange(impl_->interacted, false);
 }
+
+void SettingsMenu::set_levels(const std::vector<std::string> &labels) {
+  HMENU levels = impl_->levels;
+  if (levels == nullptr) {
+    return;
+  }
+  while (GetMenuItemCount(levels) > 0) {
+    DeleteMenu(levels, 0, MF_BYPOSITION);
+  }
+  const auto count = std::min<std::size_t>(labels.size(), Impl::last_level_command -
+                                                              Impl::first_level_command + 1);
+  for (std::size_t index = 0; index < count; ++index) {
+    const std::string &label = labels[index];
+    const int size =
+        MultiByteToWideChar(CP_UTF8, 0, label.data(), static_cast<int>(label.size()), nullptr, 0);
+    std::wstring wide(static_cast<std::size_t>(size), L'\0');
+    MultiByteToWideChar(CP_UTF8, 0, label.data(), static_cast<int>(label.size()), wide.data(),
+                        size);
+    AppendMenuW(levels, MF_STRING, Impl::first_level_command + static_cast<UINT>(index),
+                wide.c_str());
+  }
+  if (count == 0) {
+    AppendMenuW(levels, MF_STRING | MF_GRAYED, 0, L"(none)");
+  }
+  if (impl_->window != nullptr) {
+    DrawMenuBar(impl_->window);
+  }
+}
+
+std::optional<int> SettingsMenu::take_level() {
+  return std::exchange(impl_->level, std::nullopt);
+}
 #else
 struct SettingsMenu::Impl {
   Settings settings;
@@ -184,6 +232,10 @@ void SettingsMenu::set_fullscreen(const bool enabled) {
 void SettingsMenu::set_visible(bool) {}
 bool SettingsMenu::take_interaction() {
   return false;
+}
+void SettingsMenu::set_levels(const std::vector<std::string> &) {}
+std::optional<int> SettingsMenu::take_level() {
+  return std::nullopt;
 }
 #endif
 

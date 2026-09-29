@@ -3,11 +3,13 @@
 
 #include "test_support.hpp"
 
+#include <array>
 #include <string>
 #include <vector>
 
 #include "phantomcrash/button_config.hpp"
 #include "phantomcrash/data_roots.hpp"
+#include "phantomcrash/option_menu.hpp"
 #include "phantomcrash/screen_adjust.hpp"
 #include "phantomcrash/sound_config.hpp"
 
@@ -209,4 +211,11 @@ TEST_CASE("sub-screen parsing names the entry at fault") {
   auto buttons = shipped_document("ui/button_config.json");
   json::merge(buttons, json::parse(R"({"default_cursor": "missing"})"));
   CHECK_THROWS(parse_button_config(buttons));
+}
+
+TEST_CASE("OPTION, SOUND CONFIG and BUTTON CONFIG place the CURRENT MUSIC meter") {
+  const std::array<float, 2> slot{434.0F, 395.0F};
+  CHECK(parse_option(shipped_document("ui/option.json")).meter == slot);
+  CHECK(parse_sound_config(shipped_document("ui/sound_config.json")).meter == slot);
+  CHECK(parse_button_config(shipped_document("ui/button_config.json")).meter == slot);
 }

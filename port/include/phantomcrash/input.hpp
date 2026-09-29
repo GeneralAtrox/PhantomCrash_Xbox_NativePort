@@ -2,6 +2,7 @@
 
 #include "phantomcrash/json.hpp"
 
+#include <array>
 #include <cstdint>
 #include <optional>
 #include <string_view>
@@ -29,6 +30,13 @@ inline constexpr Buttons left_trigger = 1U << 12;
 inline constexpr Buttons right_trigger = 1U << 13;
 inline constexpr Buttons left_thumb = 1U << 14;
 inline constexpr Buttons right_thumb = 1U << 15;
+// The controller's D-pad itself, 8 bits above its direction: it also holds
+// that direction, but the directions from the keys and the left stick do not
+// hold these. The battle camera changes views with them.
+inline constexpr Buttons pad_up = up << 8;
+inline constexpr Buttons pad_down = down << 8;
+inline constexpr Buttons pad_left = left << 8;
+inline constexpr Buttons pad_right = right << 8;
 
 // Groups the data files use. "confirm" is the original's A/START mask 0x110,
 // "cancel" its B, and "any" every button.
@@ -36,7 +44,18 @@ inline constexpr Buttons confirm = a | start;
 inline constexpr Buttons cancel = b | back;
 inline constexpr Buttons directions = up | down | left | right;
 inline constexpr Buttons any = (1U << 16) - 1;
+inline constexpr Buttons pad = pad_up | pad_down | pad_left | pad_right;
 } // namespace button
+
+// The controller ports, one per VS player (0x0dee20 asks after each).
+inline constexpr int controller_ports = 4;
+
+// One port's own controller: whether one is connected, and its buttons.
+struct PortInput {
+  bool connected{};
+  Buttons held{};
+  Buttons pressed{};
+};
 
 // One logic tick's view of the controllers.
 struct InputFrame {
@@ -45,11 +64,26 @@ struct InputFrame {
   // released again before the tick sampled them.
   Buttons pressed{};
   int controllers{};
+  // The analog sticks, -1..1 with +x right and +y up. Without a stick
+  // pushed, the held directions give the left stick full deflection.
+  std::array<float, 2> left_stick{};
+  std::array<float, 2> right_stick{};
+  // The mouse in canvas units (the original's 640x480 space, after the
+  // screen offset) while it is over the window, whether it moved since the
+  // previous tick, and whether the left button went down.
+  std::optional<std::array<float, 2>> pointer;
+  bool pointer_moved{};
+  bool clicked{};
+  // Each port on its own; `held` and `pressed` above take them all together.
+  std::array<PortInput, controller_ports> ports{};
 
   [[nodiscard]] bool any_pressed(Buttons mask) const {
     return (pressed & mask) != 0;
   }
 };
+
+// Port `port`'s buttons alone, as a frame of their own (no sticks or mouse).
+[[nodiscard]] InputFrame port_frame(const InputFrame &frame, int port);
 
 // Builds InputFrames from sampled button levels plus presses latched from
 // events between ticks.

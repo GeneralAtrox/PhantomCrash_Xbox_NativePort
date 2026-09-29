@@ -1,0 +1,152 @@
+// The live RUMBLING: the opponents' fight among themselves, the larger
+// rosters and the next opponent drawn, and the world that runs the areas'
+// battles and lends one to the player.
+
+#include "rumbling_fixture.hpp"
+#include "test_support.hpp"
+
+#include "phantomcrash/battle.hpp"
+#include "phantomcrash/rumbling_world.hpp"
+#include "phantomcrash/rumbling_map.hpp"
+#include "phantomcrash/training_battle.hpp"
+
+#include <algorithm>
+#include <cmath>
+
+using namespace phantomcrash;
+using namespace phantomcrash::rumbling_fixture;
+
+namespace {
+
+EnemyPath square_path() {
+  return parse_enemy_path(json::parse(R"({"segments": [
+    {"kind": 0, "points": [[-80, 0, -80], [-40, 0, -40]], "next": [2]},
+    {"kind": 0, "points": [[80, 0, 80], [40, 0, 40]], "next": [2]},
+    {"kind": 1, "points": [[-40, 0, -40], [40, 0, -40], [40, 0, 40]], "next": [3]},
+    {"kind": 1, "points": [[40, 0, 40], [-40, 0, 40], [-40, 0, -40]], "next": [2]}
+  ]})"));
+}
+
+BattleSettings fighting_settings() {
+  return parse_battle_settings(json::parse(R"({
+    "arena": {"half_size": 100},
+    "weapons": {"handgun": {"kind": "gun", "damage": 10, "cooldown": 0.1, "speed": 300}},
+    "ai": {"fight": true, "engage_range": 150}
+  })"));
+}
+
+bool near(const float a, const float b) {
+  return std::abs(a - b) < 0.01F;
+}
+
+} // namespace
+
+TEST_CASE("opponents who fight turn on each other and one shoots the other down") {
+  Battle battle(fighting_settings(), square_path());
+  battle.add_robot("player", 0, {}, 0.0F, {}, 100.0F);
+  battle.take_out(0); // the player is elsewhere
+  const std::array<std::string, weapon_slots> handgun{"handgun", "", "", ""};
+  for (const int team : {1, 2}) {
+    const int robot = battle.add_drone("r" + std::to_string(team), 50.0F);
+    battle.set_identity(robot, "r" + std::to_string(team), team, 50.0F);
+    battle.arm(robot, handgun);
+    battle.set_auto_respawn(robot, false);
+  }
+  battle.place(1, {0.0F, 0.0F, 30.0F}, 0.0F);
+  battle.place(2, {10.0F, 0.0F, -30.0F}, 1.0F);
+  for (int i = 0; i < 1200 && battle.robots()[1].alive && battle.robots()[2].alive; ++i) {
+    battle.tick({}, {}, 1.0F / 60.0F);
+  }
+  const bool first_down = !battle.robots()[1].alive;
+  REQUIRE(first_down != !battle.robots()[2].alive); // exactly one is down
+  const Combatant &down = battle.robots()[first_down ? 1 : 2];
+  CHECK(down.shot_by == (first_down ? 2 : 1));
+  CHECK(battle.robots()[first_down ? 2 : 1].kills == 1);
+}
+
+TEST_CASE("the live roster has live_size places and the next one is not already out") {
+  Fixture fixture;
+  fixture.rules.roster.live_size = 5;
+  QuestSave quest;
+  const AreaRoster roster = draw_roster(fixture.check(), fixture.tables, quest, 0, constant(0.0F));
+  REQUIRE(roster.members.size() == 4); // five places, the player's among them
+  const auto next =
+      draw_replacement(fixture.check(), fixture.tables, quest, roster, 0, constant(0.0F));
+  REQUIRE(next.has_value());
+  for (std::size_t place = 1; place < roster.members.size(); ++place) {
+    CHECK(!next->same(roster.members[place]));
+  }
+}
+
+TEST_CASE("the live world runs the areas, lends one and pays for the player's kills") {
+  Fixture fixture;
+  fixture.rules.roster.live_size = 4;
+  const TestDriveScript drive;
+  const std::map<std::string, WeaponTuning> templates;
+  const RumblingTables tables{fixture.parts, fixture.garage, fixture.tables,
+                              fixture.rules, drive,          templates};
+  std::array<RumblingStage, roster_areas> stages{};
+  stages[0].path = square_path();
+  RumblingLive live;
+  live.arrival_seconds = 1.0F;
+  RumblingWorld world(fixture.check(), tables, fighting_settings(), stages, live, 7);
+  QuestSave quest;
+  world.update(quest, 0.5);
+  CHECK(quest.live_epoch != 0);
+  REQUIRE(quest.rosters[0].members.size() == 3);
+  for (const RosterMember &member : quest.rosters[0].members) {
+    CHECK(member.live.placed);
+    CHECK(!member.live.down);
+  }
+  REQUIRE(world.robot(0, 1) != nullptr);
+  CHECK(world.robot(0, 1)->entrant == quest.rosters[0].members[0].entrant);
+
+  // A loaded game's opponents are taken up where they stood.
+  QuestSave loaded = quest_from_json(quest_to_json(quest));
+  CHECK(loaded.live_epoch == 0);
+  RumblingWorld other(fixture.check(), tables, fighting_settings(), stages, live, 9);
+  const std::shared_ptr<Battle> battle = other.lend(0, loaded);
+  REQUIRE(battle != nullptr);
+  CHECK(other.lent() == 0);
+  const LiveRobot &stood = quest.rosters[0].members[0].live;
+  const Vec3 at = battle->robots()[1].mover.position();
+  CHECK(near(at.x, stood.position[0]));
+  CHECK(near(at.z, stood.position[2]));
+
+  // One the player shoots down is beaten once the player leaves.
+  const RosterMember victim = loaded.rosters[0].members[0];
+  battle->robot(1).alive = false;
+  battle->robot(1).shot_by = 0;
+  const int changes = other.changes(0);
+  other.update(loaded, 0.2);
+  CHECK(loaded.rosters[0].members[0].live.down);
+  other.give_back(loaded);
+  CHECK(other.lent() < 0);
+  CHECK(std::ranges::find(loaded.beaten, beaten_key(victim.team, victim.place)) !=
+        loaded.beaten.end());
+  // Its place is filled once the arrival time is up.
+  for (int frame = 0; frame < 90; ++frame) {
+    other.update(loaded, tick);
+  }
+  CHECK(!loaded.rosters[0].members[0].live.down);
+  CHECK(other.changes(0) > changes);
+  CHECK(battle->robots()[1].alive);
+}
+
+TEST_CASE("the map puts a stage point by its area's scale, offset and turn") {
+  RumblingRobotMarkers markers;
+  markers.origin = {234.0F, 73.0F};
+  RumblingMapProjection flat{{232.0F, 167.0F}, {0.0F, 0.0F}, 0.0F, 2.0F};
+  const auto at = rumbling_map_point(markers, flat, 10.0F, 5.0F);
+  CHECK(near(at[0], 234.0F + 232.0F + 20.0F));
+  CHECK(near(at[1], 73.0F + 167.0F - 10.0F)); // +z runs up the map
+  CHECK(near(rumbling_map_degrees(flat, 0.0F), 0.0F));
+  // A quarter turn about the pivot: the pivot itself stays put.
+  RumblingMapProjection turned{{10.0F, 20.0F}, {10.0F, 20.0F}, pi * 0.5F, 1.0F};
+  const auto pivot = rumbling_map_point(markers, turned, 0.0F, 0.0F);
+  CHECK(near(pivot[0], 244.0F));
+  CHECK(near(pivot[1], 93.0F));
+  const auto east = rumbling_map_point(markers, turned, 1.0F, 0.0F);
+  CHECK(near(east[0], 244.0F));
+  CHECK(near(east[1], 92.0F));
+}

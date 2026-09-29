@@ -114,6 +114,23 @@ std::vector<GlyphQuad> layout_run(const GlyphFont &font, const std::vector<int> 
   return quads;
 }
 
+GlyphQuad glyph_cell(const GlyphFont &font, const int glyph, const float x, const float y) {
+  const float u = static_cast<float>(glyph % font.columns) * font.cell;
+  const float v = static_cast<float>(glyph / font.columns) * font.cell;
+  return {{u, v, u + font.cell, v + font.cell}, x, y, font.cell, font.cell};
+}
+
+std::vector<GlyphQuad> layout_cells(const GlyphFont &font, const std::vector<int> &run, float x,
+                                    const float y, const float advance) {
+  std::vector<GlyphQuad> quads;
+  quads.reserve(run.size());
+  for (const int glyph : run) {
+    quads.push_back(glyph_cell(font, glyph, x, y));
+    x += advance;
+  }
+  return quads;
+}
+
 TickerStyle parse_ticker(const json::JsonValue &value) {
   TickerStyle style;
   style.position = numbers<2>(required(value, "position"), "position");

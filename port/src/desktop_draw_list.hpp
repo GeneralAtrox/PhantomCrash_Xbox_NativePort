@@ -21,13 +21,21 @@ public:
   DrawList(TextureCache &textures, const GlyphFont &font, const Viewport &viewport, double seconds)
       : textures_(textures), font_(font), viewport_(viewport), seconds_(seconds) {}
 
-  void sprite(const Sprite &source);
+  void sprite(const Sprite &source, float alpha = 1.0F);
+  // A sprite cut to `clip` (left, top, right, bottom on the canvas), for
+  // turned sprites that would otherwise show beyond the picture.
+  void sprite(const Sprite &source, const std::array<float, 4> &clip, float alpha = 1.0F);
   void text(int layer, std::vector<GlyphQuad> glyphs, std::uint32_t colour,
-            const std::optional<std::array<float, 4>> &clip = std::nullopt);
+            const std::optional<std::array<float, 4>> &clip = std::nullopt, float alpha = 1.0F);
   // A ticker `seconds` after its text was set.
   void ticker(const TickerStyle &style, const std::vector<int> &run, double seconds);
   // A message box as it is now: the growing window, then its lines and choices.
   void message_box(const MessageBox &box);
+  // `draw` run in its turn on `layer` (a menu's 3D robot, between the
+  // backdrop and the window over it).
+  void custom(int layer, std::function<void()> draw) {
+    commands_.push_back({layer, std::move(draw)});
+  }
   // Draws everything collected, then forgets it.
   void flush();
 

@@ -33,4 +33,14 @@ template <std::size_t N>
   return result;
 }
 
+// Parses a member with `parse`, naming it in the error.
+template <typename Parse>
+[[nodiscard]] auto member(const JsonValue &value, const char *key, Parse parse) {
+  try {
+    return parse(required(value, key));
+  } catch (const std::exception &error) {
+    throw std::runtime_error(std::string(key) + ": " + error.what());
+  }
+}
+
 } // namespace phantomcrash::json

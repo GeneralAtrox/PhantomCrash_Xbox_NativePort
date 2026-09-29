@@ -2,6 +2,7 @@
 
 #include "phantomcrash/canvas.hpp"
 #include "phantomcrash/data_roots.hpp"
+#include "phantomcrash/json.hpp"
 #include "phantomcrash/sprite_layer.hpp"
 
 #include <SDL3/SDL.h>
@@ -22,6 +23,9 @@ public:
 
   // Null when the image is missing (logged once).
   [[nodiscard]] SDL_Texture *get(const std::string &file);
+  // Loads every image a data document names (each string ending ".png"),
+  // so a screen's first use of one does not load it mid-frame.
+  void preload(const json::JsonValue &document);
 
   [[nodiscard]] SDL_Renderer *renderer() const noexcept {
     return renderer_;

@@ -7,8 +7,8 @@ import json
 from pathlib import Path
 import sys
 
-from . import xbe
-from .convert import convert
+from . import stats_csv, xbe
+from .convert import convert, update_robots, update_town
 from .extract import extract
 from .xdvdfs import XdvdfsImage
 
@@ -55,8 +55,34 @@ def _command_convert(arguments: argparse.Namespace) -> int:
     effects = sum(len(bank["effects"]) for bank in manifest["sound_banks"])
     tables = manifest["tables"]
     print(
-        f"Converted {textures} textures, {effects} effects, {tables['sprites']} sprites and "
+        f"Converted {textures} textures, {len(manifest['models'])} models, {effects} effects, "
+        f"{tables['sprites']} sprites and "
         f"{tables['resources']} resources to {arguments.output}"
+    )
+    return 0
+
+
+def _command_convert_robots(arguments: argparse.Namespace) -> int:
+    report = None if arguments.quiet else print
+    robots = update_robots(Path(arguments.files), Path(arguments.output), report)
+    print(
+        f"Converted {len(robots['models'])} robot models, {robots['textures']} paints and "
+        f"{robots['motion_banks']} motion banks to {arguments.output}"
+    )
+    return 0
+
+
+def _command_export_stats(arguments: argparse.Namespace) -> int:
+    counts = stats_csv.export(Path(arguments.assets), Path(arguments.output))
+    print(f"Wrote {len(counts)} tables ({sum(counts.values())} rows) to {arguments.output}")
+    return 0
+
+
+def _command_convert_town(arguments: argparse.Namespace) -> int:
+    town = update_town(Path(arguments.files), Path(arguments.output))
+    print(
+        f"Converted {len(town['contests'])} contests, {len(town['classes'])} classes and "
+        f"{len(town['calendar'])} calendar days to {arguments.output}"
     )
     return 0
 
@@ -90,6 +116,28 @@ def build_parser() -> argparse.ArgumentParser:
     )
     conversion.add_argument("--quiet", action="store_true", help="Only print the summary")
     conversion.set_defaults(handler=_command_convert)
+
+    robot_conversion = commands.add_parser(
+        "convert-robots", help="Redo only the robot part of an existing conversion"
+    )
+    robot_conversion.add_argument("--files", default=str(DEFAULT_OUTPUT / "files"))
+    robot_conversion.add_argument("--output", default=str(DEFAULT_ASSETS))
+    robot_conversion.add_argument("--quiet", action="store_true", help="Only print the summary")
+    robot_conversion.set_defaults(handler=_command_convert_robots)
+
+    town_conversion = commands.add_parser(
+        "convert-town", help="Redo only the town's tables (tables/town.json)"
+    )
+    town_conversion.add_argument("--files", default=str(DEFAULT_OUTPUT / "files"))
+    town_conversion.add_argument("--output", default=str(DEFAULT_ASSETS))
+    town_conversion.set_defaults(handler=_command_convert_town)
+
+    stats_export = commands.add_parser(
+        "export-stats", help="Write every part, item and opponent's stats as CSV files"
+    )
+    stats_export.add_argument("--assets", default=str(DEFAULT_ASSETS))
+    stats_export.add_argument("--output", default=str(DEFAULT_OUTPUT / "stats"))
+    stats_export.set_defaults(handler=_command_export_stats)
     return parser
 
 

@@ -355,7 +355,8 @@ Status: OPTION on the main menu fades to the option screen from
 `option.json`. `OptionMenu` (core) runs the list, the per-item help lines and
 the boxes styled by `message_box.json`; `GlyphFont` lays out text in the
 game's font and places the scrolling lines. The vibration choice is kept in
-the settings file (`game.vibration`); nothing rumbles yet. EXIT returns to
+the settings file (`game.vibration`) and silences the battle's damage rumble
+(`data/world/rumble.json`, `rumble.hpp`). EXIT returns to
 the main menu with the cursor on OPTION.
 
 Deliberate differences: a message box grows (with its sound) every time it

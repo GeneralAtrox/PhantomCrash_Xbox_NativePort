@@ -1,0 +1,393 @@
+{
+ "notes": ["The hangar's ASSEMBLE (original scene 4: setup 0x01b295, the grid 0x019a3e drawn by 0x01877e, the side choice 0x01b78f drawn by 0x017af0, the lists 0x01b59d drawn by 0x018d50 and the row drawers 0x1dae38, the details 0x01b482 drawn by 0x019d24, fitting 0x01afe1, DIS 0x01ade0). The hangar's menu opens it for the hangar chosen; EXIT goes back to the menu.", "The grid's twelve cells, column by column, top first: BODY, LEG, ARM, CHIP, BACK, COLOR, OPTION, STICKER, NAME, DIS, SPEC, EXIT. The icons slide in over slide_seconds; left/right (sys 23) and up/down (sys 22) move without wrapping, cancel jumps to EXIT (sys 4). A cell that cannot be chosen wears the disabled mark (sys 8 on confirm): NAME and SPEC without a body, legs and CHIP, DIS with nothing fitted, COLOR for a robot of makers 3 to 6 (unpaintable_makers).", "ARM and BACK first ask which side (sys 23; side 0 is the right-hand weapon): the pair rises out of the cell and parts. The list shows the stock's parts of the kind, and the paints and emblems owned, by name; X sorts by name and Y by price (sys 5); up/down move (sys 18). A line is grey when it cannot be fitted: another hangar holds it, a weapon is on the other side, a module needs more sockets than are free, or (same_maker) its maker is not the robot's. Gold is fitted here; confirm opens its details, confirm again fits it (sys 29) or, fitted already, takes it off. A body with fewer socket holes than the modules take has them all taken off with the modules_off notice.", "DIS asks the dismantle question (NO chosen, sys 17): YES takes every part off (sys 41). A hangar left without a body, legs or CHIP loses its name and stops being ridden. NAME opens NAME ENTRY for the Scoobee's name; SPEC the SV SPEC screen.", "Researcher readings: the chosen row's place in the details, the cells' help. The robot the original turns in the panel (0x08371b) is not drawn yet; a CHIP's and a module's maker are not ported, so they fit any robot."],
+ "scene": 4,
+ "music": "garage",
+ "fade_in": 0.5,
+ "fade_out": 0.5,
+ "exit_to": "hangar",
+ "confirm": {"buttons": "confirm"},
+ "cancel": {"buttons": "cancel"},
+ "cursor_repeat": {"delay": 0.4, "interval": 0.1},
+ "buttons": {"left": "left", "right": "right", "up": "up", "down": "down", "sort_name": "x", "sort_price": "y"},
+ "sounds": {"move": "wheel", "row": "schedule_row", "select": "confirm", "back": "cancel", "exit": "adjust", "list_row": "list_row", "sort": "confirm", "fit": "fit", "question": "question", "dismantle": "dismantle", "no": "adjust"},
+ "layers": [
+  {"id": "966", "image": "textures/scroll/assemble_tex/0.png", "rect": [0, 0, 640, 480], "position": [0, 0], "layer": 1},
+  {"id": "968", "image": "textures/scroll/assemble_tex/0.png", "rect": [1152, 480, 1792, 576], "position": [0, 0], "layer": 257},
+  {"id": "967", "image": "textures/scroll/assemble_tex/0.png", "rect": [304, 480, 944, 584], "position": [0, 376], "layer": 257},
+  {"id": "979", "image": "textures/scroll/assemble_tex/0.png", "rect": [944, 480, 1152, 584], "position": [375, 268], "layer": 260},
+  {"id": "977", "image": "textures/scroll/assemble_tex/0.png", "rect": [1856, 304, 1960, 360], "position": [504, 100], "layer": 258},
+  {"id": "978", "image": "textures/scroll/assemble_tex/0.png", "rect": [1856, 384, 1960, 440], "position": [504, 100], "layer": 257},
+  {"id": "969", "image": "textures/scroll/assemble_tex/0.png", "rect": [1856, 240, 1992, 304], "position": [-18, 101], "layer": 257},
+  {"id": "980", "image": "textures/scroll/assemble_tex/0.png", "rect": [576, 584, 848, 664], "position": [349, 235], "layer": 257}
+ ],
+ "frame": {
+  "hud": true,
+  "meter": [434, 395],
+  "now_playing": {"format": "《 {title} : {artist} 》", "position": [0, 419], "clip": [0, 419, 396, 437], "colour": "#ffffff", "speed": 60, "trail": 45, "layer": 263},
+  "riding_plate": true,
+  "riding_plate_y": 378
+ },
+ "grid": {
+  "columns": 6,
+  "rows": 2,
+  "slide_seconds": 0.4,
+  "cells": [
+   {
+    "id": "body",
+    "icon": {"id": "1007", "image": "textures/scroll/assemble_tex/0.png", "rect": [1984, 480, 2032, 528], "position": [72, 212], "layer": 257},
+    "from_x": -488,
+    "lit": {"id": "1008", "image": "textures/scroll/assemble_tex/0.png", "rect": [1512, 584, 1560, 632], "position": [72, 212], "layer": 258, "colour": "#ffd300", "animation": "pulse"},
+    "help": "Change body module.",
+    "kind": "body",
+    "titles": [
+     {"id": "1063", "image": "textures/scroll/assemble_tex/0.png", "rect": [1344, 216, 1520, 232], "position": [117, 122], "layer": 263}
+    ],
+    "labels": [
+     {"id": "1055", "image": "textures/scroll/assemble_tex/0.png", "rect": [1016, 0, 1320, 216], "position": [51, 198], "layer": 262}
+    ],
+    "stats_right": 310,
+    "totals": ["weight", "capacity", "armour", "sockets"],
+    "totals_top": 330,
+    "totals_right": 310
+   },
+   {
+    "id": "legs",
+    "icon": {"id": "1023", "image": "textures/scroll/assemble_tex/0.png", "rect": [1944, 584, 1992, 632], "position": [72, 257], "layer": 257},
+    "from_x": -558,
+    "lit": {"id": "1024", "image": "textures/scroll/assemble_tex/0.png", "rect": [1992, 584, 2040, 632], "position": [72, 257], "layer": 258, "colour": "#ffd300", "animation": "pulse"},
+    "help": "Change leg module.",
+    "kind": "legs",
+    "titles": [
+     {"id": "1068", "image": "textures/scroll/assemble_tex/0.png", "rect": [480, 672, 656, 688], "position": [117, 122], "layer": 263}
+    ],
+    "labels": [
+     {"id": "1058", "image": "textures/scroll/assemble_tex/0.png", "rect": [640, 240, 944, 456], "position": [51, 198], "layer": 262}
+    ],
+    "stats_right": 310,
+    "totals": ["weight", "capacity", "armour"],
+    "totals_top": 351,
+    "totals_right": 310
+   },
+   {
+    "id": "arm",
+    "icon": {"id": "995", "image": "textures/scroll/assemble_tex/0.png", "rect": [1992, 0, 2040, 48], "position": [117, 212], "layer": 257},
+    "from_x": -403,
+    "lit": {"id": "996", "image": "textures/scroll/assemble_tex/0.png", "rect": [1992, 240, 2040, 288], "position": [117, 212], "layer": 258, "colour": "#ffd300", "animation": "pulse"},
+    "help": "Change arm weapon module.",
+    "kind": "arm",
+    "titles": [
+     {"id": "1071", "image": "textures/scroll/assemble_tex/0.png", "rect": [984, 672, 1160, 688], "position": [117, 122], "layer": 263},
+     {"id": "1066", "image": "textures/scroll/assemble_tex/0.png", "rect": [1872, 216, 2048, 232], "position": [117, 122], "layer": 263}
+    ],
+    "labels": [
+     {"id": "1062", "image": "textures/scroll/assemble_tex/0.png", "rect": [0, 480, 304, 696], "position": [51, 198], "layer": 262}
+    ],
+    "stats_right": 310,
+    "totals": ["weight", "capacity"],
+    "totals_top": 372,
+    "totals_right": 310,
+    "sides": {
+     "plain": [
+      {"id": "999", "image": "textures/scroll/assemble_tex/0.png", "rect": [1992, 128, 2040, 176], "position": [117.5, 215.0], "layer": 259},
+      {"id": "997", "image": "textures/scroll/assemble_tex/0.png", "rect": [1992, 288, 2040, 336], "position": [117.5, 215.0], "layer": 259}
+     ],
+     "lit": [
+      {"id": "1000", "image": "textures/scroll/assemble_tex/0.png", "rect": [1992, 384, 2040, 432], "position": [117.5, 215.0], "layer": 260, "colour": "#ffd300", "animation": "pulse"},
+      {"id": "998", "image": "textures/scroll/assemble_tex/0.png", "rect": [1992, 336, 2040, 384], "position": [117.5, 215.0], "layer": 260, "colour": "#ffd300", "animation": "pulse"}
+     ],
+     "rise": 45.0,
+     "spread": 22.5,
+     "seconds": 0.1333,
+     "help": ["Changing right arm weapon. Use the direction pad to select.", "Changing left arm weapon. Use the direction pad to select."]
+    }
+   },
+   {
+    "id": "chip",
+    "icon": {"id": "1010", "image": "textures/scroll/assemble_tex/0.png", "rect": [1560, 584, 1608, 632], "position": [117, 257], "layer": 257},
+    "from_x": -468,
+    "lit": {"id": "1011", "image": "textures/scroll/assemble_tex/0.png", "rect": [1608, 584, 1656, 632], "position": [117, 257], "layer": 258, "colour": "#ffd300", "animation": "pulse"},
+    "help": "Change CHIP module.",
+    "kind": "chip",
+    "titles": [
+     {"id": "1064", "image": "textures/scroll/assemble_tex/0.png", "rect": [1520, 216, 1696, 232], "position": [117, 122], "layer": 263}
+    ],
+    "labels": [
+     {"id": "1056", "image": "textures/scroll/assemble_tex/0.png", "rect": [1320, 0, 1624, 216], "position": [51, 198], "layer": 262}
+    ],
+    "stats_right": 261,
+    "totals": ["weight", "capacity", "level", "chip_name"],
+    "totals_top": 330,
+    "totals_right": 310
+   },
+   {
+    "id": "back",
+    "icon": {"id": "1001", "image": "textures/scroll/assemble_tex/0.png", "rect": [1928, 128, 1976, 176], "position": [162, 212], "layer": 257},
+    "from_x": -318,
+    "lit": {"id": "1002", "image": "textures/scroll/assemble_tex/0.png", "rect": [1992, 432, 2040, 480], "position": [162, 212], "layer": 258, "colour": "#ffd300", "animation": "pulse"},
+    "help": "Change backpack weapon module.",
+    "kind": "shoulder",
+    "titles": [
+     {"id": "1072", "image": "textures/scroll/assemble_tex/0.png", "rect": [1160, 672, 1336, 688], "position": [117, 122], "layer": 263},
+     {"id": "1067", "image": "textures/scroll/assemble_tex/0.png", "rect": [304, 672, 480, 688], "position": [117, 122], "layer": 263}
+    ],
+    "labels": [
+     {"id": "1062", "image": "textures/scroll/assemble_tex/0.png", "rect": [0, 480, 304, 696], "position": [51, 198], "layer": 262}
+    ],
+    "stats_right": 310,
+    "totals": ["weight", "capacity"],
+    "totals_top": 372,
+    "totals_right": 310,
+    "sides": {
+     "plain": [
+      {"id": "1005", "image": "textures/scroll/assemble_tex/0.png", "rect": [1888, 480, 1936, 528], "position": [162.5, 215.0], "layer": 259},
+      {"id": "1003", "image": "textures/scroll/assemble_tex/0.png", "rect": [1792, 480, 1840, 528], "position": [162.5, 215.0], "layer": 259}
+     ],
+     "lit": [
+      {"id": "1006", "image": "textures/scroll/assemble_tex/0.png", "rect": [1936, 480, 1984, 528], "position": [162.5, 215.0], "layer": 260, "colour": "#ffd300", "animation": "pulse"},
+      {"id": "1004", "image": "textures/scroll/assemble_tex/0.png", "rect": [1840, 480, 1888, 528], "position": [162.5, 215.0], "layer": 260, "colour": "#ffd300", "animation": "pulse"}
+     ],
+     "rise": 45.0,
+     "spread": 22.5,
+     "seconds": 0.1333,
+     "help": ["Changing right shoulder weapon. Use the direction pad to select.", "Changing left shoulder weapon. Use the direction pad to select."]
+    }
+   },
+   {
+    "id": "paint",
+    "icon": {"id": "1012", "image": "textures/scroll/assemble_tex/0.png", "rect": [1656, 584, 1704, 632], "position": [162, 257], "layer": 257},
+    "from_x": -378,
+    "lit": {"id": "1013", "image": "textures/scroll/assemble_tex/0.png", "rect": [1704, 584, 1752, 632], "position": [162, 257], "layer": 258, "colour": "#ffd300", "animation": "pulse"},
+    "help": "Change coloring.",
+    "kind": "paint",
+    "titles": [
+     {"id": "1065", "image": "textures/scroll/assemble_tex/0.png", "rect": [1696, 216, 1872, 232], "position": [117, 122], "layer": 263}
+    ],
+    "labels": [
+     {"id": "1057", "image": "textures/scroll/assemble_tex/0.png", "rect": [1624, 0, 1928, 216], "position": [51, 198], "layer": 262}
+    ],
+    "stats_right": 310,
+    "totals": ["weight", "capacity", "armour"],
+    "totals_top": 330,
+    "totals_right": 310
+   },
+   {
+    "id": "module",
+    "icon": {"id": "1027", "image": "textures/scroll/assemble_tex/0.png", "rect": [1608, 632, 1656, 680], "position": [207, 212], "layer": 257},
+    "from_x": -233,
+    "lit": {"id": "1028", "image": "textures/scroll/assemble_tex/0.png", "rect": [1656, 632, 1704, 680], "position": [207, 212], "layer": 258, "colour": "#ffd300", "animation": "pulse"},
+    "help": "Change option module.",
+    "kind": "module",
+    "titles": [
+     {"id": "1069", "image": "textures/scroll/assemble_tex/0.png", "rect": [656, 672, 832, 688], "position": [117, 122], "layer": 263}
+    ],
+    "labels": [
+     {"id": "1059", "image": "textures/scroll/assemble_tex/0.png", "rect": [944, 240, 1248, 456], "position": [51, 198], "layer": 262},
+     {"id": "1060", "image": "textures/scroll/assemble_tex/0.png", "rect": [1248, 240, 1552, 456], "position": [51, 198], "layer": 262}
+    ],
+    "stats_right": 319,
+    "totals": ["weight", "capacity", "armour", "overclock"],
+    "totals_top": 330,
+    "totals_right": 319
+   },
+   {
+    "id": "sticker",
+    "icon": {"id": "1037", "image": "textures/scroll/assemble_tex/0.png", "rect": [1936, 632, 1984, 680], "position": [207, 257], "layer": 257},
+    "from_x": -288,
+    "lit": {"id": "1038", "image": "textures/scroll/assemble_tex/0.png", "rect": [1984, 632, 2032, 680], "position": [207, 257], "layer": 258, "colour": "#ffd300", "animation": "pulse"},
+    "help": "Change sticker.",
+    "kind": "emblem",
+    "titles": [
+     {"id": "1073", "image": "textures/scroll/assemble_tex/0.png", "rect": [1336, 672, 1512, 688], "position": [117, 122], "layer": 263}
+    ],
+    "labels": [
+     {"id": "1061", "image": "textures/scroll/assemble_tex/0.png", "rect": [1552, 240, 1856, 456], "position": [51, 198], "layer": 262}
+    ],
+    "stats_right": 310,
+    "totals": ["weight", "capacity", "armour"],
+    "totals_top": 330,
+    "totals_right": 310
+   },
+   {
+    "id": "name",
+    "icon": {"id": "1025", "image": "textures/scroll/assemble_tex/0.png", "rect": [1512, 632, 1560, 680], "position": [252, 212], "layer": 257},
+    "from_x": -148,
+    "lit": {"id": "1026", "image": "textures/scroll/assemble_tex/0.png", "rect": [1560, 632, 1608, 680], "position": [252, 212], "layer": 258, "colour": "#ffd300", "animation": "pulse"},
+    "help": "Name the Scoobee."
+   },
+   {
+    "id": "dismantle",
+    "icon": {"id": "1014", "image": "textures/scroll/assemble_tex/0.png", "rect": [1752, 584, 1800, 632], "position": [252, 257], "layer": 257},
+    "from_x": -198,
+    "lit": {"id": "1015", "image": "textures/scroll/assemble_tex/0.png", "rect": [1800, 584, 1848, 632], "position": [252, 257], "layer": 258, "colour": "#ffd300", "animation": "pulse"},
+    "help": "Dismantle the Scoobee."
+   },
+   {
+    "id": "spec",
+    "icon": {"id": "1035", "image": "textures/scroll/assemble_tex/0.png", "rect": [1840, 632, 1888, 680], "position": [297, 212], "layer": 257},
+    "from_x": -63,
+    "lit": {"id": "1036", "image": "textures/scroll/assemble_tex/0.png", "rect": [1888, 632, 1936, 680], "position": [297, 212], "layer": 258, "colour": "#ffd300", "animation": "pulse"},
+    "help": "View the Scoobee’s specs."
+   },
+   {
+    "id": "exit",
+    "icon": {"id": "1018", "image": "textures/scroll/assemble_tex/0.png", "rect": [1848, 584, 1896, 632], "position": [297, 257], "layer": 257},
+    "from_x": -108,
+    "lit": {"id": "1019", "image": "textures/scroll/assemble_tex/0.png", "rect": [1896, 584, 1944, 632], "position": [297, 257], "layer": 258, "colour": "#ffd300", "animation": "pulse"},
+    "help": "Return to hangar."
+   }
+  ],
+  "disabled": {"id": "1034", "image": "textures/scroll/assemble_tex/0.png", "rect": [1792, 632, 1840, 680], "layer": 259},
+  "shade": {"id": "1032", "image": "textures/scroll/assemble_tex/0.png", "rect": [304, 584, 576, 672], "position": [72, 212], "layer": 260}
+ },
+ "panel": {
+  "numbers": [
+   {"id": "1044", "image": "textures/scroll/assemble_tex/0.png", "rect": [944, 632, 1000, 664], "position": [41, 121], "layer": 258},
+   {"id": "1045", "image": "textures/scroll/assemble_tex/0.png", "rect": [1000, 632, 1056, 664], "position": [41, 121], "layer": 258},
+   {"id": "1046", "image": "textures/scroll/assemble_tex/0.png", "rect": [1056, 632, 1112, 664], "position": [41, 121], "layer": 258},
+   {"id": "1047", "image": "textures/scroll/assemble_tex/0.png", "rect": [1112, 632, 1168, 664], "position": [41, 121], "layer": 258},
+   {"id": "1048", "image": "textures/scroll/assemble_tex/0.png", "rect": [1168, 632, 1224, 664], "position": [41, 121], "layer": 258},
+   {"id": "1049", "image": "textures/scroll/assemble_tex/0.png", "rect": [1224, 632, 1280, 664], "position": [41, 121], "layer": 258},
+   {"id": "1050", "image": "textures/scroll/assemble_tex/0.png", "rect": [1280, 632, 1336, 664], "position": [41, 121], "layer": 258},
+   {"id": "1051", "image": "textures/scroll/assemble_tex/0.png", "rect": [1336, 632, 1392, 664], "position": [41, 121], "layer": 258},
+   {"id": "1052", "image": "textures/scroll/assemble_tex/0.png", "rect": [1392, 632, 1448, 664], "position": [41, 121], "layer": 258},
+   {"id": "1053", "image": "textures/scroll/assemble_tex/0.png", "rect": [1448, 632, 1504, 664], "position": [41, 121], "layer": 258}
+  ],
+  "sockets_used": [548, 132],
+  "sockets_total": [574, 132],
+  "sockets_colour": "#f0f0f0",
+  "sockets_layer": 262,
+  "name": {"position": [444, 265], "colour": "#f0f0f0", "layer": 262, "max_glyphs": 9},
+  "no_equip": [
+   {"id": "981", "image": "textures/scroll/assemble_tex/0.png", "rect": [1928, 0, 1992, 64], "position": [382, 307], "layer": 258},
+   {"id": "981", "image": "textures/scroll/assemble_tex/0.png", "rect": [1928, 0, 1992, 64], "position": [450, 307], "layer": 258},
+   {"id": "981", "image": "textures/scroll/assemble_tex/0.png", "rect": [1928, 0, 1992, 64], "position": [518, 307], "layer": 258}
+  ],
+  "chip_at": [382, 307],
+  "paint_at": [450, 307],
+  "emblem_at": [518, 307],
+  "equip_layer": 259,
+  "incomplete": {"id": "1041", "image": "textures/scroll/assemble_tex/0.png", "rect": [1928, 64, 2040, 128], "position": [432, 172], "layer": 257},
+  "underkill": {"id": "1042", "image": "textures/scroll/assemble_tex/0.png", "rect": [1792, 528, 1904, 576], "position": [432, 178], "layer": 257},
+  "overweight": {"id": "1043", "image": "textures/scroll/assemble_tex/0.png", "rect": [1904, 528, 2016, 576], "position": [432, 178], "layer": 257},
+  "pair_x": [371, 487]
+ },
+ "list": {
+  "window": {
+   "sprite": {"id": "972", "image": "textures/scroll/assemble_tex/0.png", "rect": [848, 584, 1184, 632], "position": [208.0, 264.5], "layer": 261, "centered": true, "size": [336.0, 245.0]},
+   "caps": [
+    {"id": "982", "image": "textures/scroll/assemble_tex/0.png", "rect": [1056, 456, 1392, 480], "layer": 261},
+    {"id": "973", "image": "textures/scroll/assemble_tex/0.png", "rect": [640, 456, 976, 480], "layer": 261}
+   ],
+   "seconds": 0.1667,
+   "thin": 0.05
+  },
+  "details": [
+   {
+    "sprite": {"id": "972", "image": "textures/scroll/assemble_tex/0.png", "rect": [848, 584, 1184, 632], "position": [208.0, 166.0], "layer": 261, "centered": true, "size": [336.0, 48.0]},
+    "caps": [
+     {"id": "982", "image": "textures/scroll/assemble_tex/0.png", "rect": [1056, 456, 1392, 480], "layer": 261},
+     {"id": "973", "image": "textures/scroll/assemble_tex/0.png", "rect": [640, 456, 976, 480], "layer": 261}
+    ],
+    "seconds": 0.1667,
+    "thin": 0.05
+   },
+   {
+    "sprite": {"id": "972", "image": "textures/scroll/assemble_tex/0.png", "rect": [848, 584, 1184, 632], "position": [208.0, 166.0], "layer": 261, "centered": true, "size": [336.0, 48.0]},
+    "caps": [
+     {"id": "982", "image": "textures/scroll/assemble_tex/0.png", "rect": [1056, 456, 1392, 480], "layer": 261},
+     {"id": "973", "image": "textures/scroll/assemble_tex/0.png", "rect": [640, 456, 976, 480], "layer": 261}
+    ],
+    "seconds": 0.1667,
+    "thin": 0.05
+   }
+  ],
+  "shade": {"id": "1032", "image": "textures/scroll/assemble_tex/0.png", "rect": [304, 584, 576, 672], "position": [72, 212], "layer": 260},
+  "shade_alpha": 1.0,
+  "cursor": {"id": "976", "image": "textures/scroll/assemble_tex/0.png", "rect": [1184, 584, 1512, 632], "position": [43.0, 144.0], "layer": 263, "animation": "pulse"},
+  "row_plate": {"id": "975", "image": "textures/scroll/assemble_tex/0.png", "rect": [1016, 216, 1344, 232], "position": [51.0, 164.0], "layer": 262},
+  "rows": 6,
+  "row_step": 38.0,
+  "name": {"position": [81, 156.0], "colour": "#f0f0f0", "layer": 263},
+  "unusable_colour": "#7f7f7f",
+  "fitted_colour": "#ffd300",
+  "maker_icons": [
+   {"id": "1020", "image": "textures/scroll/assemble_tex/0.png", "rect": [1928, 176, 1960, 208], "position": [50.0, 152.0], "layer": 262},
+   {"id": "1029", "image": "textures/scroll/assemble_tex/0.png", "rect": [1960, 176, 1992, 208], "position": [50.0, 152.0], "layer": 262},
+   {"id": "994", "image": "textures/scroll/assemble_tex/0.png", "rect": [1960, 304, 1992, 336], "position": [50.0, 152.0], "layer": 262},
+   {"id": "1040", "image": "textures/scroll/assemble_tex/0.png", "rect": [2016, 528, 2048, 560], "position": [50.0, 152.0], "layer": 262},
+   {"id": "1039", "image": "textures/scroll/assemble_tex/0.png", "rect": [1960, 416, 1992, 448], "position": [50.0, 152.0], "layer": 262},
+   {"id": "1009", "image": "textures/scroll/assemble_tex/0.png", "rect": [1960, 336, 1992, 368], "position": [50.0, 152.0], "layer": 262}
+  ],
+  "scroll": [
+   {"id": "971", "image": "textures/scroll/assemble_tex/0.png", "rect": [1960, 456, 1992, 472], "position": [184, 136], "layer": 264},
+   {"id": "970", "image": "textures/scroll/assemble_tex/0.png", "rect": [1928, 456, 1960, 472], "position": [184, 371], "layer": 264}
+  ],
+  "cancel_hint": [
+   {"id": "3122", "image": "textures/scroll/scr_common_tex/0.png", "rect": [256, 184, 272, 200], "position": [281, 381], "layer": 262},
+   {"id": "3132", "image": "textures/scroll/scr_common_tex/0.png", "rect": [480, 184, 536, 200], "position": [301, 383], "layer": 262}
+  ],
+  "stats_top": 227,
+  "badge_base": {"id": "983", "image": "textures/scroll/assemble_tex/0.png", "rect": [1392, 456, 1432, 480], "position": [321.0, 156.0], "layer": 262},
+  "hangar_badges": [
+   {"id": "984", "image": "textures/scroll/assemble_tex/0.png", "rect": [1432, 456, 1472, 480], "position": [321.0, 156.0], "layer": 263},
+   {"id": "985", "image": "textures/scroll/assemble_tex/0.png", "rect": [1472, 456, 1512, 480], "position": [321.0, 156.0], "layer": 263},
+   {"id": "986", "image": "textures/scroll/assemble_tex/0.png", "rect": [1512, 456, 1552, 480], "position": [321.0, 156.0], "layer": 263},
+   {"id": "987", "image": "textures/scroll/assemble_tex/0.png", "rect": [1552, 456, 1592, 480], "position": [321.0, 156.0], "layer": 263},
+   {"id": "988", "image": "textures/scroll/assemble_tex/0.png", "rect": [1592, 456, 1632, 480], "position": [321.0, 156.0], "layer": 263},
+   {"id": "989", "image": "textures/scroll/assemble_tex/0.png", "rect": [1632, 456, 1672, 480], "position": [321.0, 156.0], "layer": 263},
+   {"id": "990", "image": "textures/scroll/assemble_tex/0.png", "rect": [1672, 456, 1712, 480], "position": [321.0, 156.0], "layer": 263},
+   {"id": "991", "image": "textures/scroll/assemble_tex/0.png", "rect": [1712, 456, 1752, 480], "position": [321.0, 156.0], "layer": 263},
+   {"id": "992", "image": "textures/scroll/assemble_tex/0.png", "rect": [1752, 456, 1792, 480], "position": [321.0, 156.0], "layer": 263},
+   {"id": "993", "image": "textures/scroll/assemble_tex/0.png", "rect": [1792, 456, 1832, 480], "position": [321.0, 156.0], "layer": 263}
+  ],
+  "badge_colour": "#808080",
+  "side_marks": [
+   {"id": "1031", "image": "textures/scroll/assemble_tex/0.png", "rect": [1904, 456, 1928, 480], "position": [297.0, 156.0], "layer": 264},
+   {"id": "1022", "image": "textures/scroll/assemble_tex/0.png", "rect": [1856, 456, 1880, 480], "position": [297.0, 156.0], "layer": 264}
+  ],
+  "lit_side_marks": [
+   {"id": "1030", "image": "textures/scroll/assemble_tex/0.png", "rect": [1880, 456, 1904, 480], "position": [297.0, 156.0], "layer": 265},
+   {"id": "1021", "image": "textures/scroll/assemble_tex/0.png", "rect": [1832, 456, 1856, 480], "position": [297.0, 156.0], "layer": 265}
+  ]
+ },
+ "stats": {
+  "right": 310,
+  "step": 21,
+  "layer": 262,
+  "colour": "#f0f0f0",
+  "sign_offset": -85,
+  "signs": [
+   {"id": "3085", "image": "textures/scroll/scr_common_tex/0.png", "rect": [960, 160, 1024, 176], "layer": 258, "colour": "#00d3ff"},
+   {"id": "3086", "image": "textures/scroll/scr_common_tex/0.png", "rect": [0, 184, 64, 200], "layer": 258, "colour": "#ffd300"},
+   {"id": "3084", "image": "textures/scroll/scr_common_tex/0.png", "rect": [960, 136, 1024, 152], "layer": 258, "colour": "#ff0000"}
+  ]
+ },
+ "details": {
+  "box": {"id": "1054", "image": "textures/scroll/assemble_tex/0.png", "rect": [640, 0, 1016, 240], "position": [14, 188], "layer": 261},
+  "box_alpha": 0.699999988079071,
+  "fade_seconds": 0.1333,
+  "equipped": {"id": "974", "image": "textures/scroll/assemble_tex/0.png", "rect": [976, 456, 1056, 480], "position": [69.0, 132.0], "layer": 265, "colour": "#ffd300", "animation": "pulse"},
+  "totals": {
+   "step": 21,
+   "layer": 262,
+   "colour": "#f0f0f0",
+   "up": {"id": "3603", "image": "textures/scroll/module_tex/0.png", "rect": [16, 112, 32, 128], "layer": 262},
+   "down": {"id": "3602", "image": "textures/scroll/module_tex/0.png", "rect": [0, 112, 16, 128], "layer": 262},
+   "arrow_dx": 24.0,
+   "arrow_dy": 0,
+   "pair_gap": 85,
+   "chip_name_at": [187, 391],
+   "negative": {"id": "3704", "image": "textures/scroll/common_2d_tex/1.png", "rect": [504, 176, 512, 192], "layer": 262},
+   "negative_dx": 118,
+   "negative_dy": -8
+  }
+ },
+ "routes": {"name": "name_entry", "spec": "sv_spec"},
+ "same_maker": true,
+ "unpaintable_makers": [3, 4, 5, 6],
+ "overweight_margin": 0.05000000074505806,
+ "message_text_at": [139, 213],
+ "messages": {"dismantle": ["Dismantle the Scoobee", "completely by taking off", "all the equipped modules.", "Continue?"], "modules_off": ["The total number of", "sockets available on the", "vehicle is less than the", "required number of", "sockets, so the option", "equipments are automatically dismantled."]},
+ "help": {"position": [0, 72], "clip": [0, 0, 640, 480], "colour": "#f0f0f0", "speed": 60, "lead": 360, "trail": 0, "layer": 263},
+ "help_text": {"list": "Select the module by moving the direction pad up/down, and press the A/START button to choose the equipment.  Press the X button to sort by name, and Y button to sort by price.", "details": "Press the A/START button to select the equipment.(Choosing a module that is already equipped will dismantle it)"}
+}

@@ -179,3 +179,59 @@ TEST_CASE("a movie completes only when everything has played") {
   CHECK(decoded_video_frame_seconds(false, 0.0, 1.0, 0.04, 0.0) > 1.039);
   CHECK(decoded_video_frame_seconds(true, 2.5, 1.0, 0.04, 0.0) == 2.5);
 }
+
+namespace {
+
+IntroScript staff_roll() {
+  return parse_intro(
+      DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT).document("story/staff_roll.json"));
+}
+
+// Plays the staff and epilogue movies to their ends and the fade after them.
+void reach_the_end(IntroSequence &sequence) {
+  run_until_change(sequence, 5, true); // staff
+  run_until_change(sequence, 5, true); // epilogue, then its fade
+  run_until_change(sequence, 120);
+}
+
+} // namespace
+
+TEST_CASE("the staff roll cannot be skipped until THE END, which loops for 30 seconds") {
+  IntroSequence sequence(staff_roll(), true, 0);
+  CHECK(id(sequence) == "staff");
+  sequence.update(tick, press(button::any), false);
+  CHECK(id(sequence) == "staff");
+  reach_the_end(sequence);
+  REQUIRE(id(sequence) == "the_end");
+  CHECK(sequence.black_alpha() > 0.9F); // fading in
+  CHECK(sequence.movie_playing());
+  // Its movie ending only starts it again.
+  CHECK(run_until_change(sequence, 60 * 29, true) == 60 * 29);
+  CHECK(id(sequence) == "the_end");
+  CHECK(run_until_change(sequence, 120) < 120);
+  CHECK(id(sequence) == "kudryavka");
+  sequence.update(tick, press(button::a), false);
+  CHECK(id(sequence) == "kudryavka");
+  run_until_change(sequence, 5, true);
+  CHECK(id(sequence) == "cloud");
+  run_until_change(sequence, 200);
+  sequence.update(tick, press(button::a), false);
+  CHECK(sequence.done());
+  CHECK(sequence.then() == "sleep");
+  CHECK(sequence.take_sounds().empty());
+}
+
+TEST_CASE("confirming THE END after two seconds goes straight to sleep, with the sound") {
+  IntroSequence sequence(staff_roll(), true, 0);
+  reach_the_end(sequence);
+  REQUIRE(id(sequence) == "the_end");
+  sequence.update(tick, press(button::a), false);
+  CHECK(id(sequence) == "the_end"); // too soon
+  run_until_change(sequence, 120);
+  sequence.update(tick, press(button::a), false);
+  CHECK(sequence.done());
+  CHECK(sequence.then() == "sleep");
+  const auto sounds = sequence.take_sounds();
+  REQUIRE(sounds.size() == 1);
+  CHECK(sounds[0] == "confirm");
+}

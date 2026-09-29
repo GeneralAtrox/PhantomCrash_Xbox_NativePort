@@ -42,6 +42,11 @@ struct Sprite {
   Animation animation{Animation::none};
   std::optional<SpriteRepeat> repeat;
   bool title_only{}; // title screen: hidden once the menu is open
+  // Turned clockwise by this many degrees about `pivot`, measured from the
+  // quad's top-left (its centre when unset), as the Club Wired wheel turns.
+  float angle{};
+  std::optional<std::array<float, 2>> pivot;
+  bool flip_x{}; // mirrored left to right (draw flag 0x400)
 };
 
 struct Quad {
@@ -56,5 +61,13 @@ struct Quad {
 
 // Where the sprite's copies are at `seconds` (one quad unless it repeats).
 [[nodiscard]] std::vector<Quad> place_sprite(const Sprite &sprite, double seconds);
+
+// What stays put as a sprite is scaled (0x0bbdb7's anchor): its centre, or
+// one of its corners.
+enum class ScaleAnchor { centre, bottom_right, bottom_left, top_right, top_left };
+
+// The sprite scaled by `x` and `y` of its size about `anchor` (0x0bbef3).
+[[nodiscard]] Sprite scaled_sprite(Sprite sprite, float x, float y,
+                                   ScaleAnchor anchor = ScaleAnchor::centre);
 
 } // namespace phantomcrash

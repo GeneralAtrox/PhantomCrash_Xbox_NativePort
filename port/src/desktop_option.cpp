@@ -5,26 +5,43 @@
 #include <utility>
 
 namespace phantomcrash {
+namespace {
+
+FramePlacement option_frame(const OptionScript &script, const bool hud) {
+  FramePlacement placement = credit_band(script);
+  placement.hud = hud;
+  placement.riding_plate = script.riding_plate_y.has_value();
+  placement.riding_plate_y = script.riding_plate_y;
+  return placement;
+}
+
+} // namespace
 
 OptionScreen::OptionScreen(TextureCache &textures, const GlyphFont &font, OptionScript script,
-                           MessageBoxStyle box, const GameOptions options,
-                           const std::string &now_playing, const std::string &returning_from)
+                           MessageBoxStyle box, const GameOptions options, const FrameStyle &frame,
+                           const std::vector<MusicCredit> &credits,
+                           const std::string &returning_from, QuestSave quest, const bool hud)
     : textures_(textures), font_(font),
-      menu_(std::move(script), std::move(box), options, returning_from) {
+      menu_(std::move(script), std::move(box), options, returning_from), quest_(std::move(quest)),
+      band_(font, frame, credits, option_frame(menu_.script(), hud)) {
   for (const auto &item : menu_.script().items) {
     help_runs_.push_back(glyph_run(font_, item.help.text));
   }
-  now_playing_run_ = glyph_run(font_, now_playing);
   // Load the textures now rather than on the first frame that needs them.
   static_cast<void>(textures_.get(font_.image));
   static_cast<void>(textures_.get(menu_.box().style().window.image));
   for (const auto &layer : menu_.script().layers) {
     static_cast<void>(textures_.get(layer.image));
   }
+  band_.preload(textures_);
 }
 
 void OptionScreen::tick(const InputFrame &input, const double tick_seconds) {
   menu_.update(tick_seconds, input);
+  if (menu_.faded_in()) {
+    band_.start_riding_plate();
+  }
+  band_.update(tick_seconds);
 }
 
 void OptionScreen::draw(const Viewport &viewport) {
@@ -49,7 +66,7 @@ void OptionScreen::draw(const Viewport &viewport) {
   const auto cursor = static_cast<std::size_t>(menu_.cursor());
   list.ticker(help_style(script.help, script.items[cursor].help), help_runs_[cursor],
               menu_.help_seconds());
-  list.ticker(script.now_playing, now_playing_run_, menu_.seconds());
+  band_.draw(list, quest_);
   list.message_box(menu_.box());
   list.flush();
   fill_black(textures_, menu_.black_alpha());

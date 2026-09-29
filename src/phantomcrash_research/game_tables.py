@@ -33,6 +33,7 @@ MUSIC_CREDITS = 0x1EFD38  # 0x1ac-byte records: int32 track, title @4, artist @0
 MUSIC_CREDIT_COUNT = 0x51  # the lookup at 0x02a407 stops here
 VOLUME_MILLIBELS = 0x410400  # int16[256]: DirectSound volume for a 0-255 level (0x0dd9d0)
 
+RESOURCE_MODEL = 0
 RESOURCE_TEXTURE_PACK = 3
 
 
@@ -52,6 +53,13 @@ class Resource:
     slot_count: int | None
     binlink_pack: int | None
     binlink_offset: int | None
+    # Models: the texture pack their batches index ({first slot, meshes, pack}
+    # record read by the loader at 0x0af17d), or None.
+    texture_resource: int | None = None
+    # Models: the first model slot their meshes fill, one mesh a slot, and
+    # how many (the same record).
+    first_mesh_slot: int | None = None
+    mesh_count: int | None = None
 
 
 @dataclass(frozen=True)
@@ -70,11 +78,18 @@ class Sprite:
 
 @dataclass(frozen=True)
 class MusicCredit:
-    """Title and artist the option screen scrolls for a track (0x02a85a)."""
+    """Title and artist the option screen scrolls for a track (0x02a85a),
+    the sprites of its CD jacket, large and small (+ 0x198, 0x02bc93), and
+    of the artist's name and web address Sonic Amp's preview shows (+ 0x1a4
+    and + 0x1a8, 0x029fdc)."""
 
     track: int
     title: str
     artist: str
+    jacket: int = -1
+    jacket_small: int = -1
+    artist_name: int = -1
+    artist_link: int = -1
 
 
 class _Image:
@@ -145,6 +160,19 @@ class GameTables:
         return None
 
 
+def sprite_binlink_packs(tables: GameTables) -> list[Resource]:
+    """The binlink texture packs that fill a slot some sprite draws from
+    (resource 1658: the music jackets and artist portraits, 0x02bc93)."""
+    used = {sprite.slot for sprite in tables.sprites}
+    return [
+        resource
+        for resource in tables.resources
+        if resource.binlink_pack is not None
+        and resource.first_slot is not None
+        and any(resource.first_slot + index in used for index in range(resource.slot_count))
+    ]
+
+
 def _resources(image: _Image) -> list[Resource]:
     resources = []
     for index in range(RESOURCE_COUNT):
@@ -153,9 +181,12 @@ def _resources(image: _Image) -> list[Resource]:
             "<6I", image.data, image.offset(base, 24)
         )
         path = image.string(path_address)
-        first_slot = slot_count = None
+        first_slot = slot_count = texture_resource = first_mesh_slot = mesh_count = None
         if kind == RESOURCE_TEXTURE_PACK and slots:
             first_slot, slot_count = struct.unpack_from("<2I", image.data, image.offset(slots, 8))
+        if kind == RESOURCE_MODEL and slots:
+            first_mesh_slot, mesh_count, pack_id = struct.unpack_from("<3I", image.data, image.offset(slots, 12))
+            texture_resource = None if pack_id == 0xFFFFFFFF else pack_id
         in_pack = path is None and pack != 0xFFFFFFFF
         resources.append(
             Resource(
@@ -167,6 +198,9 @@ def _resources(image: _Image) -> list[Resource]:
                 slot_count=slot_count,
                 binlink_pack=pack if in_pack else None,
                 binlink_offset=pack_offset if in_pack else None,
+                texture_resource=texture_resource,
+                first_mesh_slot=first_mesh_slot,
+                mesh_count=mesh_count,
             )
         )
     return resources
@@ -207,7 +241,9 @@ def _music_credits(image: _Image) -> list[MusicCredit]:
         track = struct.unpack_from("<i", image.data, image.offset(base))[0]
         if track >= 0:
             title, artist = image.raw_string(base + 4), image.raw_string(base + 0x69)
-            credits.append(MusicCredit(track, _plain(title), _plain(artist)))
+            # + 0x1a0 points at the preview's animation, which the port leaves out.
+            large, small, _, name, link = struct.unpack_from("<5i", image.data, image.offset(base + 0x198, 20))
+            credits.append(MusicCredit(track, _plain(title), _plain(artist), large, small, name, link))
     return credits
 
 

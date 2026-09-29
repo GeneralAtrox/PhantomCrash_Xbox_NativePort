@@ -1,0 +1,160 @@
+{
+ "notes": ["PlusTech's UPLIFT (original scene 27, state 2: setup 0x0326ff, cards 0x032a8c drawn by 0x02f710, level window 0x032865 drawn by 0x030bdb, questions and notices 0x032ca8 and 0x032788). Opened from the PlusTech menu (data/ui/plustech.json), which EXIT goes back to. The cards are SELL CHIP's (data/ui/chip_shop.json, the same layout with uplift_tex): the player's CHIPs in stock under the names they were given; with none, none and back to PlusTech.", "confirm on a CHIP opens the level window (the card slides aside, the panel grows and the frames pop open as SELL CHIP's dialog does); a CHIP already at level_max asks maxed first (YES chosen) and opens it to look at only. left/right choose a level from the CHIP's own up to level_max (sys 3); the fire control shows at the level chosen, the bar 2711 grows bar_step a level from bar_at, and the price is the record's price at the new level less the price at the old (0x02f3d4), red when the money will not do. confirm on a new level: poor, or the uplift question (NO chosen); YES pays (sys 27), raises the CHIP's level in the stock and thanks. cancel closes the window (sys 8).", "The help line shows the CHIP's description (0x1fae90), the way out's (0x1fb010) on EXIT and how to choose a level (0x1fb014) in the window.", "The cancel hint's gap after the B button is the researcher's reading of 0x06ded3's last argument (0x1a)."],
+ "scene": 27,
+ "music": "keep",
+ "fade_in": 0.5,
+ "fade_out": 0.5,
+ "exit_to": "plustech",
+ "confirm": {"buttons": "confirm"},
+ "cancel": {"buttons": "cancel"},
+ "cursor_repeat": {"delay": 0.4, "interval": 0.1},
+ "buttons": {"left": "left", "right": "right", "up": "up", "down": "down"},
+ "sounds": {"move": "cursor", "select": "confirm", "row": "cursor", "choice": "cursor", "jump": "adjust", "back": "cancel", "trade": "purchase"},
+ "layers": [
+  {"id": "2726", "image": "textures/scroll/uplift_tex/1.png", "rect": [0, 0, 640, 480], "position": [0, 0], "layer": 1}
+ ],
+ "frame": {
+  "hud": true,
+  "meter": [434, 395],
+  "now_playing": {"format": "《 {title} : {artist} 》", "position": [0, 419], "clip": [0, 419, 396, 437], "colour": "#ffffff", "speed": 60, "trail": 45, "layer": 263}
+ },
+ "window": {
+  "sprite": {"id": "2717", "image": "textures/scroll/uplift_tex/1.png", "rect": [0, 480, 576, 696], "position": [326, 218], "layer": 2, "centered": true},
+  "grow_seconds": 0.26666666666666666,
+  "widest": 1.2,
+  "thin": 0.05,
+  "dim": "#646464",
+  "frame": [
+   {"id": "2708", "image": "textures/scroll/uplift_tex/1.png", "rect": [992, 0, 1016, 24], "position": [205, 128], "layer": 3},
+   {"id": "2724", "image": "textures/scroll/uplift_tex/1.png", "rect": [992, 360, 1016, 384], "position": [412, 128], "layer": 3}
+  ]
+ },
+ "scanlines": {
+  "sprite": {"id": "2723", "image": "textures/scroll/uplift_tex/1.png", "rect": [576, 640, 1008, 688], "position": [106, 169], "layer": 3},
+  "from": -48,
+  "period": 155,
+  "speed": 60,
+  "clip": [106, 169, 536, 276]
+ },
+ "highlight": {"id": "2714", "image": "textures/scroll/uplift_tex/1.png", "rect": [640, 0, 800, 192], "position": [321, 211], "layer": 258, "centered": true},
+ "row_arrows": [
+  {"id": "2725", "image": "textures/scroll/uplift_tex/1.png", "rect": [800, 360, 848, 408], "position": [400, 117], "layer": 6, "animation": "pulse"},
+  {"id": "2709", "image": "textures/scroll/uplift_tex/1.png", "rect": [944, 0, 992, 48], "position": [194, 117], "layer": 6, "animation": "pulse"}
+ ],
+ "cards": {
+  "card": {"id": "2721", "image": "textures/scroll/uplift_tex/1.png", "rect": [800, 0, 944, 176], "layer": 257},
+  "centre": [321, 211],
+  "step": 145,
+  "side": 3,
+  "side_scale": 0.65,
+  "side_drop": 12,
+  "shade": 60,
+  "clip": [104, 110, 536, 302],
+  "face_drop": 12,
+  "face_layer": 258,
+  "slide_seconds": 0.13333333333333333,
+  "fade_seconds": 0.16666666666666666
+ },
+ "details": {
+  "name": {"position": [191, 322], "colour": "#ffffff", "layer": 257},
+  "price": {"right": [299, 351], "digits": 9, "commas": true, "colour": "#f0f0f0"},
+  "level_label": {"id": "2710", "image": "textures/scroll/uplift_tex/1.png", "rect": [832, 176, 888, 192], "position": [292, 153], "layer": 259},
+  "level": {"right": [333, 171], "digits": 2, "colour": "#000000"},
+  "weight_label": {"id": "2736", "image": "textures/scroll/uplift_tex/1.png", "rect": [952, 72, 1008, 96], "position": [267, 264], "layer": 259},
+  "weight": {"right": [364, 263], "digits": 1, "decimals": 2, "colour": "#000000"},
+  "weight_unit": {"id": "2733", "image": "textures/scroll/uplift_tex/1.png", "rect": [952, 176, 968, 192], "position": [367, 262], "layer": 259}
+ },
+ "counter": {
+  "index": {"right": [483, 285], "digits": 3, "colour": "#000000"},
+  "total": {"right": [527, 285], "digits": 3, "colour": "#000000"},
+  "dashes": [
+   {"id": "3748", "image": "textures/scroll/common_2d_tex/1.png", "rect": [472, 384, 488, 400], "position": [471, 285], "layer": 257, "colour": "#000000"},
+   {"id": "3748", "image": "textures/scroll/common_2d_tex/1.png", "rect": [472, 384, 488, 400], "position": [461, 285], "layer": 257, "colour": "#000000"}
+  ]
+ },
+ "labels": [
+  {"id": "3640", "image": "textures/scroll/cpu_common_tex/0.png", "rect": [200, 120, 344, 152], "position": [39, 316], "layer": 6},
+  {"id": "3641", "image": "textures/scroll/cpu_common_tex/0.png", "rect": [344, 120, 488, 152], "position": [39, 344], "layer": 6}
+ ],
+ "exit": {"id": "exit", "sprite": {"id": "2705", "image": "textures/scroll/uplift_tex/1.png", "rect": [640, 408, 832, 448], "position": [436, 323], "layer": 3}, "lit": {"id": "2706", "image": "textures/scroll/uplift_tex/1.png", "rect": [832, 408, 1024, 448], "position": [436, 323], "layer": 4, "animation": "pulse"}},
+ "dialog": {
+  "stage_seconds": [0.16666666666666666, 0.16666666666666666, 0.1],
+  "card_shift": -179,
+  "panel": {"id": "2729", "image": "textures/scroll/uplift_tex/1.png", "rect": [640, 192, 1024, 360], "layer": 260, "centered": true},
+  "panel_open_layer": 258,
+  "panel_to": [405, 223],
+  "pops": [
+   {"id": "2730", "image": "textures/scroll/uplift_tex/1.png", "rect": [0, 696, 176, 840], "position": [311, 218], "layer": 259, "centered": true},
+   {"id": "2731", "image": "textures/scroll/uplift_tex/1.png", "rect": [576, 480, 776, 640], "position": [492, 224], "layer": 259, "centered": true}
+  ],
+  "pop_thin": 0.05,
+  "spec": {
+   "labels": {"id": "2737", "image": "textures/scroll/uplift_tex/1.png", "rect": [776, 480, 976, 640], "position": [392, 144], "layer": 260},
+   "inner_shapes": [
+    {"id": "3662", "image": "textures/scroll/cpu_common_tex/0.png", "rect": [344, 40, 424, 56], "position": [406, 173], "layer": 260},
+    {"id": "3660", "image": "textures/scroll/cpu_common_tex/0.png", "rect": [184, 40, 264, 56], "position": [406, 173], "layer": 260},
+    {"id": "3664", "image": "textures/scroll/cpu_common_tex/0.png", "rect": [104, 160, 184, 176], "position": [406, 173], "layer": 260}
+   ],
+   "outer_shapes": [
+    {"id": "3663", "image": "textures/scroll/cpu_common_tex/0.png", "rect": [424, 40, 504, 56], "position": [406, 208], "layer": 260},
+    {"id": "3661", "image": "textures/scroll/cpu_common_tex/0.png", "rect": [264, 40, 344, 56], "position": [406, 208], "layer": 260},
+    {"id": "3665", "image": "textures/scroll/cpu_common_tex/0.png", "rect": [184, 160, 264, 176], "position": [406, 208], "layer": 260}
+   ],
+   "inner_size": [
+    {"right": [521, 175], "digits": 3},
+    {"right": [569, 175], "digits": 3}
+   ],
+   "outer_size": [
+    {"right": [521, 210], "digits": 3},
+    {"right": [569, 210], "digits": 3}
+   ],
+   "centre": [310, 217],
+   "preview_scale": 0.25,
+   "inner_corners": [
+    {"id": "3653", "image": "textures/scroll/cpu_common_tex/0.png", "rect": [136, 56, 160, 80], "layer": 260},
+    {"id": "3655", "image": "textures/scroll/cpu_common_tex/0.png", "rect": [184, 56, 208, 80], "layer": 260},
+    {"id": "3652", "image": "textures/scroll/cpu_common_tex/0.png", "rect": [112, 56, 136, 80], "layer": 260},
+    {"id": "3654", "image": "textures/scroll/cpu_common_tex/0.png", "rect": [160, 56, 184, 80], "layer": 260}
+   ],
+   "outer_corners": [
+    {"id": "3671", "image": "textures/scroll/cpu_common_tex/0.png", "rect": [424, 56, 448, 80], "layer": 260},
+    {"id": "3673", "image": "textures/scroll/cpu_common_tex/0.png", "rect": [472, 56, 496, 80], "layer": 260},
+    {"id": "3670", "image": "textures/scroll/cpu_common_tex/0.png", "rect": [400, 56, 424, 80], "layer": 260},
+    {"id": "3672", "image": "textures/scroll/cpu_common_tex/0.png", "rect": [448, 56, 472, 80], "layer": 260}
+   ],
+   "inner_fill": {"id": "3680", "image": "textures/scroll/cpu_common_tex/0.png", "rect": [504, 0, 512, 8], "layer": 260},
+   "outer_fill": {"id": "3681", "image": "textures/scroll/cpu_common_tex/0.png", "rect": [496, 56, 504, 64], "layer": 260},
+   "mortal_shot": {"right": [555, 242], "digits": 3},
+   "repulsion_shield": {"right": [555, 264], "digits": 3}
+  }
+ },
+ "message_text_at": [139, 213],
+ "help": {"position": [0, 72], "clip": [0, 0, 640, 480], "colour": "#f2e8e8", "speed": 60, "lead": 360, "trail": 0, "layer": 263},
+ "help_text": {"exit": "Go back to PlusTech top menu.", "dialog": "Move the direction pad left/right to select a level, and then press the A/START button to confirm."},
+ "chip_help": ["Beginning CHIP I", "Beginning CHIP II", "Beginning CHIP III", "Beginning CHIP IV", "Beginning CHIP V", "Beginning CHIP VI", "Beginning CHIP VII", "KUDRYAVKA", "PLASMA", "PLASMA", "A standard square with average 《lock-on sight 》and 《aiming sight》. Does not have self-awareness like others, so it is appropriate for Wire Heads who do not want their CHIPs to interrupt them. The standard CHIP installed in SV factories", "A standard square with average 《lock-on sight 》and 《aiming sight》. Highly loyal, and thus has a relatively high percentage of Repulsion Shield activation. Modeled after Beagle.", "A standard square with average 《lock-on sight 》and 《aiming sight》. Highly loyal, and thus has a relatively high percentage of Repulsion Shield activation. Modeled after Beagle.", "A standard square with average 《lock-on sight 》and 《aiming sight》. Highly loyal, and thus has a relatively high percentage of Repulsion Shield activation. Modeled after Beagle.", "A standard square with average 《lock-on sight 》and 《aiming sight》. Highly loyal, and thus has a relatively high percentage of Repulsion Shield activation. Modeled after Beagle.", "A standard square with average 《lock-on sight 》and 《aiming sight》. Highly loyal, and thus has a relatively high percentage of Repulsion Shield activation. Modeled after Beagle.", "A standard square with average 《lock-on sight 》and 《aiming sight》. Highly loyal, and thus has a relatively high percentage of Repulsion Shield activation. Modeled after Shibainu.", "A standard square with average 《lock-on sight 》and 《aiming sight》. Highly loyal, and thus has a relatively high percentage of Repulsion Shield activation. Modeled after Shibainu.", "A standard square with average 《lock-on sight 》and 《aiming sight》. Highly loyal, and thus has a relatively high percentage of Repulsion Shield activation. Modeled after Shibainu.", "A standard square with average 《lock-on sight 》and 《aiming sight》. Highly loyal, and thus has a relatively high percentage of Repulsion Shield activation. Modeled after Shibainu.", "A standard square with average 《lock-on sight 》and 《aiming sight》. Highly loyal, and thus has a relatively high percentage of Repulsion Shield activation. Modeled after Shibainu.", "A standard square with average 《lock-on sight 》and 《aiming sight》. Highly loyal, and thus has a relatively high percentage of Repulsion Shield activation. Modeled after Doberman Pinscher.", "A standard square with average 《lock-on sight 》and 《aiming sight》. Highly loyal, and thus has a relatively high percentage of Repulsion Shield activation. Modeled after Doberman Pinscher.", "A standard square with average 《lock-on sight 》and 《aiming sight》. Highly loyal, and thus has a relatively high percentage of Repulsion Shield activation. Modeled after Doberman Pinscher.", "A standard square with average 《lock-on sight 》and 《aiming sight》. Highly loyal, and thus has a relatively high percentage of Repulsion Shield activation. Modeled after Doberman Pinscher.", "A standard square with average 《lock-on sight 》and 《aiming sight》. Highly loyal, and thus has a relatively high percentage of Repulsion Shield activation. Modeled after Doberman Pinscher.", "A standard square with average 《lock-on sight 》and 《aiming sight》. Highly loyal, and thus has a relatively high percentage of Repulsion Shield activation. Modeled after Border Collie.", "A standard square with average 《lock-on sight 》and 《aiming sight》. Highly loyal, and thus has a relatively high percentage of Repulsion Shield activation. Modeled after Border Collie.", "A standard square with average 《lock-on sight 》and 《aiming sight》. Highly loyal, and thus has a relatively high percentage of Repulsion Shield activation. Modeled after Border Collie.", "A standard square with average 《lock-on sight 》and 《aiming sight》. Highly loyal, and thus has a relatively high percentage of Repulsion Shield activation. Modeled after Border Collie.", "A standard square with average 《lock-on sight 》and 《aiming sight》. Highly loyal, and thus has a relatively high percentage of Repulsion Shield activation. Modeled after Border Collie.", "A square with a horizontally long 《lock-on sight》 and standard  《aiming sight》. The Repulsion Shield happens less, but it has relatively fast lock-on speed and average growth rate. Modeled after American Shorthair.", "A square with a horizontally long 《lock-on sight》 and standard  《aiming sight》. The Repulsion Shield happens less, but it has relatively fast lock-on speed and average growth rate. Modeled after American Shorthair.", "A square with a horizontally long 《lock-on sight》 and standard  《aiming sight》. The Repulsion Shield happens less, but it has relatively fast lock-on speed and average growth rate. Modeled after American Shorthair.", "A square with a horizontally long 《lock-on sight》 and standard  《aiming sight》. The Repulsion Shield happens less, but it has relatively fast lock-on speed and average growth rate. Modeled after American Shorthair.", "A square with a horizontally long 《lock-on sight》 and standard  《aiming sight》. The Repulsion Shield happens less, but it has relatively fast lock-on speed and average growth rate. Modeled after American Shorthair.", "A square with a horizontally long 《lock-on sight》 and standard  《aiming sight》. The Repulsion Shield happens less, but it has relatively fast lock-on speed and average growth rate. Modeled after Russian Blue.", "A square with a horizontally long 《lock-on sight》 and standard  《aiming sight》. The Repulsion Shield happens less, but it has relatively fast lock-on speed and average growth rate. Modeled after Russian Blue.", "A square with a horizontally long 《lock-on sight》 and standard  《aiming sight》. The Repulsion Shield happens less, but it has relatively fast lock-on speed and average growth rate. Modeled after Russian Blue.", "A square with a horizontally long 《lock-on sight》 and standard  《aiming sight》. The Repulsion Shield happens less, but it has relatively fast lock-on speed and average growth rate. Modeled after Russian Blue.", "A square with a horizontally long 《lock-on sight》 and standard  《aiming sight》. The Repulsion Shield happens less, but it has relatively fast lock-on speed and average growth rate. Modeled after Russian Blue.", "A square with a horizontally long 《lock-on sight》 and standard  《aiming sight》. The Repulsion Shield happens less, but it has relatively fast lock-on speed and average growth rate. Modeled after Abyssinian.", "A square with a horizontally long 《lock-on sight》 and standard  《aiming sight》. The Repulsion Shield happens less, but it has relatively fast lock-on speed and average growth rate. Modeled after Abyssinian.", "A square with a horizontally long 《lock-on sight》 and standard  《aiming sight》. The Repulsion Shield happens less, but it has relatively fast lock-on speed and average growth rate. Modeled after Abyssinian.", "A square with a horizontally long 《lock-on sight》 and standard  《aiming sight》. The Repulsion Shield happens less, but it has relatively fast lock-on speed and average growth rate. Modeled after Abyssinian.", "A square with a horizontally long 《lock-on sight》 and standard  《aiming sight》. The Repulsion Shield happens less, but it has relatively fast lock-on speed and average growth rate. Modeled after Abyssinian.", "A square with a horizontally long 《lock-on sight》 and standard  《aiming sight》. The Repulsion Shield happens less, but it has relatively fast lock-on speed and average growth rate. Modeled after Persian.", "A square with a horizontally long 《lock-on sight》 and standard  《aiming sight》. The Repulsion Shield happens less, but it has relatively fast lock-on speed and average growth rate. Modeled after Persian.", "A square with a horizontally long 《lock-on sight》 and standard  《aiming sight》. The Repulsion Shield happens less, but it has relatively fast lock-on speed and average growth rate. Modeled after Persian.", "A square with a horizontally long 《lock-on sight》 and standard  《aiming sight》. The Repulsion Shield happens less, but it has relatively fast lock-on speed and average growth rate. Modeled after Persian.", "A square with a horizontally long 《lock-on sight》 and standard  《aiming sight》. The Repulsion Shield happens less, but it has relatively fast lock-on speed and average growth rate. Modeled after Persian.", "Has horizontally long 《lock-on sight》and 《aiming sight》. The chance for a Repulsion Shield is incredibly low, and so is the growth rate. However, it has the fastest lock-on speed and data analysis. Modeled after Carrion Crow.", "Has horizontally long 《lock-on sight》and 《aiming sight》. The chance for a Repulsion Shield is incredibly low, and so is the growth rate. However, it has the fastest lock-on speed and data analysis. Modeled after Carrion Crow.", "Has horizontally long 《lock-on sight》and 《aiming sight》. The chance for a Repulsion Shield is incredibly low, and so is the growth rate. However, it has the fastest lock-on speed and data analysis. Modeled after Carrion Crow.", "Has horizontally long 《lock-on sight》and 《aiming sight》. The chance for a Repulsion Shield is incredibly low, and so is the growth rate. However, it has the fastest lock-on speed and data analysis. Modeled after Carrion Crow.", "Has horizontally long 《lock-on sight》and 《aiming sight》. The chance for a Repulsion Shield is incredibly low, and so is the growth rate. However, it has the fastest lock-on speed and data analysis. Modeled after Carrion Crow.", "Has horizontally long 《lock-on sight》and 《aiming sight》. The chance for a Repulsion Shield is incredibly low, and so is the growth rate. However, it has the fastest lock-on speed and data analysis. Modeled after Eagle.", "Has horizontally long 《lock-on sight》and 《aiming sight》. The chance for a Repulsion Shield is incredibly low, and so is the growth rate. However, it has the fastest lock-on speed and data analysis. Modeled after Eagle.", "Has horizontally long 《lock-on sight》and 《aiming sight》. The chance for a Repulsion Shield is incredibly low, and so is the growth rate. However, it has the fastest lock-on speed and data analysis. Modeled after Eagle.", "Has horizontally long 《lock-on sight》and 《aiming sight》. The chance for a Repulsion Shield is incredibly low, and so is the growth rate. However, it has the fastest lock-on speed and data analysis. Modeled after Eagle.", "Has horizontally long 《lock-on sight》and 《aiming sight》. The chance for a Repulsion Shield is incredibly low, and so is the growth rate. However, it has the fastest lock-on speed and data analysis. Modeled after Eagle.", "Has vertically long 《lock-on sight》and 《aiming sight》. It has somewhat fast growth rate, but not much talent for attack or defense. But, it is good enough for its cheap price, making it ideal for newbies. Modeled after Japanese Hare.", "Has vertically long 《lock-on sight》and 《aiming sight》. It has somewhat fast growth rate, but not much talent for attack or defense. But, it is good enough for its cheap price, making it ideal for newbies. Modeled after Japanese Hare.", "Has vertically long 《lock-on sight》and 《aiming sight》. It has somewhat fast growth rate, but not much talent for attack or defense. But, it is good enough for its cheap price, making it ideal for newbies. Modeled after Japanese Hare.", "Has vertically long 《lock-on sight》and 《aiming sight》. It has somewhat fast growth rate, but not much talent for attack or defense. But, it is good enough for its cheap price, making it ideal for newbies. Modeled after Japanese Hare.", "Has vertically long 《lock-on sight》and 《aiming sight》. It has somewhat fast growth rate, but not much talent for attack or defense. But, it is good enough for its cheap price, making it ideal for newbies. Modeled after Japanese Hare.", "Has vertically long 《lock-on sight》and 《aiming sight》. It has somewhat fast growth rate, but not much talent for attack or defense. But, it is good enough for its cheap price, making it ideal for newbies. Modeled after Japanese Hare.", "Has vertically long 《lock-on sight》and 《aiming sight》. It has somewhat fast growth rate, but not much talent for attack or defense. But, it is good enough for its cheap price, making it ideal for newbies. Modeled after Japanese Hare.", "Has vertically long 《lock-on sight》and 《aiming sight》. It has somewhat fast growth rate, but not much talent for attack or defense. But, it is good enough for its cheap price, making it ideal for newbies. Modeled after Japanese Hare.", "Has vertically long 《lock-on sight》and 《aiming sight》. It has somewhat fast growth rate, but not much talent for attack or defense. But, it is good enough for its cheap price, making it ideal for newbies. Modeled after Japanese Hare.", "Has vertically long 《lock-on sight》and 《aiming sight》. It has somewhat fast growth rate, but not much talent for attack or defense. But, it is good enough for its cheap price, making it ideal for newbies. Modeled after Japanese Hare.", "Has standard 《lock-on sight》and《aiming sight》. It has slow growth rate and lock-on speed, but has the highest chance for Repulsion Shield. Modeled after Canis Lupus.", "Has standard 《lock-on sight》and《aiming sight》. It has slow growth rate and lock-on speed, but has the highest chance for Repulsion Shield. Modeled after Canis Lupus.", "Has standard 《lock-on sight》and《aiming sight》. It has slow growth rate and lock-on speed, but has the highest chance for Repulsion Shield. Modeled after Canis Lupus.", "Has standard 《lock-on sight》and《aiming sight》. It has slow growth rate and lock-on speed, but has the highest chance for Repulsion Shield. Modeled after Canis Lupus.", "Has standard 《lock-on sight》and《aiming sight》. It has slow growth rate and lock-on speed, but has the highest chance for Repulsion Shield. Modeled after Canis Lupus.", "Has standard 《lock-on sight》and《aiming sight》. It has slow growth rate and lock-on speed, but has the highest chance for Repulsion Shield. Modeled after Canis Lupus.", "Has standard 《lock-on sight》and《aiming sight》. It has slow growth rate and lock-on speed, but has the highest chance for Repulsion Shield. Modeled after Canis Lupus.", "Has standard 《lock-on sight》and《aiming sight》. It has slow growth rate and lock-on speed, but has the highest chance for Repulsion Shield. Modeled after Canis Lupus.", "Has standard 《lock-on sight》and《aiming sight》. It has slow growth rate and lock-on speed, but has the highest chance for Repulsion Shield. Modeled after Canis Lupus.", "Has standard 《lock-on sight》and《aiming sight》. It has slow growth rate and lock-on speed, but has the highest chance for Repulsion Shield. Modeled after Canis Lupus.", "Has standard 《lock-on sight》and《aiming sight》. It has average Repulsion Shield percentage, but is the lightest CHIP available, ideal for lightweights. Its growth rate is the fastest as well. Modeled after Mongolian Gerbil.", "Has standard 《lock-on sight》and《aiming sight》. It has average Repulsion Shield percentage, but is the lightest CHIP available, ideal for lightweights. Its growth rate is the fastest as well. Modeled after Mongolian Gerbil.", "Has standard 《lock-on sight》and《aiming sight》. It has average Repulsion Shield percentage, but is the lightest CHIP available, ideal for lightweights. Its growth rate is the fastest as well. Modeled after Mongolian Gerbil.", "Has standard 《lock-on sight》and《aiming sight》. It has average Repulsion Shield percentage, but is the lightest CHIP available, ideal for lightweights. Its growth rate is the fastest as well. Modeled after Mongolian Gerbil.", "Has standard 《lock-on sight》and《aiming sight》. It has average Repulsion Shield percentage, but is the lightest CHIP available, ideal for lightweights. Its growth rate is the fastest as well. Modeled after Mongolian Gerbil.", "Has standard 《lock-on sight》and《aiming sight》. It has average Repulsion Shield percentage, but is the lightest CHIP available, ideal for lightweights. Its growth rate is the fastest as well. Modeled after Hamster.", "Has standard 《lock-on sight》and《aiming sight》. It has average Repulsion Shield percentage, but is the lightest CHIP available, ideal for lightweights. Its growth rate is the fastest as well. Modeled after Hamster.", "Has standard 《lock-on sight》and《aiming sight》. It has average Repulsion Shield percentage, but is the lightest CHIP available, ideal for lightweights. Its growth rate is the fastest as well. Modeled after Hamster.", "Has standard 《lock-on sight》and《aiming sight》. It has average Repulsion Shield percentage, but is the lightest CHIP available, ideal for lightweights. Its growth rate is the fastest as well. Modeled after Hamster.", "Has standard 《lock-on sight》and《aiming sight》. It has average Repulsion Shield percentage, but is the lightest CHIP available, ideal for lightweights. Its growth rate is the fastest as well. Modeled after Hamster.", "Enemy type CHIP LV5", "Enemy type CHIP LV4", "Enemy type CHIP LV3", "Enemy type CHIP LV2", "Enemy type CHIP LV1"],
+ "modes": {
+  "uplift": {
+   "labels": [
+    {"id": "2732", "image": "textures/scroll/uplift_tex/1.png", "rect": [736, 360, 800, 384], "position": [121, 282], "layer": 3, "colour": "#000000"}
+   ],
+   "slash": {"id": "3750", "image": "textures/scroll/common_2d_tex/1.png", "rect": [480, 360, 496, 376], "position": [483, 285], "layer": 257, "colour": "#000000"},
+   "level_max": 99,
+   "level_window": {
+    "window": {"id": "2713", "image": "textures/scroll/uplift_tex/1.png", "rect": [624, 696, 1024, 800], "position": [403, 329], "layer": 259, "centered": true},
+    "bar": {"id": "2711", "image": "textures/scroll/uplift_tex/1.png", "rect": [984, 176, 985, 177], "layer": 260},
+    "bar_at": [235, 347],
+    "bar_step": 2,
+    "bar_height": 8,
+    "old_level": {"right": [311, 315], "digits": 2, "colour": "#ffffff"},
+    "new_level": {"right": [364, 315], "digits": 2, "colour": "#ffffff"},
+    "price": {"right": [553, 315], "digits": 9, "commas": true, "colour": "#f0f0f0"},
+    "poor_colour": "#ff0000",
+    "cancel_hint": [
+     {"id": "3122", "image": "textures/scroll/scr_common_tex/0.png", "rect": [256, 184, 272, 200], "position": [490, 341], "layer": 260},
+     {"id": "3133", "image": "textures/scroll/scr_common_tex/0.png", "rect": [536, 184, 600, 200], "position": [517, 343], "layer": 260}
+    ]
+   },
+   "messages": {"poor": ["You need New Yen to", "Uplift a CHIP. You don’t", "have enough, it seems."], "uplift": ["Will that do? I’m anxious", "to hear your comments."], "thanks": ["Thank you! I hope the", "Uplift when well."], "none": ["Which CHIP do you want", "to Uplift? You didn’t", "bring any with you..."], "maxed": ["I can’t Uplift the CHIP", "anymore, but do you want", "to see the parameters", "anyway?"]}
+  }
+ }
+}

@@ -1,0 +1,213 @@
+#include "desktop_supply.hpp"
+
+#include "desktop_cockpit.hpp"
+#include "phantomcrash/json.hpp"
+#include "phantomcrash/skeleton.hpp"
+
+#include <SDL3/SDL.h>
+
+#include <algorithm>
+
+namespace phantomcrash {
+namespace {
+
+// 0x0699d5 draws the lights shell in a colour of random red, green and blue.
+constexpr int colour_levels = 256;
+
+} // namespace
+
+DesktopSupply::DesktopSupply(WorldRenderer &world, const SupplyLook &look, const int stage)
+    : look_(look), parts_(look.models[static_cast<std::size_t>(stage & 1)]) {
+  model_ = world.model(parts_.model);
+  const ModelData *data = world.model_data(model_);
+  if (data == nullptr) {
+    model_ = -1;
+    return;
+  }
+  mesh_nodes_ = converter_mesh_nodes(*data);
+  glow_texture_ = world.texture(look_.glow_texture);
+}
+
+int DesktopSupply::effect_of(const SupplyDrop &drop, const int type) const {
+  const auto &kinds = drop.settings().kinds;
+  if (type < 0 || type >= static_cast<int>(kinds.size())) {
+    return 0;
+  }
+  return std::clamp(static_cast<int>(kinds[static_cast<std::size_t>(type)].effect), 0,
+                    static_cast<int>(look_.glow_colours.size()) - 1);
+}
+
+void DesktopSupply::add_mesh(const int mesh, const Mat4 &world,
+                             std::vector<WorldItem> &items) const {
+  if (mesh < 0 || mesh >= static_cast<int>(mesh_nodes_.size())) {
+    return;
+  }
+  for (const int node : mesh_nodes_[static_cast<std::size_t>(mesh)]) {
+    WorldItem item;
+    item.model = model_;
+    item.node = node;
+    item.world = world;
+    items.push_back(std::move(item));
+  }
+}
+
+void DesktopSupply::add_items(const SupplyDrop &drop, std::vector<WorldItem> &items,
+                              const bool split_screen) {
+  if (!ready() || !drop.active()) {
+    return;
+  }
+  const SupplyCarrier &carrier = drop.carrier();
+  const Mat4 frame = rotation_y(carrier.heading) * translation(carrier.position);
+  if (carrier.wrecked) {
+    add_mesh(parts_.wreck, frame, items); // 0x0699d5 state 4: the wreck alone
+  } else if (!carrier.parked) {
+    add_mesh(parts_.body, frame, items);
+    if (parts_.shell >= 0) {
+      const std::size_t first = items.size();
+      add_mesh(parts_.shell, frame, items);
+      std::uniform_int_distribution<int> level(0, colour_levels - 1);
+      const auto channel = [&] {
+        return static_cast<float>(level(random_)) / static_cast<float>(colour_levels - 1);
+      };
+      const std::array<float, 4> colour{channel(), channel(), channel(), 1.0F};
+      for (std::size_t index = first; index < items.size(); ++index) {
+        items[index].colour = colour;
+      }
+    }
+    for (std::size_t door = 0; door < parts_.doors.size(); ++door) {
+      const Vec3 hinge = look_.door_hinges[door];
+      const Mat4 turned = translation(Vec3{-hinge.x, -hinge.y, -hinge.z}) *
+                          rotation_z(carrier.hatch * look_.door_turns[door]) * translation(hinge) *
+                          frame;
+      add_mesh(parts_.doors[door], turned, items);
+    }
+    add_mesh(parts_.spinner, rotation_y(carrier.spin) * frame, items);
+  }
+  const float scale = look_.pickup_scale;
+  for (const SupplyPickup &pickup : drop.pickups()) {
+    const bool carried = pickup.state == SupplyState::carried && !carrier.parked;
+    if (!carried && pickup.state != SupplyState::falling && pickup.state != SupplyState::landed) {
+      continue;
+    }
+    const std::size_t first = items.size();
+    add_mesh(parts_.first_pickup + pickup.kind,
+             scaling(Vec3{scale, scale, scale}) * translation(pickup.position), items);
+    if (!split_screen) {
+      continue;
+    }
+    const float pulse = SupplyDrop::blink(pickup) * look_.tint_pulse + look_.tint_base;
+    const auto &tint = look_.glow_colours[static_cast<std::size_t>(effect_of(drop, pickup.kind))];
+    for (std::size_t index = first; index < items.size(); ++index) {
+      items[index].colour = {tint[0] * pulse, tint[1] * pulse, tint[2] * pulse, 1.0F};
+    }
+  }
+}
+
+void DesktopSupply::add_sprites(const SupplyDrop &drop, const Vec3 eye,
+                                std::vector<WorldSprite> &sprites) const {
+  if (!ready() || !drop.active() || glow_texture_ < 0) {
+    return;
+  }
+  const bool parked = drop.carrier().parked;
+  for (const SupplyPickup &pickup : drop.pickups()) {
+    const bool carried = pickup.state == SupplyState::carried && !parked;
+    if (!carried && pickup.state != SupplyState::falling && pickup.state != SupplyState::landed) {
+      continue;
+    }
+    // 0x066223: turned to the camera and brought glow_pull toward it.
+    const Vec3 toward = eye - pickup.position;
+    const float distance = length(toward);
+    WorldSprite glow;
+    glow.texture = glow_texture_;
+    glow.position =
+        distance > 0.0F ? pickup.position + toward * (look_.glow_pull / distance) : pickup.position;
+    glow.size = look_.glow_size * 0.5F; // grid_mdl spans -0.5 to 0.5
+    const auto &colour = look_.glow_colours[static_cast<std::size_t>(effect_of(drop, pickup.kind))];
+    glow.colour = {colour[0], colour[1], colour[2], SupplyDrop::blink(pickup) * look_.glow_alpha};
+    sprites.push_back(glow);
+  }
+}
+
+void DesktopSupply::tick(const Battle &battle, EffectSystem *effects) {
+  if (effects == nullptr) {
+    return;
+  }
+  const auto &robots = battle.robots();
+  // 0x0880ad: a burst that has thrown stops, and heads for its robot.
+  std::erase_if(bursts_, [&](const Burst &burst) { return !effects->alive(burst.handle); });
+  for (const Burst &burst : bursts_) {
+    effects->stop(burst.handle);
+    if (burst.robot >= 0 && burst.robot < static_cast<int>(robots.size())) {
+      effects->set_target(burst.handle, robots[static_cast<std::size_t>(burst.robot)].aim_origin());
+    }
+  }
+  const SupplyDrop *drop = battle.supply();
+  if (drop == nullptr) {
+    return;
+  }
+  const auto &kinds = drop->settings().kinds;
+  for (const BattleEvent &event : battle.events()) {
+    if (event.kind != BattleEventKind::supply || event.robot < 0 ||
+        event.robot >= static_cast<int>(robots.size()) ||
+        static_cast<int>(bursts_.size()) >= look_.take_bursts) {
+      continue;
+    }
+    const int effect = effect_of(*drop, event.slot);
+    // The level: the pickup's place among its effect's kinds, from 1.
+    int level = 1;
+    for (int type = 0; type < event.slot && type < static_cast<int>(kinds.size()); ++type) {
+      level += effect_of(*drop, type) == effect ? 1 : 0;
+    }
+    const Vec3 robot = robots[static_cast<std::size_t>(event.robot)].aim_origin();
+    const EffectHandle handle =
+        effects->start(look_.take_effects[static_cast<std::size_t>(effect)], event.at, robot);
+    if (handle != 0) {
+      effects->set_rate(handle, look_.take_rate * static_cast<float>(level));
+      bursts_.push_back({handle, event.robot});
+    }
+  }
+}
+
+std::unique_ptr<DesktopSupply> load_supply(WorldRenderer *world, const DataRoots &roots,
+                                           const SceneTuning &tuning, SupplySettings settings,
+                                           Battle &battle) {
+  if (const auto file = roots.find_asset(tuning.tables)) {
+    try {
+      settings.routes = parse_supply_routes(json::read_file(*file), tuning.stage);
+    } catch (const std::exception &error) {
+      SDL_Log("%s: %s", tuning.tables.c_str(), error.what());
+    }
+  }
+  if (settings.routes.empty()) {
+    return nullptr;
+  }
+  const SupplyLook look = settings.look;
+  battle.set_supply(std::move(settings));
+  if (world == nullptr || !world->available()) {
+    return nullptr;
+  }
+  auto view = std::make_unique<DesktopSupply>(*world, look, tuning.stage);
+  if (view->ready()) {
+    return view;
+  }
+  SDL_Log("The supply drop model is missing; convert the robots again");
+  return nullptr;
+}
+
+void collect_supply(const Battle &battle, const SupplyLook &look, std::int64_t &money,
+                    std::vector<WorldSound> &sounds) {
+  for (const BattleEvent &event : battle.events()) {
+    if (event.robot != 0) {
+      continue;
+    }
+    if (event.kind == BattleEventKind::supply) {
+      money += static_cast<std::int64_t>(event.amount);
+      // 0x066e50, for player robots, at the robot.
+      sounds.push_back({look.take_sound, battle.player().aim_origin()});
+    } else if (event.kind == BattleEventKind::carrier_down) {
+      money += static_cast<std::int64_t>(event.amount);
+    }
+  }
+}
+
+} // namespace phantomcrash

@@ -116,10 +116,24 @@ TEST_CASE("settings round-trip and tolerate old or bad files") {
   changed.frame_rate = {false, true, 144};
   changed.fullscreen = true;
   changed.frame_counter = true;
+  changed.quest.player_name = "Tester";
+  changed.quest.day = 12;
+  QuestSave slot;
+  slot.player_name = "Saved";
+  slot.money = 5000;
+  slot.seen_events = {50, 51};
+  changed.save_slots[2] = slot;
   CHECK(settings_from_json(json::parse(json::write(settings_to_json(changed)))) == changed);
 
   CHECK(settings_from_json(json::parse("{}")) == Settings{});
   const auto clamped = settings_from_json(json::parse(R"({"frame_rate": {"cap": 500}})"));
   CHECK(clamped.frame_rate.cap == 144);
   CHECK(load_settings("definitely/missing/settings.json") == Settings{});
+}
+
+TEST_CASE("save slots that cannot be read are marked for LOAD and SAVE's notice") {
+  CHECK(!settings_from_json(json::parse(R"({"save_slots": [null, {}]})")).save_slots_unreadable);
+  const auto bad_entry = settings_from_json(json::parse(R"({"save_slots": [null, 7]})"));
+  CHECK(bad_entry.save_slots_unreadable);
+  CHECK(settings_from_json(json::parse(R"({"save_slots": "x"})")).save_slots_unreadable);
 }

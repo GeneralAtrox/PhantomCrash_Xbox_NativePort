@@ -26,7 +26,10 @@ and `scr_common_tex.bin`, starts 5GARAGE and fades in over 0.5 s (`0x2eb8f`).
 - A second ticker (`0x2a85a`, redrawn by `0x2a443`) scrolls the current
   track's credit in the CURRENT MUSIC band: x 0–396, y 419, as
   《 title : artist 》 from the 81 records at `0x1efd38` (5GARAGE is
-  "Sanctuary" by Dunkirk).
+  "Sanctuary" by Dunkirk). The band's seven meter bars (at 434, 395) move
+  with the music as on the town screens, and the credit follows the music
+  when the radio changes songs; SOUND CONFIG and BUTTON CONFIG share the
+  band.
 - VIBRATION (`0x2e87f`) opens a YES/NO message box on the current setting
   (bit 30 of the config word at `+0x9cc` means off; the default is on). The
   choice moves with left/right (flags `0x17`), B moves it to NO, A stores it.

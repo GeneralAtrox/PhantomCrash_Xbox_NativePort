@@ -3,14 +3,15 @@
   "OPTION screen (original scene 26: init 0x2eb8f, list 0x2e9eb, draw 0x2e710; sprite pairs 0x1fa368, positions 0x1fa398, help strings 0x1fa4ac).",
   "The cursor moves with the D-pad or left stick and wraps on a new press. Cancel does not leave: it moves the cursor to EXIT, and in a YES/NO box to NO.",
   "Each item has its own help line; it restarts when the cursor moves onto the item and scrolls left along the top at one unit per frame (help), repeating.",
-  "now_playing is the credit for the current music, scrolling in the CURRENT MUSIC band (0x2a85a), from the converted tables/music.json credits.",
+  "now_playing is the credit for the current music, scrolling in the CURRENT MUSIC band (0x2a85a), from the converted tables/music.json credits; meter places the band's seven bars (data/ui/frame.json), which move with the music as on the town screens. SOUND CONFIG and BUTTON CONFIG have the same band.",
   "toggle asks the question and sets the named option (YES is on); reset asks, then restores every option's default and shows its done notice. The boxes' look is in message_box.json.",
-  "The original also shows the day and money here when it is entered from the garage; the port only enters it from the main menu so far."
+  "entered_from: opened from the garage's system menu (scene 39) the screen also shows the day and money (0xb1b56, 0xb1cdd) and EXIT returns there; the sub-screens do not show them."
  ],
  "music": "garage",
  "fade_in": 0.5,
  "fade_out": 0.5,
  "exit_to": "main_menu",
+ "entered_from": { "system": { "exit_to": "system", "hud": true } },
  "confirm": { "buttons": "confirm" },
  "cancel": { "buttons": "cancel" },
  "cursor_repeat": { "delay": 0.4, "interval": 0.1 },
@@ -20,6 +21,7 @@
  ],
  "help": { "position": [0, 72], "clip": [0, 0, 640, 480], "colour": "#f0f0f0", "speed": 60, "lead": 270, "trail": 36, "layer": 263 },
  "now_playing": { "format": "《 {title} : {artist} 》", "position": [0, 419], "clip": [0, 419, 396, 437], "colour": "#ffffff", "speed": 60, "trail": 45, "layer": 263 },
+ "meter": [434, 395],
  "default_cursor": "vibration",
  "cancel_cursor": "exit",
  "items": [

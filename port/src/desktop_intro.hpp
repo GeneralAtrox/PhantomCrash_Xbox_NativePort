@@ -12,6 +12,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <vector>
 
 namespace phantomcrash {
 
@@ -38,6 +39,9 @@ public:
   }
   [[nodiscard]] std::string next() const override {
     return sequence_.then();
+  }
+  [[nodiscard]] std::vector<std::string> take_sounds() override {
+    return sequence_.take_sounds();
   }
 
 private:

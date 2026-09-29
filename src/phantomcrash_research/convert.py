@@ -3,9 +3,16 @@
 Output (``artifacts/europe/assets`` by default):
 
 - ``textures/<pack>/<index>.png``: every texture of every ``*_tex.bin`` pack.
+- ``models/model/<name>.gltf`` (and ``.bin``): every standalone model as
+  glTF 2.0, its materials pointing at the PNGs of its texture pack.
 - ``sound/sfx/<bank>/<index>.wav``: every effect of every SE BIN bank, as PCM.
+- ``robots/``, ``models/binlink/``, ``textures/binlink/``, ``motions/``: the
+  robots' part tables, skeletons, models, paints and motion banks
+  (:mod:`robot_convert`).
 - ``tables/*.json``: resources, sprites, music (with credits and the volume
-  curve), movie and system font tables from the XBE.
+  curve), movie and system font tables from the XBE, and the story events
+  with their scripts (``events.json``) and talk backgrounds and characters
+  (``talk.json``).
 - ``manifest.json``: what was converted from which input.
 
 Movies (``.sfd``) and music (PCM ``.wav``) are already open formats; the port
@@ -20,16 +27,18 @@ from pathlib import Path
 import shutil
 from typing import Callable
 
-from . import audio, game_tables, png, texture_pack
+from . import audio, events, game_tables, garage_tables, gltf, model, png, robot_convert, texture_pack, town_tables
 
 MANIFEST = "manifest.json"
 FORMAT_VERSION = 1
 TEXTURE_DIRECTORIES = ("scroll", "texture")
 
 
-def _write_json(path: Path, data: object) -> None:
+def _write_json(path: Path, data: object, readable_text: bool = False) -> None:
+    """``readable_text`` keeps non-ASCII text as UTF-8 rather than escapes."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, indent=1) + "\n", encoding="utf-8")
+    text = json.dumps(data, indent=1, ensure_ascii=not readable_text)
+    path.write_text(text + "\n", encoding="utf-8")
 
 
 def _prepare_output(output: Path, replace: bool) -> None:
@@ -72,6 +81,33 @@ def convert_textures(media: Path, output: Path, report: Callable[[str], None]) -
     return records
 
 
+def convert_models(
+    media: Path, output: Path, tables: game_tables.GameTables, report: Callable[[str], None]
+) -> list[dict]:
+    """Standalone models (``Media/model``) to glTF. Binlink models (robots,
+    city stages) wait for their texture banks to be converted."""
+    records = []
+    packs = {resource.id: resource for resource in tables.resources}
+    for resource in tables.resources:
+        if resource.type != game_tables.RESOURCE_MODEL or resource.path is None:
+            continue
+        source = media / resource.path
+        if not source.is_file():
+            continue
+        target = output / "models" / f"{_pack_name(resource.path)}.gltf"
+        uris = None
+        pack = packs.get(resource.texture_resource)
+        if pack is not None and pack.path is not None:
+            textures = output / "textures" / _pack_name(pack.path)
+            count = len(list(textures.glob("*.png")))
+            relative = Path("../" * (len(Path(resource.path).parts))) / "textures" / _pack_name(pack.path)
+            uris = [(relative / f"{index}.png").as_posix() for index in range(count)]
+        summary = gltf.write(model.parse(source.read_bytes()), target, uris)
+        records.append({"model": resource.path, "resource": resource.id, **summary})
+        report(f"{summary['meshes']:>3} meshes    {resource.path}")
+    return records
+
+
 def convert_sound_banks(media: Path, output: Path, report: Callable[[str], None]) -> list[dict]:
     records = []
     for source in sorted((media / "sound").glob("*.bin")):
@@ -100,7 +136,8 @@ def convert_sound_banks(media: Path, output: Path, report: Callable[[str], None]
 
 
 def _slot_sources(tables: game_tables.GameTables) -> dict[str, list[dict]]:
-    """Texture slot -> every disc pack texture that can fill it (usually one)."""
+    """Texture slot -> every pack texture that can fill it (usually one): the
+    disc's packs first, then the binlink packs (``binlink/<resource>``)."""
     sources: dict[str, list[dict]] = {}
     for resource in tables.resources:
         if resource.path is None or resource.first_slot is None:
@@ -108,11 +145,44 @@ def _slot_sources(tables: game_tables.GameTables) -> dict[str, list[dict]]:
         for index in range(resource.slot_count):
             entry = {"pack": _pack_name(resource.path), "texture": index}
             sources.setdefault(str(resource.first_slot + index), []).append(entry)
+    for resource in game_tables.sprite_binlink_packs(tables):
+        for index in range(resource.slot_count):
+            entry = {"pack": f"binlink/{resource.id}", "texture": index}
+            sources.setdefault(str(resource.first_slot + index), []).append(entry)
     return sources
 
 
+def _sprite_source(tables: game_tables.GameTables, sprite_id: int) -> dict | None:
+    """A sprite as the port's data files give one: its image and texel rect."""
+    sources = _slot_sources(tables)
+    sprite = next((entry for entry in tables.sprites if entry.id == sprite_id), None)
+    if sprite is None or str(sprite.slot) not in sources:
+        return None
+    source = sources[str(sprite.slot)][0]
+    return {
+        "image": f"textures/{source['pack']}/{source['texture']}.png",
+        "rect": [sprite.left, sprite.top, sprite.right, sprite.bottom],
+    }
+
+
+def _credit_record(tables: game_tables.GameTables, credit: game_tables.MusicCredit) -> dict:
+    """A credit with its music file, and its jackets and artist images as sprites."""
+    record = {"file": f"sound/{tables.music[credit.track]}", "track": credit.track}
+    record.update(title=credit.title, artist=credit.artist)
+    for key, sprite_id in (
+        ("jacket", credit.jacket),
+        ("jacket_small", credit.jacket_small),
+        ("artist_name", credit.artist_name),
+        ("artist_link", credit.artist_link),
+    ):
+        if (source := _sprite_source(tables, sprite_id)) is not None:
+            record[key] = source
+    return record
+
+
 def write_tables(executable: Path, output: Path) -> dict:
-    tables = game_tables.load(executable.read_bytes())
+    data = executable.read_bytes()
+    tables = game_tables.load(data)
     directory = output / "tables"
     _write_json(directory / "resources.json", [asdict(resource) for resource in tables.resources])
     _write_json(
@@ -128,7 +198,7 @@ def write_tables(executable: Path, output: Path) -> dict:
             "tracks": tables.music,
             "scene_music": tables.scene_music,
             "credits": [
-                {"file": f"sound/{tables.music[credit.track]}", **asdict(credit)}
+                _credit_record(tables, credit)
                 for credit in tables.music_credits
                 if credit.track < len(tables.music)
             ],
@@ -152,7 +222,13 @@ def write_tables(executable: Path, output: Path) -> dict:
             "binlink_packs": tables.binlink_packs,
         },
     )
+    story = events.events(data, tables)
+    _write_json(directory / "events.json", {"events": story}, readable_text=True)
+    _write_json(directory / "talk.json", events.talk_tables(data, tables))
+    _write_json(directory / "town.json", town_tables.town_tables(data, tables), readable_text=True)
+    _write_json(directory / "garage.json", garage_tables.garage_tables(data), readable_text=True)
     return {
+        "events": len(story),
         "resources": len(tables.resources),
         "sprites": len(tables.sprites),
         "music": len(tables.music),
@@ -179,7 +255,40 @@ def convert(
     _write_json(output / MANIFEST, manifest)
     manifest["tables"] = write_tables(executable, output)
     manifest["texture_packs"] = convert_textures(media, output, report)
+    tables = game_tables.load(executable.read_bytes())
+    manifest["models"] = convert_models(media, output, tables, report)
+    manifest["robots"] = robot_convert.convert_robots(
+        media, executable.read_bytes(), tables, output, report
+    )
     manifest["sound_banks"] = convert_sound_banks(media, output, report)
     manifest["complete"] = True
     _write_json(output / MANIFEST, manifest)
     return manifest
+
+
+def update_robots(
+    files: Path, output: Path, progress: Callable[[str], None] | None = None
+) -> dict:
+    """Re-run only the robot conversion into an existing conversion."""
+    report = progress or (lambda _message: None)
+    manifest_path = output / MANIFEST
+    if not manifest_path.is_file():
+        raise FileNotFoundError(f"{output} has no {MANIFEST}: run a full conversion first")
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    executable = (files / "default.xbe").read_bytes()
+    tables = game_tables.load(executable)
+    manifest["robots"] = robot_convert.convert_robots(
+        files / "Media", executable, tables, output, report
+    )
+    _write_json(manifest_path, manifest)
+    return manifest["robots"]
+
+
+def update_town(files: Path, output: Path) -> dict:
+    """Re-write only the town's tables (tables/town.json) into an existing conversion."""
+    if not (output / MANIFEST).is_file():
+        raise FileNotFoundError(f"{output} has no {MANIFEST}: run a full conversion first")
+    data = (files / "default.xbe").read_bytes()
+    town = town_tables.town_tables(data, game_tables.load(data))
+    _write_json(output / "tables" / "town.json", town, readable_text=True)
+    return town

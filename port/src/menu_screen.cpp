@@ -8,6 +8,7 @@
 namespace phantomcrash {
 namespace {
 
+using json::numbers;
 using json::required;
 
 // Ticks of 1/60 s do not sum exactly (30 of them fall just short of 0.5).
@@ -20,6 +21,13 @@ void parse_menu_basics(const json::JsonValue &document, MenuBasics &basics) {
   basics.fade_in = document.number_or("fade_in", 0.0);
   basics.fade_out = document.number_or("fade_out", 0.0);
   basics.exit_to = required(document, "exit_to").string();
+  basics.hud = document.boolean_or("hud", false);
+  if (const auto *entered = document.find("entered_from")) {
+    for (const auto &[origin, entry] : entered->object()) {
+      basics.entered_from[origin] = {required(entry, "exit_to").string(),
+                                     entry.boolean_or("hud", basics.hud)};
+    }
+  }
   basics.confirm_buttons = buttons_from_json(required(required(document, "confirm"), "buttons"));
   if (const auto *cancel = document.find("cancel")) {
     basics.cancel_buttons = buttons_from_json(required(*cancel, "buttons"));
@@ -36,6 +44,13 @@ void parse_menu_basics(const json::JsonValue &document, MenuBasics &basics) {
   }
 }
 
+MenuEntry menu_entry(const MenuBasics &basics, const std::string &origin) {
+  if (const auto found = basics.entered_from.find(origin); found != basics.entered_from.end()) {
+    return found->second;
+  }
+  return {basics.exit_to, basics.hud};
+}
+
 MenuTickers parse_menu_tickers(const json::JsonValue &document) {
   MenuTickers tickers;
   try {
@@ -49,6 +64,9 @@ MenuTickers parse_menu_tickers(const json::JsonValue &document) {
     tickers.now_playing_format = required(now_playing, "format").string();
   } catch (const std::exception &error) {
     throw std::runtime_error(std::string("now_playing: ") + error.what());
+  }
+  if (const auto *meter = document.find("meter")) {
+    tickers.meter = numbers<2>(*meter, "meter");
   }
   return tickers;
 }

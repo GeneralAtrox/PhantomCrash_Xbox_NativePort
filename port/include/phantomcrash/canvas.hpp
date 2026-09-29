@@ -20,6 +20,8 @@ struct Viewport {
   float scale{1.0F};
   // Pixel position of canvas (0, 0).
   float offset_x{}, offset_y{};
+  // The screen's pixel rectangle: the window, or one screen of a split.
+  float origin_x{}, origin_y{};
   int pixel_width{}, pixel_height{};
 
   [[nodiscard]] float to_pixel_x(float x) const {
@@ -37,10 +39,14 @@ struct Viewport {
   }
   // Canvas x of the window's left and right edges (-ve / beyond 640 when wide).
   [[nodiscard]] float visible_left() const {
-    return -offset_x / scale;
+    return (origin_x - offset_x) / scale;
   }
   [[nodiscard]] float visible_right() const {
-    return (static_cast<float>(pixel_width) - offset_x) / scale;
+    return (origin_x + static_cast<float>(pixel_width) - offset_x) / scale;
+  }
+  // Canvas y of the screen's middle.
+  [[nodiscard]] float visible_middle() const {
+    return (origin_y + static_cast<float>(pixel_height) * 0.5F - offset_y) / scale;
   }
 };
 
@@ -53,6 +59,23 @@ struct Viewport {
   viewport.scale = std::min(width / canvas_width, height / canvas_height);
   viewport.offset_x = (width - canvas_width * viewport.scale) * 0.5F;
   viewport.offset_y = (height - canvas_height * viewport.scale) * 0.5F;
+  return viewport;
+}
+
+// A canvas `width` x `height` units fitted, centred, into the pixel
+// rectangle `screen` (one screen of a split).
+[[nodiscard]] inline Viewport fit_screen(const PixelRect &screen, const float width,
+                                         const float height) {
+  Viewport viewport;
+  viewport.origin_x = screen.x;
+  viewport.origin_y = screen.y;
+  viewport.pixel_width = std::max(static_cast<int>(screen.width), 1);
+  viewport.pixel_height = std::max(static_cast<int>(screen.height), 1);
+  const auto pixels_x = static_cast<float>(viewport.pixel_width);
+  const auto pixels_y = static_cast<float>(viewport.pixel_height);
+  viewport.scale = std::min(pixels_x / width, pixels_y / height);
+  viewport.offset_x = screen.x + (pixels_x - width * viewport.scale) * 0.5F;
+  viewport.offset_y = screen.y + (pixels_y - height * viewport.scale) * 0.5F;
   return viewport;
 }
 

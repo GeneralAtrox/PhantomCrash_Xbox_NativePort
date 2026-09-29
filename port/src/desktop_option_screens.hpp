@@ -1,5 +1,6 @@
 #pragma once
 
+#include "desktop_frame.hpp"
 #include "desktop_screen.hpp"
 #include "desktop_textures.hpp"
 #include "phantomcrash/button_config.hpp"
@@ -44,32 +45,55 @@ protected:
   Menu menu_;
 };
 
-// SOUND CONFIG: the items, their values as digits and bars, and the help and
-// music lines.
+// SOUND CONFIG: the items, their values as digits and bars, the help line and
+// the CURRENT MUSIC band (meter and credit).
 class SoundConfigScreen final : public MenuScreen<SoundConfigMenu> {
 public:
   SoundConfigScreen(TextureCache &textures, const GlyphFont &font, SoundConfigScript script,
-                    GameOptions options, const std::string &now_playing);
+                    GameOptions options, const FrameStyle &frame,
+                    const std::vector<MusicCredit> &credits);
+  void tick(const InputFrame &input, double tick_seconds) override {
+    MenuScreen::tick(input, tick_seconds);
+    band_.update(tick_seconds);
+  }
+  void set_music(const std::string &file) override {
+    band_.set_music(file);
+  }
+  void hear_music(const std::vector<float> &levels) override {
+    band_.hear_music(levels);
+  }
   void draw(const Viewport &viewport) override;
 
 private:
   const GlyphFont &font_;
   std::vector<std::vector<int>> help_runs_;
-  std::vector<int> now_playing_run_;
+  LocationFrame band_;
 };
 
 // BUTTON CONFIG: the rows' bars, labels and values, the assigned buttons'
-// icons, the selected row's arrows or controller marker, and the lines.
+// icons, the selected row's arrows or controller marker, the help line and
+// the CURRENT MUSIC band (meter and credit).
 class ButtonConfigScreen final : public MenuScreen<ButtonConfigMenu> {
 public:
   ButtonConfigScreen(TextureCache &textures, const GlyphFont &font, ButtonConfigScript script,
-                     GameOptions options, const std::string &now_playing);
+                     GameOptions options, const FrameStyle &frame,
+                     const std::vector<MusicCredit> &credits);
+  void tick(const InputFrame &input, double tick_seconds) override {
+    MenuScreen::tick(input, tick_seconds);
+    band_.update(tick_seconds);
+  }
+  void set_music(const std::string &file) override {
+    band_.set_music(file);
+  }
+  void hear_music(const std::vector<float> &levels) override {
+    band_.hear_music(levels);
+  }
   void draw(const Viewport &viewport) override;
 
 private:
   const GlyphFont &font_;
   std::vector<std::vector<int>> help_runs_;
-  std::vector<int> now_playing_run_;
+  LocationFrame band_;
 };
 
 // SCREEN ADJUST: the picture, moved by the runner with the offset, and the

@@ -8,6 +8,7 @@
 #include "phantomcrash/settings.hpp"
 #include "phantomcrash/sprite_layer.hpp"
 
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -39,16 +40,27 @@ struct OptionScript : MenuBasics, MenuTickers {
   std::vector<OptionItem> items;
   int default_cursor{};
   int cancel_cursor{}; // where a cancel press moves the cursor
+  // The RIDING SV plate's height, for a menu that shows it (the system
+  // menu's, 0x6dd74).
+  std::optional<float> riding_plate_y;
 };
 
-// Throws std::runtime_error naming the document and entry at fault.
-[[nodiscard]] OptionScript parse_option(const json::JsonValue &document);
+// Throws std::runtime_error naming the document (`name`) and entry at fault.
+[[nodiscard]] OptionScript parse_option(const json::JsonValue &document,
+                                        const std::string &name = "option.json");
 
 // A track's credit from the converted tables/music.json.
 struct MusicCredit {
   std::string file; // e.g. "sound/5GARAGE.WAV"
   std::string title;
   std::string artist;
+  // The CD jacket, large and small (the converted credit's image and rect;
+  // no position or layer), when the credit has one.
+  std::optional<Sprite> jacket;
+  std::optional<Sprite> jacket_small;
+  // The artist's name and web address, as images (Sonic Amp's preview).
+  std::optional<Sprite> artist_name;
+  std::optional<Sprite> artist_link;
 };
 
 [[nodiscard]] std::vector<MusicCredit> parse_music_credits(const json::JsonValue &document);
@@ -102,6 +114,9 @@ public:
   }
   [[nodiscard]] double seconds() const noexcept {
     return seconds_;
+  }
+  [[nodiscard]] bool faded_in() const noexcept {
+    return !fade_.fading_in();
   }
   [[nodiscard]] float black_alpha() const noexcept {
     return fade_.black_alpha();

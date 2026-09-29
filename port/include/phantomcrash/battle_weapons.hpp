@@ -1,0 +1,246 @@
+#pragma once
+
+#include "phantomcrash/json.hpp"
+#include "phantomcrash/math3d.hpp"
+#include "phantomcrash/robot_parts.hpp"
+#include "phantomcrash/stage_collision.hpp"
+#include "phantomcrash/stage_doors.hpp"
+
+#include <map>
+#include <optional>
+#include <random>
+#include <string>
+#include <utility>
+#include <vector>
+
+namespace phantomcrash {
+
+// How a weapon behaves in the port's battle, tuned in
+// data/world/training.json "weapons". A weapon naming an original record
+// ("part", robot_parts.hpp) takes its damage, timing, flight, blast,
+// homing, ammunition and HUD kind from that record instead.
+enum class WeaponKind { gun, melee, missile, grenade };
+
+// The HUD's weapon kinds (weapon record +0x1c, drawn by 0x4ad3b).
+namespace hud_kind {
+inline constexpr int cannon = 0; // pistols and cannons
+inline constexpr int missile = 1;
+inline constexpr int machine_gun = 2; // machine guns and shotguns
+inline constexpr int grenade = 3;
+inline constexpr int beam = 5; // charged: beams and lasers
+inline constexpr int melee = 6;
+} // namespace hud_kind
+
+// What a shot does where it lands (weapon record +0x1f and +0x20, the
+// cases of 0x098eda).
+namespace shot_hit {
+inline constexpr int removed = 0;       // gone, without an impact
+inline constexpr int burst = 1;         // gone, with its impact
+inline constexpr int explode = 2;       // blasts, with its impact
+inline constexpr int explode_quiet = 3; // blasts without one
+inline constexpr int strike = 4;        // its impact and a hit sound (melee)
+inline constexpr int pierce = 5;        // its impact, and it flies on (beams)
+} // namespace shot_hit
+
+struct WeaponTuning {
+  std::string name;
+  std::string label; // shown on the HUD (the name when not given)
+  WeaponKind kind{WeaponKind::gun};
+  float damage{30.0F};             // a direct hit's
+  float cooldown{0.15F};           // seconds between shots
+  int rounds{1};                   // shots a trigger pull fires
+  float spread_degrees{};          // the extra rounds scatter this far off the aim
+  float speed{180.0F};             // projectile (top) speed, units per second
+  float start_speed{};             // missiles leave this fast (0: half the speed) ...
+  float acceleration{};            // ... and speed up by this (0: the speed) a second
+  float range{150.0F};             // gun and melee reach
+  float life_seconds{};            // projectiles expire after this (0: past 1.5 x range)
+  float lock_range{120.0F};        // the aim locks onto enemies this close ...
+  float lock_degrees{20.0F};       // ... and this far off the aim
+  float turn_degrees_per_second{}; // missiles home at this rate
+  float gravity{};                 // grenades fall
+  float launch_degrees{};          // grenades leave this far above the aim (0: lobbed onto it)
+  float blast_radius{};            // missiles and grenades hurt everyone this close
+  float blast_start_radius{};      // the blast grows from this ...
+  float blast_seconds{};           // ... to blast_radius over this long
+  float blast_damage{};            // to each body in it every tick (0: damage, less with distance)
+  float stagger_seconds{0.2F};     // a hit makes its target flinch this long (0: never)
+  float knockback{};               // a hit pushes its target this fast, units a second
+  float knockdown_percent{};       // a critical hit's chance to knock off a weapon
+  float recharge_seconds{};        // a beam recharges from empty to full in this long
+  std::optional<PartRef> part;     // the original record it is
+  int hud_kind{hud_kind::cannon};
+  int model{-1};      // its record's model (+8), which some fire sounds go by
+  int fire_sound{-1}; // its record's fire sound (+0x21, battle_sounds.hpp); -1: none
+  int flight{-1};     // its record's flight (+0x1d)
+  // How its record draws it (effects.json): the shots' look (+0x22), the
+  // impact they start where they land (+0x23), and what they do there
+  // (+0x1f on a wall or the floor, +0x20 on a robot; see shot_hit). -1 and
+  // 0: none.
+  int look{-1};
+  int impact{-1};
+  int surface_hit{};
+  int robot_hit{};
+  int max_ammo{}; // 0: unlimited
+  bool homing{};  // missiles home on their lock
+};
+
+// A weapon's ammunition, and the count the HUD shows. A refill counts the
+// shown value up to the new amount over refill_count_seconds (0x09b986
+// counts weapon +0x98 from +0x9c to +0x94 over the 120 frames at +0xa4).
+// A beam's charge instead recharges by max / recharge_seconds a second
+// (0x097785 adds max / recharge frames every frame).
+struct Magazine {
+  static constexpr float refill_count_seconds = 2.0F;
+
+  int max{}; // 0: unlimited
+  int ammo{};
+  float shown{};
+  float refill_from{};
+  float refill_left{};      // seconds of the count still to run
+  float dry_seconds{};      // how long it has been empty
+  float recharge_seconds{}; // 0: it does not recharge
+  float charge{};           // the part of the next round recharged so far
+
+  void reset(int maximum, float recharge = 0.0F);
+  [[nodiscard]] bool recharging() const noexcept {
+    return recharge_seconds > 0.0F;
+  }
+  [[nodiscard]] bool limited() const noexcept {
+    return max > 0;
+  }
+  [[nodiscard]] bool empty() const noexcept {
+    return max > 0 && ammo <= 0;
+  }
+  [[nodiscard]] bool refilling() const noexcept {
+    return refill_left > 0.0F;
+  }
+  // Spends one round (nothing when unlimited).
+  void take();
+  // Adds `amount`, up to the maximum, and starts the count.
+  void refill(int amount);
+  void tick(float seconds);
+};
+
+// {"handgun": {"kind": "gun", ...}, ...}; throws on an unknown kind.
+[[nodiscard]] std::map<std::string, WeaponTuning>
+parse_weapon_tunings(const json::JsonValue &value);
+
+// A body the weapons can hit: a vertical capsule approximated by a sphere
+// at the robot's middle.
+struct Target {
+  Vec3 centre;
+  float radius{};
+  int team{};
+  bool alive{};
+};
+
+struct Projectile {
+  const WeaponTuning *weapon{};
+  int owner{};
+  int team{};
+  int target{-1}; // missiles home on this robot
+  Vec3 position;
+  Vec3 velocity;
+  float travelled{};
+  float age{};
+};
+
+// A blast still growing: every battle tick it hurts each body it reaches,
+// the one hit directly too.
+struct Blast {
+  const WeaponTuning *weapon{};
+  int owner{};
+  int team{};
+  Vec3 position;
+  float age{};
+  float next_pulse{}; // the age at which it hurts again
+};
+
+// A blast or impact, drawn as an expanding flash.
+struct Explosion {
+  Vec3 position;
+  float radius{};
+  float age{};
+  float life{0.5F};
+};
+
+// Where a shot or strike landed: on a body, a wall or the floor, or where
+// a blast weapon's flight ended. The battle's sounds and effects hear it.
+struct Landing {
+  const WeaponTuning *weapon{};
+  int owner{};
+  Vec3 at;
+  bool on_robot{}; // a body, so the weapon's robot_hit applies, not its surface_hit
+};
+
+// Whether a landing starts the weapon's impact effect (0x098eda).
+[[nodiscard]] bool starts_impact(const WeaponTuning &weapon, bool on_robot) noexcept;
+
+struct WeaponHit {
+  int victim{};
+  int attacker{};
+  float damage{};
+  float stagger{};
+  Vec3 position;
+  const WeaponTuning *weapon{};
+  Vec3 direction;     // the way it pushes the victim (a unit vector)
+  bool directional{}; // a shot or strike, which does more from behind; not a blast
+};
+
+// Every projectile and blast in flight. Battle fires the weapons and
+// applies the hits this returns.
+class Armory final {
+public:
+  // Fires `rounds` of `weapon` from `muzzle` along `aim` (a unit vector),
+  // toward `target` when one is locked (-1 otherwise). Rounds after the
+  // first scatter by up to the weapon's spread.
+  void fire(const WeaponTuning &weapon, int owner, int team, Vec3 muzzle, Vec3 aim, int target,
+            const std::vector<Target> &targets, int rounds = 1);
+  // A melee strike: hits `target` when it is within the weapon's reach of
+  // `origin`. Returns whether it connected.
+  bool strike(const WeaponTuning &weapon, int owner, Vec3 origin, int target,
+              const std::vector<Target> &targets, std::vector<WeaponHit> &hits);
+  // Moves everything on, collecting hits; shots stop at the stage's walls
+  // and floor, and at the gates' shut door leaves.
+  void tick(float seconds, const std::vector<Target> &targets, const StageCollision &stage,
+            std::vector<WeaponHit> &hits, const StageDoors *doors = nullptr);
+
+  [[nodiscard]] const std::vector<Projectile> &projectiles() const noexcept {
+    return projectiles_;
+  }
+  [[nodiscard]] const std::vector<Explosion> &explosions() const noexcept {
+    return explosions_;
+  }
+  // The landings since the last call.
+  [[nodiscard]] std::vector<Landing> take_landings() {
+    return std::exchange(landings_, {});
+  }
+  // A fireball that hurts no one (a wreck blowing up).
+  void explode(const Vec3 at, const float radius, const float life) {
+    explosions_.push_back({at, radius, 0.0F, life});
+  }
+  void clear();
+
+private:
+  [[nodiscard]] Vec3 launch_velocity(const WeaponTuning &weapon, Vec3 muzzle, Vec3 direction,
+                                     const Target *locked) const;
+  [[nodiscard]] Vec3 scatter(Vec3 direction, float degrees);
+  void detonate(const Projectile &shot, Vec3 at, const std::vector<Target> &targets,
+                std::vector<WeaponHit> &hits, bool on_robot = false);
+  void spread_blasts(float seconds, const std::vector<Target> &targets,
+                     std::vector<WeaponHit> &hits);
+
+  std::vector<Projectile> projectiles_;
+  std::vector<Blast> blasts_;
+  std::vector<Explosion> explosions_;
+  std::vector<Landing> landings_;
+  std::minstd_rand random_;
+};
+
+// The launch velocity that lobs a grenade from `from` onto `to` at
+// `speed` under `gravity`, taking the higher arc when the target is out of
+// reach of the lower one; aims straight at `to` if it cannot reach.
+[[nodiscard]] Vec3 lob_velocity(Vec3 from, Vec3 to, float speed, float gravity);
+
+} // namespace phantomcrash

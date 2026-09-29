@@ -149,8 +149,29 @@ Settings settings_from_json(const json::JsonValue &value) {
   settings.fullscreen = value.boolean_or("fullscreen", settings.fullscreen);
   settings.frame_counter = value.boolean_or("frame_counter", settings.frame_counter);
   settings.pause_unfocused = value.boolean_or("pause_unfocused", settings.pause_unfocused);
+  settings.rumble_robots = std::clamp(
+      static_cast<int>(std::lround(value.number_or("rumble_robots", settings.rumble_robots))), 0,
+      max_rumble_robots);
   if (const auto *game = value.find("game")) {
     settings.game = game_from_json(*game);
+  }
+  if (const auto *quest = value.find("quest")) {
+    settings.quest = quest_from_json(*quest);
+  }
+  if (const auto *slots = value.find("save_slots"); slots != nullptr && slots->is_array()) {
+    const auto &saved = slots->array();
+    for (std::size_t slot = 0; slot < settings.save_slots.size() && slot < saved.size(); ++slot) {
+      if (saved[slot].is_object()) {
+        settings.save_slots[slot] = quest_from_json(saved[slot]);
+      } else if (!saved[slot].is_null()) {
+        settings.save_slots_unreadable = true;
+      }
+    }
+  } else if (slots != nullptr) {
+    settings.save_slots_unreadable = true;
+  }
+  if (const auto *kept = value.find("vs_scoobees")) {
+    settings.vs_scoobees = vs_scoobees_from_json(*kept);
   }
   return settings;
 }
@@ -162,12 +183,20 @@ json::JsonValue settings_to_json(const Settings &settings) {
       {"cap_enabled", JsonValue{settings.frame_rate.cap_enabled}},
       {"cap", JsonValue{static_cast<std::int64_t>(settings.frame_rate.cap)}},
   };
+  JsonValue::Array slots;
+  for (const auto &slot : settings.save_slots) {
+    slots.push_back(slot ? quest_to_json(*slot) : JsonValue{});
+  }
   return JsonValue{JsonValue::Object{
       {"frame_rate", JsonValue{std::move(frame_rate)}},
       {"fullscreen", JsonValue{settings.fullscreen}},
       {"frame_counter", JsonValue{settings.frame_counter}},
       {"pause_unfocused", JsonValue{settings.pause_unfocused}},
+      {"rumble_robots", JsonValue{static_cast<std::int64_t>(settings.rumble_robots)}},
       {"game", game_to_json(settings.game)},
+      {"quest", quest_to_json(settings.quest)},
+      {"save_slots", JsonValue{std::move(slots)}},
+      {"vs_scoobees", vs_scoobees_to_json(settings.vs_scoobees)},
   }};
 }
 
@@ -179,7 +208,9 @@ Settings load_settings(const std::filesystem::path &path) {
   try {
     return settings_from_json(json::read_file(path));
   } catch (const std::exception &) {
-    return {};
+    Settings unread;
+    unread.save_slots_unreadable = true;
+    return unread;
   }
 }
 

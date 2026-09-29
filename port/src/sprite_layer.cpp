@@ -108,6 +108,11 @@ Sprite parse_sprite(const json::JsonValue &value) {
       sprite.repeat = parse_repeat(*repeat);
     }
     sprite.title_only = value.boolean_or("title_only", false);
+    sprite.flip_x = value.boolean_or("flip_x", false);
+    sprite.angle = static_cast<float>(value.number_or("angle", 0.0));
+    if (const auto *pivot = value.find("pivot")) {
+      sprite.pivot = numbers<2>(*pivot, "pivot");
+    }
   } catch (const std::exception &error) {
     throw std::runtime_error("sprite \"" + sprite.id + "\": " + error.what());
   }
@@ -150,6 +155,41 @@ std::vector<Quad> place_sprite(const Sprite &sprite, const double seconds) {
     quads.push_back({x, y, width, height});
   }
   return quads;
+}
+
+Sprite scaled_sprite(Sprite sprite, const float x, const float y, const ScaleAnchor anchor) {
+  const std::array<float, 2> size = sprite.size.value_or(
+      std::array<float, 2>{sprite.rect[2] - sprite.rect[0], sprite.rect[3] - sprite.rect[1]});
+  std::array<float, 2> left_top = sprite.position;
+  if (sprite.centered) {
+    left_top = {left_top[0] - size[0] * 0.5F, left_top[1] - size[1] * 0.5F};
+  }
+  // How far along the lost width and height the top-left moves.
+  float along_x = 0.5F;
+  float along_y = 0.5F;
+  switch (anchor) {
+  case ScaleAnchor::centre:
+    break;
+  case ScaleAnchor::bottom_right:
+    along_x = along_y = 1.0F;
+    break;
+  case ScaleAnchor::bottom_left:
+    along_x = 0.0F;
+    along_y = 1.0F;
+    break;
+  case ScaleAnchor::top_right:
+    along_x = 1.0F;
+    along_y = 0.0F;
+    break;
+  case ScaleAnchor::top_left:
+    along_x = along_y = 0.0F;
+    break;
+  }
+  sprite.position = {left_top[0] + size[0] * (1.0F - x) * along_x,
+                     left_top[1] + size[1] * (1.0F - y) * along_y};
+  sprite.size = std::array<float, 2>{size[0] * x, size[1] * y};
+  sprite.centered = false;
+  return sprite;
 }
 
 } // namespace phantomcrash

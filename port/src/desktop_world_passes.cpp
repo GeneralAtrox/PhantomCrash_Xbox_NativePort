@@ -1,0 +1,292 @@
+#include "desktop_world_renderer.hpp"
+
+#include <algorithm>
+#include <cstring>
+
+namespace phantomcrash {
+namespace {
+
+// Byte-for-byte the HLSL constant buffers (desktop_world_shaders.cpp).
+struct FrameConstants {
+  Mat4 view_projection;
+  Vec3 eye;
+  float fog_start;
+  Vec3 ambient;
+  float fog_end;
+  Vec3 sun_direction;
+  float fog_enabled;
+  Vec3 sun_colour;
+  float shadow_length;
+  Vec3 fog_colour;
+  float pad1;
+};
+static_assert(sizeof(FrameConstants) == 144);
+
+struct DrawConstants {
+  Mat4 world;
+  std::array<float, 4> base_colour;
+  float alpha_cutoff;
+  float unlit;
+  float has_base;
+  float has_normal;
+  float alpha_test;
+  float fogged;
+  float item_alpha;
+  float flash;
+  std::array<float, 2> uv_offset;
+  float optical;
+  float pad;
+  std::array<float, 4> optical_sphere;
+  std::array<float, 4> optical_shape;
+};
+static_assert(sizeof(DrawConstants) == 160);
+
+template <typename T>
+void upload(ID3D11DeviceContext *context, ID3D11Buffer *buffer, const T &data) {
+  D3D11_MAPPED_SUBRESOURCE mapped{};
+  if (SUCCEEDED(context->Map(buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped))) {
+    std::memcpy(mapped.pData, &data, sizeof(T));
+    context->Unmap(buffer, 0);
+  }
+}
+
+bool blended(const ModelMaterial &material) {
+  return material.alpha == AlphaMode::blend || material.additive;
+}
+
+} // namespace
+
+void WorldRenderer::set_frame_constants(const WorldFrame &frame, const Mat4 &view) {
+  const StageLighting &light = frame.lighting;
+  FrameConstants constants{};
+  constants.view_projection = view * frame.projection;
+  constants.eye = frame.eye;
+  constants.fog_start = light.fog_start;
+  constants.ambient = light.ambient;
+  constants.fog_end = light.fog_end;
+  constants.sun_direction = light.sun_direction;
+  constants.fog_enabled = light.fog ? 1.0F : 0.0F;
+  constants.sun_colour = light.sun_colour;
+  constants.shadow_length = frame.shadow_length;
+  constants.fog_colour = light.fog_colour;
+  upload(context_.Get(), frame_constants_.Get(), constants);
+}
+
+void WorldRenderer::render(const WorldFrame &frame) {
+  const D3D11_VIEWPORT viewport{
+      0.0F, 0.0F, static_cast<float>(frame.width), static_cast<float>(frame.height), 0.0F, 1.0F};
+  context_->RSSetViewports(1, &viewport);
+  ID3D11RenderTargetView *target = colour_view_.Get();
+  context_->OMSetRenderTargets(1, &target, depth_view_.Get());
+  const Vec3 clear = frame.transparent ? Vec3{} : frame.lighting.clear_colour;
+  const float clear_colour[4] = {clear.x, clear.y, clear.z, frame.transparent ? 0.0F : 1.0F};
+  context_->ClearRenderTargetView(colour_view_.Get(), clear_colour);
+  context_->ClearDepthStencilView(depth_view_.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0F,
+                                  0);
+  context_->IASetInputLayout(shaders_.layout.Get());
+  context_->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+  context_->VSSetShader(shaders_.vertex.Get(), nullptr, 0);
+  context_->PSSetShader(shaders_.pixel.Get(), nullptr, 0);
+  ID3D11Buffer *constants[] = {frame_constants_.Get(), draw_constants_.Get()};
+  context_->VSSetConstantBuffers(0, 2, constants);
+  context_->PSSetConstantBuffers(0, 2, constants);
+
+  std::vector<Draw> draws;
+  for (std::size_t item_index = 0; item_index < frame.items.size(); ++item_index) {
+    item_draws(frame.items[item_index], static_cast<int>(item_index), frame.eye, draws);
+  }
+  std::vector<Draw> sky;
+  std::vector<Draw> opaque;
+  std::vector<Draw> casting; // opaque batches of shadow casters, drawn after the volumes
+  std::vector<Draw> translucent;
+  std::vector<Draw> optical;
+  for (const Draw &entry : draws) {
+    if (entry.sky_node) {
+      sky.push_back(entry);
+    } else if (entry.item->optical) {
+      optical.push_back(entry);
+    } else if (entry.alpha < 1.0F || entry.blend) {
+      translucent.push_back(entry);
+    } else {
+      (entry.item->casts_shadow ? casting : opaque).push_back(entry);
+    }
+  }
+  std::ranges::stable_sort(sky, {}, [](const Draw &d) { return d.draw->pass; });
+  std::ranges::stable_sort(translucent, std::ranges::greater{}, &Draw::distance);
+
+  // The sky: around the camera, depth-tested only against itself.
+  if (!sky.empty()) {
+    Mat4 sky_view = frame.view;
+    sky_view.at(3, 0) = sky_view.at(3, 1) = sky_view.at(3, 2) = 0.0F;
+    set_frame_constants(frame, sky_view);
+    for (const Draw &draw : sky) {
+      draw_one(draw, true, frame.lighting);
+    }
+    context_->ClearDepthStencilView(depth_view_.Get(), D3D11_CLEAR_DEPTH, 1.0F, 0);
+  }
+  set_frame_constants(frame, frame.view);
+  for (const Draw &draw : opaque) {
+    draw_one(draw, false, frame.lighting);
+  }
+  // As the original's layers 3 to 7: the volumes count against the stage,
+  // the casters clear the count where they show, and what is left is
+  // shadowed.
+  const bool shadowed = render_volumes(frame);
+  for (const Draw &draw : casting) {
+    draw_one(draw, false, frame.lighting);
+  }
+  if (shadowed) {
+    cover_shadows(frame.lighting);
+  }
+  render_optical(optical, frame.lighting);
+  // Back to front; each see-through item lays down its depth before its
+  // first batch is drawn.
+  std::vector<int> prepassed;
+  for (const Draw &draw : translucent) {
+    if (draw.group >= 0 && std::ranges::find(prepassed, draw.group) == prepassed.end()) {
+      prepassed.push_back(draw.group);
+      for (const Draw &part : translucent) {
+        if (part.group == draw.group) {
+          draw_one(part, false, frame.lighting, true);
+        }
+      }
+    }
+    draw_one(draw, false, frame.lighting);
+  }
+  render_sprites(frame);
+  // As 0x0b7900, ahead of the cockpit's layer.
+  if (frame.transparent) {
+    render_coverage();
+  } else {
+    render_screen(frame);
+  }
+  render_overlay(frame);
+}
+
+void WorldRenderer::item_draws(const WorldItem &item, const int index, const Vec3 eye,
+                               std::vector<Draw> &out) const {
+  if (item.model < 0 || item.model >= static_cast<int>(models_.size()) || !models_[item.model]) {
+    return;
+  }
+  const GpuModel &model = *models_[static_cast<std::size_t>(item.model)];
+  const bool animated = item.node_worlds.size() == model.data.nodes.size();
+  ID3D11ShaderResourceView *paint =
+      item.paint >= 0 && item.paint < static_cast<int>(textures_.size())
+          ? textures_[static_cast<std::size_t>(item.paint)].Get()
+          : nullptr;
+  const Mat4 stretch = scaling({item.scale_x, 1.0F, 1.0F});
+  for (const ModelDraw &draw : model.data.draws) {
+    if (item.node >= 0 && draw.node != item.node) {
+      continue;
+    }
+    const auto node_index = static_cast<std::size_t>(draw.node);
+    const ModelNode &node = model.data.nodes[node_index];
+    const Mat4 world = animated ? item.node_worlds[node_index] : stretch * node.world * item.world;
+    const float distance = length(transform_point(draw.centre, world) - eye);
+    const bool blend = blended(model.data.materials[static_cast<std::size_t>(draw.material)]);
+    const bool faded = item.alpha < 1.0F;
+    const bool sky = std::ranges::find(item.sky_nodes, node.name) != item.sky_nodes.end();
+    out.push_back({&model, &draw, world, distance, paint, item.alpha, item.flash,
+                   faded && !blend ? index : -1, &item, sky, blend});
+  }
+}
+
+void WorldRenderer::render_optical(const std::vector<Draw> &draws, const StageLighting &lighting) {
+  if (draws.empty() || !scene_view_) {
+    return;
+  }
+  if (samples_ > 1) {
+    context_->ResolveSubresource(scene_.Get(), 0, colour_.Get(), 0, format_);
+  } else {
+    context_->CopyResource(scene_.Get(), colour_.Get());
+  }
+  ID3D11ShaderResourceView *scene = scene_view_.Get();
+  ID3D11SamplerState *sampler = scene_sampler_.Get();
+  context_->PSSetShaderResources(2, 1, &scene);
+  context_->PSSetSamplers(2, 1, &sampler);
+  for (const Draw &draw : draws) {
+    draw_one(draw, false, lighting);
+  }
+  // Unbound, so the next frame's copy may write it.
+  ID3D11ShaderResourceView *none = nullptr;
+  context_->PSSetShaderResources(2, 1, &none);
+}
+
+void WorldRenderer::render_overlay(const WorldFrame &frame) {
+  if (frame.overlay.empty()) {
+    return;
+  }
+  std::vector<Draw> draws;
+  for (const WorldItem &item : frame.overlay) {
+    item_draws(item, -1, {}, draws);
+  }
+  context_->ClearDepthStencilView(depth_view_.Get(), D3D11_CLEAR_DEPTH, 1.0F, 0);
+  set_frame_constants(frame, Mat4{});
+  for (const Draw &draw : draws) {
+    draw_one(draw, true, frame.lighting, false, true);
+  }
+}
+
+void WorldRenderer::draw_one(const Draw &draw, const bool sky, const StageLighting &lighting,
+                             const bool depth_prepass, const bool overlay) {
+  const GpuModel &model = *draw.model;
+  const ModelMaterial &material =
+      model.data.materials[static_cast<std::size_t>(draw.draw->material)];
+  const auto view_of = [&](const int texture) -> ID3D11ShaderResourceView * {
+    return texture >= 0 ? model.texture_views[static_cast<std::size_t>(texture)].Get() : nullptr;
+  };
+  const auto sampler_of = [&](const int texture) -> ID3D11SamplerState * {
+    return texture >= 0 ? model.samplers[static_cast<std::size_t>(texture)].Get() : nullptr;
+  };
+  const bool painted = draw.paint != nullptr && material.base_texture >= 0 &&
+                       model.paintable[static_cast<std::size_t>(material.base_texture)];
+  ID3D11ShaderResourceView *views[] = {painted ? draw.paint : view_of(material.base_texture),
+                                       view_of(material.normal_texture)};
+  ID3D11SamplerState *samplers[] = {sampler_of(material.base_texture),
+                                    sampler_of(material.normal_texture)};
+
+  DrawConstants constants{};
+  constants.world = draw.world;
+  constants.base_colour = draw.item->colour.value_or(material.base_colour);
+  constants.uv_offset = draw.item->uv_offset;
+  constants.alpha_cutoff = material.alpha_cutoff;
+  constants.unlit = material.unlit ? 1.0F : 0.0F;
+  constants.has_base = views[0] != nullptr ? 1.0F : 0.0F;
+  constants.has_normal = views[1] != nullptr ? 1.0F : 0.0F;
+  constants.alpha_test = material.alpha == AlphaMode::mask ? 1.0F : 0.0F;
+  constants.fogged = !sky && lighting.fog ? 1.0F : 0.0F;
+  constants.item_alpha = draw.alpha;
+  constants.flash = draw.flash;
+  if (const auto &optical = draw.item->optical) {
+    constants.optical = 1.0F;
+    constants.optical_sphere = {optical->centre.x, optical->centre.y, optical->centre.z,
+                                optical->radius};
+    constants.optical_shape = {optical->edge, optical->reach, optical->least, optical->push};
+  }
+  upload(context_.Get(), draw_constants_.Get(), constants);
+
+  context_->PSSetShaderResources(0, 2, views);
+  context_->PSSetSamplers(0, 2, samplers);
+  const bool both_sides = material.double_sided || draw.item->double_sided;
+  context_->RSSetState(both_sides ? cull_none_.Get() : cull_back_.Get());
+  const bool faded = draw.alpha < 1.0F;
+  const bool see_through = material.alpha == AlphaMode::blend || faded || overlay;
+  ID3D11BlendState *blend = material.additive || draw.item->additive ? additive_.Get()
+                            : see_through                            ? alpha_.Get()
+                                                                     : opaque_.Get();
+  const bool reads_depth = !sky && !depth_prepass && (blended(material) || faded);
+  ID3D11DepthStencilState *depth = overlay                   ? depth_off_.Get()
+                                   : reads_depth             ? depth_read_.Get()
+                                   : draw.item->casts_shadow ? clear_stencil_.Get()
+                                                             : depth_write_.Get();
+  context_->OMSetBlendState(depth_prepass ? depth_only_.Get() : blend, nullptr, 0xffffffff);
+  context_->OMSetDepthStencilState(depth, 0);
+  ID3D11Buffer *vertices = model.vertices.Get();
+  const UINT stride = sizeof(ModelVertex);
+  const UINT offset = 0;
+  context_->IASetVertexBuffers(0, 1, &vertices, &stride, &offset);
+  context_->IASetIndexBuffer(model.indices.Get(), DXGI_FORMAT_R32_UINT, 0);
+  context_->DrawIndexed(draw.draw->index_count, draw.draw->first_index, 0);
+}
+
+} // namespace phantomcrash

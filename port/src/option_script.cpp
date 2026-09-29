@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cctype>
 #include <stdexcept>
+#include <utility>
 
 namespace phantomcrash {
 namespace {
@@ -91,7 +92,7 @@ void replace_all(std::string &text, const std::string &key, const std::string &v
 
 } // namespace
 
-OptionScript parse_option(const json::JsonValue &document) {
+OptionScript parse_option(const json::JsonValue &document, const std::string &name) {
   try {
     OptionScript script;
     parse_menu_basics(document, script);
@@ -109,18 +110,42 @@ OptionScript parse_option(const json::JsonValue &document) {
         item_index(script.items, required(document, "default_cursor").string(), "default_cursor");
     script.cancel_cursor =
         item_index(script.items, required(document, "cancel_cursor").string(), "cancel_cursor");
+    if (const auto *plate = document.find("riding_plate_y")) {
+      script.riding_plate_y = static_cast<float>(plate->number());
+    }
     return script;
   } catch (const std::exception &error) {
-    throw std::runtime_error(std::string("option.json: ") + error.what());
+    throw std::runtime_error(name + ": " + error.what());
   }
 }
+
+namespace {
+
+std::optional<Sprite> credit_jacket(const json::JsonValue &entry, const char *key) {
+  const auto *value = entry.find(key);
+  if (value == nullptr) {
+    return std::nullopt;
+  }
+  Sprite jacket;
+  jacket.id = key;
+  jacket.image = required(*value, "image").string();
+  jacket.rect = json::numbers<4>(required(*value, "rect"), "rect");
+  return jacket;
+}
+
+} // namespace
 
 std::vector<MusicCredit> parse_music_credits(const json::JsonValue &document) {
   std::vector<MusicCredit> credits;
   if (const auto *list = document.find("credits")) {
     for (const auto &entry : list->array()) {
-      credits.push_back({required(entry, "file").string(), entry.string_or("title", ""),
-                         entry.string_or("artist", "")});
+      MusicCredit credit{required(entry, "file").string(), entry.string_or("title", ""),
+                         entry.string_or("artist", "")};
+      credit.jacket = credit_jacket(entry, "jacket");
+      credit.jacket_small = credit_jacket(entry, "jacket_small");
+      credit.artist_name = credit_jacket(entry, "artist_name");
+      credit.artist_link = credit_jacket(entry, "artist_link");
+      credits.push_back(std::move(credit));
     }
   }
   return credits;
