@@ -52,8 +52,10 @@ public:
   // robot.
   void tick(const Battle &battle, float seconds);
   // Appends the robots' parts to `items`, all but robot `hidden`'s (the
-  // one the camera sits in).
-  void add_items(const Battle &battle, std::vector<WorldItem> &items, int hidden = -1);
+  // one the camera sits in). `hidden_shield` suppresses only that robot's
+  // shield visual during its entrance, without changing damage protection.
+  void add_items(const Battle &battle, std::vector<WorldItem> &items, int hidden = -1,
+                 int hidden_shield = -1);
 
 private:
   void add_shield(const Combatant &robot, std::vector<WorldItem> &items) const;

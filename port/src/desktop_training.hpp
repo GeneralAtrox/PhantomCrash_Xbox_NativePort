@@ -9,9 +9,12 @@
 #include "desktop_shots.hpp"
 #include "desktop_screen.hpp"
 #include "desktop_supply.hpp"
+#include "desktop_monitor_ship.hpp"
 #include "desktop_textures.hpp"
+#include "desktop_replay_archive.hpp"
 #include "desktop_world_renderer.hpp"
 #include "phantomcrash/battle.hpp"
+#include "phantomcrash/match_result.hpp"
 #include "phantomcrash/battle_sounds.hpp"
 #include "phantomcrash/battle_camera.hpp"
 #include "phantomcrash/chase_camera.hpp"
@@ -50,6 +53,7 @@ struct TrainingContext {
   std::shared_ptr<Battle> live_battle{};
   const RumblingWorld *live_world{};
   int live_area{-1};
+  bool match_results{};
 };
 
 // The tutorial battle (scene 42) on the training ground, opened by one of
@@ -77,9 +81,7 @@ public:
       cue_music_.clear(); // the jingle is over (or would not play)
     }
   }
-  [[nodiscard]] std::vector<std::string> take_sounds() override {
-    return std::exchange(sounds_, {});
-  }
+  [[nodiscard]] std::vector<std::string> take_sounds() override;
   // The battle's sounds, placed as the camera hears them
   // (desktop_training_sound.cpp).
   [[nodiscard]] std::vector<SoundCue> take_sound_cues() override;
@@ -92,10 +94,20 @@ public:
     return done_;
   }
   [[nodiscard]] std::string next() const override {
-    return script_.return_to;
+    return match_results_ ? "match_result" : script_.return_to;
   }
+  [[nodiscard]] MatchSummary match_summary() const;
+  [[nodiscard]] WorldFrame result_background();
+  std::shared_ptr<ReplayArchive> replay() const { return replay_; }
+  [[nodiscard]] std::int64_t extra_prize() const { return extra_prize_; }
 
 private:
+  void start_recording(const TrainingContext &context);
+  void begin_recording();
+  void record_world(const WorldFrame &frame, const std::optional<WorldFrame> &monitor);
+  void finish_recording();
+  void update_result(double seconds);
+  void load_stage_art(const StageDefinition *stage, const DataRoots &roots);
   void build_battle(const TrainingContext &context);
   // The live RUMBLING (desktop_training_live.cpp): the player's robot
   // takes robot 0's place, and each opponent brought in since is drawn as
@@ -127,6 +139,8 @@ private:
   void build_split(const DataRoots &roots);
   void tick_split(float seconds);
   void draw_screen(const Viewport &screen, std::size_t index);
+  [[nodiscard]] WorldFrame battle_frame(const ChaseCamera &camera, int width, int height,
+                                        int hidden_robot);
   void draw_message(const Viewport &viewport);
   void draw_notice(const std::vector<int> &run, const Viewport &viewport);
 
@@ -138,6 +152,10 @@ private:
   EventTuning tuning_;
   StageLighting lighting_;
   WorldItem stage_;
+  std::unique_ptr<BattleMonitor> monitor_;
+  std::unique_ptr<MonitorShip> monitor_ship_;
+  WorldItem props_;
+  int object_model_{-1};
   int mode_{};
   bool free_play_{};
   LessonMessages messages_;
@@ -183,6 +201,12 @@ private:
   bool snap_camera_{true};
   bool jump_armed_{true}; // the button that closed a message must lift first
   bool done_{};
+  bool match_results_{};
+  std::shared_ptr<ReplayArchive> replay_;
+  ReplayFrame replay_frame_;
+  MatchOutcome outcome_{MatchOutcome::leave};
+  double play_seconds_{};
+  std::int64_t extra_prize_{};
   double clock_{}; // seconds of battle: the HUD's mission time and pulses
   int day_{};
   std::int64_t money_{};

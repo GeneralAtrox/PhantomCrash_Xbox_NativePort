@@ -54,6 +54,7 @@ bool BattleScene::start_entrance(Battle &battle) {
   gate_ = std::max(tuning_.gate, 0) % static_cast<int>(list->size());
   origin_ = (*list)[static_cast<std::size_t>(gate_)];
   battle.place(0, origin_.position, origin_.heading);
+  battle.raise_shield(0); // 0x082552: protected as soon as the robot is placed.
   state_ = state;
   left_ = scene->frames;
   gate_flag_ = 0;
@@ -89,6 +90,9 @@ void BattleScene::prepare(Battle &battle, const float seconds) {
 }
 
 void BattleScene::walk_entrance(Battle &battle, const float seconds, const float step) {
+  // 0x08928c refreshes protection throughout entry, including a held camera scene.
+  // Once control returns, the configured shield duration counts down normally.
+  battle.raise_shield(0);
   if (cinematic()) {
     hold_still(battle, 0);
     return;

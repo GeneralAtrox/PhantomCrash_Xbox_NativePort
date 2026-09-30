@@ -26,6 +26,11 @@ Inside this repository, `artifacts\`, `research-output\`, `build\` and
 
 ## Requirements
 
+For a prebuilt Windows executable, download the Windows x64 ZIP from
+[Releases](https://github.com/GeneralAtrox/PhantomCrash_Xbox_ModernSourcePort/releases).
+See [Windows release setup](docs/WINDOWS_RELEASE.md) for runtime prerequisites
+and extracting your own game disc. The requirements below are for source builds.
+
 - Python 3.11+ (no third-party runtime dependencies; `pytest` for tests)
 - PowerShell 7.4+
 - Visual Studio 2022 with the C++ workload, CMake 3.25+

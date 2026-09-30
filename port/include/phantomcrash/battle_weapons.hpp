@@ -133,6 +133,10 @@ struct Target {
   float radius{};
   int team{};
   bool alive{};
+  const StageCollision *collision{}; // placed scenery uses its extracted triangles
+  bool on_robot{true};
+  [[nodiscard]] std::optional<Vec3> hit_point(Vec3 from, Vec3 to, float fuse_radius) const;
+  [[nodiscard]] float distance_to(Vec3 point) const;
 };
 
 struct Projectile {
@@ -172,6 +176,7 @@ struct Landing {
   int owner{};
   Vec3 at;
   bool on_robot{}; // a body, so the weapon's robot_hit applies, not its surface_hit
+  std::optional<StageHit> surface;
 };
 
 // Whether a landing starts the weapon's impact effect (0x098eda).
@@ -227,7 +232,8 @@ private:
                                      const Target *locked) const;
   [[nodiscard]] Vec3 scatter(Vec3 direction, float degrees);
   void detonate(const Projectile &shot, Vec3 at, const std::vector<Target> &targets,
-                std::vector<WeaponHit> &hits, bool on_robot = false);
+                std::vector<WeaponHit> &hits, bool on_robot = false,
+                std::optional<StageHit> surface = std::nullopt);
   void spread_blasts(float seconds, const std::vector<Target> &targets,
                      std::vector<WeaponHit> &hits);
 

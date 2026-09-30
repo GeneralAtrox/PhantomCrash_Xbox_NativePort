@@ -131,7 +131,8 @@ void BattleSights::track(const View &view, const Battle &battle, const CanvasPoi
   const std::array<float, 2> ndc{style_.safe_area[0] * 0.5F * screen_[0],
                                  style_.safe_area[1] * 0.5F * screen_[1]};
   const auto half = inner_half();
-  // The nearest enemy inside the inner box draws the reticle (0x4f6a0).
+  // Check the chip's box around the sight, not the previous tracked point:
+  // moving the acquisition box with the target lets tracking drift unbounded.
   std::vector<std::pair<float, CanvasPoint>> candidates;
   for (const Combatant &robot : battle.robots()) {
     const float distance = length(robot.mover.position() - player.mover.position());
@@ -147,8 +148,8 @@ void BattleSights::track(const View &view, const Battle &battle, const CanvasPoi
             [](const auto &a, const auto &b) { return a.first < b.first; });
   std::optional<std::array<float, 2>> target;
   for (const auto &[distance, at] : candidates) {
-    if (std::abs(at.x - reticle_.x) <= half[0] * scale[0] &&
-        std::abs(at.y - reticle_.y) <= half[1] * scale[1]) {
+    if (std::abs(at.x - sight.x) <= half[0] * scale[0] &&
+        std::abs(at.y - sight.y) <= half[1] * scale[1]) {
       target = std::array<float, 2>{(at.x - sight.x) / ndc[0], (at.y - sight.y) / ndc[1]};
       break;
     }
@@ -156,7 +157,8 @@ void BattleSights::track(const View &view, const Battle &battle, const CanvasPoi
   const auto &control = style_.control;
   const float speed =
       control.track_base + control.track_scale * control.track_value / control.value_max;
-  tracker_.update(target, speed, frames);
+  tracker_.update(target, speed, frames,
+                  {half[0] * scale[0] / ndc[0], half[1] * scale[1] / ndc[1]});
   reticle_ = {sight.x + tracker_.offset()[0] * ndc[0], sight.y + tracker_.offset()[1] * ndc[1]};
 }
 

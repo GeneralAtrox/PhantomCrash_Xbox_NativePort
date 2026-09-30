@@ -1,6 +1,7 @@
 #include "desktop_world_renderer.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <cstring>
 
 namespace phantomcrash {
@@ -38,8 +39,9 @@ struct DrawConstants {
   float pad;
   std::array<float, 4> optical_sphere;
   std::array<float, 4> optical_shape;
+  std::array<float, 4> uv_transform{1, 1, 0, 0};
 };
-static_assert(sizeof(DrawConstants) == 160);
+static_assert(sizeof(DrawConstants) == 176);
 
 template <typename T>
 void upload(ID3D11DeviceContext *context, ID3D11Buffer *buffer, const T &data) {
@@ -181,13 +183,28 @@ void WorldRenderer::item_draws(const WorldItem &item, const int index, const Vec
     }
     const auto node_index = static_cast<std::size_t>(draw.node);
     const ModelNode &node = model.data.nodes[node_index];
-    const Mat4 world = animated ? item.node_worlds[node_index] : stretch * node.world * item.world;
+    Mat4 world = animated ? item.node_worlds[node_index] : stretch * node.world * item.world;
+    auto uv_offset = item.uv_offset;
+    const bool sky = std::ranges::find(item.sky_nodes, node.name) != item.sky_nodes.end();
+    if (sky) {
+      const auto motion = std::ranges::find(item.sky_motion, node.name, &SkyMotion::node);
+      if (motion != item.sky_motion.end()) {
+        const float angle =
+            static_cast<float>(std::fmod(item.sky_seconds * motion->rotation_per_second, 2.0 * pi));
+        world = world * rotation_y(angle);
+        for (std::size_t axis = 0; axis < uv_offset.size(); ++axis) {
+          uv_offset[axis] +=
+              static_cast<float>(std::fmod(item.sky_seconds * motion->uv_per_second[axis], 1.0));
+        }
+      }
+    }
     const float distance = length(transform_point(draw.centre, world) - eye);
     const bool blend = blended(model.data.materials[static_cast<std::size_t>(draw.material)]);
     const bool faded = item.alpha < 1.0F;
-    const bool sky = std::ranges::find(item.sky_nodes, node.name) != item.sky_nodes.end();
     out.push_back({&model, &draw, world, distance, paint, item.alpha, item.flash,
-                   faded && !blend ? index : -1, &item, sky, blend});
+                   faded && !blend ? index : -1, &item, sky, blend,
+                   std::ranges::find(item.monitor_nodes, node.name) != item.monitor_nodes.end(),
+                   uv_offset});
   }
 }
 
@@ -248,7 +265,7 @@ void WorldRenderer::draw_one(const Draw &draw, const bool sky, const StageLighti
   DrawConstants constants{};
   constants.world = draw.world;
   constants.base_colour = draw.item->colour.value_or(material.base_colour);
-  constants.uv_offset = draw.item->uv_offset;
+  constants.uv_offset = draw.uv_offset;
   constants.alpha_cutoff = material.alpha_cutoff;
   constants.unlit = material.unlit ? 1.0F : 0.0F;
   constants.has_base = views[0] != nullptr ? 1.0F : 0.0F;
@@ -257,6 +274,17 @@ void WorldRenderer::draw_one(const Draw &draw, const bool sky, const StageLighti
   constants.fogged = !sky && lighting.fog ? 1.0F : 0.0F;
   constants.item_alpha = draw.alpha;
   constants.flash = draw.flash;
+  if (draw.monitor) {
+    constants.uv_transform = monitor_uv(draw);
+    views[0] = capturing_monitor_ ? nullptr : monitor_view_.Get();
+    views[1] = nullptr;
+    samplers[0] = scene_sampler_.Get();
+    constants.base_colour =
+        views[0] ? std::array<float, 4>{1, 1, 1, 1} : std::array<float, 4>{0, 0, 0, 1};
+    constants.unlit = 1.0F;
+    constants.has_base = views[0] ? 1.0F : 0.0F;
+    constants.has_normal = 0.0F;
+  }
   if (const auto &optical = draw.item->optical) {
     constants.optical = 1.0F;
     constants.optical_sphere = {optical->centre.x, optical->centre.y, optical->centre.z,

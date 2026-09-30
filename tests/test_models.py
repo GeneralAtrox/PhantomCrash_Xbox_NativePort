@@ -62,6 +62,28 @@ def test_gltf_exports_only_instantiated_stage_meshes(tmp_path):
     assert len(doc["meshes"]) == 2
 
 
+def test_gltf_instances_keep_local_transforms_under_distinct_object_placements(tmp_path):
+    source = model.parse(build_model())
+    target = tmp_path / "props.gltf"
+    instances = [
+        {"index": 2, "mesh": 0, "position": [10, 2, 30], "rotation": [0, math.pi, 0]},
+        {"index": 5, "mesh": 0, "position": [-10, 0, -30], "rotation": [0, 0, 0]},
+    ]
+    gltf.write_instances(source, target, ["tex/0.png"], instances)
+    doc = json.loads(target.read_text())
+    roots = [doc["nodes"][i] for i in doc["scenes"][0]["nodes"]]
+    assert [root["name"] for root in roots] == ["object2", "object5"]
+    assert [root["translation"] for root in roots] == [[10, 2, -30], [-10, 0, 30]]
+    assert roots[0]["rotation"] == pytest.approx([0, -1, 0, 0], abs=1e-6)
+    for root in roots:
+        child = doc["nodes"][root["children"][0]]
+        assert child["translation"] == [0, 2, -3]
+        assert child["rotation"] == pytest.approx([0, -math.sin(math.pi / 4), 0,
+                                                    math.cos(math.pi / 4)])
+    assert len([n for n in doc["nodes"] if "mesh" in n]) == 2
+    assert doc["images"][0]["uri"] == "tex/0.png"
+
+
 def test_gltf_mirrors_z_and_keeps_materials(tmp_path):
     target = tmp_path / "quad.gltf"
     summary = gltf.write(model.parse(build_model()), target, ["tex/0.png"])

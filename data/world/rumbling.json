@@ -153,7 +153,8 @@
    "load_game",
    "vs_mode",
    "vs_battle",
-   "staff_roll"
+   "staff_roll",
+   "match_result"
   ],
   "ai": {
    "fight": true,

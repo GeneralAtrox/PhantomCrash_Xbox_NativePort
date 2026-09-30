@@ -70,14 +70,15 @@ void SupplyDrop::load() {
   }
 }
 
-void SupplyDrop::tick(const float seconds, const std::function<float(Vec3)> &ground) {
+void SupplyDrop::tick(const float seconds, const std::function<float(Vec3)> &ground,
+                      const SupplyContact &contact) {
   if (!active() || route_ == nullptr) {
     return;
   }
   const float ticks = seconds * settings_.tick_rate;
   carrier_.spin = std::fmod(carrier_.spin + settings_.spin_speed * ticks, 2.0F * pi);
   if (phase_ == Phase::wreck) {
-    fall(ticks, ground);
+    fall(ticks, ground, contact);
   } else if (phase_ != Phase::parked) {
     fly(ticks);
   }
@@ -186,17 +187,29 @@ bool SupplyDrop::shoot_carrier() {
   velocity_ = velocity_ * settings_.wreck_keep;
   velocity_.y = -settings_.wreck_sink;
   wreck_left_ = settings_.wreck_ticks;
+  hatch_ = Hatch::shut;
+  // Cargo still in the hold is destroyed. Already released pickups remain
+  // independent of the wreck and continue falling or waiting on the ground.
+  for (SupplyPickup &pickup : pickups_) {
+    if (pickup.state == SupplyState::carried) {
+      pickup.state = SupplyState::gone;
+    }
+  }
   return true;
 }
 
 // 0x06828e: the wreck falls until it strikes the ground or its time is up,
 // and blows up.
-void SupplyDrop::fall(const float ticks, const std::function<float(Vec3)> &ground) {
+void SupplyDrop::fall(const float ticks, const std::function<float(Vec3)> &ground,
+                      const SupplyContact &contact) {
+  const Vec3 before = carrier_.position;
   carrier_.position = carrier_.position + velocity_ * ticks;
   wreck_left_ -= ticks;
-  if (carrier_.position.y - settings_.carrier_radius <= ground(carrier_.position) ||
+  const auto hit =
+      contact ? contact(before, carrier_.position, settings_.carrier_radius) : std::nullopt;
+  if (hit || carrier_.position.y - settings_.carrier_radius <= ground(carrier_.position) ||
       wreck_left_ < 0.0F) {
-    crash_ = carrier_.position;
+    crash_ = hit.value_or(carrier_.position);
     park();
   }
 }

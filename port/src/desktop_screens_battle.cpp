@@ -43,12 +43,13 @@ std::unique_ptr<Screen> ScreenRunner::make_battle(const std::string &name) {
     if (entry == nullptr) {
       return nullptr;
     }
+    active_match_ = *entry;
     battle_training_ =
         rumbling_training(training_, test_drive_, rumbling_battle_, *entry, quest_.garage,
                           game_->part_tables(), game_->garage_tables());
     RumblingWorld *live = rumbling_world();
     if (live == nullptr) {
-      return make_training(battle_training_, rumbling_battle_.lesson);
+      return make_training(battle_training_, rumbling_battle_.lesson, {}, -1, true);
     }
     // A direct Level Select entry has not passed through the menu's roster update.
     if (quick) {
@@ -56,7 +57,7 @@ std::unique_ptr<Screen> ScreenRunner::make_battle(const std::string &name) {
     }
     join_rumbling(*entry);
     return make_training(battle_training_, rumbling_battle_.lesson, live->lend(entry->area, quest_),
-                         entry->area);
+                         entry->area, true);
   }
   if (name == "vs_battle") {
     // The first entered player's Scoobee rides; a screen for each player.
@@ -88,7 +89,8 @@ PreviewWorld ScreenRunner::world() {
 std::unique_ptr<Screen> ScreenRunner::make_training(const TrainingScript &script,
                                                     const TrainingLesson &lesson,
                                                     std::shared_ptr<Battle> live,
-                                                    const int live_area) {
+                                                    const int live_area,
+                                                    const bool match_results) {
   static_cast<void>(world());
   const auto stage = stages_.find(script.stage);
   staged_training_ = script;
@@ -108,7 +110,8 @@ std::unique_ptr<Screen> ScreenRunner::make_training(const TrainingScript &script
                                 quest_.money,
                                 std::move(live),
                                 rumbling_world_.get(),
-                                live_area};
+                                live_area,
+                                match_results};
   return std::make_unique<TrainingScreen>(textures_, font_, context, lesson);
 }
 

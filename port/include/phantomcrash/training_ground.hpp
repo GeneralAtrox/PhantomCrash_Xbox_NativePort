@@ -1,6 +1,7 @@
 #pragma once
 
 #include "phantomcrash/json.hpp"
+#include "phantomcrash/battle_monitor.hpp"
 #include "phantomcrash/math3d.hpp"
 #include "phantomcrash/robot.hpp"
 #include "phantomcrash/robot_load.hpp"
@@ -59,6 +60,14 @@ struct StageLighting {
   ScreenPass screen;
 };
 
+// Sky object animation tags at 0x2212ec, applied by 0x06ea05. Rates are
+// per second, converted from the original battle's 30 Hz updates.
+struct SkyMotion {
+  std::string node;
+  float rotation_per_second{};
+  std::array<float, 2> uv_per_second{};
+};
+
 // One battle stage of the stage table at 0x2212ac (data/world/stages.json).
 struct StageDefinition {
   std::string name;
@@ -66,9 +75,13 @@ struct StageDefinition {
   std::string collision;              // asset path of its converted collision, or empty
   std::string enemy_path;             // asset path of its drones' path (enepath/), or empty
   std::vector<std::string> sky_nodes; // drawn around the camera, behind everything
+  std::vector<SkyMotion> sky_motion;
+  std::vector<std::string> monitor_nodes; // live arena TV surfaces, never the shared sky texture
+  BattleMonitorSettings monitor;
   StageLighting lighting;
-  int scene_stage{-1};    // its number in the original's tables (0x2212ac), -1 for the script's
-  std::string door_model; // the effect model of its gate doors, empty for the script's
+  int scene_stage{-1};     // its number in the original's tables (0x2212ac), -1 for the script's
+  std::string door_model;  // the effect model of its gate doors, empty for the script's
+  std::string props_model; // placed city scenery, separate from the moving gate leaves
 };
 
 [[nodiscard]] std::map<std::string, StageDefinition> parse_stages(const json::JsonValue &document);

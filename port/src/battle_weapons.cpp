@@ -26,14 +26,6 @@ constexpr float blast_flash_seconds = 0.6F;
 constexpr float strike_radius = 1.5F;
 constexpr float strike_seconds = 0.25F;
 
-// The distance from `point` to the segment a..b.
-float segment_distance(const Vec3 a, const Vec3 b, const Vec3 point) {
-  const Vec3 ab = b - a;
-  const float span = dot(ab, ab);
-  const float t = span > 0.0F ? std::clamp(dot(point - a, ab) / span, 0.0F, 1.0F) : 0.0F;
-  return length(a + ab * t - point);
-}
-
 // Turns unit vector `from` toward `to` by at most `angle` radians.
 Vec3 turn_toward(const Vec3 from, const Vec3 to, const float angle) {
   const float cosine = std::clamp(dot(from, to), -1.0F, 1.0F);
@@ -93,7 +85,7 @@ void reach(const Blast &blast, const std::vector<Target> &targets, std::vector<W
     if (!body.alive || body.team == blast.team) {
       continue;
     }
-    if (length(body.centre - blast.position) - body.radius < radius) {
+    if (body.distance_to(blast.position) < radius) {
       hits.push_back({static_cast<int>(index), blast.owner, weapon.blast_damage,
                       weapon.stagger_seconds, body.centre, &weapon,
                       push_direction(blast.position, body.centre), false});
@@ -220,9 +212,10 @@ bool Armory::strike(const WeaponTuning &weapon, const int owner, const Vec3 orig
 }
 
 void Armory::detonate(const Projectile &shot, const Vec3 at, const std::vector<Target> &targets,
-                      std::vector<WeaponHit> &hits, const bool on_robot) {
+                      std::vector<WeaponHit> &hits, const bool on_robot,
+                      std::optional<StageHit> surface) {
   const WeaponTuning &weapon = *shot.weapon;
-  landings_.push_back({&weapon, shot.owner, at, on_robot});
+  landings_.push_back({&weapon, shot.owner, at, on_robot, surface});
   if (weapon.blast_radius <= 0.0F) {
     explosions_.push_back({at, impact_radius, 0.0F, impact_seconds});
     return;
@@ -244,7 +237,7 @@ void Armory::detonate(const Projectile &shot, const Vec3 at, const std::vector<T
     if (!body.alive || body.team == shot.team) {
       continue;
     }
-    const float distance = length(body.centre - at) - body.radius;
+    const float distance = body.distance_to(at);
     if (distance < weapon.blast_radius) {
       const float falloff = 1.0F - std::max(distance, 0.0F) / weapon.blast_radius * 0.5F;
       hits.push_back({static_cast<int>(index), shot.owner, weapon.damage * falloff,
@@ -295,40 +288,44 @@ void Armory::tick(const float seconds, const std::vector<Target> &targets,
     shot.position = shot.position + shot.velocity * seconds;
     shot.travelled += length(shot.velocity) * seconds;
 
-    bool spent = false;
-    for (std::size_t index = 0; index < targets.size() && !spent; ++index) {
+    // Limit the search by walls/doors, then select the nearest target surface.
+    // A vehicle in front of a robot must intercept the shot first.
+    auto surface = stage.segment_contact(from, shot.position);
+    std::optional<Vec3> impact = surface ? std::optional<Vec3>{surface->position} : std::nullopt;
+    if (const auto leaf = doors != nullptr
+                              ? doors->segment_hit(from, impact.value_or(shot.position))
+                              : std::nullopt) {
+      impact = leaf;
+      surface.reset();
+    }
+    int victim = -1;
+    const float fuse =
+        weapon.blast_radius > 0.0F && !growing_blast(weapon) && shot.age > fuse_arming_seconds
+            ? weapon.blast_radius * proximity_fuse_share
+            : 0.0F;
+    for (std::size_t index = 0; index < targets.size(); ++index) {
       const Target &body = targets[index];
       if (!body.alive || body.team == shot.team) {
         continue;
       }
-      const float gap = segment_distance(from, shot.position, body.centre) - body.radius;
-      const bool fused = weapon.blast_radius > 0.0F && !growing_blast(weapon) &&
-                         shot.age > fuse_arming_seconds &&
-                         gap <= weapon.blast_radius * proximity_fuse_share;
-      if (gap <= 0.0F || fused) {
-        // Port-tuned blast weapons hurt only through their blast.
-        const bool direct = weapon.blast_radius <= 0.0F || growing_blast(weapon);
-        if (direct) {
-          hits.push_back({static_cast<int>(index), shot.owner, weapon.damage,
-                          weapon.stagger_seconds, body.centre, &weapon,
-                          flight_direction(shot.velocity), true});
-        }
-        detonate(shot, shot.position, targets, hits, true);
-        spent = true;
+      if (const auto contact = body.hit_point(from, impact.value_or(shot.position), fuse)) {
+        impact = contact;
+        victim = static_cast<int>(index);
       }
     }
-    if (!spent) {
-      std::optional<Vec3> wall = stage.segment_hit(from, shot.position);
-      // A shut door leaf is a wall too (0x06f82e's triangles).
-      if (const std::optional<Vec3> leaf =
-              doors != nullptr ? doors->segment_hit(from, wall.value_or(shot.position))
-                               : std::nullopt) {
-        wall = leaf;
+    bool spent = impact.has_value();
+    if (impact) {
+      bool on_robot = false;
+      if (victim >= 0) {
+        const Target &body = targets[static_cast<std::size_t>(victim)];
+        on_robot = body.on_robot;
+        // Port-tuned blast weapons hurt only through their blast.
+        if (weapon.blast_radius <= 0.0F || growing_blast(weapon)) {
+          hits.push_back({victim, shot.owner, weapon.damage, weapon.stagger_seconds, *impact,
+                          &weapon, flight_direction(shot.velocity), true});
+        }
       }
-      if (wall) {
-        detonate(shot, *wall, targets, hits); // a wall, a door or the floor
-        spent = true;
-      }
+      detonate(shot, *impact, targets, hits, on_robot, victim < 0 ? surface : std::nullopt);
     }
     const bool expired = weapon.life_seconds > 0.0F ? shot.age >= weapon.life_seconds
                                                     : shot.travelled > weapon.range * 1.5F;

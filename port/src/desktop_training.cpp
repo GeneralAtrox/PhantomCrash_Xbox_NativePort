@@ -4,6 +4,7 @@
 #include "desktop_event_text.hpp"
 #include "desktop_text.hpp"
 #include "desktop_training_robots.hpp"
+#include "desktop_stage_objects.hpp"
 
 #include <SDL3/SDL.h>
 
@@ -40,19 +41,16 @@ TrainingScreen::TrainingScreen(TextureCache &textures, const GlyphFont &font,
   screens_ = std::clamp(lesson.screens, 1, max_screens);
   day_ = context.day;
   money_ = context.money;
-  if (context.stage != nullptr) {
-    lighting_ = context.stage->lighting;
-    stage_.sky_nodes = context.stage->sky_nodes;
-    if (world_ != nullptr && !context.stage->model.empty()) {
-      stage_.model = world_->model(context.stage->model);
-    }
-  }
+  match_results_ = context.match_results;
+  start_recording(context);
+  load_stage_art(context.stage, context.roots);
   if (world_ == nullptr || !world_->available()) {
     missing_run_ = glyph_run(font, "The 3D world needs the Direct3D 11 renderer");
   } else if (stage_.model < 0) {
     missing_run_ = glyph_run(font, "The stage model is missing: convert the game files");
   }
   build_battle(context);
+  object_model_ = load_stage_objects(world_, context.roots, script_.battle.scenes.stage, *battle_);
   load_sounds(context.roots);
   cockpit_ = load_cockpit(world_, context.roots);
   effects_ = DesktopEffects::load(world_, context.roots);
@@ -309,15 +307,14 @@ void TrainingScreen::tick(const InputFrame &input, const double tick_seconds) {
     supply_->tick(*battle_, effects_ ? &effects_->system() : nullptr);
   }
   if (shots_) {
-    shots_->tick(*battle_, effects_->system());
+    shots_->tick(*battle_, effects_->system(), seconds);
   }
   if (effects_) {
     effects_->tick(seconds);
   }
   tick_camera(input, seconds);
   tick_split(seconds);
-  done_ = done_ || (scene_ && scene_->scene().finished()) ||
-          (!free_play_ && tutorial_.finished() && !message_);
+  update_result(tick_seconds);
 }
 
 BattleHudInfo TrainingScreen::hud_info() const {
@@ -368,6 +365,7 @@ void TrainingScreen::draw(const Viewport &viewport) {
     return;
   }
   if (splits_.empty()) {
+    begin_recording();
     draw_screen(viewport, 0);
   } else {
     // Each screen draws in its own rectangle, SDL's viewport moved there.
@@ -394,6 +392,7 @@ void TrainingScreen::draw(const Viewport &viewport) {
   if (!missing_run_.empty()) {
     draw_notice(missing_run_, viewport);
   }
+  finish_recording();
 }
 
 } // namespace phantomcrash

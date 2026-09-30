@@ -133,6 +133,32 @@ TEST_CASE("the live world runs the areas, lends one and pays for the player's ki
   CHECK(battle->robots()[1].alive);
 }
 
+TEST_CASE("returning a battle collects its final tick kill and cannot pay it twice") {
+  Fixture fixture;
+  fixture.rules.roster.live_size = 4;
+  const TestDriveScript drive;
+  const std::map<std::string, WeaponTuning> templates;
+  const RumblingTables tables{fixture.parts, fixture.garage, fixture.tables,
+                              fixture.rules, drive,          templates};
+  std::array<RumblingStage, roster_areas> stages{};
+  stages[0].path = square_path();
+  RumblingWorld world(fixture.check(), tables, fighting_settings(), stages, {}, 7);
+  QuestSave quest;
+  const auto battle = world.lend(0, quest);
+  REQUIRE(battle != nullptr);
+  REQUIRE(!quest.rosters[0].members.empty());
+  const auto victim = quest.rosters[0].members[0];
+  const auto prize =
+      roster_card(fixture.check(), fixture.tables, quest, victim.entrant, true).bounty;
+  battle->robot(1).alive = false;
+  battle->robot(1).shot_by = 0;
+  // No 30 Hz world update between the killing hit and leaving the match.
+  CHECK(world.give_back(quest) == prize);
+  CHECK(quest.money == prize);
+  CHECK(world.give_back(quest) == 0);
+  CHECK(quest.money == prize);
+}
+
 TEST_CASE("the map puts a stage point by its area's scale, offset and turn") {
   RumblingRobotMarkers markers;
   markers.origin = {234.0F, 73.0F};

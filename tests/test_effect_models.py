@@ -22,7 +22,7 @@ def test_flashes_are_flip_books_of_slots(tables):
     assert fireball["frames"][0] == "textures/binlink/1566/5.png"
     smoke = out["flashes"][1]
     assert smoke["frames"][0] == "textures/binlink/1566/25.png" and not smoke["additive"]
-    assert models == {194}
+    assert models == {194, 197}
     assert packs == {1566, 1567}
 
 
@@ -37,3 +37,14 @@ def test_shots_and_impacts(tables):
     assert out["impacts"][3] == {"id": 3, "group": 3, "flash_scale": 20.0, "decal": False}
     assert out["impacts"][0]["decal"]
     assert out["decals"]["textures"][0] == "textures/binlink/1566/0.png"
+
+
+def test_fence_impact_uses_the_thirty_authored_meshes(tables):
+    out, models, _ = tables
+    fence = out["fence"]
+    assert 197 in models
+    assert fence["model"] == "models/binlink/197.gltf"
+    assert fence["meshes"] == list(range(30))
+    assert fence["frame_rate"] == 30 and fence["capacity"] == 20
+    assert fence["scale"] == 0.1 and fence["growth"] == 0.05
+    assert fence["depth"] == 0.2 and fence["offset"] == -0.5

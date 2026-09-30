@@ -54,6 +54,7 @@ std::vector<Target> Battle::targets() const {
   for (const Combatant &robot : robots_) {
     out.push_back({robot.centre(settings_.robot_height), robot.radius, robot.team, robot.alive});
   }
+  add_object_targets(out);
   add_supply_targets(out);
   return out;
 }

@@ -94,7 +94,10 @@ TEST_CASE("a stage's screen pass reads its tint and depth of field") {
 
 TEST_CASE("a stage gives the battle's scenes its own gates and door model") {
   const auto stages = parse_stages(json::parse(R"({"stages": {
-    "choco_night": {"scene_stage": 7, "door_model": "night_doors.gltf"}, "arena": {}}})"));
+    "choco_night": {"scene_stage": 7, "door_model": "night_doors.gltf",
+                    "props_model": "night_props.gltf"}, "arena": {}}})"));
+  CHECK(stages.at("choco_night").props_model == "night_props.gltf");
+  CHECK(stages.at("arena").props_model.empty());
   SceneTuning scenes;
   scenes.doors.model = "day_doors.gltf";
   apply_stage(scenes, stages.at("arena"));

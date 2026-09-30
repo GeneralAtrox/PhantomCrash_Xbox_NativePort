@@ -135,6 +135,7 @@ private:
   // A training lesson, TEST DRIVE or a RUMBLING entry's battle
   // (desktop_screens_battle.cpp), or null for another screen.
   [[nodiscard]] std::unique_ptr<Screen> make_battle(const std::string &name);
+  [[nodiscard]] std::unique_ptr<Screen> make_match_result();
   // The 3D renderer and robots, made the first time a screen needs them.
   [[nodiscard]] PreviewWorld world();
   // The training ground's battle on `script`, which outlives the screen.
@@ -142,7 +143,8 @@ private:
   [[nodiscard]] std::unique_ptr<Screen> make_training(const TrainingScript &script,
                                                       const TrainingLesson &lesson,
                                                       std::shared_ptr<Battle> live = {},
-                                                      int live_area = -1);
+                                                      int live_area = -1,
+                                                      bool match_results = false);
   // The live RUMBLING (desktop_screens_rumbling.cpp): the world, made the
   // first time a game is under way (null without its data), and its run
   // for `seconds` unless the screen is one before a game.
@@ -211,6 +213,7 @@ private:
   TrainingScript training_;
   TestDriveScript test_drive_;
   RumblingBattle rumbling_battle_;
+  std::optional<RumblingEntry> active_match_;
   VsBattle vs_battle_;
   TrainingScript battle_training_; // the entered robot's, while TEST DRIVE or RUMBLING runs
   TrainingScript staged_training_; // the battle's script on its stage (apply_stage)

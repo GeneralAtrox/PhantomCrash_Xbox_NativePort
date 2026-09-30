@@ -128,13 +128,40 @@ TEST_CASE("a lock box closes as its lock time runs out") {
 
 TEST_CASE("the reticle follows its target no faster than its speed") {
   ReticleTracker tracker;
-  tracker.update(std::array<float, 2>{0.3F, 0.4F}, 0.05F, 2.0F);
+  tracker.update(std::array<float, 2>{0.3F, 0.4F}, 0.05F, 2.0F, {1.0F, 1.0F});
   CHECK(close_to(tracker.offset()[0], 0.06F));
   CHECK(close_to(tracker.offset()[1], 0.08F));
-  tracker.update(std::array<float, 2>{0.3F, 0.4F}, 0.05F, 100.0F);
+  tracker.update(std::array<float, 2>{0.3F, 0.4F}, 0.05F, 100.0F, {1.0F, 1.0F});
   CHECK(close_to(tracker.offset()[0], 0.3F));
-  tracker.update(std::nullopt, 1.0F, 1.0F); // back to the sight
+  tracker.update(std::nullopt, 1.0F, 1.0F, {1.0F, 1.0F}); // back to the sight
   CHECK(tracker.offset()[0] == 0.0F);
+}
+
+TEST_CASE("a target cannot drag the tracking point beyond the chip box") {
+  ReticleTracker tracker;
+  const std::array<float, 2> half{0.2F, 0.1F};
+  for (int frame = 0; frame < 120; ++frame) {
+    const float position = static_cast<float>(frame) * 0.01F;
+    tracker.update(std::array<float, 2>{position, -position}, 0.05F, 1.0F, half);
+    CHECK(std::abs(tracker.offset()[0]) <= half[0]);
+    CHECK(std::abs(tracker.offset()[1]) <= half[1]);
+  }
+  CHECK(close_to(tracker.offset()[0], half[0]));
+  CHECK(close_to(tracker.offset()[1], -half[1]));
+  tracker.update(std::nullopt, 0.05F, 10.0F, half);
+  CHECK(tracker.offset()[0] == 0.0F);
+  CHECK(tracker.offset()[1] == 0.0F);
+}
+
+TEST_CASE("changing to a narrower chip box bounds the current tracking offset immediately") {
+  ReticleTracker tracker;
+  tracker.update(std::array<float, 2>{-0.4F, 0.2F}, 1.0F, 1.0F, {0.5F, 0.3F});
+  tracker.update(std::array<float, 2>{-0.4F, 0.2F}, 1.0F, 0.0F, {0.1F, 0.3F});
+  CHECK(close_to(tracker.offset()[0], -0.1F));
+  CHECK(close_to(tracker.offset()[1], 0.2F));
+  tracker.update(std::array<float, 2>{-0.4F, 0.2F}, 1.0F, 0.0F, {0.3F, 0.05F});
+  CHECK(close_to(tracker.offset()[0], -0.1F));
+  CHECK(close_to(tracker.offset()[1], 0.05F));
 }
 
 TEST_CASE("messages slide in, rise a step for each newer one and fade out") {

@@ -133,6 +133,35 @@ TEST_CASE("the entrance walks the robot out of its gate and hands the battle ove
   CHECK(!scene.finished());
 }
 
+TEST_CASE(
+    "the player stays shielded through entry and for the configured time after control returns") {
+  BattleSettings settings = test_settings();
+  settings.entry_shield.seconds = 2.0F;
+  Battle battle(settings, EnemyPath{});
+  battle.add_robot("player", 0, {}, 0.0F, {}, 100.0F);
+  BattleScene scene(test_tables(), SceneTuning{}, 1);
+  CHECK(scene.start_entrance(battle));
+  CHECK(battle.player().shield == settings.entry_shield.seconds);
+  int steps = 0;
+  while (scene.active() && steps++ < 280) {
+    step(scene, battle);
+    CHECK(battle.player().shield > settings.entry_shield.seconds - 2.0F * tick);
+    CHECK(battle.player().shield_glow > 0.0F);
+  }
+  CHECK(!scene.active());
+  CHECK(steps > 260); // The entrance outlasts a shield raised only once at spawn.
+  for (int index = 0; index < 45; ++index) {
+    step(scene, battle);
+  }
+  CHECK(battle.player().shield > 0.0F);
+  CHECK(battle.player().shield_glow > 0.0F);
+  for (int index = 0; index < 20; ++index) {
+    step(scene, battle);
+  }
+  CHECK(battle.player().shield == 0.0F);
+  CHECK(battle.player().shield_glow == 0.0F);
+}
+
 TEST_CASE("walking back into a gate turns the robot to it, walks it in and ends the battle") {
   BattleScene scene(test_tables(), SceneTuning{}, 1);
   TestBattle test;

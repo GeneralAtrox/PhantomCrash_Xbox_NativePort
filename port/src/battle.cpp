@@ -242,6 +242,9 @@ void Battle::separate() {
 
 void Battle::tick(const RobotControl &player, const FireControl &fire, const float seconds) {
   events_.clear();
+  if (objects_) {
+    objects_->tick(seconds);
+  }
   if (doors_) {
     doors_->tick(seconds);
   }
@@ -309,6 +312,7 @@ void Battle::tick(const RobotControl &player, const FireControl &fire, const flo
     impact.weapon = landing.weapon;
     impact.at = landing.at;
     impact.on_robot = landing.on_robot;
+    impact.surface = landing.surface;
     events_.push_back(impact);
   }
 }

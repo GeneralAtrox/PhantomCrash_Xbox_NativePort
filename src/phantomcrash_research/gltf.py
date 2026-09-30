@@ -321,3 +321,34 @@ def write(
         "triangles": sum(len(mesh.indices) // 3 for mesh in model.meshes),
         "materials": len(doc.get("materials", [])),
     }
+
+
+def write_instances(model: mdl.Model, target: Path, texture_uris: list[str],
+                    instances: list[dict]) -> None:
+    """Place selected meshes under object transforms, retaining each mesh's local nodes.
+
+    Instances name a mesh, position and X/Y/Z rotation in game coordinates.
+    Parent nodes keep those placements editable in ordinary glTF tools.
+    """
+    writer = _Writer(texture_uris)
+    roots = writer.doc["scenes"][0]["nodes"]
+    for instance in instances:
+        mesh = instance["mesh"]
+        if not 0 <= mesh < len(model.meshes):
+            raise ValueError("Object mesh is outside its model resource")
+        first_root = len(roots)
+        writer.add_mesh(model.meshes[mesh], mesh)
+        children = roots[first_root:]
+        del roots[first_root:]
+        roots.append(len(writer.doc["nodes"]))
+        writer.doc["nodes"].append({
+            "name": f"object{instance['index']}",
+            "children": children,
+            "translation": list(_mirror(instance["position"])),
+            "rotation": _quaternion(instance["rotation"]),
+            "extras": {"phantomcrash": instance},
+        })
+    document = writer.finish(target.with_suffix(".bin").name)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.with_suffix(".bin").write_bytes(bytes(writer.blob))
+    target.write_text(json.dumps(document, indent=1) + "\n", encoding="utf-8")

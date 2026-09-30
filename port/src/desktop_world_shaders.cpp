@@ -45,6 +45,7 @@ cbuffer Draw : register(b1) {
   float draw_pad;
   float4 optical_sphere; // centre, radius
   float4 optical_shape;  // edge, reach, least, push
+  float4 uv_transform;   // UV scale and offset (TV atlas rectangle -> complete live feed)
 };
 
 struct VertexIn {
@@ -74,7 +75,7 @@ VertexOut vs_main(VertexIn input) {
   output.normal = mul(input.normal, (float3x3)world);
   output.tangent = float4(mul(input.tangent.xyz, (float3x3)world), input.tangent.w);
   output.colour = input.colour;
-  output.uv = input.uv + uv_offset;
+  output.uv = input.uv * uv_transform.xy + uv_transform.zw + uv_offset;
   output.behind = output.position;
   output.seen = 1.0;
   if (optical > 0.5) {

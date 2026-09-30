@@ -144,7 +144,8 @@ void BattleView::tick(const Battle &battle, const float seconds) {
   }
 }
 
-void BattleView::add_items(const Battle &battle, std::vector<WorldItem> &items, const int hidden) {
+void BattleView::add_items(const Battle &battle, std::vector<WorldItem> &items, const int hidden,
+                           const int hidden_shield) {
   const auto &robots = battle.robots();
   for (std::size_t index = 0; index < visuals_.size() && index < robots.size(); ++index) {
     const Combatant &robot = robots[index];
@@ -168,7 +169,12 @@ void BattleView::add_items(const Battle &battle, std::vector<WorldItem> &items, 
       items[item].flash = flash;
     }
     add_shadow(robot, visual, root, first, items);
-    add_shield(robot, items);
+    if (static_cast<int>(index) != hidden_shield) {
+      add_shield(robot, items);
+    }
+    for (std::size_t item = first; item < items.size(); ++item) {
+      items[item].robot = static_cast<int>(index);
+    }
   }
 }
 

@@ -22,10 +22,10 @@ of states 1-4, picked at random; state 5 is a computer robot's.
 - Gates (``0x201598``, per stage ``{vec3 *points, u32 count, f32
   *headings}``): where robots enter (``0x0825df``) and where a robot that
   walks back in leaves the battle (``0x08224d``, ``0x044839``).
-- Doors (``0x06f0ab``, ``0x070b80``): the training ground's stage objects
+- Doors (``0x06f0ab``, ``0x070b80``): the city and training ground stage objects
   (per stage a pointer at ``0x22e638`` to 13-dword records, the object
   types at ``0x22e7e8`` and 12-triangle collision templates at
-  ``0x22e658``). A record holds the effect model's resource id, the
+  ``0x22e658``). A record holds the effect model's global mesh slot, the
   position, the x, y and z rotation, a template index and a gate slot.
   Objects of type 6 are door leaves in pairs: the one with a gate slot
   opens that gate (``0x070667``) and turns +0.58 rad about its origin,
@@ -52,7 +52,7 @@ from __future__ import annotations
 
 import struct
 
-from . import motion
+from . import motion, stage_objects
 from .game_tables import _Image
 
 SCENE_TABLE = 0x258F50
@@ -67,10 +67,9 @@ OBJECT_COLLISION = 0x22E658
 OBJECT_RECORD = 52
 OBJECT_TEMPLATE = 0x1B0  # 12 triangles of three vec3
 DOOR_TYPE = 6  # 0x0731c5 opens and 0x073430 closes it
-# The training ground builds eight objects (0x06f0ab); the effect model's
-# first resource id is where its random crates start: day 0x492, night 0x498.
-DOOR_STAGES = {6: 0x492, 7: 0x498}
-DOOR_OBJECTS = 8
+# First mesh slot of each stage's effect model (resources 198-205).
+DOOR_STAGES = {0: 1052, 1: 1079, 2: 1106, 3: 1122, 4: 1138, 5: 1154,
+               6: 0x492, 7: 0x498}
 FIXED_CAMERAS = 0x232AE0
 FIXED_CAMERA_AREAS = 0x232BC0
 FIXED_CAMERA_AREA_COUNT = 5
@@ -141,12 +140,16 @@ def _door_leaf(image: _Image, stage: int, index: int, first_model: int) -> dict:
 
 def _doors(image: _Image, stage: int) -> list[dict]:
     first_model = DOOR_STAGES[stage]
-    leaves = [_door_leaf(image, stage, index, first_model) for index in range(DOOR_OBJECTS)]
+    leaves = [_door_leaf(image, stage, record["index"], first_model)
+              for record in stage_objects.records(image, stage)]
     doors = []
     for index, leaf in enumerate(leaves):
         if leaf["kind"] != DOOR_TYPE or leaf["gate"] < 0 or index == 0:
             continue
         partner = leaves[index - 1]
+        if (partner["kind"] != DOOR_TYPE or partner["position"] != leaf["position"]
+                or partner["rotation"] != leaf["rotation"]):
+            raise ValueError(f"Gate leaves do not share a transform on stage {stage}")
         doors.append(
             {
                 "gate": leaf["gate"],

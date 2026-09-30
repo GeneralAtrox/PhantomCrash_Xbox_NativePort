@@ -18,6 +18,10 @@ Output, under the converted assets:
   view layer 1 around the camera; slot ``resource.first_mesh_slot + n`` is
   mesh ``n``. Layer 7 contains static stencil volumes, not colour geometry;
   these are excluded until the static-volume pass is implemented.
+- ``models/stages/<stage>_props.gltf``: separately placed scenery from
+  :mod:`stage_objects`, using effect-model texture packs 1575-1580.
+  ``<stage>_objects.gltf`` supplies the moving gate leaves; placements and
+  source mesh slots are also exported to ``tables/stage_objects.json``.
 """
 
 from __future__ import annotations
@@ -26,7 +30,7 @@ import struct
 from pathlib import Path
 from typing import Callable
 
-from . import battle_data, game_tables, gltf, model, png, texture_pack
+from . import battle_data, game_tables, gltf, model, png, stage_objects, texture_pack
 
 STAGE_MODELS = 0x2212AC  # u32 model resource per stage
 STAGE_OBJECTS = 0x2212EC  # u32 object list per stage
@@ -99,6 +103,10 @@ def convert_stages(
             "enemy_path": path,
             **summary,
         })
+    scenery = stage_objects.convert_objects(executable, read, output, write_json)
+    for record in records:
+        objects = scenery[record["stage"]]
+        record.update({key: objects[key] for key in ("props_model", "door_model")})
     write_json(output / "tables" / "stages.json", records)
     report(f"{len(records):>4} city stages, {len(paths)} area paths")
     return records

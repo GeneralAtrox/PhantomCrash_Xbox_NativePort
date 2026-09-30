@@ -18,6 +18,12 @@ struct CollisionTriangle {
   int surface{};
 };
 
+struct StageHit {
+  Vec3 position;
+  Vec3 normal;
+  int surface{};
+};
+
 // Result flags of the stage tests, as the original's (0x052c1f, 0x054c45).
 namespace stage_contact {
 inline constexpr unsigned touched = 0x1;
@@ -63,6 +69,8 @@ public:
   unsigned push_sphere(Vec3 &centre, float radius) const;
   // Where the segment first meets a wall or the floor.
   [[nodiscard]] std::optional<Vec3> segment_hit(Vec3 from, Vec3 to) const;
+  [[nodiscard]] std::optional<StageHit> segment_contact(Vec3 from, Vec3 to) const;
+  [[nodiscard]] float distance_to(Vec3 point) const;
 
   [[nodiscard]] const std::vector<CollisionTriangle> &walls() const noexcept {
     return triangles_walls_;

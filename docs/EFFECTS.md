@@ -141,11 +141,34 @@ leave a bullet hole (`decals`, 0x0663d2). Bullet holes are not ported.
 
 `wreck_groups` are the groups 0x07675e starts where a robot's armour runs
 out: 0x34, 0x35 and 0x36 (kept, debris and smoke) and 0xf (the blast). The
-supply carrier's crash starts group 0x3f (0x06828e, `crash_effect` in the
+supply carrier starts group 0x3f both when shot and when its wreck crashes
+(0x06781a and 0x06828e, `crash_effect` in the
 supply look).
 
 The port's earlier glow discs for shots and blasts are gone. The Armory's
 explosions now only time the blasts' damage.
+
+## Arena fence impacts
+
+Shots keep the closest collision triangle's surface and normal through
+their landing event. Surface 8 (including its `% 1000` variants) selects
+the arena boundary above the visible fence. When the weapon starts its
+surface impact, `0x065f28` also starts `0x07027b`'s fence effect. A closer
+robot, prop, or door does not inherit that boundary contact.
+
+`fence` in `tables/effects.json` supplies the dedicated mesh animation:
+model resource 197, slots 1021–1050 (meshes 0–29). `0x071869` selects one
+mesh per 30 Hz frame, scales X/Z from 0.1 by `age / 30 * 0.05`, scales Y
+by 0.2, and places it in the surface frame offset -0.5 along the normal.
+`0x07027b` allows twenty simultaneous effects, each lasting thirty frames.
+The native animation advances with elapsed game time, independently of
+presentation rate and split-screen draws.
+
+The original uses its `effopt` refraction path with the shader sphere at
+the contact point and radius zero (`0x071869`, `0x0c05c2`). The port draws
+the extracted meshes through its existing scene-copy refraction pass;
+the shape, timing, scale and refraction settings remain editable in the
+extracted table. No replacement mesh or ripple texture is generated.
 
 ## Not yet ported
 
@@ -153,8 +176,7 @@ explosions now only time the blasts' damage.
 - Debris bouncing. Debris is pinned to the floor instead.
 - The exact placement of cluster particles, and the random_offset target.
 - The kinds' depth biases in 0x0bf4cf.
-- Bullet holes and scorch marks (0x0663d2), missile smoke trails (0x0702d8)
-  and fence sparks (0x07027b).
+- Bullet holes and scorch marks (0x0663d2) and missile smoke trails (0x0702d8).
 - Beams (hit case 5) spend themselves on a surface in the port instead of
   flying on.
 - The original emitter's first frame carries the velocity of a jump from

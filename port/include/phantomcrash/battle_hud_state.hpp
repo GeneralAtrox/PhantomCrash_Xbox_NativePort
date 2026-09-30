@@ -38,8 +38,10 @@ struct LockBox {
 // (0x4f6a0).
 class ReticleTracker final {
 public:
-  // `target` is the target's NDC offset from the sight.
-  void update(std::optional<std::array<float, 2>> target, float speed_per_frame, float frames);
+  // Target and chip box half size are NDC offsets from the sight. The
+  // tracked point stays inside that box, including when the chip changes.
+  void update(std::optional<std::array<float, 2>> target, float speed_per_frame, float frames,
+              std::array<float, 2> half_size);
   [[nodiscard]] std::array<float, 2> offset() const noexcept {
     return offset_;
   }

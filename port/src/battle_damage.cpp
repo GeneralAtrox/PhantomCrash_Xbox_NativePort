@@ -139,7 +139,7 @@ void Battle::apply_hits(const std::vector<WeaponHit> &hits) {
   const auto count = robots_.size();
   std::vector<float> piloted_damage(count, 0.0F);
   for (const WeaponHit &hit : hits) {
-    if (hit_supply(hit)) {
+    if (hit_object(hit) || hit_supply(hit)) {
       continue;
     }
     const auto victim_index = static_cast<std::size_t>(hit.victim);

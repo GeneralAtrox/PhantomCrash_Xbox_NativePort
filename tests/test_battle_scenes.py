@@ -34,3 +34,13 @@ def test_battle_scenes_read_the_training_grounds_gate_doors():
     assert (opening["mesh"], opening["swing"]) == (4, 1)
     assert len(opening["collision"]) == 12
     assert opening["collision"][0] == [4.68, 10.0, -3.78, 4.68, 0.0, -3.78, 4.68, 10.0, 0.33]
+
+
+@pytest.mark.skipif(not EXTRACTED_XBE.is_file(), reason="needs the extracted default.xbe")
+def test_city_doors_use_city_effect_meshes_and_gate_slots():
+    doors = battle_scenes.battle_scenes(EXTRACTED_XBE.read_bytes())["doors"]
+    for stage in range(6):
+        assert [door["gate"] for door in doors[str(stage)]] == list(range(3 if stage < 2 else 2))
+        for door in doors[str(stage)]:
+            assert [leaf["mesh"] for leaf in door["leaves"]] == ([26, 25] if stage < 2 else [15, 14])
+            assert all(len(leaf["collision"]) == 12 for leaf in door["leaves"])

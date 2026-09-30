@@ -49,7 +49,7 @@ import struct
 from pathlib import Path
 from typing import Callable
 
-from . import battle_data, battle_scenes, chatter, collision, effect_bank, effect_convert, environment, game_tables, gltf, model, motion, parts, png, robots, stage_convert, texture_pack
+from . import arena_monitor, battle_data, battle_scenes, chatter, collision, effect_bank, effect_convert, environment, game_tables, gltf, model, motion, parts, png, robots, stage_convert, texture_pack
 
 
 def _write_json(path: Path, data: object) -> None:
@@ -253,6 +253,7 @@ def convert_robots(
         "enemy_paths": len(paths),
         "models": _convert_models(wanted["models"], catalogue, packs, output, report),
         "hud_models": _convert_hud_models(packs, output, report),
+        "arena_monitor": arena_monitor.convert_ship(executable, packs.read, output, _write_json),
         "effect_models": effect_convert.convert_effects(media, packs.read, output, report),
         "effect_bank": effect_bank.convert_effect_bank(executable, packs.read, output, _write_json, report),
         "textures": _convert_textures(wanted["textures"], packs, output, report),

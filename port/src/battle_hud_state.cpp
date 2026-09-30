@@ -50,8 +50,14 @@ float lock_spread_left(const float frames, const float lock_frames) {
 }
 
 void ReticleTracker::update(const std::optional<std::array<float, 2>> target,
-                            const float speed_per_frame, const float frames) {
-  const std::array<float, 2> goal = target.value_or(std::array<float, 2>{});
+                            const float speed_per_frame, const float frames,
+                            const std::array<float, 2> half_size) {
+  auto goal = target.value_or(std::array<float, 2>{});
+  for (std::size_t axis = 0; axis < offset_.size(); ++axis) {
+    const float limit = std::max(half_size[axis], 0.0F);
+    offset_[axis] = std::clamp(offset_[axis], -limit, limit);
+    goal[axis] = std::clamp(goal[axis], -limit, limit);
+  }
   const float dx = goal[0] - offset_[0];
   const float dy = goal[1] - offset_[1];
   const float distance = std::sqrt(dx * dx + dy * dy);

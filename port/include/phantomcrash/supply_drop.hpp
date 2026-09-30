@@ -14,6 +14,9 @@
 
 namespace phantomcrash {
 
+// The wreck's swept stage contact, returning the position of its final explosion.
+using SupplyContact = std::function<std::optional<Vec3>(Vec3, Vec3, float)>;
+
 // The supply drops (0x066940 starts them with every battle, 0x06717c ticks
 // them): a carrier flies one of its stage's routes, a chain of cubic Bezier
 // segments (tables/battle_scenes.json "supply_routes"), opens its hatch on
@@ -125,8 +128,8 @@ struct SupplySettings {
   // Shots (0x067603): one brings the carrier down within carrier_radius and
   // pays its shooter shot_bounty (0x047ed9); one bursts a pickup within
   // pickup_radius. The wreck keeps wreck_keep of its speed and sinks
-  // wreck_sink a tick until it strikes the stage or wreck_ticks pass, then
-  // blows up (0x06781a, 0x06828e).
+  // wreck_sink a tick after the immediate explosion. It explodes again on
+  // stage contact or after wreck_ticks (0x06781a, 0x06828e).
   float carrier_radius{3.0F};
   float pickup_radius{1.0F};
   float shot_bounty{1000.0F};
@@ -188,7 +191,8 @@ public:
     return !settings_.routes.empty();
   }
   // `ground` answers the ground's height under a point.
-  void tick(float seconds, const std::function<float(Vec3)> &ground);
+  void tick(float seconds, const std::function<float(Vec3)> &ground,
+            const SupplyContact &contact = {});
   // The pickup a robot whose collision sphere is centred at `centre` with
   // `radius` touches, taken; its kind, or nothing.
   [[nodiscard]] std::optional<SupplyTaken> take(Vec3 centre, float radius);
@@ -224,7 +228,7 @@ private:
   void load();
   void fly(float ticks);
   void work_hatch(float ticks);
-  void fall(float ticks, const std::function<float(Vec3)> &ground);
+  void fall(float ticks, const std::function<float(Vec3)> &ground, const SupplyContact &contact);
   void park();
   void tick_pickups(float ticks, const std::function<float(Vec3)> &ground);
   [[nodiscard]] Mat4 carrier_frame() const;

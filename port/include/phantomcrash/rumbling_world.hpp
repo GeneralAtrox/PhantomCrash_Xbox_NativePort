@@ -43,6 +43,7 @@ struct RumblingLive {
 struct RumblingStage {
   EnemyPath path;
   StageCollision collision;
+  std::optional<StageObjects> objects;
 };
 
 class RumblingWorld final {
@@ -65,7 +66,8 @@ public:
   [[nodiscard]] std::shared_ptr<Battle> lend(int area, QuestSave &quest);
   // The player has left: the opponents they shot down are beaten and their
   // bounties paid.
-  void give_back(QuestSave &quest);
+  std::int64_t give_back(QuestSave &quest);
+  [[nodiscard]] bool player_won() const;
   [[nodiscard]] int lent() const noexcept {
     return lent_;
   }

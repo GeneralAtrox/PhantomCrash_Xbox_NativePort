@@ -1,5 +1,7 @@
 #pragma once
 
+#include "phantomcrash/fence_impacts.hpp"
+
 #include "phantomcrash/json.hpp"
 #include "phantomcrash/math3d.hpp"
 
@@ -203,6 +205,7 @@ struct EffectBank {
   std::optional<EffectPicture> exhaust;
   std::vector<ShotImpact> impacts;
   EffectDecals decals;
+  FenceLook fence;
   std::vector<int> wreck_groups; // started where a robot is destroyed (0x07675e)
 };
 

@@ -6,6 +6,7 @@
   "dependencies": [
     "cgltf",
     "sdl3",
+    "zlib",
     {
       "name": "sdl3-image",
       "features": [

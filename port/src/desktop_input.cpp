@@ -180,6 +180,7 @@ InputFrame DesktopInput::sample(const bool focused, const Viewport &viewport) {
     latched |= (focused ? latched_[port] : 0) | injected_[port];
   }
   InputFrame frame = edges_.update(held, latched, controllers());
+  frame.mouse_right_held = focused && (SDL_GetMouseState(nullptr, nullptr) & SDL_BUTTON_RMASK);
   if (focused && mouse_captured_ && controls_) {
     constexpr float radians_per_degree = 0.01745329252F;
     const float sensitivity = controls_->mouse_degrees_per_pixel * radians_per_degree;

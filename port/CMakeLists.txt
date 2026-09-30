@@ -7,6 +7,7 @@ endif()
 
 # Platform-independent core: data loading, input model, timing, canvas maths.
 add_library(phantomcrash_core
+  src/match_result.cpp
   src/location_menu.cpp
   src/location_menu_script.cpp
   src/data_roots.cpp
@@ -39,13 +40,18 @@ add_library(phantomcrash_core
   src/battle_roster.cpp
   src/battle_weapon_tuning.cpp
   src/battle_weapons.cpp
+  src/battle_weapon_targets.cpp
+  src/fence_impacts.cpp
   src/stage_collision.cpp
   src/stage_doors.cpp
+  src/stage_objects.cpp
+  src/battle_objects.cpp
   src/battle_hud_style.cpp
   src/battle_hud_state.cpp
   src/battle_panels_style.cpp
   src/button_config.cpp
   src/battle_camera.cpp
+  src/battle_monitor.cpp
   src/chase_camera.cpp
   src/cockpit.cpp
   src/optical_camouflage.cpp
@@ -177,6 +183,7 @@ endif()
 
 if(BUILD_TESTING)
   add_executable(phantomcrash_core_tests
+    tests/match_result_tests.cpp
     tests/club_tests.cpp
     tests/core_tests.cpp
     tests/data_tests.cpp
@@ -205,10 +212,14 @@ if(BUILD_TESTING)
     tests/robot_load_tests.cpp
     tests/stage_collision_tests.cpp
     tests/stage_doors_tests.cpp
+    tests/stage_objects_tests.cpp
+    tests/fence_impacts_tests.cpp
+    tests/battle_monitor_tests.cpp
     tests/battle_camera_tests.cpp
     tests/cockpit_tests.cpp
     tests/optical_camouflage_tests.cpp
     tests/supply_drop_tests.cpp
+    tests/supply_destruction_tests.cpp
     tests/split_screen_tests.cpp
     tests/garage_tests.cpp
     tests/town_screen_tests.cpp
@@ -254,6 +265,7 @@ endif()
 if(PHANTOMCRASH_BUILD_DESKTOP)
   find_package(SDL3 CONFIG REQUIRED)
   find_package(SDL3_image CONFIG REQUIRED)
+  find_package(ZLIB REQUIRED)
   find_package(PkgConfig REQUIRED)
   pkg_check_modules(FFMPEG REQUIRED IMPORTED_TARGET
     libavcodec
@@ -311,10 +323,19 @@ if(PHANTOMCRASH_BUILD_DESKTOP)
     src/desktop_textures.cpp
     src/desktop_robot.cpp
     src/desktop_training.cpp
+    src/desktop_training_result.cpp
+    src/desktop_training_replay.cpp
+    src/desktop_replay.cpp
+    src/desktop_replay_archive.cpp
+    src/desktop_replay_overlay.cpp
+    src/desktop_match_result.cpp
+    src/desktop_screens_result.cpp
     src/desktop_training_sound.cpp
     src/desktop_training_camera.cpp
     src/desktop_training_live.cpp
     src/desktop_training_split.cpp
+    src/desktop_monitor_ship.cpp
+    src/desktop_stage_objects.cpp
     src/desktop_game_screens.cpp
     src/desktop_records.cpp
     src/desktop_battle_music.cpp
@@ -351,6 +372,7 @@ if(PHANTOMCRASH_BUILD_DESKTOP)
     src/desktop_training_robots.cpp
     src/desktop_world_gpu.cpp
     src/desktop_world_passes.cpp
+    src/desktop_world_monitor.cpp
     src/desktop_world_shadows.cpp
     src/desktop_world_screen.cpp
     src/desktop_world_sprites.cpp
@@ -360,7 +382,7 @@ if(PHANTOMCRASH_BUILD_DESKTOP)
     src/movie_player.cpp
   )
   target_link_libraries(phantomcrash_port PRIVATE
-    phantomcrash_core phantomcrash_media SDL3::SDL3 SDL3_image::SDL3_image)
+    phantomcrash_core phantomcrash_media SDL3::SDL3 SDL3_image::SDL3_image ZLIB::ZLIB)
   if(WIN32)
     target_link_libraries(phantomcrash_port PRIVATE comctl32 d3d11 dxgi d3dcompiler)
   endif()
@@ -370,8 +392,9 @@ if(PHANTOMCRASH_BUILD_DESKTOP)
 
   if(BUILD_TESTING)
     add_executable(phantomcrash_input_tests tests/core_tests.cpp tests/desktop_input_tests.cpp
+      tests/desktop_replay_archive_tests.cpp src/desktop_replay_archive.cpp
       src/desktop_input.cpp src/desktop_input_bindings.cpp)
-    target_link_libraries(phantomcrash_input_tests PRIVATE phantomcrash_core SDL3::SDL3)
+    target_link_libraries(phantomcrash_input_tests PRIVATE phantomcrash_core SDL3::SDL3 ZLIB::ZLIB)
     add_test(NAME phantomcrash_input_tests COMMAND phantomcrash_input_tests)
     add_test(NAME phantomcrash_port_smoke COMMAND phantomcrash_port --smoke-test 60
              WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})

@@ -21,7 +21,7 @@ public:
   DesktopShots(WorldRenderer &world, const EffectBank &bank);
 
   // Starts the effects of this tick's landings, wrecks and blasts.
-  void tick(const Battle &battle, EffectSystem &effects);
+  void tick(const Battle &battle, EffectSystem &effects, float seconds);
   // Appends the shots' models; billboard looks face the camera of `view`.
   void add_items(const Battle &battle, const Mat4 &view, std::vector<WorldItem> &items);
   // Appends the sprite shots and the flashes in play.
@@ -40,6 +40,8 @@ private:
   std::vector<Mesh> looks_;
   std::vector<int> look_sprites_;
   Mesh exhaust_;
+  FenceImpacts fence_;
+  std::map<int, Mesh> fence_meshes_;
   std::vector<std::vector<int>> flash_textures_;
   std::minstd_rand random_{0x5eed};
 };

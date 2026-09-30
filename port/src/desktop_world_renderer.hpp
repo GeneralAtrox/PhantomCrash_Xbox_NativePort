@@ -29,9 +29,13 @@ namespace phantomcrash {
 // texture 0's image wherever the model uses it (keeping each texture's wrap
 // modes): the robot's own paint, which the original binds per robot.
 struct WorldItem {
+  int robot{-1}; // replay subject owner; -1 for scenery and shared effects
   int model{-1};
   Mat4 world;
   std::vector<std::string> sky_nodes;
+  std::vector<SkyMotion> sky_motion;
+  double sky_seconds{};
+  std::vector<std::string> monitor_nodes;
   std::vector<Mat4> node_worlds;
   int paint{-1};
   float alpha{1.0F}; // below 1 the item is drawn see-through
@@ -121,7 +125,7 @@ public:
   // The texture at `asset_path`, loaded on first use; -1 when it cannot load.
   [[nodiscard]] int texture(const std::string &asset_path);
   // Renders `frame` and draws it over the whole window.
-  void draw(const WorldFrame &frame);
+  void draw(const WorldFrame &frame, const WorldFrame *monitor = nullptr);
 
 private:
   struct Draw {
@@ -136,10 +140,14 @@ private:
     const WorldItem *item;
     bool sky_node;
     bool blend;
+    bool monitor;
+    std::array<float, 2> uv_offset{};
   };
 
   void create_states();
   void ensure_targets(int width, int height);
+  void render_monitor(const WorldFrame &frame);
+  [[nodiscard]] std::array<float, 4> monitor_uv(const Draw &draw) const;
   void render(const WorldFrame &frame);
   // Appends the batches of `item` (item `index` of the frame) to `out`.
   void item_draws(const WorldItem &item, int index, Vec3 eye, std::vector<Draw> &out) const;
@@ -211,6 +219,9 @@ private:
   Com<ID3D11DepthStencilView> depth_view_;
   Com<ID3D11Texture2D> scene_; // the copy Optic Camouflage samples
   Com<ID3D11ShaderResourceView> scene_view_;
+  Com<ID3D11Texture2D> monitor_texture_;
+  Com<ID3D11ShaderResourceView> monitor_view_;
+  bool capturing_monitor_{};
   Com<ID3D11SamplerState> scene_sampler_;
   Com<ID3D11ShaderResourceView> depth_read_view_; // the depth, for the screen pass
   // The screen pass: its shaders, and the two half-size targets it blurs into.

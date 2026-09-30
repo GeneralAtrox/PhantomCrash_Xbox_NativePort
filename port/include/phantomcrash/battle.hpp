@@ -6,6 +6,7 @@
 #include "phantomcrash/robot_mover.hpp"
 #include "phantomcrash/stage_collision.hpp"
 #include "phantomcrash/stage_doors.hpp"
+#include "phantomcrash/stage_objects.hpp"
 #include "phantomcrash/supply_drop.hpp"
 
 #include <array>
@@ -159,6 +160,7 @@ struct BattleEvent {
   const WeaponTuning *weapon{};
   Vec3 at;
   bool on_robot{}; // impact: it struck a robot
+  std::optional<StageHit> surface;
 };
 
 // The player's buttons for weapons this tick.
@@ -223,6 +225,15 @@ public:
   }
   // The gates' doors: robots push against them and open them (stage_doors.hpp).
   void set_doors(StageDoors doors);
+  void set_objects(StageObjects objects) {
+    objects_ = std::move(objects);
+  }
+  [[nodiscard]] StageObjects *objects() {
+    return objects_ ? &*objects_ : nullptr;
+  }
+  [[nodiscard]] const StageObjects *objects() const {
+    return objects_ ? &*objects_ : nullptr;
+  }
   // The stage's supply drops (supply_drop.hpp); none without routes.
   void set_supply(SupplySettings settings);
   [[nodiscard]] const SupplyDrop *supply() const noexcept {
@@ -322,15 +333,20 @@ private:
   void separate();
   void respawn(Combatant &drone);
   void tick_supply(float seconds);
+  void supply_explosion(Vec3 at);
   void take_supply(Combatant &robot, const SupplyTaken &taken);
   // The carrier and the pickups as shot targets, after the robots.
   void add_supply_targets(std::vector<Target> &out) const;
+  void add_object_targets(std::vector<Target> &out) const;
+  bool hit_object(const WeaponHit &hit);
+  [[nodiscard]] int object_count() const;
   // A hit on one of them; false for a robot's.
   bool hit_supply(const WeaponHit &hit);
 
   BattleSettings settings_;
   StageCollision stage_;
   std::optional<StageDoors> doors_;
+  std::optional<StageObjects> objects_;
   std::optional<SupplyDrop> supply_;
   EnemyPath path_;
   std::minstd_rand random_;

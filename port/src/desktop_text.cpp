@@ -31,6 +31,7 @@ void draw_glyphs(TextureCache &textures, const GlyphFont &font,
     const SDL_FRect source{left, top, right - left, bottom - top};
     const auto pixels = viewport.to_pixels(glyph.x, glyph.y, glyph.width, glyph.height);
     const SDL_FRect target{pixels.x, pixels.y, pixels.width, pixels.height};
+    record_quad(textures, texture, source, target);
     SDL_RenderTexture(renderer, texture, &source, &target);
   }
   if (clip) {

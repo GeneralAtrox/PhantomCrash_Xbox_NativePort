@@ -4,6 +4,7 @@
 #include "phantomcrash/data_roots.hpp"
 #include "phantomcrash/json.hpp"
 #include "phantomcrash/sprite_layer.hpp"
+#include "desktop_replay_overlay.hpp"
 
 #include <SDL3/SDL.h>
 
@@ -26,6 +27,8 @@ public:
   // Loads every image a data document names (each string ending ".png"),
   // so a screen's first use of one does not load it mid-frame.
   void preload(const json::JsonValue &document);
+  void record_into(ReplayOverlay *overlay) { recording_ = overlay; }
+  ReplayOverlay *recording() const { return recording_; }
 
   [[nodiscard]] SDL_Renderer *renderer() const noexcept {
     return renderer_;
@@ -33,6 +36,7 @@ public:
 
 private:
   SDL_Renderer *renderer_{};
+  ReplayOverlay *recording_{};
   const DataRoots &roots_;
   std::map<std::string, SDL_Texture *> textures_;
 };

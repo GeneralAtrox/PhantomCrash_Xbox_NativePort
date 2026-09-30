@@ -1,5 +1,30 @@
 # The training ground, the tutorial battle and the 3D renderer
 
+## Arena monitors
+
+Gate TVs and the advertising ship show a live chase view of a random living
+combatant, including the player and AI. The port switches every eight simulation
+seconds, avoids immediate repeats when another fighter is available, and switches
+immediately if its subject dies. With no living fighters, the screens go black.
+`data/world/stages.json` controls `monitor.switch_seconds`, the camera and aspect,
+and each stage's `monitor_nodes`. These name the gate quads independently of the
+sky geometry that shares their original placeholder texture.
+
+The feed renders the same battle snapshot, including robots, scenery, projectiles
+and effects, without HUD or cockpit. It uses native viewport resolution and is
+shared by every TV and split-screen view. TVs within the feed are black to prevent
+recursive feedback. The renderer expands each panel's authored UV rectangle to
+show the complete feed.
+
+`arena_monitor.py` extracts the previously unloaded advertising ship models
+210/211 and their textures, plus the stage flight curves selected at `0x066940`
+and followed by `0x06a38d`. `tables/arena_monitor.json` contains the route, speed,
+hinged panel groups and night rotors. The screen meshes are slots 1218/1222 by day
+and 1233/1237 by night; `0x06aa07` replaces their atlas UVs for the framebuffer.
+The native ship follows those curves and displays the shared battle feed.
+Random subject cycling and continuous battle coverage replace the original
+player-only view and ship advertisements as a requested port improvement.
+
 Pepper's BEGINNERS CLUB lessons (FreePlay, basic controls, attack methods,
 Optic Camouflage) start the tutorial battle, scene 42, on the training
 ground. It is the port's first 3D screen: the player's Scoobee, posed from
@@ -129,6 +154,38 @@ and buildings. Object slots are resolved relative to the model resource's
 day's resource starts at slot 31 but its object list starts at 91. Its sky
 slots 143 and 144 therefore select meshes 112 and 113. The stage table in
 `data/world/stages.json` uses those resource-relative sky node names.
+
+City scenery uses a second list, at `0x22e638[stage]`: `0x06f0ab` reads
+52-byte records until mesh slot -1. `0x070b80` places the first mesh slot
+with XYZ rotation then translation; the second slot is its wreck. The
+collision-template index at +44 selects an object kind through `0x22e7e8`.
+These are effect models 198-203, bound to texture packs 1575-1580, rather
+than the static stage models. `stage_objects.py` converts their intact
+instances to `<stage>_props.gltf` (20 per Shinjuku variant, 52 per Shibuya,
+25 per Umihotaru), with editable parent transforms and source record
+metadata. That baked model remains a fallback for older extractions. The
+runtime loads `tables/stage_objects.json` and draws each intact or wreck
+mesh from `<stage>_objects.gltf` at the record's transform. Its twelve
+collision triangles come from `0x22e658[stage]`, template stride `0x1b0`.
+Projectiles test these surfaces before targets behind them; blasts use
+distance to the surfaces. Live battles retain destroyed props on reentry.
+
+The hit-handler table at `0x22e8e0` selects destruction, without an HP
+threshold: types 0/1/7 select their wreck and effect 14/13/13 respectively;
+types 2/3/4 vanish with effect 15 and type 5 with effect 58. Type 0 wrecks
+remain solid; type 1 wrecks can be shot away with effect 15 after six
+seconds; type 7 wrecks remain visible without shot collision. Type 8 stays
+intact. The extracted table exposes effects, collision, wreck meshes,
+cooldown and break sound as editable data. These handler interpretations
+come from `0x07271e`, `0x072902`, `0x072afa` and `0x07354e`; the prop shot
+dispatch is `0x047ed9`.
+
+Type 6 records are gate leaves. They are excluded from that scenery model
+and exported through `battle_scenes.py` to the existing `StageDoors`
+system: three paired gates per Shinjuku variant and two in each other
+city. Each city's `door_model` uses its own textured effect model. The
+record and transform interpretation was checked with Ghidra and radare2;
+names in this description are researcher-assigned.
 
 ### The screen pass
 
@@ -363,7 +420,7 @@ from `data/ui/battle_panels.json`, using `game_quest_tex` (slot 465, sprites
 | --- | --- |
 | 0x503b9 | The sight ring (1392) at the projection of the point 64 units along the robot's aim. Four triangles 55 units out (0x203d08); they fill (1393) with a pulsing red while a camouflaged robot is on screen within 75 units. Arrows 96 units out toward robots within 75 units that are off screen and less than 90 degrees from the heading. |
 | 0x4faad / 0x51499 | The inner and outer reticles and the centre diamond (1387). The half size comes from the shape tables 0x203c48 and 0x203c78 (square, wide, tall), interpolated by the fire control's value / 999 (0x4db69). Each corner piece is the top-left one, mirrored and turned for the others. |
-| 0x4f6a0 | The reticle's tracking: it follows the nearest enemy inside the inner box at (0.02 + 0.08 × robot +0x4514 / 999) NDC per frame. |
+| 0x4f6a0 | The reticle's tracking: it follows the nearest enemy inside the inner box at (0.02 + 0.08 × robot +0x4514 / 999) NDC per frame. The port checks acquisition against the sight-centred chip box and bounds the tracked offset by its half width/height, preventing the moving reticle from dragging the acquisition area beyond the chip's limits. |
 | 0x51045 / 0x51499 | Shoulder lock boxes (1390 right, 1389 left, colour 0xcc00b496). Each opens at the outer reticle's corners and closes on the robot as the lock time (robot +0x4520) runs out, keeping (time left / lock time) of its spread each frame (0x5239b). |
 | 0x51e37 / 0x5218b | The melee lock box (1391) for a kind 6 arm weapon, within 20 units (25 for other robots). |
 | 0x4de50 | The markers: a team-coloured frame (1376) whose tail points at the robot, and its armour bar (1386) scaled by armour / maximum. The robot must be on screen, uncamouflaged and within 75 units. |
@@ -490,9 +547,26 @@ routes in `tables/battle_scenes.json`:
   at random every frame.
 - **Shooting.** The carrier (radius 3) and falling or landed pickups
   (radius 1) take shots (0x067603). A shot pickup bursts. A carrier shot
-  down pays its shooter 1000 (0x047ed9) and keeps 0.6 of its speed as it
-  sinks. After 500 ticks, or on hitting the ground, it explodes (0x06781a,
-  0x06828e) and starts again.
+  down pays its shooter 1000 (0x047ed9) and immediately starts explosion
+  group 0x3f (0x06781a). The wreck keeps 0.6 of its horizontal speed and
+  sinks 0.3 units per 30 Hz tick; it does not keep following its route.
+  After 500 ticks, or on contacting the stage (including walls), it starts
+  group 0x3f again and disappears (0x06828e). Cargo still carried is removed
+  at the initial hit. Already falling and landed pickups remain available;
+  neither visual explosion damages them. A fresh trip begins once no
+  released pickup remains. `supply_destruction_tests.cpp` covers immediate
+  effects, drift/fall, cargo separation, contact and timeout.
+- **Cadence check.** The original battle clock table at `0x255ab0` sets
+  scenes 10 and 42 to 30 Hz. Initial departure (`0x066940`) and subsequent
+  trips (`0x06a2f6`) pass `0x3cf5c28f` (0.03) to `0x0679e7`; all three
+  flight states add that step to the cubic route parameter each update.
+  The port's fixed 60 Hz host passes 1/60 second, so `SupplyDrop` advances
+  0.015 per host tick, or 0.9 route segments per second. This is parameter
+  speed, not constant world-space speed: longer curve sections cover more
+  distance in the same time. The monitor pass never advances simulation,
+  and `RumblingWorld` skips ticking the player's borrowed battle.
+  `supply_drop_tests.cpp` checks ten seconds of travel at 30/60/120/144/480
+  presentation Hz and irregular frame timing against 30 Hz simulation.
 
 ### Split screen
 
@@ -566,17 +640,24 @@ robot index % 4 (0x0825df). The lessons start in their own states (0x18,
   `training.json` gets this entrance.
 - **Entry shield** (robot +0x27d4). A computer robot is shielded for 300
   frames from its entrance (0x082552), renewed while it waits at its gate
-  (0x089032, 0x0892d1); the player's robot for its exit scene (0x08224d).
+  (0x089032, 0x0892d1). The player's shield is raised immediately on
+  placement and refreshed throughout its entrance (0x08928c writes 300
+  frames at 0x0892d1), then counts down for five seconds after control
+  returns. The player's shield visual stays hidden throughout the elevator
+  entrance and appears when control returns; damage protection remains active
+  throughout, including while the visual is hidden. Arena monitors use the same
+  visibility rule. The player's exit is protected for its scene (0x08224d).
   No hit hurts a shielded robot. Its glow (+0xac, 0x082e60) rises 0.015 a
   frame to 0.3 while more than 10 frames are left, then falls 0.03 a
   frame. 0x06f592 draws it: object slot 0x41b (mesh 30 of resource 197, a
   sphere one unit across) at the lower collision sphere's centre, 3.2 leg
   radii across, turning 0.02 a frame, colour 0x64ffffff times the glow,
-  added to what is behind it. The original's barrier program
-  (`Media/Shaders/barrier.xvu`) lays `systemdata/muteki01.tga` over it;
-  the extraction writes the sphere with texture coordinates of its own
-  (`models/binlink/197_30.gltf`). `training.json` `entry_shield` holds the
-  values.
+  added to what is behind it. The original uses `rainbow.xvu` / `rainbow.xpu`:
+  animated height-dependent vertex colour and scrolling alpha waves from
+  `systemdata/muteki01.tga`. The current port's white textured sphere
+  (`models/binlink/197_30.gltf`) omits that shader and applies an extra alpha
+  multiplier. See [Entry shield rendering](ENTRY_SHIELD_RENDERING.md) for the
+  validated shader dispatch, constants and native discrepancies.
 - **Doors** (stage objects of type 6: 0x072f85, 0x0731c5, 0x073430). Each
   gate has a door of two curved leaves, choco_effmodel meshes 4 and 5.
   The leaves turn 0.58 radians about the tower's axis, opposite ways,
@@ -684,6 +765,23 @@ last four. Layer 1 is the sky, which is drawn around the camera.
 | 1 | The sky dome: radius about 2060, unlit, 5 batches (clouds are textures 0–1, the horizon is 2) |
 | 2 | The arena: 6361 vertices and 3604 triangles. Gravel floor (texture 3, repeating), walls (texture 4 with its normal map 5), the emblem (texture 6, texture alpha), towers (texture 7 with normal map 8) |
 | 3–6 | Unlit corner quads (texture 9) |
+
+### Cloud motion
+
+The fourth word of each stage object entry at `0x2212ec` is its animation
+tag. `0x06e5b8` applies it through `0x06ea05` before submitting the object.
+Tags 1 and 2 rotate around Y by minus the shared sky angle, or twice that
+angle. The angle advances by `0.0005` per original battle update. Tags 3 and
+4 advance texture V by `0.0005` and `0.001` respectively. At the battle's
+30 Hz cadence these are −0.015/−0.03 radians and 0.015/0.03 UV units per
+second.
+
+`data/world/stages.json` records the corresponding sky nodes and rates in
+`sky_motion`. The renderer applies them per node, using elapsed game time;
+split screens and arena monitor renders sample the same animation time.
+Static sky layers and non-sky surfaces retain their own transforms and UVs.
+The daytime training dome has tag 0 and remains stationary; its night sky
+has a rotating layer. All six city skies have tagged moving layers.
 
 ### Stage collision
 
@@ -878,8 +976,9 @@ The local transform is S·Rx·Ry·Rz·T with row vectors.
    [PART_RECORDS.md](PART_RECORDS.md)) but not yet read in their units.
 2. VS mode, which will use the split screen; the computer robots seeking
    supply pickups (0x0678f8); breakable stage objects (chatter event 31).
-3. The fence's contact sparks (surface 8, 0x07027b); specular; the effect
-   models; the presets' gamma levels.
+3. Robot-contact fence effects (shot impacts now use the extracted
+   refraction meshes; see [EFFECTS.md](EFFECTS.md)); specular; the presets'
+   gamma levels.
 4. The Standard and Preferred control types' movement differences (the
    robot's flag 0x2740 bit 0 in 0x07d330, 0x08b70b and 0x08c18a).
 5. The other stages in `stages.json`, from the stage table, with their

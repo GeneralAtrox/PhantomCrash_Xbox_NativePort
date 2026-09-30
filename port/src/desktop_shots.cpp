@@ -48,7 +48,11 @@ Vec3 between(const Vec3 from, const Vec3 to, const float t) {
 
 } // namespace
 
-DesktopShots::DesktopShots(WorldRenderer &world, const EffectBank &bank) : bank_(&bank) {
+DesktopShots::DesktopShots(WorldRenderer &world, const EffectBank &bank)
+    : bank_(&bank), fence_(bank.fence) {
+  for (const int mesh : bank.fence.meshes) {
+    fence_meshes_.emplace(mesh, load_mesh(world, EffectPicture{bank.fence.model, mesh}));
+  }
   for (const ShotLook &look : bank.shots) {
     looks_.push_back(load_mesh(world, look.model));
     look_sprites_.push_back(look.sprite.empty() ? -1 : world.texture(look.sprite));
@@ -93,10 +97,14 @@ void DesktopShots::add_mesh(const Mesh &mesh, const Mat4 &world, std::vector<Wor
   }
 }
 
-void DesktopShots::tick(const Battle &battle, EffectSystem &effects) {
+void DesktopShots::tick(const Battle &battle, EffectSystem &effects, const float seconds) {
+  fence_.tick(seconds);
   const EffectBank &bank = *bank_;
   for (const BattleEvent &event : battle.events()) {
     if (event.kind == BattleEventKind::impact && event.weapon != nullptr) {
+      if (event.surface && starts_impact(*event.weapon, event.on_robot)) {
+        fence_.start(*event.surface);
+      }
       // 0x098eda: where the weapon's landing case starts its impact.
       const int impact = event.weapon->impact;
       if (impact < 0 || impact >= static_cast<int>(bank.impacts.size()) ||
@@ -117,6 +125,17 @@ void DesktopShots::tick(const Battle &battle, EffectSystem &effects) {
 
 void DesktopShots::add_items(const Battle &battle, const Mat4 &view,
                              std::vector<WorldItem> &items) {
+  for (const auto &frame : fence_.frames()) {
+    const auto &mesh = fence_meshes_.at(frame.mesh);
+    for (const int node : mesh.nodes) {
+      WorldItem item;
+      item.model = mesh.model;
+      item.node = node;
+      item.world = frame.world;
+      item.optical = frame.refraction;
+      items.push_back(std::move(item));
+    }
+  }
   const Mat4 camera = facing(view);
   std::uniform_real_distribution<float> roll(0.0F, 2.0F * std::numbers::pi_v<float>);
   for (const Projectile &shot : battle.armory().projectiles()) {

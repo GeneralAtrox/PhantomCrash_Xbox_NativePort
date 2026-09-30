@@ -78,6 +78,9 @@ ShotLook shot(const JsonValue &value) {
 } // namespace
 
 void parse_effect_pictures(const JsonValue &value, EffectBank &bank) {
+  if (const auto *fence = value.find("fence")) {
+    bank.fence = parse_fence_look(*fence);
+  }
   if (const JsonValue *flashes = value.find("flashes")) {
     for (const JsonValue &entry : flashes->array()) {
       bank.flashes.push_back(flash(entry));

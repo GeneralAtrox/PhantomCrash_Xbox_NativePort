@@ -8,8 +8,9 @@
 namespace phantomcrash {
 
 // A robot walking into the battle is shielded (robot +0x27d4, in frames):
-// 300 frames from its entrance (0x082552, and again while it waits at its
-// gate, 0x089032, 0x0892d1), and a leaving robot for its exit scene
+// 300 frames from its entrance (0x082552), refreshed throughout the player's
+// entry and while computers wait at their gates (0x089032, 0x0892d1).
+// A leaving robot is protected for its exit scene
 // (0x08224d). No hit hurts it meanwhile. The shield's glow (robot +0xac,
 // 0x082e60) rises 0.015 a frame to 0.3 while more than 10 frames are left,
 // and falls 0.03 a frame after them.

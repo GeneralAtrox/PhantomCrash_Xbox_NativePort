@@ -78,6 +78,7 @@ struct InputFrame {
   std::optional<std::array<float, 2>> pointer;
   bool pointer_moved{};
   bool clicked{};
+  bool mouse_right_held{}; // cursor-visible camera dragging (replay Free view)
   // Each port on its own; `held` and `pressed` above take them all together.
   std::array<PortInput, controller_ports> ports{};
 

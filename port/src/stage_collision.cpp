@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <stdexcept>
 
 namespace phantomcrash {
@@ -299,12 +300,19 @@ unsigned StageCollision::push_sphere(Vec3 &centre, const float radius) const {
 }
 
 std::optional<Vec3> StageCollision::segment_hit(const Vec3 from, const Vec3 to) const {
+  const auto hit = segment_contact(from, to);
+  return hit ? std::optional<Vec3>{hit->position} : std::nullopt;
+}
+
+std::optional<StageHit> StageCollision::segment_contact(const Vec3 from, const Vec3 to) const {
   const Vec3 delta = to - from;
   std::optional<float> nearest;
+  const CollisionTriangle *triangle = nullptr;
   const auto test = [&](const CollisionTriangle &t) {
     if (const auto along = segment_cross(from, delta, t);
         along && (!nearest || *along < *nearest)) {
       nearest = along;
+      triangle = &t;
     }
   };
   const float x0 = std::min(from.x, to.x), x1 = std::max(from.x, to.x);
@@ -318,11 +326,21 @@ std::optional<Vec3> StageCollision::segment_hit(const Vec3 from, const Vec3 to) 
   if (!nearest) {
     return std::nullopt;
   }
-  return from + delta * *nearest;
+  return StageHit{from + delta * *nearest, triangle->normal, triangle->surface};
 }
 
 StageCollision parse_stage_collision(const json::JsonValue &value) {
   return {triangles(value, "walls"), triangles(value, "floor")};
+}
+
+float StageCollision::distance_to(const Vec3 point) const {
+  float nearest = std::numeric_limits<float>::max();
+  for (const auto *triangles : {&triangles_walls_, &triangles_floor_}) {
+    for (const auto &triangle : *triangles) {
+      nearest = std::min(nearest, length(closest_point(point, triangle.points).point - point));
+    }
+  }
+  return nearest;
 }
 
 } // namespace phantomcrash

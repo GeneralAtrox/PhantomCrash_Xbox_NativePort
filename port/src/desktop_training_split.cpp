@@ -1,12 +1,36 @@
 // The training battle's split screen (split_screen.hpp): the further
 // screens' robots, chase cameras and HUDs, and one screen's world and HUD.
 #include "desktop_training.hpp"
+#include "desktop_stage_objects.hpp"
 
 #include <SDL3/SDL.h>
 
 #include <algorithm>
 
 namespace phantomcrash {
+
+void TrainingScreen::load_stage_art(const StageDefinition *stage, const DataRoots &roots) {
+  if (stage == nullptr) {
+    return;
+  }
+  lighting_ = stage->lighting;
+  stage_.sky_nodes = stage->sky_nodes;
+  stage_.sky_motion = stage->sky_motion;
+  stage_.monitor_nodes = stage->monitor_nodes;
+  if (!stage_.monitor_nodes.empty()) {
+    monitor_ =
+        std::make_unique<BattleMonitor>(stage->monitor, static_cast<std::uint32_t>(SDL_GetTicks()));
+  }
+  if (world_ != nullptr) {
+    monitor_ship_ = std::make_unique<MonitorShip>(*world_, roots, stage->scene_stage);
+    if (!stage->model.empty()) {
+      stage_.model = world_->model(stage->model);
+    }
+    if (!stage->props_model.empty()) {
+      props_.model = world_->model(stage->props_model);
+    }
+  }
+}
 
 void TrainingScreen::build_split(const DataRoots &roots) {
   const int robots = static_cast<int>(battle_->robots().size());
@@ -17,6 +41,13 @@ void TrainingScreen::build_split(const DataRoots &roots) {
 }
 
 void TrainingScreen::tick_split(const float seconds) {
+  stage_.sky_seconds += seconds;
+  if (monitor_ship_) {
+    monitor_ship_->tick(seconds);
+  }
+  if (monitor_) {
+    monitor_->tick(*battle_, seconds);
+  }
   const StageDoors *doors = battle_->doors();
   for (SplitView &split : splits_) {
     const RobotMover &mover = battle_->robots().at(static_cast<std::size_t>(split.robot)).mover;
@@ -31,6 +62,50 @@ void TrainingScreen::tick_split(const float seconds) {
   }
 }
 
+WorldFrame TrainingScreen::battle_frame(const ChaseCamera &camera, const int width,
+                                        const int height, const int hidden_robot) {
+  WorldFrame frame;
+  frame.width = width;
+  frame.height = height;
+  frame.view = camera.view();
+  frame.projection = camera.projection(static_cast<float>(width) / static_cast<float>(height));
+  frame.eye = camera.eye();
+  frame.lighting = lighting_;
+  frame.shadow_length = script_.battle.shadows.volume_length;
+  frame.items.push_back(stage_);
+  if (monitor_ship_) {
+    monitor_ship_->add_items(frame.items);
+  }
+  if (object_model_ >= 0) {
+    add_object_items(*battle_, object_model_, frame.items);
+  } else if (props_.model >= 0) {
+    frame.items.push_back(props_);
+  }
+  add_door_items(*battle_, door_model_, frame.items);
+  if (supply_ && battle_->supply() != nullptr) {
+    supply_->add_items(*battle_->supply(), frame.items, screens_ > 1);
+    if (screens_ == 1) {
+      supply_->add_sprites(*battle_->supply(), frame.eye, frame.sprites);
+    }
+  }
+  if (effects_) {
+    effects_->add_sprites(frame.sprites);
+  }
+  if (shots_) {
+    shots_->add_items(*battle_, frame.view, frame.items);
+    shots_->add_sprites(*battle_, effects_->system(), frame.sprites);
+  }
+  if (view_) {
+    const int state = scene_ ? scene_->scene().state() : scene_state::none;
+    const bool entering =
+        state >= scene_state::entrance_first && state <= scene_state::entrance_last;
+    // The player is protected throughout entry, but the shell appears only
+    // when the scene releases control. Apply this to the arena monitors too.
+    view_->add_items(*battle_, frame.items, hidden_robot, entering ? 0 : -1);
+  }
+  return frame;
+}
+
 // Screen 0 is the player's, with the camera views and the cockpit; the
 // others follow their robots from behind.
 void TrainingScreen::draw_screen(const Viewport &screen, const std::size_t index) {
@@ -43,36 +118,23 @@ void TrainingScreen::draw_screen(const Viewport &screen, const std::size_t index
   const Mat4 view = camera.view();
   const Mat4 projection = camera.projection(aspect);
   if (world_ != nullptr && world_->available() && stage_.model >= 0) {
-    WorldFrame frame;
-    frame.width = screen.pixel_width;
-    frame.height = screen.pixel_height;
-    frame.view = view;
-    frame.projection = projection;
-    frame.eye = camera.eye();
-    frame.lighting = lighting_;
-    frame.shadow_length = script_.battle.shadows.volume_length;
-    frame.items.push_back(stage_);
-    add_door_items(*battle_, door_model_, frame.items);
-    if (supply_ && battle_->supply() != nullptr) {
-      supply_->add_items(*battle_->supply(), frame.items, screens_ > 1);
-      if (screens_ == 1) {
-        supply_->add_sprites(*battle_->supply(), frame.eye, frame.sprites);
-      }
-    }
-    if (effects_) {
-      effects_->add_sprites(frame.sprites);
-    }
-    if (shots_) {
-      shots_->add_items(*battle_, view, frame.items);
-      shots_->add_sprites(*battle_, effects_->system(), frame.sprites);
-    }
-    if (view_) {
-      view_->add_items(*battle_, frame.items, split == nullptr && in_cockpit() ? 0 : -1);
-    }
+    WorldFrame frame = battle_frame(camera, screen.pixel_width, screen.pixel_height,
+                                    split == nullptr && in_cockpit() ? 0 : -1);
     if (split == nullptr && cockpit_ && cockpit_up()) {
       cockpit_->add_items(cockpit_input(), clock_, frame.overlay);
     }
-    world_->draw(frame);
+    std::optional<WorldFrame> feed;
+    if (index == 0 && monitor_) {
+      feed = battle_frame(monitor_->camera(), frame.width, frame.height, -1);
+      feed->projection = monitor_->camera().projection(monitor_->aspect());
+      if (monitor_->subject() < 0) {
+        feed->items.clear();
+        feed->sprites.clear();
+        feed->lighting.clear_colour = {};
+      }
+    }
+    if (index == 0) record_world(frame, feed);
+    world_->draw(frame, feed ? &*feed : nullptr);
   }
   const Mat4 view_projection = view * projection;
   if (in_scene()) {

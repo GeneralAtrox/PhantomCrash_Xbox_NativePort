@@ -7,7 +7,7 @@ namespace {
 
 constexpr UINT wanted_samples = 4;
 constexpr UINT frame_constant_bytes = 144; // desktop_world_shaders.cpp, cbuffer Frame
-constexpr UINT draw_constant_bytes = 160;  // cbuffer Draw
+constexpr UINT draw_constant_bytes = 176;  // cbuffer Draw
 
 Com<ID3D11Buffer> constant_buffer(ID3D11Device *device, const UINT bytes) {
   D3D11_BUFFER_DESC desc{};
@@ -247,7 +247,7 @@ void WorldRenderer::ensure_targets(const int width, const int height) {
   }
 }
 
-void WorldRenderer::draw(const WorldFrame &frame) {
+void WorldRenderer::draw(const WorldFrame &frame, const WorldFrame *monitor) {
   if (!available() || frame.width <= 0 || frame.height <= 0) {
     return;
   }
@@ -262,6 +262,9 @@ void WorldRenderer::draw(const WorldFrame &frame) {
   SDL_FlushRenderer(renderer_);
   Com<ID3DDeviceContextState> previous;
   context_->SwapDeviceContextState(state_.Get(), &previous);
+  if (monitor != nullptr) {
+    render_monitor(*monitor);
+  }
   render(frame);
   if (samples_ > 1) {
     context_->ResolveSubresource(output_texture_, 0, colour_.Get(), 0, format_);

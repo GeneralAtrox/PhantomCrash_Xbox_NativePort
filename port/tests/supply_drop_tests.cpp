@@ -6,6 +6,7 @@
 #include <cmath>
 
 #include "phantomcrash/json.hpp"
+#include "phantomcrash/fixed_step.hpp"
 #include "phantomcrash/supply_drop.hpp"
 
 using namespace phantomcrash;
@@ -145,4 +146,55 @@ TEST_CASE("the supply settings and routes parse") {
   }
   CHECK(near(routes[0].segments[0][3].x, 3.0F));
   CHECK(parse_supply_routes(json::parse(R"({})"), 6).empty());
+}
+
+TEST_CASE("dropship travel follows the original 30 Hz movement step at any presentation rate") {
+  // 0x066940 passes 0x3cf5c28f (0.03) to 0x0679e7. 0x067bf6,
+  // 0x067f04 and 0x06804b add it once per 30 Hz battle update.
+  // Use a long straight inbound route, so no hatch/parking transitions
+  // hide a doubled update or a presentation-dependent movement rate.
+  auto settings = test_settings();
+  auto &route = settings.routes[0];
+  route.segments.clear();
+  route.closing = route.drop = route.leave = 100;
+  for (int i = 0; i < 20; ++i) {
+    const float x = static_cast<float>(i * 30);
+    route.segments.push_back(
+        {Vec3{x, 30, 0}, Vec3{x + 10, 30, 0}, Vec3{x + 20, 30, 0}, Vec3{x + 30, 30, 0}});
+  }
+  REQUIRE(near(settings.speed, 0.03F));
+  REQUIRE(near(settings.tick_rate, 30));
+  SupplyDrop source(settings, 7);
+  for (int i = 0; i < 300; ++i) {
+    source.tick(1.0F / 30.0F, flat);
+  }
+  CHECK(std::abs(source.carrier().position.x - 270.0F) < 0.01F);
+  // The desktop runs fixed 60 Hz logic even at unlimited rendering.
+  // 480 Hz exercises that case; irregular presentation is covered below.
+  for (const int fps : {30, 60, 120, 144, 480}) {
+    SupplyDrop rendered(settings, 7);
+    FixedStep clock(1.0 / 60.0);
+    int ticks = 0;
+    for (int frame = 0; frame < fps * 10; ++frame) {
+      const int due = clock.add(1.0 / fps);
+      for (int i = 0; i < due; ++i) {
+        rendered.tick(static_cast<float>(clock.tick_seconds()), flat);
+      }
+      ticks += due;
+    }
+    CHECK(ticks >= 599 && ticks <= 600); // floating-point remainder: at most one host tick
+    CHECK(std::abs(rendered.carrier().position.x - source.carrier().position.x) < 0.46F);
+  }
+  SupplyDrop uncapped(settings, 7);
+  FixedStep clock(1.0 / 60.0);
+  double elapsed = 0;
+  int frame = 0;
+  while (elapsed < 10) {
+    const double delta = std::min(10 - elapsed, frame++ % 2 == 0 ? 0.001 : 0.012);
+    elapsed += delta;
+    for (int i = clock.add(delta); i > 0; --i) {
+      uncapped.tick(static_cast<float>(clock.tick_seconds()), flat);
+    }
+  }
+  CHECK(std::abs(uncapped.carrier().position.x - source.carrier().position.x) < 0.46F);
 }

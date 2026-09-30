@@ -21,17 +21,20 @@ void Battle::tick_supply(const float seconds) {
   if (!supply_ || !supply_->active()) {
     return;
   }
-  supply_->tick(seconds, [this](const Vec3 at) {
-    const float height = stage_.ground_height(at, 0.0F); // the ground below it
-    return height == no_ground ? 0.0F : height;
-  });
+  supply_->tick(
+      seconds,
+      [this](const Vec3 at) {
+        const float height = stage_.ground_height(at, 0.0F); // the ground below it
+        return height == no_ground ? 0.0F : height;
+      },
+      [this](const Vec3 from, const Vec3 to, const float radius) -> std::optional<Vec3> {
+        if (const auto hit = stage_.segment_hit(from, to)) {
+          return hit;
+        }
+        return stage_.distance_to(to) <= radius ? std::optional<Vec3>{to} : std::nullopt;
+      });
   if (const auto crash = supply_->take_crash()) {
-    const SupplyLook &look = supply_->settings().look;
-    armory_.explode(*crash, look.crash_radius, look.crash_seconds);
-    BattleEvent blast{-1, BattleEventKind::effect};
-    blast.slot = look.crash_effect;
-    blast.at = *crash;
-    events_.push_back(blast);
+    supply_explosion(*crash);
   }
   for (Combatant &robot : robots_) {
     if (!robot.alive) {
@@ -42,6 +45,15 @@ void Battle::tick_supply(const float seconds) {
       take_supply(robot, *taken);
     }
   }
+}
+
+void Battle::supply_explosion(const Vec3 at) {
+  const SupplyLook &look = supply_->settings().look;
+  armory_.explode(at, look.crash_radius, look.crash_seconds);
+  BattleEvent blast{-1, BattleEventKind::effect};
+  blast.slot = look.crash_effect;
+  blast.at = at;
+  events_.push_back(blast);
 }
 
 // Shots see the carrier and the pickups (0x067603) with no side, after
@@ -71,14 +83,19 @@ bool Battle::hit_supply(const WeaponHit &hit) {
   if (!supply_) {
     return true;
   }
-  const int index = hit.victim - robots;
+  const int index = hit.victim - robots - object_count();
   if (index > 0) {
     if (hit.directional) {
       supply_->shoot_pickup(static_cast<std::size_t>(index - 1));
     }
     return true;
   }
-  if (supply_->shoot_carrier() && hit.attacker >= 0 && hit.attacker < robots) {
+  if (!supply_->shoot_carrier()) {
+    return true;
+  }
+  // 0x06781a starts group 0x3f immediately, before the wreck begins to fall.
+  supply_explosion(supply_->carrier().position);
+  if (hit.attacker >= 0 && hit.attacker < robots) {
     BattleEvent event{hit.attacker, BattleEventKind::carrier_down};
     event.amount = supply_->settings().shot_bounty;
     events_.push_back(event);

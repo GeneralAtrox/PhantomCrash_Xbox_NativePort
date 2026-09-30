@@ -61,6 +61,8 @@ void BattleScenePresenter::draw(const Viewport &viewport) const {
     set_colour(renderer, style_.colour);
     const SDL_FRect upper{0.0F, 0.0F, width, top};
     const SDL_FRect lower{0.0F, bottom, width, std::max(height - bottom, 0.0F)};
+    record_quad(textures_, nullptr, {}, upper);
+    record_quad(textures_, nullptr, {}, lower);
     SDL_RenderFillRect(renderer, &upper);
     SDL_RenderFillRect(renderer, &lower);
   }

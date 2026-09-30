@@ -61,6 +61,9 @@ RumblingWorld *ScreenRunner::rumbling_world() {
     if (auto ground = stage_file(roots_, stage->second.collision, parse_stage_collision)) {
       stages[area].collision = std::move(*ground);
     }
+    stages[area].objects = stage_file(roots_, "tables/stage_objects.json", [&](const auto &data) {
+      return parse_stage_objects(data, stage->second.scene_stage);
+    });
   }
   BattleSettings settings = training_.battle.settings;
   static_cast<void>(apply_weapon_records(settings.weapons, game_->part_tables()));

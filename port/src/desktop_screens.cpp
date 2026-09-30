@@ -84,6 +84,7 @@ ScreenRunner::ScreenRunner(SDL_Renderer *renderer, const DataRoots &roots, const
                  static_cast<std::uint32_t>(SDL_GetTicksNS()));
   const auto new_game = roots.document("story/new_game.json");
   if (const auto *start = new_game.find("quest")) {
+    new_quest_.player_name = start->string_or("player_name", "");
     new_quest_.day = static_cast<int>(start->number_or("day", 0));
     new_quest_.money = static_cast<std::int64_t>(start->number_or("money", 0));
     if (const auto *music = start->find("music")) {
@@ -256,6 +257,7 @@ std::unique_ptr<Screen> ScreenRunner::make(const std::string &name, const std::s
 
 void ScreenRunner::show(const std::string &name, const bool events) {
   std::string target = name;
+  auto result_screen = target == "match_result" ? make_match_result() : nullptr;
   if (const StoryEvent *event = events ? story_event(name_, name) : nullptr) {
     quest_.seen_events.push_back(event->scene);
     event_next_ = name;
@@ -274,7 +276,7 @@ void ScreenRunner::show(const std::string &name, const bool events) {
     }
     audio_.stop_keyed();
   }
-  auto next = make(target, name_);
+  auto next = result_screen ? std::move(result_screen) : make(target, name_);
   if (next == nullptr) {
     SDL_Log("No screen named \"%s\"; showing the title", target.c_str());
     next = make("title", name_);

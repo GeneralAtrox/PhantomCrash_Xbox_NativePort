@@ -126,6 +126,9 @@ void RumblingWorld::build(const int index, const QuestSave &quest) {
       std::make_shared<Battle>(settings_, stage.path, static_cast<std::uint32_t>(random_()));
   Battle &battle = *area.battle;
   battle.set_stage(stage.collision);
+  if (stage.objects) {
+    battle.set_objects(*stage.objects);
+  }
   // The player's place, empty until they come in (robot 0 is the player's).
   battle.add_robot("player", 0, {}, 0.0F, {}, 1.0F);
   battle.take_out(0);
@@ -282,24 +285,39 @@ std::shared_ptr<Battle> RumblingWorld::lend(const int area, QuestSave &quest) {
   return lent.battle;
 }
 
-void RumblingWorld::give_back(QuestSave &quest) {
+bool RumblingWorld::player_won() const {
   if (lent_ < 0) {
-    return;
+    return false;
   }
+  return std::ranges::any_of(areas_[static_cast<std::size_t>(lent_)].player_kills,
+                             [](const RosterMember &kill) {
+                               return kill.source == RosterSource::champion;
+                             });
+}
+
+std::int64_t RumblingWorld::give_back(QuestSave &quest) {
+  if (lent_ < 0) {
+    return 0;
+  }
+  // The player's last 60 Hz tick may precede the world's next 30 Hz observation.
+  step(lent_, quest, 0.0F, false);
   Area &area = areas_[static_cast<std::size_t>(lent_)];
   lent_ = -1;
   if (area.battle) {
     area.battle->take_out(0);
   }
+  std::int64_t prize = 0;
   for (const RosterMember &kill : area.player_kills) {
     const int key = beaten_key(kill.team, kill.place);
     if (std::ranges::find(quest.beaten, key) == quest.beaten.end()) {
       quest.beaten.push_back(key);
     }
     const RosterCard card = roster_card(check_, tables_.contests, quest, kill.entrant, true);
+    prize += card.bounty;
     quest.money = std::min(quest.money + card.bounty, money_limit);
   }
   area.player_kills.clear();
+  return prize;
 }
 
 const RumblingRobot *RumblingWorld::robot(const int area, const int index) const {

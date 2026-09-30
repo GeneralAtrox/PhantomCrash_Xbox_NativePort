@@ -30,6 +30,11 @@ void TrainingScreen::gather_sounds(const float seconds) {
     sounds = doors->take_sounds();
   }
   collect_supply(*battle_, script_.battle.supply.look, money_, sounds);
+  if (StageObjects *objects = battle_->objects()) {
+    for (auto &[name, at] : objects->take_sounds()) {
+      sounds.push_back({std::move(name), at});
+    }
+  }
   for (WorldSound &sound : sounds) {
     if (sound.at) {
       placed_.push_back({SoundCue{SoundCue::Action::play, std::move(sound.name)}, *sound.at});
@@ -64,7 +69,9 @@ std::vector<SoundCue> TrainingScreen::take_sound_cues() {
   if (length(view) > 1e-4F) {
     listener.forward = normalize(view);
   }
-  return place_cues(falloff, screens_ > 1 ? nullptr : &listener, std::exchange(placed_, {}));
+  auto cues = place_cues(falloff, screens_ > 1 ? nullptr : &listener, std::exchange(placed_, {}));
+  if (replay_) replay_->hear(cues);
+  return cues;
 }
 
 } // namespace phantomcrash

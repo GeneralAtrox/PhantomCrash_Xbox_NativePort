@@ -154,12 +154,15 @@ void draw_sprite(TextureCache &textures, const Sprite &sprite, const Viewport &v
     const SDL_FRect source{rect.x + inset_x, rect.y + inset_y, rect.w - 2.0F * inset_x,
                            rect.h - 2.0F * inset_y};
     if (sprite.angle == 0.0F && !sprite.flip_x) {
+      record_quad(textures, texture, source, target);
       SDL_RenderTexture(textures.renderer(), texture, &source, &target);
       continue;
     }
     const SDL_FPoint pivot = sprite.pivot ? SDL_FPoint{(*sprite.pivot)[0] * viewport.scale,
                                                        (*sprite.pivot)[1] * viewport.scale}
                                           : SDL_FPoint{target.w * 0.5F, target.h * 0.5F};
+    record_quad(textures, texture, source, target, sprite.angle, pivot,
+                sprite.flip_x ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE);
     SDL_RenderTextureRotated(textures.renderer(), texture, &source, &target, sprite.angle, &pivot,
                              sprite.flip_x ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE);
   }

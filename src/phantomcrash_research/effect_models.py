@@ -46,6 +46,9 @@ DECAL_SLOTS = (0xDB, 0x104)  # 0x065ade: bullet hole kinds 0 and 1
 DECAL_SCALE = 0.25  # 0x065f28 passes it to 0x0663d2
 DECAL_COUNT = 100  # the ring 0x0663d2 writes
 WRECK_GROUPS = (0x34, 0x35, 0x36, 0x0F)  # 0x07675e: a robot's armour gone (0x34-0x36 kept)
+FENCE_FIRST_SLOT = 0x3FD  # 0x071869: 0x41b - remaining (30 down to 1)
+FENCE_FRAMES = 30
+FENCE_CAPACITY = 20  # 0x07027b
 NO_SLOT = -1
 DECIMALS = 4
 
@@ -140,7 +143,7 @@ def effect_models(executable: bytes) -> tuple[dict, set[int], set[int]]:
     """The tables for ``effects.json``, and the model and texture resources they draw."""
     tables = game_tables.load(executable)
     image = game_tables._Image(executable)
-    model_slots: list[int] = []
+    model_slots: list[int] = list(range(FENCE_FIRST_SLOT, FENCE_FIRST_SLOT + FENCE_FRAMES))
     texture_slots: list[int] = list(DECAL_SLOTS)
     flashes = []
     for index in range(FLASH_COUNT):
@@ -159,6 +162,17 @@ def effect_models(executable: bytes) -> tuple[dict, set[int], set[int]]:
         "exhaust": model_slot(tables, EXHAUST_SLOT),
         "impacts": [_impact(image, index) for index in range(IMPACT_COUNT)],
         "wreck_groups": list(WRECK_GROUPS),
+        "fence": {
+            "model": model_slot(tables, FENCE_FIRST_SLOT)["model"],
+            "meshes": [model_slot(tables, slot)["mesh"] for slot in model_slots[:FENCE_FRAMES]],
+            "capacity": FENCE_CAPACITY, "frame_rate": 30,
+            "scale": round(struct.unpack_from("<f", image.data, image.offset(0x17AC38))[0], 6),
+            "growth": round(struct.unpack_from("<f", image.data, image.offset(0x17BEC4))[0], 6),
+            "depth": 0.2, "offset": -0.5,
+            # effopt's sphere is set at the hit with radius zero (0x071869).
+            # The refraction parameters are shared with 0x0c05c2's optical path.
+            "refraction": {"edge": 1.0, "reach": 4.0, "push": 1.0, "least": 0.25},
+        },
         "decals": {
             "textures": [texture_slot(tables, s) for s in DECAL_SLOTS],
             "scale": DECAL_SCALE,

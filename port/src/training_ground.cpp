@@ -76,14 +76,40 @@ std::map<std::string, StageDefinition> parse_stages(const json::JsonValue &docum
       stage.model = value.string_or("model", "");
       stage.collision = value.string_or("collision", "");
       stage.enemy_path = value.string_or("enemy_path", "");
+      if (const auto *monitor = document.find("monitor")) {
+        stage.monitor = parse_battle_monitor(*monitor);
+      }
+      if (const auto *monitor = value.find("monitor")) {
+        stage.monitor = parse_battle_monitor(*monitor);
+      }
+      if (const auto *nodes = value.find("monitor_nodes")) {
+        for (const auto &node : nodes->array()) {
+          stage.monitor_nodes.push_back(node.string());
+        }
+      }
       if (const json::JsonValue *sky = value.find("sky_nodes")) {
         for (const auto &node : sky->array()) {
           stage.sky_nodes.push_back(node.string());
         }
       }
+      if (const auto *motions = value.find("sky_motion")) {
+        for (const auto &entry : motions->array()) {
+          SkyMotion motion;
+          motion.node = json::required(entry, "node").string();
+          if (std::ranges::find(stage.sky_nodes, motion.node) == stage.sky_nodes.end()) {
+            throw std::runtime_error("sky_motion node is not a sky node: " + motion.node);
+          }
+          motion.rotation_per_second = float_or(entry, "rotation_per_second", 0.0F);
+          if (const auto *uv = entry.find("uv_per_second")) {
+            motion.uv_per_second = json::numbers<2>(*uv, "sky_motion uv_per_second");
+          }
+          stage.sky_motion.push_back(std::move(motion));
+        }
+      }
       stage.lighting = parse_lighting(value);
       stage.scene_stage = static_cast<int>(value.number_or("scene_stage", -1.0));
       stage.door_model = value.string_or("door_model", "");
+      stage.props_model = value.string_or("props_model", "");
       stages.emplace(name, std::move(stage));
     } catch (const std::exception &error) {
       throw std::runtime_error("stages.json, stage " + name + ": " + error.what());
