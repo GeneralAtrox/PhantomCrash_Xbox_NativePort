@@ -1,6 +1,7 @@
 #include "desktop_town_screen.hpp"
 
 #include "desktop_draw_list.hpp"
+#include "phantomcrash/shop_pointer.hpp"
 
 #include <utility>
 
@@ -22,6 +23,23 @@ void TownScreen::draw_sort_hints(DrawList &list, const GoodsList &goods) const {
        sort_hint_sprites(frame_.style().sort_hints, goods.sort_key(), goods.sort_fresh())) {
     list.sprite(sprite);
   }
+}
+
+InputFrame TownScreen::sort_pointer(InputFrame input, Buttons name, Buttons price) const {
+  if (!input.clicked) {
+    return input;
+  }
+  const auto &style = frame_.style().sort_hints;
+  for (int i = 0; i < 2; ++i) {
+    const auto &key = style.keys[i];
+    Sprite arrow = style.up;
+    arrow.position = key.arrow_at;
+    if (shop_hit(input, key.button) || shop_hit(input, key.label) || shop_hit(input, arrow)) {
+      input.pressed |= i == 0 ? name : price;
+      SDL_Log("Shop sort: %s", i == 0 ? "name" : "price");
+    }
+  }
+  return input;
 }
 
 void TownScreen::tick_frame(const double tick_seconds, const bool faded_in) {

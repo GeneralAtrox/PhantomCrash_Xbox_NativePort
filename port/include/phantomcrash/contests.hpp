@@ -64,6 +64,7 @@ struct Entrant {
   int pilot{-1};
   int robot{-1};
   int level{};
+  int ai_profile{4}; // entrant +4; loadout +0x5a
 };
 
 // The schedule's three venues (rows), and a fourth the calendar also has.

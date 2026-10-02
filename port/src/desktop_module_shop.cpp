@@ -22,8 +22,18 @@ ModuleShopScreen::ModuleShopScreen(TextureCache &textures, const GlyphFont &font
       preview_(world, preview,
                logic_.script().mode == ModuleShopMode::stock ? "stock_module" : "module_shop") {}
 
-void ModuleShopScreen::tick(const InputFrame &input, const double tick_seconds) {
-  logic_.update(tick_seconds, input);
+void ModuleShopScreen::tick(const InputFrame &raw_input, const double tick_seconds) {
+  const auto &script = logic_.script();
+  const InputFrame input =
+      logic_.view() == ModuleShopView::list && logic_.list_seconds() >= script.list.window.seconds
+          ? sort_pointer(raw_input, script.sort_name, script.sort_price)
+          : raw_input;
+  const auto before_view = logic_.view();
+  logic_.update(tick_seconds, notice_.pointer_input(input, logic_.script().confirm_buttons));
+  if (before_view != logic_.view()) {
+    SDL_Log("Module shop: mode=%d category=%d view=%d->%d mouse=%d", int(logic_.script().mode),
+            logic_.category(), int(before_view), int(logic_.view()), input.clicked);
+  }
   tick_frame(tick_seconds, logic_.faded_in());
   notice_.update(logic_.message(), logic_.view() == ModuleShopView::question, logic_.choice(),
                  logic_.script().messages, tick_seconds);

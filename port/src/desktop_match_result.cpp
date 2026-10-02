@@ -4,8 +4,7 @@
 #include "phantomcrash/money.hpp"
 
 #include <algorithm>
-#include <iomanip>
-#include <sstream>
+#include <exception>
 
 namespace phantomcrash {
 using json::required;
@@ -17,13 +16,6 @@ std::string money_text(const std::int64_t value) {
   }
   return result;
 }
-std::string play_time(const double seconds) {
-  const int time = std::clamp(static_cast<int>(seconds), 0, 359999);
-  std::ostringstream out;
-  out << std::setfill('0') << std::setw(2) << time / 3600 << ':' << std::setw(2) << time / 60 % 60
-      << ':' << std::setw(2) << time % 60;
-  return out.str();
-}
 } // namespace
 
 MatchResultScreen::MatchResultScreen(TextureCache &textures, const GlyphFont &font,
@@ -31,15 +23,49 @@ MatchResultScreen::MatchResultScreen(TextureCache &textures, const GlyphFont &fo
                                      const std::vector<MusicCredit> &credits,
                                      const json::JsonValue &data, MatchReceipt receipt,
                                      QuestSave quest, WorldRenderer *world, WorldFrame background,
-                                     std::string next, std::shared_ptr<ReplayArchive> replay)
+                                     std::string next, std::shared_ptr<ReplayArchive> replay,
+                                     const int first_win)
     : textures_(textures), font_(font),
       frame_(font, frame, credits, parse_frame_placement(required(data, "frame"))),
-      receipt_(std::move(receipt)), quest_(std::move(quest)), world_(world),
-      background_(std::move(background)), next_(std::move(next)) {
+      receipt_(std::move(receipt)), presentation_(receipt_, required(data, "presentation")),
+      quest_(std::move(quest)), world_(world), backdrop_(replay, std::move(background)),
+      next_(std::move(next)) {
+  shootdowns_font_ = parse_number_font(required(data, "shootdowns_font"));
+  time_font_ = parse_number_font(required(data, "time_font"));
+  shootdowns_number_ = parse_number_style(required(data, "shootdowns_number"));
+  time_number_ = parse_number_style(required(data, "time_number"));
+  time_colon_ = parse_sprite(required(data, "time_colon"));
+  time_colon_advance_ = static_cast<float>(data.number_or("time_colon_advance", 6));
   sprites_ = parse_sprites(required(data, "sprites"));
   prize_label_ = parse_sprite(required(data, "prize"));
   rental_label_ = parse_sprite(required(data, "rental_prize"));
-  retire_ = parse_sprite(required(data, "retire"));
+  rental_counting_ = parse_sprite(required(data, "rental_counting"));
+  for (const auto &sprite : required(data, "sprites").array()) {
+    reveal_rows_.push_back(static_cast<int>(sprite.number_or("reveal_row", -1)));
+  }
+  if (receipt_.match.outcome == MatchOutcome::retire) {
+    verdict_ = parse_sprite(required(data, "retire"));
+  } else {
+    const auto &tiers = required(required(data, "verdicts"),
+                                 receipt_.match.outcome == MatchOutcome::win ? "win" : "leave");
+    int best = -1;
+    for (const auto &tier : tiers.array()) {
+      const int minimum = static_cast<int>(tier.number_or("min_shootdowns", 0));
+      if (minimum > best && receipt_.match.shootdowns >= minimum) {
+        verdict_ = parse_sprite(required(tier, "sprite"));
+        best = minimum;
+      }
+    }
+  }
+  const auto &outcome = required(data, "outcome_label");
+  const auto &position = required(outcome, "position").array();
+  outcome_position_ = {static_cast<float>(position.at(0).number()),
+                       static_cast<float>(position.at(1).number())};
+  outcome_scale_ = static_cast<float>(outcome.number_or("scale", 0.7));
+  const auto &sounds = required(data, "sounds");
+  cursor_sound_ = sounds.string_or("cursor", "");
+  confirm_sound_ = sounds.string_or("confirm", "");
+  cancel_sound_ = sounds.string_or("cancel", "");
   exit_ = parse_sprite(required(data, "exit"));
   replay_ = parse_sprite(required(data, "replay"));
   replay_selected_ = parse_sprite(required(data, "replay_selected"));
@@ -53,11 +79,25 @@ MatchResultScreen::MatchResultScreen(TextureCache &textures, const GlyphFont &fo
   for (std::size_t row = 0; row < rows_.size(); ++row) {
     rows_[row] = static_cast<float>(rows.at(row).number());
   }
-  tally_seconds_ = std::max(0.0, data.number_or("tally_seconds", 3));
+  counting_hint_run_ = glyph_run(font_, data.string_or("counting_hint", ""));
   const auto &music = required(data, "music");
   music_ =
       music.string_or(receipt_.match.outcome == MatchOutcome::retire ? "retire" : "survive", "");
   frame_.preload(textures_);
+  textures_.preload(data);
+  if (first_win >= 0 && world_ != nullptr && world_->available() && data.find("trophy")) {
+    try {
+      TrophyStyle style = parse_trophy_style(*data.find("trophy"));
+      if (const int award = trophy_award(style, first_win); award >= 0) {
+        trophy_ = std::make_unique<ResultTrophy>(*world_, std::move(style), award);
+        SDL_Log("Result trophy: contest %d, award %d", first_win, award);
+      }
+    } catch (const std::exception &error) {
+      SDL_Log("match_result.json: %s", error.what());
+    }
+  }
+  SDL_Log("Result presentation: verdict=%s, sequential tally, replay=%d",
+          verdict_ ? verdict_->id.c_str() : "none", replay_available());
 }
 
 void MatchResultScreen::tick(const InputFrame &input, const double seconds) {
@@ -72,8 +112,22 @@ void MatchResultScreen::tick(const InputFrame &input, const double seconds) {
     return;
   }
   seconds_ += seconds;
+  backdrop_.tick(seconds);
   frame_.update(seconds);
-  if (input.any_pressed(button::left)) {
+  const int old_row = presentation_.counting_row();
+  const bool was_complete = presentation_.complete();
+  if (trophy_) {
+    trophy_->tick(seconds);
+  }
+  if (!trophy_ || !trophy_->holding()) {
+    presentation_.update(seconds);
+  }
+  if (presentation_.counting_row() != old_row || presentation_.complete() != was_complete) {
+    SDL_Log("Result tally: row=%d complete=%d money=%lld", presentation_.counting_row(),
+            presentation_.complete(), static_cast<long long>(presentation_.values()[8]));
+  }
+  const int before = selected_;
+  if (input.any_pressed(button::left) && replay_available()) {
     selected_ = 0;
   }
   if (input.any_pressed(button::right | button::cancel)) {
@@ -82,23 +136,47 @@ void MatchResultScreen::tick(const InputFrame &input, const double seconds) {
   bool clicked = false;
   if (input.pointer) {
     const auto [x, y] = *input.pointer;
-    if (y >= 376 && y < 408 && x >= 108 && x < 284) {
+    // Use the rendered button geometry, including modded positions/scales.
+    const auto hit = [&](const Sprite &sprite) {
+      return std::ranges::any_of(place_sprite(sprite, seconds_), [&](const Quad &quad) {
+        return x >= quad.x && y >= quad.y && x < quad.x + quad.width && y < quad.y + quad.height;
+      });
+    };
+    if (hit(exit_) || (replay_available() && hit(replay_))) {
       if (input.pointer_moved || input.clicked) {
-        selected_ = x < 196 ? 0 : 1;
+        selected_ = hit(exit_) ? 1 : 0;
       }
       clicked = input.clicked;
     }
   }
+  if (before != selected_) {
+    sound(cursor_sound_);
+  }
   if (input.any_pressed(button::confirm | button::cancel) || clicked) {
-    if (seconds_ < tally_seconds_) {
-      seconds_ = tally_seconds_;
-    } else {
-      if (selected_ == 0 && tape_ && tape_->size() > 1) {
-        watching_ = std::make_unique<ReplayScreen>(textures_, font_, world_, tape_, replay_data_);
-      } else if (selected_ == 1) {
-        done_ = true;
-      }
+    if (!presentation_.complete() || !was_complete) {
+      presentation_.finish();
+      sound(confirm_sound_);
+      SDL_Log("Result tally skipped: money=%lld",
+              static_cast<long long>(presentation_.values()[8]));
+      return; // One press only completes the receipt; it cannot also leave it.
     }
+    if (selected_ == 0 && replay_available()) {
+      sound(confirm_sound_);
+      watching_ = std::make_unique<ReplayScreen>(textures_, font_, world_, tape_, replay_data_);
+    } else if (selected_ == 1) {
+      sound(input.any_pressed(button::cancel) ? cancel_sound_ : confirm_sound_);
+      done_ = true;
+    }
+  }
+}
+
+bool MatchResultScreen::replay_available() const {
+  return tape_ && tape_->size() > 1;
+}
+
+void MatchResultScreen::sound(const std::string &name) {
+  if (!name.empty()) {
+    pending_sounds_.push_back({SoundCue::Action::play, name});
   }
 }
 
@@ -107,8 +185,8 @@ std::vector<SoundCue> MatchResultScreen::take_sound_cues() {
 }
 
 void MatchResultScreen::text(DrawList &list, const std::string &value, const float x, const float y,
-                             const std::uint32_t colour, const float scale,
-                             const bool right) const {
+                             const std::uint32_t colour, const float scale, const bool right,
+                             const float alpha) const {
   const auto run = glyph_run(font_, value);
   auto quads = layout_run(font_, run, 0, 0);
   const float left = right ? x - run_width(font_, run) * scale : x;
@@ -118,7 +196,32 @@ void MatchResultScreen::text(DrawList &list, const std::string &value, const flo
     quad.width *= scale;
     quad.height *= scale;
   }
-  list.text(264, std::move(quads), colour);
+  list.text(264, std::move(quads), colour, std::nullopt, alpha);
+}
+
+void MatchResultScreen::draw_counters(DrawList &list) const {
+  for (const auto &digit :
+       number_sprites(shootdowns_font_, shootdowns_number_, receipt_.match.shootdowns, 260)) {
+    list.sprite(digit);
+  }
+  const auto total =
+      static_cast<std::int64_t>(std::clamp(receipt_.match.play_seconds, 0.0, 359999.0));
+  const std::array<std::int64_t, 3> fields{total % 60, total / 60 % 60, total / 3600};
+  NumberStyle style = time_number_;
+  for (std::size_t i = 0; i < fields.size(); ++i) {
+    float left = style.right[0];
+    for (const auto &digit : number_sprites(time_font_, style, fields[i], 260)) {
+      list.sprite(digit);
+      left = std::min(left, digit.position[0]);
+    }
+    if (i + 1 < fields.size()) {
+      Sprite colon = time_colon_;
+      colon.position = {left - time_colon_advance_, style.right[1]};
+      list.sprite(colon);
+      left -= time_colon_advance_;
+    }
+    style.right[0] = left;
+  }
 }
 
 void MatchResultScreen::draw(const Viewport &viewport) {
@@ -128,34 +231,23 @@ void MatchResultScreen::draw(const Viewport &viewport) {
   }
   clear_black(textures_);
   if (world_ && world_->available()) {
-    background_.width = viewport.pixel_width;
-    background_.height = viewport.pixel_height;
-    background_.projection.at(0, 0) = background_.projection.at(1, 1) *
-                                      static_cast<float>(viewport.pixel_height) /
-                                      static_cast<float>(viewport.pixel_width);
-    world_->draw(background_);
+    backdrop_.draw(*world_, viewport);
   }
   DrawList list(textures_, font_, viewport, seconds_);
-  for (const Sprite &sprite : sprites_) {
-    list.sprite(sprite);
+  if (trophy_) {
+    trophy_->draw(list, viewport);
   }
-  list.sprite(prize_label_);
+  for (std::size_t i = 0; i < sprites_.size(); ++i) {
+    const float alpha = reveal_rows_[i] < 0 ? 1.0F : presentation_.row_alpha(reveal_rows_[i]);
+    list.sprite(sprites_[i], alpha);
+  }
+  list.sprite(prize_label_, presentation_.row_alpha(2));
   if (receipt_.match.rental) {
-    list.sprite(rental_label_);
+    list.sprite(presentation_.rental_discount_label() ? rental_label_ : rental_counting_,
+                presentation_.row_alpha(2));
   }
-  const double share = tally_seconds_ > 0 ? std::min(seconds_ / tally_seconds_, 1.0) : 1.0;
-  std::array<std::int64_t, 9> values{
-      receipt_.starting_money, receipt_.prize,        receipt_.repairs[0],
-      receipt_.repairs[1],     receipt_.repairs[2],   receipt_.repairs[3],
-      receipt_.repairs[4],     receipt_.repair_total, receipt_.total_money};
-  values[7] = 0;
-  for (std::size_t row = 1; row <= 6; ++row) {
-    values[row] = static_cast<std::int64_t>(values[row] * share);
-    if (row >= 2) {
-      values[7] += values[row];
-    }
-  }
-  values[8] = std::clamp(values[0] + values[1] - values[7], std::int64_t{0}, money_limit);
+  const auto &values = presentation_.values();
+  constexpr std::array<int, 9> reveal_rows{1, 2, 4, 5, 6, 7, 8, 9, 10};
   for (std::size_t row = 0; row < values.size(); ++row) {
     const bool repair = row >= 2 && row <= 7;
     const auto amount = values[row];
@@ -163,24 +255,24 @@ void MatchResultScreen::draw(const Viewport &viewport) {
     const std::string sign = amount && repair ? "- " : row == 1 ? "+ " : "";
     const auto value = sign + money_text(amount);
     const float scale = std::min(0.9F, 100.0F / run_width(font_, glyph_run(font_, value)));
-    text(list, value, values_right_, rows_[row], colour, scale, true);
+    text(list, value, values_right_, rows_[row], colour, scale, true,
+         presentation_.row_alpha(reveal_rows[row]));
   }
-  if (receipt_.match.outcome == MatchOutcome::retire) {
-    list.sprite(retire_);
-  } else {
-    text(list, receipt_.match.outcome == MatchOutcome::win ? "Win" : "Leave", 389, 253, 0xffd300,
-         2.3F);
+  if (verdict_) {
+    list.sprite(*verdict_, presentation_.row_alpha(10));
   }
-  std::ostringstream kills;
-  kills << std::setfill('0') << std::setw(4) << receipt_.match.shootdowns;
-  text(list, kills.str(), 590, 288, 0xffffff, 2.0F, true);
-  text(list, play_time(receipt_.match.play_seconds), 590, 338, 0xffffff, 0.95F, true);
+  if (receipt_.match.outcome != MatchOutcome::retire) {
+    text(list, receipt_.match.outcome == MatchOutcome::win ? "Win" : "Leave", outcome_position_[0],
+         outcome_position_[1], 0xffd300, outcome_scale_, false, presentation_.row_alpha(10));
+  }
+  draw_counters(list);
   list.sprite(selected_ == 0 ? replay_selected_ : replay_,
-              tape_ && tape_->size() > 1 ? 1.0F : 0.45F);
-  list.sprite(selected_ == 1 ? exit_selected_ : exit_);
-  list.ticker(hint_, hint_run_, seconds_);
-  quest_.money = values[8];
-  frame_.draw(list, quest_);
+              replay_available() && presentation_.complete() ? 1.0F : 0.45F);
+  list.sprite(selected_ == 1 ? exit_selected_ : exit_, presentation_.complete() ? 1.0F : 0.45F);
+  list.ticker(hint_, presentation_.complete() ? hint_run_ : counting_hint_run_, seconds_);
+  QuestSave displayed = quest_;
+  displayed.money = values[8];
+  frame_.draw(list, displayed);
   list.flush();
 }
 

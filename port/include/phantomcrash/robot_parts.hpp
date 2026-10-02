@@ -104,6 +104,7 @@ struct WeaponRecord {
   LevelCurve knockdown;       // +0xa8: percent, on a critical hit
   LevelCurve price;
   LevelCurve weight; // +0x0c (0x075f93)
+  int aim_mode{-1};  // +0x1e: 0/1 shoulder servos, other values keep mount direction
 };
 
 // A body (0x1b5b88) or legs (0x1b5f88) record: the armour it gives, never
@@ -124,10 +125,12 @@ struct ArmourRecord {
   LevelCurve sockets;              // body +0x28: socket holes for modules (0x0bb0c8)
   // Legs only (robot_load.hpp): the model, and the curves the load scales.
   int model{-1};
-  LevelCurve capacity; // +0x5c: the weight carried before the robot slows
-  LevelCurve speed;    // +0x1c: the dash; the walk is half
-  LevelCurve jump;     // +0x2c: the jump's height
-  LevelCurve turn;     // +0x3c
+  LevelCurve capacity;  // +0x5c: the weight carried before the robot slows
+  LevelCurve speed;     // +0x1c: the dash; the walk is half
+  LevelCurve jump;      // +0x2c: the jump's height
+  LevelCurve turn;      // +0x3c
+  LevelCurve dodge;     // +0x9c: a dodge's push on the ground ...
+  LevelCurve air_dodge; // +0xac: ... and in the air
 };
 
 // A pilot (0x1c9920): the tag its robot's marker shows (0x04de50), and
@@ -242,6 +245,7 @@ struct WeaponStats {
   float knockback{};
   float knockdown{};
   int price{};
+  int aim_mode{-1};
 };
 
 [[nodiscard]] WeaponStats weapon_stats(const WeaponRecord &record, int level);

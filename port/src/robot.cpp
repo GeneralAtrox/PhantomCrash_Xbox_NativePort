@@ -121,10 +121,12 @@ RobotAssembly assemble_robot(const RobotCatalogue &catalogue, const RobotSkeleto
                              const RobotParts &parts) {
   RobotAssembly robot;
   const int body_type = pick(catalogue.body_parts, parts.body, "body part");
+  robot.body_type = body_type;
   const auto &body = pick(catalogue.body_types, body_type, "body type");
   robot.leg_type = pick(catalogue.leg_parts, parts.legs, "leg part");
   const auto &legs = pick(catalogue.leg_types, robot.leg_type, "leg type");
   robot.body_model = robot_model_path(body.model);
+  robot.body_motions = motion_bank_path(body.motions);
   robot.forearm_turn = body.forearm_turn;
   robot.legs_model = robot_model_path(legs.model);
   robot.leg_motions = motion_bank_path(legs.motions);
@@ -163,13 +165,21 @@ RobotAssembly assemble_robot(const RobotCatalogue &catalogue, const RobotSkeleto
 void skin_nodes(const ModelData &model, const PosePart &bones, const int first_slot,
                 const Mat4 &fallback, std::vector<Mat4> &node_worlds) {
   node_worlds.resize(model.nodes.size());
+  int slot = first_slot;
   for (std::size_t i = 0; i < model.nodes.size(); ++i) {
-    const int slot = first_slot + static_cast<int>(i);
+    const bool drawn =
+        std::any_of(model.draws.begin(), model.draws.end(),
+                    [i](const ModelDraw &draw) { return draw.node == static_cast<int>(i); });
+    if (!drawn) {
+      node_worlds[i] = model.nodes[i].world * fallback;
+      continue;
+    }
     if (slot >= 0 && slot < bone_slots && bones.set[static_cast<std::size_t>(slot)]) {
       node_worlds[i] = model.nodes[i].local * bones.bones[static_cast<std::size_t>(slot)];
     } else {
       node_worlds[i] = model.nodes[i].world * fallback;
     }
+    ++slot;
   }
 }
 

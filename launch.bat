@@ -26,10 +26,9 @@ if not exist "%PHANTOMCRASH_BUILD%\CMakeCache.txt" (
 )
 
 echo Checking for game source changes...
-rem A CMake change re-runs vcpkg; use the same tools as scripts\build-port.ps1
-rem so it reuses the installed packages instead of rebuilding FFmpeg.
-set "VCPKG_FORCE_SYSTEM_BINARIES=1"
-"%PHANTOMCRASH_CMAKE%" --build "%PHANTOMCRASH_BUILD%" --config Release --target phantomcrash_port --parallel 4
+rem Windows PowerShell bootstraps a real PowerShell 7 path for vcpkg, avoiding
+rem the Microsoft Store execution alias. Only launch after a successful build.
+"%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -File "%PHANTOMCRASH_ROOT%scripts\build-game.ps1" -CMake "%PHANTOMCRASH_CMAKE%"
 if errorlevel 1 (
     echo.
     echo The game could not be built. See the error above.

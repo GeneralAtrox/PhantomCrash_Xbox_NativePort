@@ -4,6 +4,9 @@ Output, under the converted assets:
 
 - ``robots/catalogue.json``: part types and what each type uses
   (:func:`robots.catalogue`).
+- ``robots/weapon_mounts.json``: ordered muzzle points and their model-node
+  transforms, with drawing-node bone indices (:mod:`weapon_mounts`).
+- ``robots/movement_mounts.json``: exhaust mounts and movement/contact effect groups.
 - ``robots/skeletons.json``: the leg and arm skeletons.
 - ``models/binlink/<resource>.gltf``: every robot part model (mesh 0).
   Robot batches draw texture 0, the robot's own paint, which the game binds
@@ -36,7 +39,10 @@ Output, under the converted assets:
 - ``tables/parts.json``: the AI chip and weapon records (:mod:`parts`),
   ``tables/chatter.json``: the battle chatter (:mod:`chatter`), and
   ``tables/battle_scenes.json``: the battle's entrance and exit scenes and
-  the stages' gates and gate doors (:mod:`battle_scenes`).
+  the stages' gates and gate doors (:mod:`battle_scenes`), and
+  ``tables/finale.json``: the epilogue after the First Ranker's contest
+  (:mod:`finale`), and ``tables/ending_subtitles.json``: the ending
+  movie's subtitles (:mod:`finale`).
 
 Everything comes out of the binlink packs (``Media/binlink``), which are
 sliced by the resource table's pack offsets.
@@ -49,7 +55,7 @@ import struct
 from pathlib import Path
 from typing import Callable
 
-from . import arena_monitor, battle_data, battle_scenes, chatter, collision, effect_bank, effect_convert, environment, game_tables, gltf, model, motion, parts, png, robots, stage_convert, texture_pack
+from . import arena_monitor, battle_data, battle_scenes, chatter, collision, effect_bank, effect_convert, environment, finale, game_tables, gltf, model, motion, parts, png, robots, stage_convert, texture_pack, weapon_mounts, movement_mounts
 
 
 def _write_json(path: Path, data: object) -> None:
@@ -240,11 +246,17 @@ def convert_robots(
     _write_json(output / "robots" / "skeletons.json", robots.skeletons(executable))
     wanted = robots.referenced_resources(catalogue)
     packs = _Packs(media, tables)
+    _write_json(output / "robots" / "movement_mounts.json",
+                movement_mounts.extract(executable, catalogue, packs))
+    _write_json(output / "robots" / "weapon_mounts.json",
+                weapon_mounts.extract(executable, catalogue, packs))
     _write_json(output / "tables" / "lessons.json", battle_data.lesson_messages(executable, tables))
     _write_json(output / "tables" / "environment.json", environment.stage_environments(executable))
     _write_json(output / "tables" / "parts.json", parts.part_tables(executable, tables))
     _write_json(output / "tables" / "chatter.json", chatter.chatter(executable, tables))
     _write_json(output / "tables" / "battle_scenes.json", battle_scenes.battle_scenes(executable))
+    _write_json(output / "tables" / "finale.json", finale.finale(executable, tables))
+    _write_json(output / "tables" / "ending_subtitles.json", finale.ending_subtitles(executable))
     paths = sorted((media / "enepath").glob("*_enepath.bin"))
     for path in paths:
         name = path.name.lower().removesuffix(".bin")

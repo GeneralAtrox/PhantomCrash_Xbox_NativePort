@@ -21,6 +21,12 @@ TrainingRobot parse_robot(const json::JsonValue &value, TrainingRobot robot) {
   robot.hp = static_cast<float>(value.number_or("hp", robot.hp));
   robot.pilot = static_cast<int>(value.number_or("pilot", robot.pilot));
   robot.boss = value.boolean_or("boss", robot.boss);
+  if (const json::JsonValue *modules = value.find("modules")) {
+    robot.modules.clear();
+    for (const json::JsonValue &module : modules->array()) {
+      robot.modules.push_back(static_cast<int>(module.number()));
+    }
+  }
   if (const json::JsonValue *chip = value.find("chip")) {
     robot.chip = static_cast<int>(json::required(*chip, "index").number());
     robot.chip_level = std::clamp(static_cast<int>(chip->number_or("level", 0.0)), -part_level_max,
@@ -50,6 +56,7 @@ BattleButtons parse_buttons(const json::JsonValue &value) {
   read_button(value, "camouflage", buttons.camouflage);
   read_button(value, "jump", buttons.jump);
   read_button(value, "dash", buttons.dash);
+  read_button(value, "down_boost", buttons.down_boost);
   read_button(value, "reset_twist", buttons.reset_twist);
   read_button(value, "dodge_left", buttons.dodge_left);
   read_button(value, "dodge_right", buttons.dodge_right);
@@ -143,10 +150,29 @@ LessonMessages parse_lesson_messages(const json::JsonValue &document, const Glyp
 }
 
 RobotControl battle_control(const InputFrame &input, const BattleButtons &buttons,
-                            const LessonStep *step) {
+                            const LessonStep *step, const bool standard, const bool beginner) {
   RobotControl control;
-  control.move = input.left_stick;
-  control.twist = input.right_stick[0];
+  if (standard) {
+    // Robot +0x2740 bit 0 set: the left stick's x strafes (+0x2f68, moved
+    // sideways by 0x08dede), the right stick's turns (+0x2f60).
+    control.move = {input.right_stick[0], input.left_stick[1]};
+    control.strafe = input.left_stick[0];
+    // The mover adds Standard's double-flick dodge and its turn in the air.
+    control.standard = true;
+  } else {
+    // Clear: the left stick's x turns (+0x2f60), the right stick's twists
+    // the upper body (+0x2f68 into +0xf8, 0x07d330).
+    control.move = {input.left_stick[0], input.left_stick[1]};
+    control.twist = input.right_stick[0];
+    // BEGINNER MODE (robot +0x273c) turns it into the quick turn.
+    control.quick_turn = beginner;
+  }
+  // The original torso-twist lesson still needs its dedicated upper-body control.
+  if (standard && step &&
+      (step->goal == LessonGoal::twist_both || step->goal == LessonGoal::twist_reset)) {
+    control.twist = control.move[0];
+    control.move[0] = 0;
+  }
   control.pitch = input.right_stick[1];
   control.mouse_aim = input.mouse_aim;
   if (step != nullptr) {
@@ -157,6 +183,7 @@ RobotControl battle_control(const InputFrame &input, const BattleButtons &button
   }
   control.jump = (input.held & buttons.jump) != 0;
   control.dash = input.any_pressed(buttons.dash);
+  control.down_boost = input.any_pressed(buttons.down_boost);
   control.reset_twist = input.any_pressed(buttons.reset_twist);
   if (input.any_pressed(buttons.dodge_left)) {
     control.dodge = -1;

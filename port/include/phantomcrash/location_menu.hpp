@@ -70,6 +70,8 @@ public:
   LocationMenu(LocationMenuScript script, const std::string &from);
 
   void update(double tick_seconds, const InputFrame &input);
+  void choose(int item);
+  void rotate(int steps);
 
   [[nodiscard]] bool done() const noexcept {
     return fade_.done();

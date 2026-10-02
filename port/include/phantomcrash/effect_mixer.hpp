@@ -1,12 +1,18 @@
 #pragma once
+#include "phantomcrash/audio_options.hpp"
 
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
+#include "phantomcrash/math3d.hpp"
 
 namespace phantomcrash {
+
+struct SoundFalloff;
+struct SoundListener;
 
 // How loud a sound is heard and where: `gain` 0..1 from its distance, and
 // `pan` from -1 (left) through 0 (both sides whole) to 1 (right).
@@ -19,6 +25,7 @@ struct SoundMix {
 struct EffectSamples {
   std::vector<float> samples;
   int channels{1};
+  std::size_t voice_limit{}; // SE BIN byte +2; zero leaves custom sounds unrestricted
   [[nodiscard]] std::size_t frames() const noexcept {
     return channels > 0 ? samples.size() / static_cast<std::size_t>(channels) : 0;
   }
@@ -35,14 +42,20 @@ public:
   // Starts `samples` (kept alive while it plays) at `volume` times `mix`.
   // A key already playing restarts.
   void play(std::shared_ptr<const EffectSamples> samples, const std::string &name, float volume,
-            SoundMix mix, bool loop = false, std::uint64_t key = 0);
-  void set_mix(std::uint64_t key, SoundMix mix);
+            SoundMix mix, bool loop = false, std::uint64_t key = 0,
+            std::optional<Vec3> position = {}, AudioBus bus = AudioBus::ui);
+  void set_mix(std::uint64_t key, SoundMix mix, std::optional<Vec3> position = {});
+  void set_listener(const SoundFalloff &falloff, const SoundListener &listener);
+  void stop_spatial();
   void stop_key(std::uint64_t key);
   void stop_name(const std::string &name);
   void stop_all();
   // The SE volume, over every voice.
   void set_gain(float gain) noexcept {
     gain_ = gain;
+  }
+  void set_audio_options(const AudioOptions &options) noexcept {
+    audio_ = options;
   }
   [[nodiscard]] bool playing(std::uint64_t key) const;
   [[nodiscard]] std::size_t active() const;
@@ -59,12 +72,15 @@ private:
     std::uint64_t key{};
     std::size_t at{};
     std::uint64_t started{};
+    std::optional<Vec3> position;
+    AudioBus bus{AudioBus::ui};
   };
 
   Voice &free_voice();
 
   std::vector<Voice> voices_;
   float gain_{1.0F};
+  AudioOptions audio_;
   std::uint64_t count_{};
 };
 

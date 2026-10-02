@@ -28,6 +28,7 @@ std::int64_t ChipShop::uplift_price() const {
 void ChipShop::open_uplift() {
   const ChipOffer &offer = offers_[static_cast<std::size_t>(cursor_)];
   level_ = offer.level;
+  level_control_.reset();
   if (offer.level >= script_.level_max) {
     show(ChipShopView::question, "maxed", After::see_level);
     choice_ = 0; // YES
@@ -42,12 +43,17 @@ void ChipShop::open_uplift() {
 // the window.
 void ChipShop::level_input(const double tick_seconds, const InputFrame &input) {
   const ChipOffer &offer = offers_[static_cast<std::size_t>(cursor_)];
-  bool fresh = false;
-  const int step = side_.step(tick_seconds, input, script_.left, script_.right, fresh);
-  if (const int moved = std::clamp(level_ + step, offer.level, script_.level_max);
-      moved != level_) {
-    level_ = moved;
-    sound(script_.choice_sound);
+  const ChipLevelWindow &bar = *script_.dialog.level;
+  const LevelMeterHit hit{bar.bar_at[0], bar.bar_step, bar.bar_at[1] - bar.bar_height * 0.5F,
+                          bar.bar_at[1] + bar.bar_height * 0.5F};
+  const LevelChange change =
+      level_control_.update(tick_seconds, input, level_, offer.level, script_.level_max,
+                            script_.left, script_.right, script_.level_control, hit);
+  if (change.value != level_) {
+    level_ = change.value;
+    if (change.sound) {
+      sound(script_.choice_sound);
+    }
     return;
   }
   if (input.any_pressed(script_.confirm_buttons) && level_ != offer.level) {

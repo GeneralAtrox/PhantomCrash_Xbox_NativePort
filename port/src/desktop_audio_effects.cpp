@@ -49,6 +49,10 @@ AudioMixer::Effect *AudioMixer::effect(const std::string &name) {
     source = file->second;
   }
   loaded.volume = source.second;
+  if (const auto cached = sample_files_.find(source.first); cached != sample_files_.end()) {
+    loaded.samples = cached->second;
+    return &loaded;
+  }
   const auto path = roots_.find_asset(source.first);
   SDL_AudioSpec spec{};
   Uint8 *samples = nullptr;
@@ -68,20 +72,47 @@ AudioMixer::Effect *AudioMixer::effect(const std::string &name) {
     return nullptr;
   }
   auto effect = std::make_shared<EffectSamples>();
+  if (const auto limit = effect_limits_.find(source.first); limit != effect_limits_.end()) {
+    effect->voice_limit = limit->second;
+  }
   effect->channels = target.channels;
   const auto *floats = reinterpret_cast<const float *>(converted);
   effect->samples.assign(floats, floats + size / static_cast<int>(sizeof(float)));
   SDL_free(converted);
   loaded.samples = std::move(effect);
+  sample_files_[source.first] = loaded.samples;
   return &loaded;
+}
+
+void AudioMixer::set_audio_options(const AudioOptions &options) {
+  if (audio_options_ == options) {
+    return;
+  }
+  audio_options_ = options;
+  if (music_) {
+    SDL_SetAudioStreamGain(music_,
+                           music_track_volume_ * music_gain_ * options.gain(AudioBus::music));
+  }
+  if (effects_stream_) {
+    SDL_LockAudioStream(effects_stream_);
+    mixer_.set_audio_options(options);
+    SDL_UnlockAudioStream(effects_stream_);
+  }
+  SDL_Log("Audio mix: master=%d music=%d weapons=%d robots=%d environment=%d pickups=%d "
+          "interface=%d dialogue=%d movies=%d",
+          options.master, options.levels[0], options.levels[1], options.levels[2],
+          options.levels[3], options.levels[4], options.levels[5], options.levels[6],
+          options.levels[7]);
 }
 
 void AudioMixer::preload(const std::string &name) {
   static_cast<void>(effect(name));
 }
 
-void AudioMixer::play_sound(const std::string &name, const SoundMix mix) {
-  play_cue(SoundCue{SoundCue::Action::play, name, mix});
+void AudioMixer::play_sound(const std::string &name, const SoundMix mix, const AudioBus bus) {
+  SoundCue cue{SoundCue::Action::play, name, mix};
+  cue.bus = bus;
+  play_cue(cue);
 }
 
 void AudioMixer::play_cue(const SoundCue &cue) {
@@ -95,17 +126,25 @@ void AudioMixer::play_cue(const SoundCue &cue) {
   SDL_LockAudioStream(effects_stream_);
   switch (cue.action) {
   case SoundCue::Action::play:
-    mixer_.play(sound->samples, cue.name, sound->volume, cue.mix, cue.loop, cue.key);
+    mixer_.play(sound->samples, cue.name, sound->volume, cue.mix, cue.loop, cue.key, cue.position,
+                cue.bus);
+    ++cue_counts_[static_cast<std::size_t>(cue.bus)];
     if (cue.key != 0 && std::ranges::find(keys_, cue.key) == keys_.end()) {
       keys_.push_back(cue.key);
     }
     break;
   case SoundCue::Action::move:
-    mixer_.set_mix(cue.key, cue.mix);
+    mixer_.set_mix(cue.key, cue.mix, cue.position);
     break;
   case SoundCue::Action::stop:
     mixer_.stop_key(cue.key);
     std::erase(keys_, cue.key);
+    break;
+  case SoundCue::Action::listener:
+    mixer_.set_listener(cue.falloff, cue.listener);
+    break;
+  case SoundCue::Action::stop_spatial:
+    mixer_.stop_spatial();
     break;
   }
   SDL_UnlockAudioStream(effects_stream_);
@@ -128,6 +167,7 @@ void AudioMixer::stop_keyed() {
   for (const std::uint64_t key : std::exchange(keys_, {})) {
     mixer_.stop_key(key);
   }
+  mixer_.stop_spatial(); // do not leave battle gunfire audible over the next screen
   SDL_UnlockAudioStream(effects_stream_);
 }
 

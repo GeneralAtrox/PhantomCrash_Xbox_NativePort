@@ -2,6 +2,7 @@
 
 #include "desktop_town_screen.hpp"
 #include "phantomcrash/sonic_amp.hpp"
+#include "phantomcrash/story_event.hpp"
 
 #include <string>
 #include <vector>
@@ -16,6 +17,7 @@ class DrawList;
 // go back into the quest as they change, so the frame shows the money left.
 class SonicAmpScreen final : public TownScreen {
 public:
+  [[nodiscard]] std::optional<MenuPresence> menu_presence() const override;
   SonicAmpScreen(TextureCache &textures, const GlyphFont &font, SonicAmpScript script,
                  const std::string &from, const FrameStyle &frame,
                  const std::vector<MusicCredit> &credits, QuestSave quest);
@@ -50,6 +52,7 @@ private:
 
   const NumberFont &number_font_;
   SonicAmp logic_;
+  std::vector<EventText> profiles_;
 };
 
 } // namespace phantomcrash

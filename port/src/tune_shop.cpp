@@ -1,4 +1,5 @@
 #include "phantomcrash/tune_shop.hpp"
+#include "phantomcrash/shop_pointer.hpp"
 
 #include <algorithm>
 #include <utility>
@@ -83,7 +84,8 @@ void TuneShop::show(const TuneShopView view, const std::string &message, const A
   choice_ = 1; // NO
 }
 
-void TuneShop::update(const double tick_seconds, const InputFrame &input) {
+void TuneShop::update(const double tick_seconds, const InputFrame &raw_input) {
+  const InputFrame input = pointer_input(raw_input);
   if (done()) {
     return;
   }
@@ -113,6 +115,23 @@ void TuneShop::update(const double tick_seconds, const InputFrame &input) {
 // 0x0324bd: left/right along the icons, not wrapping; confirm lists the
 // kind's parts or leaves on EXIT; cancel jumps to EXIT (sys 4).
 void TuneShop::items_input(const double tick_seconds, const InputFrame &input) {
+  if (input.clicked) {
+    for (std::size_t i = 0; i < script_.items.size(); ++i) {
+      const TuneItem &item = script_.items[i];
+      const float dx = (item.from_x - item.icon.position[0]) * (1.0F - slide());
+      if (shop_hit(input, item.icon, dx)) {
+        item_ = static_cast<int>(i);
+        refresh_help();
+        sound(script_.select_sound);
+        if (item.kind) {
+          open_list();
+        } else {
+          leave(script_.exit_to);
+        }
+        return;
+      }
+    }
+  }
   bool fresh = false;
   if (const int step = across_.step(tick_seconds, input, script_.left, script_.right, fresh)) {
     const int count = static_cast<int>(script_.items.size());
@@ -159,6 +178,15 @@ void TuneShop::open_list() {
 // 0x03215c: up/down through the parts, X and Y sort them (sys 5), cancel
 // goes back to the icons (sys 8) and confirm opens the meter.
 void TuneShop::list_input(const double tick_seconds, const InputFrame &input) {
+  if (input.clicked && list_seconds_ >= script_.list.window.seconds) {
+    const int row = shop_row_at(input, script_.list);
+    if (row >= 0 && list_.scroll() + row < static_cast<int>(list_.goods().size())) {
+      list_.move(row - list_.row(), script_.list.rows);
+      sound(script_.select_sound);
+      open_meter();
+      return;
+    }
+  }
   bool fresh = false;
   if (const int step = repeat_.step(tick_seconds, input, script_.up, script_.down, fresh)) {
     if (list_.move(step, script_.list.rows)) {
@@ -196,6 +224,7 @@ void TuneShop::open_meter() {
   meter_seconds_ = 0.0;
   level_ = list_.chosen()->goods.level;
   across_.reset();
+  level_control_.reset();
   refresh_help();
 }
 
@@ -203,11 +232,20 @@ void TuneShop::open_meter() {
 // says the money will not do); cancel puts the level back (sys 8).
 void TuneShop::meter_input(const double tick_seconds, const InputFrame &input) {
   const int old = list_.chosen()->goods.level;
-  bool fresh = false;
-  if (const int step = across_.step(tick_seconds, input, script_.left, script_.right, fresh)) {
-    if (const int moved = std::clamp(level_ + step, script_.level_min, script_.level_max);
-        moved != level_) {
-      level_ = moved;
+  const TuneMeter &meter = script_.meter;
+  const Sprite &marker = meter.marker;
+  const float width = marker.rect[2] - marker.rect[0];
+  const float height = marker.rect[3] - marker.rect[1];
+  const LevelMeterHit hit{marker.position[0] + (marker.centered ? 0 : width * 0.5F),
+                          meter.marker_step,
+                          marker.position[1] - (marker.centered ? height * 0.5F : 0),
+                          marker.position[1] + (marker.centered ? height * 0.5F : height)};
+  const LevelChange change =
+      level_control_.update(tick_seconds, input, level_, script_.level_min, script_.level_max,
+                            script_.left, script_.right, script_.level_control, hit);
+  if (change.value != level_) {
+    level_ = change.value;
+    if (change.sound) {
       sound(script_.move_sound);
     }
     return;
@@ -290,6 +328,9 @@ void TuneShop::close_message() {
 // 0x031821 and 0x031ae2: a notice closes on confirm; the question takes YES
 // or NO (left/right), cancel moving to NO (sys 4).
 void TuneShop::message_input(const double tick_seconds, const InputFrame &input) {
+  if (input.dialog_choice) {
+    choice_ = *input.dialog_choice;
+  }
   if (view_ == TuneShopView::question) {
     bool fresh = false;
     if (const int step = across_.step(tick_seconds, input, script_.left, script_.right, fresh)) {

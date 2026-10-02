@@ -30,6 +30,7 @@ public:
            messages, tick_seconds);
   }
   void draw(DrawList &list) const;
+  [[nodiscard]] InputFrame pointer_input(InputFrame input, Buttons confirm) const;
   // Open at full size, showing its contents.
   [[nodiscard]] bool grown() const noexcept {
     return box_.is_open() && box_.grown();
@@ -52,6 +53,9 @@ public:
   // Opens, changes or closes the message box as the purchase's message
   // changes.
   void update(const SvPurchase &purchase, double tick_seconds);
+  [[nodiscard]] InputFrame pointer_input(InputFrame input, Buttons confirm) const {
+    return notice_.pointer_input(std::move(input), confirm);
+  }
   void draw(DrawList &list, const SvPurchase &purchase, const Garage &garage) const;
   [[nodiscard]] std::vector<std::string> take_sounds();
 

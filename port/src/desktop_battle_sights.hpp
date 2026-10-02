@@ -40,6 +40,17 @@ public:
   // draws; `clock` runs the pulses.
   void draw(const Viewport &viewport, const Battle &battle, const Mat4 &view_projection,
             float elapsed, double clock);
+  // The reticle and its boxes as last drawn, for the battle's locks.
+  [[nodiscard]] const std::optional<LockBoxes> &lock_boxes() const noexcept {
+    return boxes_;
+  }
+  [[nodiscard]] const BattleHudStyle &style() const noexcept {
+    return style_;
+  }
+  // Not drawn this frame (a fixed camera view): no boxes.
+  void hide() noexcept {
+    boxes_.reset();
+  }
 
 private:
   struct CanvasPoint {
@@ -62,6 +73,7 @@ private:
   [[nodiscard]] const Combatant &viewer(const Battle &battle) const;
   [[nodiscard]] CanvasPoint sight_point(const View &view, const Battle &battle) const;
   void track(const View &view, const Battle &battle, CanvasPoint sight, float frames);
+  [[nodiscard]] LockBoxes boxes_on(const Viewport &viewport) const;
   void draw_sight(const View &view, const Battle &battle, CanvasPoint sight, double clock) const;
   void draw_reticle(const Viewport &viewport, CanvasPoint centre) const;
   void draw_locks(const View &view, const Battle &battle);
@@ -81,6 +93,7 @@ private:
   BattleHudStyle style_;
   ReticleTracker tracker_;
   CanvasPoint reticle_{};
+  std::optional<LockBoxes> boxes_;
   // Right shoulder, left shoulder, right arm melee, left arm melee.
   std::array<LockBox, 4> locks_{};
   int viewer_{};

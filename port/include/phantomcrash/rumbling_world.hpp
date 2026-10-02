@@ -25,6 +25,10 @@
 
 namespace phantomcrash {
 
+// The robots the match's results stand up behind the receipt: 0x045a68
+// fills up to six slots from the contest's roster (an empty one is 0xfffe).
+inline constexpr int result_robots = 6;
+
 struct RumblingLive {
   double tick_hz{30.0};        // the areas' battles run at this rate, off screen
   float arrival_seconds{8.0F}; // an opponent shot down is replaced this long after
@@ -67,7 +71,15 @@ public:
   // The player has left: the opponents they shot down are beaten and their
   // bounties paid.
   std::int64_t give_back(QuestSave &quest);
+  // A fresh battle of area `area`'s roster behind the match's results
+  // (0x04a6a0, 0x045a68): robot 0 is the player's place, out, and up to
+  // result_robots of the roster's robots stand at full armour on the path.
+  // The world does not run it or keep it. Null when the area has nobody out.
+  [[nodiscard]] std::shared_ptr<Battle> stand_up(int area, const QuestSave &quest);
   [[nodiscard]] bool player_won() const;
+  [[nodiscard]] std::int64_t coop_bounty(const QuestSave &quest, int entrant) const;
+  void release_coop_robot(int area, int actor);
+  void set_coop_level_offset(int area, int offset, const QuestSave &quest);
   [[nodiscard]] int lent() const noexcept {
     return lent_;
   }
@@ -86,14 +98,17 @@ private:
     std::vector<RumblingRobot> robots; // by roster place
     double clock{};
     int changes{};
+    int enemy_level_offset{};
     std::vector<RosterMember> player_kills; // since it was lent
   };
 
   void build(int area, const QuestSave &quest);
   // Puts roster place `place`'s robot into robot `place` + 1.
   void fit(int area, std::size_t place, const QuestSave &quest);
-  // Stands a new opponent somewhere on the path.
-  void scatter(int area, int index);
+  // Arms and names `battle`'s robot `place` + 1 as roster place `place`'s.
+  RumblingRobot seat(Battle &battle, int area, std::size_t place, const QuestSave &quest);
+  // Stands a new opponent somewhere on the area's path.
+  void scatter(Battle &battle, int area, int index);
   void restore(Battle &battle, int index, const LiveRobot &live);
   void step(int area, const QuestSave &quest, float seconds, bool run);
   static void record(const Combatant &robot, LiveRobot &live);

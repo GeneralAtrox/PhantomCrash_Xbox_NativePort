@@ -34,6 +34,8 @@ public:
   PathFollower() = default;
   // Starts at the first point of `segment`.
   void start(const EnemyPath &path, int segment);
+  // Join the nearest portion of a segment, continuing toward its next point.
+  void join(const EnemyPath &path, int segment, Vec3 position);
   // Moves on to the next point when `position` is within `reach` of the
   // target. Returns the target to steer toward.
   Vec3 update(const EnemyPath &path, Vec3 position, float reach, std::minstd_rand &random);

@@ -7,6 +7,7 @@
 #include "phantomcrash/stage_doors.hpp"
 
 #include <map>
+#include <cstdint>
 #include <optional>
 #include <random>
 #include <string>
@@ -51,12 +52,13 @@ struct WeaponTuning {
   int rounds{1};                   // shots a trigger pull fires
   float spread_degrees{};          // the extra rounds scatter this far off the aim
   float speed{180.0F};             // projectile (top) speed, units per second
-  float start_speed{};             // missiles leave this fast (0: half the speed) ...
-  float acceleration{};            // ... and speed up by this (0: the speed) a second
-  float range{150.0F};             // gun and melee reach
-  float life_seconds{};            // projectiles expire after this (0: past 1.5 x range)
-  float lock_range{120.0F};        // the aim locks onto enemies this close ...
-  float lock_degrees{20.0F};       // ... and this far off the aim
+  float start_speed{};             // rounds leave this fast (0: the speed; missiles half) ...
+  float acceleration{};            // ... and speed up by this a second (missiles 0: the speed)
+  float range{150.0F};             // the farthest it is fired at; melee reach, beam length
+  float min_range{};               // the nearest the computer fires it at (lobbed rounds)
+  float life_seconds{};            // projectiles expire after this (0: past the range)
+  float lock_range{120.0F};        // the aim locks onto enemies this close, in its box
+  float hold_degrees{};            // a lock made holds this far off the aim (0: no hold)
   float turn_degrees_per_second{}; // missiles home at this rate
   float gravity{};                 // grenades fall
   float launch_degrees{};          // grenades leave this far above the aim (0: lobbed onto it)
@@ -73,6 +75,7 @@ struct WeaponTuning {
   int model{-1};      // its record's model (+8), which some fire sounds go by
   int fire_sound{-1}; // its record's fire sound (+0x21, battle_sounds.hpp); -1: none
   int flight{-1};     // its record's flight (+0x1d)
+  int aim_mode{-1};   // weapon-specific shoulder targeting (+0x1e)
   // How its record draws it (effects.json): the shots' look (+0x22), the
   // impact they start where they land (+0x23), and what they do there
   // (+0x1f on a wall or the floor, +0x20 on a robot; see shot_hit). -1 and
@@ -148,6 +151,24 @@ struct Projectile {
   Vec3 velocity;
   float travelled{};
   float age{};
+  std::uint64_t id{}; // stable across vector compaction; identifies persistent smoke trails
+};
+
+// A beam held on its muzzle (0x09b9fe, battle_beams.cpp): its tip runs out
+// at the weapon's speed to its range and flies on through walls; a robot it
+// reaches is hit and the ray starts again. Let go, it fades out where it was.
+struct Beam {
+  const WeaponTuning *weapon{};
+  int owner{};
+  int slot{};
+  int team{};
+  Vec3 origin;
+  Vec3 direction;          // a unit vector
+  float length{};          // to the tip as it grows
+  float reach{};           // drawn this far: to the robot it hit, or `length`
+  float held{};            // seconds held, up to the fade; counts down once let go
+  std::optional<Vec3> tip; // where the tip was last tick; none once it starts again
+  bool holding{};          // held this tick
 };
 
 // A blast still growing: every battle tick it hurts each body it reaches,
@@ -191,6 +212,7 @@ struct WeaponHit {
   const WeaponTuning *weapon{};
   Vec3 direction;     // the way it pushes the victim (a unit vector)
   bool directional{}; // a shot or strike, which does more from behind; not a blast
+  bool direct{};      // a blast on the body its round struck (counts as that round's hit)
 };
 
 // Every projectile and blast in flight. Battle fires the weapons and
@@ -202,10 +224,15 @@ public:
   // first scatter by up to the weapon's spread.
   void fire(const WeaponTuning &weapon, int owner, int team, Vec3 muzzle, Vec3 aim, int target,
             const std::vector<Target> &targets, int rounds = 1);
-  // A melee strike: hits `target` when it is within the weapon's reach of
-  // `origin`. Returns whether it connected.
-  bool strike(const WeaponTuning &weapon, int owner, Vec3 origin, int target,
+  // A melee strike's armed blade at `blade` this tick (0x09c9c2): the
+  // first robot of another team whose centre lies within its radius times
+  // melee_contact_scale takes the weapon's damage. Returns whether it
+  // connected; a strike connects once.
+  bool strike(const WeaponTuning &weapon, int owner, int team, Vec3 blade,
               const std::vector<Target> &targets, std::vector<WeaponHit> &hits);
+  // Holds the beam of `weapon` in `slot` on `muzzle` along `aim` (a unit
+  // vector) for this tick.
+  void hold_beam(const WeaponTuning &weapon, int owner, int slot, int team, Vec3 muzzle, Vec3 aim);
   // Moves everything on, collecting hits; shots stop at the stage's walls
   // and floor, and at the gates' shut door leaves.
   void tick(float seconds, const std::vector<Target> &targets, const StageCollision &stage,
@@ -213,6 +240,9 @@ public:
 
   [[nodiscard]] const std::vector<Projectile> &projectiles() const noexcept {
     return projectiles_;
+  }
+  [[nodiscard]] const std::vector<Beam> &beams() const noexcept {
+    return beams_;
   }
   [[nodiscard]] const std::vector<Explosion> &explosions() const noexcept {
     return explosions_;
@@ -234,11 +264,15 @@ private:
   void detonate(const Projectile &shot, Vec3 at, const std::vector<Target> &targets,
                 std::vector<WeaponHit> &hits, bool on_robot = false,
                 std::optional<StageHit> surface = std::nullopt);
+  void tick_beams(float seconds, const std::vector<Target> &targets, const StageCollision &stage,
+                  std::vector<WeaponHit> &hits, const StageDoors *doors);
   void spread_blasts(float seconds, const std::vector<Target> &targets,
                      std::vector<WeaponHit> &hits);
 
   std::vector<Projectile> projectiles_;
+  std::uint64_t next_projectile_id_{1};
   std::vector<Blast> blasts_;
+  std::vector<Beam> beams_;
   std::vector<Explosion> explosions_;
   std::vector<Landing> landings_;
   std::minstd_rand random_;

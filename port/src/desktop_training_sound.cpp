@@ -15,6 +15,14 @@ constexpr const char *battle_sounds_document = "audio/battle_sounds.json";
 
 } // namespace
 
+void TrainingScreen::queue_dialogue(std::vector<std::string> sounds) {
+  for (auto &sound : sounds) {
+    SoundCue cue{SoundCue::Action::play, std::move(sound)};
+    cue.bus = AudioBus::dialogue;
+    unplaced_.push_back(std::move(cue));
+  }
+}
+
 void TrainingScreen::load_sounds(const DataRoots &roots) {
   try {
     battle_sounds_ =
@@ -36,10 +44,12 @@ void TrainingScreen::gather_sounds(const float seconds) {
     }
   }
   for (WorldSound &sound : sounds) {
+    SoundCue cue{SoundCue::Action::play, std::move(sound.name)};
+    cue.bus = sound.bus;
     if (sound.at) {
-      placed_.push_back({SoundCue{SoundCue::Action::play, std::move(sound.name)}, *sound.at});
+      placed_.push_back({std::move(cue), *sound.at});
     } else {
-      sounds_.push_back(std::move(sound.name));
+      unplaced_.push_back(std::move(cue));
     }
   }
   if (battle_sounds_) {
@@ -53,6 +63,7 @@ std::vector<std::string> TrainingScreen::sound_preloads() const {
   if (battle_sounds_) {
     files = sound_files(battle_sounds_->table());
   }
+  files.push_back(script_.battle.settings.robot_wrecks.break_sound);
   const SceneTuning &scenes = script_.battle.scenes;
   for (const std::string *name :
        {&scenes.doors.move_sound, &scenes.doors.open_sound, &scenes.ready_sound, &scenes.go_sound,
@@ -70,7 +81,10 @@ std::vector<SoundCue> TrainingScreen::take_sound_cues() {
     listener.forward = normalize(view);
   }
   auto cues = place_cues(falloff, screens_ > 1 ? nullptr : &listener, std::exchange(placed_, {}));
-  if (replay_) replay_->hear(cues);
+  std::ranges::move(std::exchange(unplaced_, {}), std::back_inserter(cues));
+  if (replay_) {
+    replay_->hear(cues);
+  }
   return cues;
 }
 

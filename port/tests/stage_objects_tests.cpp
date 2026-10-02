@@ -1,5 +1,6 @@
 #include "test_support.hpp"
 #include "phantomcrash/battle.hpp"
+#include "phantomcrash/battle_chatter.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -94,6 +95,67 @@ TEST_CASE("projectiles hit the long end of a vehicle without hitting empty space
   CHECK(std::abs(body.distance_to({5, 2, 9}) - 1.0F) < 0.001F);
 }
 
+TEST_CASE("retained wrecks stop walking robots and shots until the wreck is removed") {
+  StageObject object = vehicle().objects()[0];
+  // Face the approach from x < 5; shot tests are two-sided but movement isn't.
+  auto walls = object.collision.walls();
+  for (auto &wall : walls) {
+    std::swap(wall.points[1], wall.points[2]);
+    wall.normal = wall.normal * -1.0F;
+  }
+  object.collision = StageCollision(std::move(walls), {});
+  object.wreck_break_effect = 15;
+  object.wreck_hit_delay = 6.0F;
+  Battle battle(BattleSettings{}, {});
+  battle.add_robot("player", 0, {}, -pi / 2.0F, {}, 100.0F);
+  battle.set_objects(StageObjects({object}));
+  RobotControl walk;
+  walk.move = {0.0F, 0.5F};
+  const auto advance = [&] {
+    for (int i = 0; i < 180; ++i) {
+      battle.tick(walk, {}, 1.0F / 60.0F);
+    }
+  };
+  advance();
+  CHECK(battle.player().mover.position().x <= 5.0F - battle.player().radius + 0.001F);
+  const auto first_break = battle.objects()->hit(0);
+  REQUIRE(first_break);
+  advance();
+  CHECK(battle.player().mover.position().x <= 5.0F - battle.player().radius + 0.001F);
+  CHECK(shoot({target(battle.objects()->objects()[0])}, {0, 2, 0}).size() == 1);
+  battle.objects()->tick(6.0F);
+  const auto second_break = battle.objects()->hit(0);
+  REQUIRE(second_break);
+  advance();
+  CHECK(battle.player().mover.position().x > 6.0F);
+  CHECK(shoot({target(battle.objects()->objects()[0])}, {0, 2, 0}).empty());
+}
+
+TEST_CASE("robots can stand on wrecks and fall when the wreck is removed") {
+  StageObject object = vehicle().objects()[0];
+  object.collision = StageCollision({{{Vec3{-4, 4, -4}, Vec3{4, 4, 4}, Vec3{4, 4, -4}}, {0, 1, 0}},
+                                     {{Vec3{-4, 4, -4}, Vec3{-4, 4, 4}, Vec3{4, 4, 4}}, {0, 1, 0}}},
+                                    {});
+  object.wreck_break_effect = 15;
+  Battle battle(BattleSettings{}, {});
+  battle.add_robot("player", 0, {0, 4, 0}, 0.0F, {}, 100.0F);
+  battle.set_objects(StageObjects({object}));
+  const auto first_break = battle.objects()->hit(0);
+  REQUIRE(first_break);
+  CHECK(battle.objects()->ground_height({0, 4, 0}, 0.1F) == 4.0F);
+  for (int i = 0; i < 120; ++i) {
+    battle.tick({}, {}, 1.0F / 60.0F);
+  }
+  CHECK(std::abs(battle.player().mover.position().y - 4.0F) < 0.001F);
+  CHECK(battle.player().mover.grounded());
+  const auto second_break = battle.objects()->hit(0);
+  REQUIRE(second_break);
+  for (int i = 0; i < 120; ++i) {
+    battle.tick({}, {}, 1.0F / 60.0F);
+  }
+  CHECK(std::abs(battle.player().mover.position().y) < 0.001F);
+}
+
 TEST_CASE("scenery intercepts shots before robots and walls block shots before scenery") {
   const StageObjects objects = vehicle();
   const Target body = target(objects.objects()[0]);
@@ -124,17 +186,22 @@ TEST_CASE("battle shots produce scenery explosions and wrecks without robot kill
   FireControl fire;
   fire.fire[0] = true;
   int explosions = 0;
+  int remarks = 0;
   for (int frame = 0; frame < 60; ++frame) {
     battle.tick({}, fire, 1.0F / 60.0F);
     for (const auto &event : battle.events()) {
       if (event.kind == BattleEventKind::effect && event.slot == 14) {
         ++explosions;
       }
+      if (event.kind == BattleEventKind::chatter && event.chatter == chatter_event::object_broken) {
+        ++remarks; // 0x047ed9: the shooter remarks on the break
+      }
       CHECK(event.kind != BattleEventKind::hit);
       CHECK(event.kind != BattleEventKind::shot_down);
     }
   }
   CHECK(explosions == 1);
+  CHECK(remarks == 1);
   CHECK(battle.objects()->objects()[0].visible_mesh() == 15);
   CHECK(battle.player().kills == 0);
 }

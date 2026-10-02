@@ -51,6 +51,10 @@ public:
   [[nodiscard]] double duration_seconds() const noexcept {
     return decoder_.duration_seconds();
   }
+  // One video frame's time, or 0 when the stream does not say.
+  [[nodiscard]] double frame_seconds() const noexcept {
+    return decoder_.frame_duration_seconds();
+  }
 
 private:
   void pump();

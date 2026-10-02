@@ -20,6 +20,7 @@ struct HudPiece {
 // y_min to y_max as the robot's value runs 0..value_max (0x04db69, tables
 // 0x203c48 and 0x203c78, one row per shape).
 using ReticleSizes = std::array<float, 4>;
+inline constexpr int reticle_shapes = 3; // square, wide, tall
 
 // The world-space battle HUD's pieces and layout, from
 // data/ui/battle_hud.json (see its notes for the original's drawers).
@@ -81,6 +82,8 @@ struct BattleHudStyle {
     std::array<float, 2> frame_offset{-72.0F, -18.0F};
     HudPiece bar;
     std::array<float, 2> bar_offset{-66.0F, -13.0F};
+    // Member, leader, champion and reserve in RUMBLING; 0..2 also serve
+    // the original team palette in training/versus.
     std::vector<std::uint32_t> team_colours;
     // The pilot's name tag (0x0bdc9b): glyphs of `cell` square every
     // `advance`, centred on the robot's point + `offset`, in the team
@@ -110,6 +113,19 @@ struct BattleHudStyle {
 
 // Throws std::runtime_error when a piece is missing or malformed.
 [[nodiscard]] BattleHudStyle parse_battle_hud_style(const json::JsonValue &document);
+
+// A robot's fire control boxes in the 640x480 canvas: the half sizes of
+// the inner box (arm weapons) and the outer box (shoulder and melee
+// weapons); by default shape 0 at value 0.
+struct SightBoxes {
+  std::array<float, 2> inner_half{40.0F, 40.0F};
+  std::array<float, 2> outer_half{70.0F, 70.0F};
+};
+
+struct ChipStats; // robot_parts.hpp
+
+// The boxes `chip` gives, by its shapes and values (0x04db69).
+[[nodiscard]] SightBoxes sight_boxes(const BattleHudStyle &style, const ChipStats &chip);
 
 // A reticle's half width and height in 640x480 units for `value`.
 [[nodiscard]] std::array<float, 2> reticle_half_size(const ReticleSizes &sizes, float value,

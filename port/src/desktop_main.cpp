@@ -15,8 +15,10 @@
 #include "desktop_frame_counter.hpp"
 #include "desktop_input.hpp"
 #include "desktop_options.hpp"
+#include "desktop_scene_dump.hpp"
 #include "desktop_screens.hpp"
 #include "desktop_settings_menu.hpp"
+#include "desktop_window_title.hpp"
 #include "phantomcrash/data_roots.hpp"
 #include "phantomcrash/fixed_step.hpp"
 #include "phantomcrash/frame_rate.hpp"
@@ -117,8 +119,29 @@ int run(const Options &options) {
   FramePacer pacer;
   FrameCounter counter;
   SDL_Log("Data root: %s", root.string().c_str());
+  auto coop = std::make_shared<CoopState>();
+  coop->enabled = saved.experimental_coop;
+  coop->options = saved.coop;
+  coop->profiles = saved.coop_profiles;
+  coop->saved_profiles = saved.coop_profiles;
+  coop->save_profile = [preferences, smoke](const int slot, const QuestSave &profile) {
+    if (smoke || slot < 0 || slot >= 4) {
+      return false;
+    }
+    auto disk = load_settings(preferences);
+    if (disk.save_slots_unreadable) {
+      SDL_Log("Co-op save failed: player=%d settings unreadable", slot + 1);
+      return false;
+    }
+    // Merge only the requesting player's checkpoint into the latest disk state.
+    disk.coop_profiles[slot] = profile;
+    const bool written = save_settings(preferences, disk);
+    SDL_Log("Co-op save %s: player=%d day=%d", written ? "written" : "failed", slot + 1,
+            profile.day + 1);
+    return written;
+  };
   ScreenRunner screens(host.renderer(), roots, options.start, saved.game, saved.quest,
-                       saved.vs_scoobees);
+                       saved.vs_scoobees, saved.audio, coop);
   screens.set_save_slots(saved.save_slots, saved.save_slots_unreadable);
   screens.set_rumble_robots(options.rumble_robots.value_or(saved.rumble_robots));
   const std::vector<ScreenRunner::Level> levels = screens.levels();
@@ -129,6 +152,13 @@ int run(const Options &options) {
     }
     menu.set_levels(labels);
   }
+  PostProcessOptions persisted_post = saved.post_process;
+  AudioOptions persisted_audio = saved.audio;
+  FrameRateSettings persisted_rate = initial.frame_rate;
+  bool persisted_fullscreen = initial.fullscreen;
+  bool persisted_counter = initial.frame_counter;
+  bool persisted_coop = initial.experimental_coop;
+  CoopOptions persisted_coop_options = initial.coop;
   bool paused = false;
 
   using Clock = std::chrono::steady_clock;
@@ -139,6 +169,10 @@ int run(const Options &options) {
   FrameStats work; // each frame's time before it is presented
   double benchmark_clock = 0.0;
   bool running = true;
+  // The copy icon (or F9, for fullscreen without the menu bar): the game
+  // context, dumped once this frame is drawn.
+  bool dump_requested = false;
+  WindowTitle title(host.window());
   while (running) {
     input.configure(menu.settings().host_controls);
     input.capture_mouse(host.window(), screens.mouse_aim() && host.focused() && !smoke);
@@ -148,12 +182,48 @@ int run(const Options &options) {
         running = false;
       } else if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat &&
                  (event.key.scancode == SDL_SCANCODE_F11 ||
-                  (event.key.scancode == SDL_SCANCODE_RETURN && (event.key.mod & SDL_KMOD_ALT)))) {
+                  ((event.key.scancode == SDL_SCANCODE_RETURN ||
+                    event.key.scancode == SDL_SCANCODE_KP_ENTER) &&
+                   (event.key.mod & SDL_KMOD_ALT)))) {
         menu.set_fullscreen(!menu.settings().fullscreen);
+      } else if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat &&
+                 event.key.scancode == SDL_SCANCODE_F9) {
+        dump_requested = !smoke;
       }
       input.handle(event);
     }
     const Settings &settings = menu.settings();
+    screens.set_coop_enabled(settings.experimental_coop);
+    coop->options = settings.coop;
+    screens.set_post_process(settings.post_process);
+    screens.set_audio_options(settings.audio);
+    if (!smoke &&
+        (settings.post_process != persisted_post || settings.audio != persisted_audio ||
+         settings.frame_rate != persisted_rate || settings.fullscreen != persisted_fullscreen ||
+         settings.frame_counter != persisted_counter ||
+         settings.experimental_coop != persisted_coop || settings.coop != persisted_coop_options)) {
+      // Save the preference at selection time without checkpointing the live match.
+      Settings disk = load_settings(preferences);
+      disk.post_process = settings.post_process;
+      disk.audio = settings.audio;
+      disk.frame_rate = settings.frame_rate;
+      disk.frame_counter = settings.frame_counter;
+      disk.experimental_coop = settings.experimental_coop;
+      disk.coop = settings.coop;
+      if (settings.fullscreen != persisted_fullscreen) {
+        disk.fullscreen = settings.fullscreen;
+      }
+      if (disk.save_slots_unreadable || !save_settings(preferences, disk)) {
+        SDL_Log("Unable to save audio/rendering preferences");
+      }
+      persisted_post = settings.post_process;
+      persisted_audio = settings.audio;
+      persisted_rate = settings.frame_rate;
+      persisted_fullscreen = settings.fullscreen;
+      persisted_counter = settings.frame_counter;
+      persisted_coop = settings.experimental_coop;
+      persisted_coop_options = settings.coop;
+    }
     apply_fullscreen(host, menu);
     FrameRateSettings rate = settings.frame_rate;
     if (benchmark) {
@@ -171,7 +241,9 @@ int run(const Options &options) {
         level && *level >= 0 && *level < static_cast<int>(levels.size())) {
       screens.jump(levels[static_cast<std::size_t>(*level)].screen);
     }
-    const bool pause = !smoke && !benchmark && settings.pause_unfocused && !host.focused();
+    dump_requested = (menu.take_copy() && !smoke) || dump_requested;
+    const bool pause =
+        !smoke && !benchmark && settings.pause_unfocused && !host.focused() && !menu.visuals_open();
     if (pause != paused) {
       paused = pause;
       screens.set_paused(paused);
@@ -212,10 +284,15 @@ int run(const Options &options) {
     for (int tick = 0; tick < ticks; ++tick) {
       screens.tick(input.sample(host.focused(), viewport), step.tick_seconds());
     }
-    input.rumble(screens.rumble());
+    input.rumble(screens.rumble(), screens.screen() != "coop");
     screens.advance(elapsed);
     screens.draw(viewport);
+    if (dump_requested) {
+      dump_requested = false;
+      static_cast<void>(dump_scene(host.renderer(), screens, settings, preferences));
+    }
     counter.record(elapsed);
+    title.update(elapsed, counter.rate(), screens.scene_progress());
     if (benchmark) {
       benchmark_clock += elapsed;
       if (benchmark_clock > benchmark_warmup_seconds) {
@@ -252,6 +329,7 @@ int run(const Options &options) {
     return 0;
   }
   Settings to_save = menu.settings();
+  to_save.coop_profiles = coop->profiles;
   to_save.game = screens.game_options();
   to_save.quest = screens.quest_save();
   to_save.vs_scoobees = screens.vs_scoobees();

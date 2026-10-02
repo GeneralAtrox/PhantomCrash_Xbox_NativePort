@@ -1,4 +1,5 @@
 #include "desktop_monitor_ship.hpp"
+#include "desktop_light_sources.hpp"
 
 #include "phantomcrash/json_fields.hpp"
 #include "phantomcrash/supply_drop.hpp"
@@ -80,6 +81,7 @@ MonitorShip::MonitorShip(WorldRenderer &world, const DataRoots &roots, const int
       }
       parts_.push_back(std::move(part));
     }
+    lights_ = light_sources(roots, "ship", stage % 2);
     tick(0);
   } catch (const std::exception &error) {
     SDL_Log("Arena monitor ship: %s", error.what());
@@ -111,6 +113,18 @@ void MonitorShip::tick(const float seconds) {
   world_ = rotation_y(std::atan2(direction.x, direction.z)) * translation(bezier_point(curve, t));
 }
 
+void MonitorShip::add_lights(std::vector<WorldLight> &lights) const {
+  if (model_ < 0 || route_.empty()) {
+    return;
+  }
+  for (auto light : lights_) {
+    light.position = transform_point(light.position, world_);
+    const Mat4 axes = rotation_y(spin_) * world_;
+    light.direction = normalize(transform_point(light.direction, axes) - transform_point({}, axes));
+    lights.push_back(light);
+  }
+}
+
 void MonitorShip::add_items(std::vector<WorldItem> &items) const {
   if (model_ < 0 || route_.empty()) {
     return;
@@ -120,6 +134,10 @@ void MonitorShip::add_items(std::vector<WorldItem> &items) const {
     item.model = model_;
     item.node = part.node;
     item.world = world_;
+    // 0x06a5ac submits the hull and TVs with flag 0x02000000 through
+    // 0x0afef7/0x0aff4a; 0x0b3240 disables fog for those draws. At the
+    // ship's altitude, ordinary arena fog otherwise hides all texture detail.
+    item.fogged = false;
     if (part.hinge_sign != 0) {
       item.world = translation({-part.hinge_x, 0, 0}) * rotation_z(part.hinge_sign * hinge_) *
                    translation({part.hinge_x, 0, 0}) * world_;

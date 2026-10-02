@@ -1,6 +1,7 @@
 #include "desktop_sonic_amp.hpp"
 
 #include "desktop_draw_list.hpp"
+#include "desktop_event_text.hpp"
 #include "desktop_shop_dialog.hpp"
 
 #include <algorithm>
@@ -38,10 +39,34 @@ SonicAmpScreen::SonicAmpScreen(TextureCache &textures, const GlyphFont &font, So
       logic_(std::move(script), quest.music, quest.money, credits, from) {
   static_cast<void>(textures_.get(logic_.script().chart.ring.image));
   static_cast<void>(textures_.get(logic_.script().dialog.window.image));
+  profiles_.resize(credits.size());
+  int loaded = 0;
+  for (std::size_t i = 0; i < credits.size(); ++i) {
+    if (const auto &profile = credits[i].artist_profile) {
+      EventText &text = profiles_[i];
+      text.tokens = parse_event_text(font_, profile->text);
+      text.position = profile->position;
+      text.colour = profile->colour;
+      text.layer = profile->layer;
+      ++loaded;
+    }
+  }
+  SDL_Log("Sonic Amp: loaded %d artist profiles for %zu tracks", loaded, credits.size());
 }
 
 void SonicAmpScreen::tick(const InputFrame &input, const double tick_seconds) {
+  const SonicAmpView before = logic_.view();
   logic_.update(tick_seconds, input);
+  if (before != logic_.view()) {
+    SDL_Log("Sonic Amp: view=%d->%d mouse=%d", int(before), int(logic_.view()), input.clicked);
+  }
+  if (before != logic_.view() && logic_.view() == SonicAmpView::preview) {
+    const int selected = logic_.cursor_track();
+    if (const MusicCredit *track = credit(selected)) {
+      SDL_Log("Artist profile: track=%d artist=%s text_units=%d", selected, track->artist.c_str(),
+              text_units(profiles_[static_cast<std::size_t>(selected)].tokens));
+    }
+  }
   tick_frame(tick_seconds, logic_.faded_in());
   if (quest().money != logic_.money() || quest().music != logic_.music()) {
     QuestSave changed = quest();
@@ -199,7 +224,7 @@ void SonicAmpScreen::draw_actions(DrawList &list) const {
 }
 
 // 0x29fdc: the track's panel with its large jacket, the artist's name and
-// web address.
+// web address, with the original profile text script (credit +0x1a0).
 void SonicAmpScreen::draw_preview(DrawList &list) const {
   const SonicAmpScript &script = logic_.script();
   for (const Sprite &layer : script.preview_layers) {
@@ -216,6 +241,8 @@ void SonicAmpScreen::draw_preview(DrawList &list) const {
     show(track->jacket, script.preview_jacket);
     show(track->artist_name, script.preview_name);
     show(track->artist_link, script.preview_link);
+    const EventText &profile = profiles_[static_cast<std::size_t>(logic_.cursor_track())];
+    draw_event_text(list, font_, {&profile, -1}, logic_.seconds(), {});
   }
   for (const Sprite &hint : script.preview_hints) {
     list.sprite(hint);

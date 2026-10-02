@@ -83,6 +83,9 @@ TuneMeter parse_meter(const json::JsonValue &value) {
   meter.window = member(value, "window", parse_pop_window);
   meter.cursor = member(value, "cursor", parse_sprite);
   meter.cancel_hint = member(value, "cancel_hint", parse_sprites);
+  if (const auto *hint = value.find("confirm_hint")) {
+    meter.confirm_hint = parse_sprites(*hint);
+  }
   meter.signs = member(value, "signs", three_sprites);
   meter.old_sign_at = numbers<2>(required(value, "old_sign_at"), "old_sign_at");
   meter.new_sign_at = numbers<2>(required(value, "new_sign_at"), "new_sign_at");
@@ -149,6 +152,15 @@ TuneShopScript parse_tune_shop(const json::JsonValue &document) {
     script.list.stats = member(document, "stats", parse_part_stats_style);
     script.load = member(document, "load", parse_load);
     script.meter = member(document, "meter", parse_meter);
+    if (const auto *control = document.find("level_control")) {
+      script.level_control = parse_level_control(*control);
+    }
+    if (const auto *comparison = document.find("comparison")) {
+      script.increase_colour = parse_colour(comparison->string_or("increase", "#80dfff"));
+      script.decrease_colour = parse_colour(comparison->string_or("decrease", "#ff6666"));
+      script.comparison_scale = static_cast<float>(comparison->number_or("scale", 0.7));
+      script.comparison_width = static_cast<float>(comparison->number_or("width", 88));
+    }
     const auto levels = numbers<2>(required(document, "levels"), "levels");
     script.level_min = static_cast<int>(levels[0]);
     script.level_max = static_cast<int>(levels[1]);

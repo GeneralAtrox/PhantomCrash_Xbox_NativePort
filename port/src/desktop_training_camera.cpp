@@ -1,6 +1,10 @@
 // The training battle's camera: the chase view, the other views the D-pad
 // picks (battle_camera.hpp) and the scenes' scripted shots over both.
 #include "desktop_training.hpp"
+#include "desktop_training_finale.hpp"
+#include "desktop_training_vs.hpp"
+
+#include <SDL3/SDL.h>
 
 #include <algorithm>
 #include <cmath>
@@ -18,6 +22,26 @@ constexpr float cockpit_share = 0.5F;
 
 } // namespace
 
+TrainingScreen::~TrainingScreen() {
+  battle_->select_player(player_index_);
+  // A live area's battle outlives this screen; do not leave its camera attached.
+  battle_->set_player_target_view(std::nullopt);
+}
+
+void TrainingScreen::update_target_view() {
+  battle_->set_player_target_view(TargetView{camera_.view() * camera_.projection(target_aspect_),
+                                             camera_.eye(),
+                                             hud_ ? hud_->lock_boxes() : std::nullopt});
+  const auto &candidates = battle_->player().lock_candidates;
+  for (std::size_t slot = 0; slot < candidates.size(); ++slot) {
+    if (target_candidates_[slot] != candidates[slot]) {
+      SDL_Log("Targeting: slot=%zu candidate=%d -> %d (range, 3D aim, view and cover checked)",
+              slot, target_candidates_[slot], candidates[slot]);
+    }
+  }
+  target_candidates_ = candidates;
+}
+
 CameraSubject TrainingScreen::camera_subject() const {
   const Combatant &player = battle_->player();
   CameraSubject subject;
@@ -25,19 +49,19 @@ CameraSubject TrainingScreen::camera_subject() const {
   subject.yaw = player.mover.aim_heading();
   subject.pitch = player.mover.pitch();
   subject.height = player.radius;
-  const std::optional<Vec3> torso = view_ ? view_->torso(0) : std::nullopt;
+  const std::optional<Vec3> torso = view_ ? view_->torso(player_index_) : std::nullopt;
   // Without a posed robot, the torso is taken as two leg radii up.
   subject.torso = torso.value_or(subject.position + Vec3{0.0F, player.radius * 2.0F, 0.0F});
-  subject.legs_model = view_ ? view_->legs_model(0) : 0;
+  subject.legs_model = view_ ? view_->legs_model(player_index_) : 0;
   return subject;
 }
 
 bool TrainingScreen::in_cockpit() const {
-  return !in_scene() && views_.first_person_share() >= inside_share;
+  return battle_->player().alive && !in_scene() && views_.first_person_share() >= inside_share;
 }
 
 bool TrainingScreen::cockpit_up() const {
-  return !in_scene() && views_.first_person_share() >= cockpit_share;
+  return battle_->player().alive && !in_scene() && views_.first_person_share() >= cockpit_share;
 }
 
 CockpitInput TrainingScreen::cockpit_input() const {
@@ -60,16 +84,22 @@ CockpitInput TrainingScreen::cockpit_input() const {
 }
 
 void TrainingScreen::tick_camera(const InputFrame &input, const float seconds) {
+  if (battle_->player().dying && views_.view() != camera_view::behind) {
+    static_cast<void>(views_.change(ViewChange::behind));
+  }
   // 0x0774ad: the views change only while the robot is free to move.
+  // BEGINNER MODE keeps the fixed views out of reach (0x07d452); the
+  // tutorial's lessons keep it off.
   const BattleButtons &buttons = script_.battle.buttons;
+  const bool cycles = !(beginner_ && free_play_);
   if (!in_scene() && battle_->player().alive) {
     if (input.any_pressed(buttons.view_first_person)) {
       static_cast<void>(views_.change(ViewChange::first_person));
     } else if (input.any_pressed(buttons.view_behind)) {
       static_cast<void>(views_.change(ViewChange::behind));
-    } else if (input.any_pressed(buttons.view_next)) {
+    } else if (cycles && input.any_pressed(buttons.view_next)) {
       static_cast<void>(views_.change(ViewChange::next));
-    } else if (input.any_pressed(buttons.view_previous)) {
+    } else if (cycles && input.any_pressed(buttons.view_previous)) {
       static_cast<void>(views_.change(ViewChange::previous));
     }
   }
@@ -92,8 +122,11 @@ void TrainingScreen::tick_camera(const InputFrame &input, const float seconds) {
   if (cockpit_) {
     cockpit_->tick(cockpit_input(), seconds);
   }
-  std::optional<CameraShot> shot = scene_ ? scene_->scene().shot(camera_.chase()) : std::nullopt;
+  std::optional<CameraShot> shot = finale_  ? finale_camera()
+                                   : scene_ ? scene_->scene().shot(camera_.chase())
+                                            : std::nullopt;
   camera_.set_shot(shot ? shot : std::optional<CameraShot>(views_.shot()));
+  update_target_view();
 }
 
 } // namespace phantomcrash

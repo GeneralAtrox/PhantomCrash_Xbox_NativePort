@@ -2,9 +2,11 @@
 // back out; the live RUMBLING (rumbling_world.hpp) also arms them, changes
 // who they are and brings them in itself.
 #include "phantomcrash/battle.hpp"
+#include "phantomcrash/robot_combat.hpp"
 
 #include <algorithm>
 #include <stdexcept>
+#include <utility>
 
 namespace phantomcrash {
 
@@ -19,12 +21,21 @@ int Battle::add_drone(const std::string &name, const float hp) {
 }
 
 void Battle::respawn(Combatant &drone) {
+  drone.ai.reset();
+  drone.camouflaged = false;
+  drone.camouflage = 1.0F;
+  if (drone.pose) {
+    drone.pose->reset();
+  }
   drone.alive = true;
+  drone.dying = false;
+  drone.death_seconds = 0.0F;
   drone.hp = drone.max_hp;
   drone.damage_from.clear();
   drone.respawn_left = 0.0F;
   drone.lost = {};
   drone.push = {};
+  drone.last_ground.reset();
   drone.invulnerable = 0.0F;
   drone.shield = 0.0F;
   drone.shield_glow = 0.0F;
@@ -68,7 +79,9 @@ void Battle::join_path(const int index) {
   const auto distance = [&](const int entry) {
     return length(path_.segments[static_cast<std::size_t>(entry)].points.front() - at);
   };
-  drone.path.start(path_, *std::ranges::min_element(entries, {}, distance));
+  // The entrance has already walked away from the gate. Resuming at point
+  // zero would send the robot back inside and immediately trigger its exit.
+  drone.path.join(path_, *std::ranges::min_element(entries, {}, distance), at);
 }
 
 void Battle::raise_shield(const int index) {
@@ -113,7 +126,11 @@ void Battle::arm(const int index, const std::array<std::string, weapon_slots> &w
 void Battle::set_identity(const int index, const std::string &name, const int team,
                           const float hp) {
   Combatant &robot = robots_.at(static_cast<std::size_t>(index));
+  robot.ai.reset();
   robot.name = name;
+  if (cooperative_) {
+    robot.pose.reset();
+  }
   robot.team = team;
   robot.hp = robot.max_hp = hp;
   robot.kills = 0;
@@ -128,12 +145,22 @@ void Battle::bring_in(const int index) {
   Combatant &robot = robots_.at(static_cast<std::size_t>(index));
   robot.mover.release();
   respawn(robot);
+  if (std::ranges::find(arrivals_, index) == arrivals_.end()) {
+    arrivals_.push_back(index);
+  }
+}
+
+std::vector<int> Battle::take_arrivals() {
+  return std::exchange(arrivals_, {});
 }
 
 void Battle::take_out(const int index) {
+  robots_.at(static_cast<std::size_t>(index)).ai.reset();
+  std::erase(arrivals_, index);
   Combatant &robot = robots_.at(static_cast<std::size_t>(index));
   robot.mover.release();
   robot.alive = false;
+  robot.dying = false;
   robot.camouflaged = false;
   robot.push = {};
   robot.respawn_left = settings_.drone_respawn_seconds;

@@ -93,6 +93,7 @@ SupplyLook parse_look(const JsonValue &value) {
   look.crash_radius = static_cast<float>(value.number_or("crash_radius", look.crash_radius));
   look.crash_seconds = static_cast<float>(value.number_or("crash_seconds", look.crash_seconds));
   look.crash_effect = static_cast<int>(value.number_or("crash_effect", look.crash_effect));
+  look.burst_effect = static_cast<int>(value.number_or("burst_effect", look.burst_effect));
   look.take_sound = value.string_or("take_sound", look.take_sound);
   return look;
 }

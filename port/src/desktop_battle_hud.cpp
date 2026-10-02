@@ -74,6 +74,8 @@ void BattleHud::draw(const Viewport &viewport, const Battle &battle, const Mat4 
   last_clock_ = clock;
   if (sights_ && info.sights) {
     sights_->draw(viewport, battle, view_projection, elapsed, clock);
+  } else if (sights_) {
+    sights_->hide();
   }
   if (panels_) {
     panels_->draw(viewport, battle, info.panels, clock);

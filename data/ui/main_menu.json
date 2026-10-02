@@ -1,7 +1,7 @@
 {
  "notes": [
   "Main menu over the title layers (original scene 21: 0x2c460, 0x2c1ce, 0x2befc; items from 0x1f944c).",
-  "Each item draws its normal sprite, and its selected sprite on top while the cursor is on it.",
+  "Items with a label use code-drawn buttons styled by main_menu_buttons.json. Unlabelled mod items retain the original normal and selected sprite path.",
   "goto names a screen; screens that do not exist yet show a placeholder (placeholders.json) that returns here with the cursor on the item that led there.",
   "The idle timer starts when the menu opens and, as in the original, is only reset by opening a submenu (resets_on_input false). It returns to the title from the top level only.",
   "The cursor moves with the D-pad or left stick; a new press wraps around the ends, a held direction repeats and stops at the ends. The repeat timing is the port's."
@@ -18,6 +18,7 @@
  "items": [
   {
    "id": "quest_mode",
+   "label": "QUEST MODE",
    "position": [225, 292],
    "normal": { "image": "textures/scroll/title_tex/0.png", "rect": [832, 256, 1024, 296], "layer": 6 },
    "selected": { "image": "textures/scroll/title_tex/0.png", "rect": [640, 376, 832, 416], "layer": 7, "animation": "pulse" },
@@ -25,6 +26,7 @@
   },
   {
    "id": "vs_mode",
+   "label": "VS MODE",
    "position": [225, 325],
    "normal": { "image": "textures/scroll/title_tex/0.png", "rect": [640, 296, 832, 336], "layer": 6 },
    "selected": { "image": "textures/scroll/title_tex/0.png", "rect": [832, 376, 1024, 416], "layer": 7, "animation": "pulse" },
@@ -34,6 +36,7 @@
   },
   {
    "id": "option",
+   "label": "OPTION",
    "position": [225, 358],
    "normal": { "image": "textures/scroll/title_tex/0.png", "rect": [640, 256, 832, 296], "layer": 6 },
    "selected": { "image": "textures/scroll/title_tex/0.png", "rect": [832, 336, 1024, 376], "layer": 7, "animation": "pulse" },
@@ -51,6 +54,7 @@
    "items": [
     {
      "id": "new_game",
+     "label": "NEW GAME",
      "position": [225, 292],
      "normal": { "image": "textures/scroll/title_tex/0.png", "rect": [832, 216, 1024, 256], "layer": 257 },
      "selected": { "image": "textures/scroll/title_tex/0.png", "rect": [640, 336, 832, 376], "layer": 257, "animation": "pulse" },
@@ -58,6 +62,7 @@
     },
     {
      "id": "load_game",
+     "label": "LOAD GAME",
      "position": [225, 325],
      "normal": { "image": "textures/scroll/title_tex/0.png", "rect": [640, 216, 832, 256], "layer": 257 },
      "selected": { "image": "textures/scroll/title_tex/0.png", "rect": [832, 296, 1024, 336], "layer": 257, "animation": "pulse" },

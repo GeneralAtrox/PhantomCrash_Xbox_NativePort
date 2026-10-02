@@ -16,7 +16,6 @@ constexpr float byte_max = 255.0F;
 constexpr float percent = 100.0F;
 constexpr float spin_speed = 0.628F;   // 0x3f20d97c: a spinning particle's most per frame
 constexpr float debris_spin = 0.0628F; // 0x3d80adfd
-constexpr float debris_ground = 0.05F; // 0x17bec4: debris lies here
 constexpr float debris_floor = -3.0F;  // 0x19f894: and is gone below this
 constexpr float debris_fall = 3.0F;    // debris falls three times as fast
 constexpr float target_reach = 2.0F;   // 0x17ccbc: squared distance that is "there"
@@ -149,30 +148,42 @@ void EffectSystem::spawn(EffectEmitter &emitter, EffectParticle &particle) {
       particle.life = immortal;
     } else {
       const float reach = particle.size * (random(0.0F, 0.5F) + cluster_reach);
-      const Vec3 out = turned({0.0F, 0.0F, -reach}, rotation_x(std::acos(random(0.1F, 1.0F))) *
-                                                        rotation_y(random(-pi, pi)));
-      particle.position = emitter.position + out;
+      const float polar = std::acos(random(0.1F, 1.0F));
+      const float azimuth = random(-pi, pi);
+      const Vec3 out = turned({0.0F, 0.0F, -reach}, rotation_y(polar) * rotation_z(azimuth));
+      // 0x063aad stores cluster children relative to their centre. The
+      // renderer expands these offsets in view space (0x0bfae4).
+      particle.position = out;
     }
     break;
   }
   if ((flags & effect_flags::random_direction) != 0) {
-    const Mat4 turn = rotation_y(random(0.0F, pi)) * rotation_z(random(-pi, pi));
+    const float pitch = random(0.0F, pi);
+    const float roll = random(-pi, pi);
+    const Mat4 turn = rotation_z(roll) * rotation_y(pitch);
     particle.position = emitter.position + turned(turned({d.push, 0.0F, 0.0F}, turn), frame);
   }
   if ((flags & effect_flags::random_offset) != 0) {
-    const Mat4 turn = rotation_y(random(0.0F, pi)) * rotation_z(random(-pi, pi));
-    particle.position =
-        emitter.position + turned(turned({d.push * offset_share, 0.0F, 0.0F}, turn), frame);
+    const float pitch = random(0.0F, pi);
+    const float roll = random(-pi, pi);
+    const Mat4 turn = rotation_z(roll) * rotation_y(pitch);
+    particle.position = emitter.position + emitter.spawn_offset +
+                        turned(turned({d.push * offset_share, 0.0F, 0.0F}, turn), frame);
   }
   particle.velocity = cone(direction, spread, speed, flags);
   if ((flags & effect_flags::radial_push) != 0) {
     const Vec3 across = particle.velocity - direction * dot(direction, particle.velocity);
     if (length(across) > 0.0F) {
-      particle.velocity = particle.velocity + normalize(across) * d.push;
+      // 0x060b7c adds this to +0xb8 (position), not +0xc4 (velocity).
+      // Treating the spawn offset as per-frame speed flings the fire away.
+      particle.position = particle.position + normalize(across) * d.push;
     }
   }
   if ((flags & effect_flags::inherit_velocity) != 0) {
-    particle.velocity = particle.velocity + emitter.velocity * -random(0.0F, 1.0F);
+    // 0x061475..0x0614ea writes +0xb8 (position), not +0xc4 (velocity).
+    // Distribute births along this frame's emitter path without changing
+    // their subsequent speed or streak length.
+    particle.position = particle.position - emitter.velocity * random(0.0F, 1.0F);
   }
   if (particle.kind == 0 && (flags & effect_flags::debris_kind) != 0) {
     particle.kind = 9;
@@ -184,6 +195,16 @@ void EffectSystem::spawn(EffectEmitter &emitter, EffectParticle &particle) {
     particle.spin = random(-debris_spin, debris_spin);
   }
   particle.previous = particle.position;
+  if ((flags & effect_flags::swirl) != 0) {
+    // 0x060b7c / 0x063c16 use a birth-time sinusoidal wind weight.
+    particle.swirl_yaw = radians(d.wind_angles.y);
+    const float phase = static_cast<float>(emitter.frame) * pi;
+    particle.swirl_weight = std::sin(particle.swirl_yaw + phase * 0.08F) *
+                            std::sin(particle.swirl_yaw * 3.2F + phase * 0.0577F);
+  }
+  if ((flags & effect_flags::fragments) != 0) {
+    spawn_fragments(emitter, particle);
+  }
   update(emitter, particle);
 }
 
@@ -199,12 +220,15 @@ void EffectSystem::update(EffectEmitter &emitter, EffectParticle &particle) {
   move_particle(emitter, particle);
   colour_particle(emitter, particle);
   ++particle.age;
-  const bool centre_alone = particle.kind == 1 && emitter.live == 1;
+  // The original's INT_MIN birth sentinel becomes INT_MAX on the first
+  // update. Keep that one-update grace period: siblings spawn afterwards.
+  const bool centre_alone = particle.kind == 1 && particle.age > 1 && emitter.live == 1;
   if ((particle.life != immortal && particle.age > particle.life) || centre_alone) {
     kill(emitter, particle);
     return;
   }
-  if ((emitter.flags & effect_flags::debris) != 0 && particle.position.y < debris_floor) {
+  if (stage_ == nullptr && (emitter.flags & effect_flags::debris) != 0 &&
+      particle.position.y < debris_floor) {
     kill(emitter, particle);
     return;
   }
@@ -232,15 +256,14 @@ void EffectSystem::move_particle(EffectEmitter &emitter, EffectParticle &particl
   particle.velocity = speed > 0.0F ? particle.velocity * (wanted / speed) : Vec3{};
   const std::uint32_t flags = emitter.flags;
   if ((flags & effect_flags::fragments) == 0) {
-    if ((flags & effect_flags::debris) == 0 || particle.position.y >= debris_ground) {
+    if ((flags & effect_flags::debris) != 0) {
+      move_debris(emitter, particle);
+    } else {
       accelerate(emitter, particle);
       particle.position = particle.position + particle.velocity;
       if (particle.age != 0 && (flags & effect_flags::detached) == 0) {
         particle.position = particle.position + emitter.velocity;
       }
-    } else {
-      particle.position.y = debris_ground;
-      particle.spin = 0.0F;
     }
   }
   const int per_cell = std::max(1, static_cast<int>(fps / animation_rate));
@@ -295,7 +318,12 @@ void EffectSystem::accelerate(const EffectEmitter &emitter, EffectParticle &part
     const float strength = d.wind * std::max(random(-1.0F, 1.0F) * jitter + d.drag, 0.0F);
     const float yaw = (emitter.flags & effect_flags::random_speed) != 0 ? random(-pi, pi)
                                                                         : radians(d.wind_angles.y);
-    push = push + aimed(d.wind_angles, yaw) * (strength / per_frame);
+    if ((emitter.flags & effect_flags::swirl) != 0) {
+      push = push + turned({1, 0, 0}, rotation_y(particle.swirl_yaw)) *
+                        (strength * particle.swirl_weight / per_frame);
+    } else {
+      push = push + aimed(d.wind_angles, yaw) * (strength / per_frame);
+    }
   }
   particle.velocity = particle.velocity + push;
   const float drag = std::clamp(

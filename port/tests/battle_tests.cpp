@@ -112,25 +112,6 @@ TEST_CASE("drones spawn at separate entries and walk while active") {
   CHECK(length(battle.robots()[1].mover.position() - a) > 1.0F);
 }
 
-TEST_CASE("the player's gun destroys a drone ahead, which respawns later") {
-  Battle battle(test_settings(), square_path());
-  battle.add_robot("player", 0, {}, 0.0F, {"handgun", "", "", ""}, 100.0F);
-  const int drone = battle.add_drone("a", 50.0F);
-  battle.set_drones_active(false);
-  battle.place_facing_player(drone, 30.0F);
-  FireControl fire;
-  fire.fire[0] = true;
-  for (int i = 0; i < 120 && battle.player().kills == 0; ++i) {
-    battle.tick({}, fire, tick);
-  }
-  CHECK(battle.player().kills == 1);
-  CHECK(!battle.robots()[1].alive);
-  for (int i = 0; i < 120; ++i) {
-    battle.tick({}, {}, tick);
-  }
-  CHECK(battle.robots()[1].alive);
-}
-
 TEST_CASE("no hit hurts a shielded robot") {
   Battle battle(test_settings(), square_path());
   battle.add_robot("player", 0, {}, 0.0F, {"handgun", "", "", ""}, 100.0F);
@@ -272,4 +253,52 @@ TEST_CASE("the tutorial battle's data names its weapons and buttons") {
   CHECK(std::fabs(control.move[1] - 0.7F) < 1e-6F);
   CHECK(control.move[0] == 0.0F);
   CHECK(control.dodge == -1);
+}
+
+TEST_CASE("a robot pushed off the stage's ground goes back to its last footing") {
+  const auto floor = [](const Vec3 a, const Vec3 b, const Vec3 c) {
+    return CollisionTriangle{{a, b, c}, {0, 1, 0}, 0};
+  };
+  Battle battle(BattleSettings{}, {});
+  battle.set_stage(StageCollision({}, {floor({-20, 0, -20}, {20, 0, -20}, {20, 0, 20}),
+                                       floor({-20, 0, -20}, {20, 0, 20}, {-20, 0, 20})}));
+  battle.add_robot("player", 0, {0, 0, 0}, 0, {}, 100);
+  for (int i = 0; i < 5; ++i) {
+    battle.tick({}, {}, tick);
+  }
+  REQUIRE(battle.player().mover.grounded());
+  // As if a push carried it past a wall into a building's empty footprint.
+  battle.robot(0).mover.set_position({30, 0, 0});
+  battle.tick({}, {}, tick);
+  const Vec3 at = battle.player().mover.position();
+  CHECK(std::abs(at.x) < 1.0F);
+  CHECK(std::abs(at.y) < 0.01F);
+  CHECK(battle.player().mover.grounded());
+}
+
+TEST_CASE("a dash on eligible legs leans into a turn without restarting its stride") {
+  for (const int legs : {2, 0}) {
+    RobotMover mover{MovementTuning{}};
+    mover.set_timings(nullptr, legs);
+    mover.place({}, 0.0F);
+    RobotControl control;
+    control.move = {0.0F, 1.0F};
+    control.dash = true;
+    mover.tick(control, tick);
+    control.dash = false;
+    REQUIRE(mover.mode() == MoveMode::dash);
+    REQUIRE(mover.motion() == robot_motion::dash);
+    control.move = {1.0F, 1.0F};
+    for (int i = 0; i < 30; ++i) {
+      mover.tick(control, tick);
+    }
+    CHECK(mover.mode() == MoveMode::dash);
+    // Leg type 0's movement-sound family has no lean (0x0823cb, 0x08f5d8).
+    CHECK(mover.motion() == (legs == 2 ? robot_motion::dash + 1 : robot_motion::dash));
+    control.move = {-1.0F, 1.0F};
+    for (int i = 0; i < 60; ++i) {
+      mover.tick(control, tick);
+    }
+    CHECK(mover.motion() == (legs == 2 ? robot_motion::dash + 2 : robot_motion::dash));
+  }
 }

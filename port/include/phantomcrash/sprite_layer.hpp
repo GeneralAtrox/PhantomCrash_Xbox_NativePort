@@ -47,6 +47,12 @@ struct Sprite {
   float angle{};
   std::optional<std::array<float, 2>> pivot;
   bool flip_x{}; // mirrored left to right (draw flag 0x400)
+  // Stretch only the outermost texel columns of frame art to the window edges.
+  bool extend_left{}, extend_right{};
+  std::array<float, 2> edge_inset{}; // transparent atlas padding excluded from edge sampling
+  // Source-relative vertical bands for the left and right edges independently.
+  // Detailed artwork between them is not extended; empty means the full edge.
+  std::array<std::vector<std::array<float, 2>>, 2> edge_bands;
 };
 
 struct Quad {

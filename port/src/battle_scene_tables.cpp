@@ -81,6 +81,7 @@ SceneTuning parse_scene_tuning(const JsonValue &value) {
   s.entrance = value.boolean_or("entrance", s.entrance);
   s.exit = value.boolean_or("exit", s.exit);
   s.computer_entrance = value.boolean_or("computer_entrance", s.computer_entrance);
+  s.rider_entrance = value.boolean_or("rider_entrance", s.rider_entrance);
   s.computer_exit = value.boolean_or("computer_exit", s.computer_exit);
   s.regular_battle = value.boolean_or("regular_battle", s.regular_battle);
   s.ready_frame = number(value, "ready_frame", s.ready_frame);
@@ -90,7 +91,6 @@ SceneTuning parse_scene_tuning(const JsonValue &value) {
   s.close_frame = number(value, "close_frame", s.close_frame);
   s.play_in_frame = number(value, "play_in_frame", s.play_in_frame);
   s.entry_delay = number(value, "entry_delay", s.entry_delay);
-  s.computer_speed = number(value, "computer_speed", s.computer_speed);
   s.blend_frames = number(value, "blend_frames", s.blend_frames);
   s.letterbox_frames = number(value, "letterbox_frames", s.letterbox_frames);
   s.gate_radius = number(value, "gate_radius", s.gate_radius);

@@ -122,15 +122,16 @@ void Cockpit::tick(const CockpitInput &input, const float seconds) {
   const float step = style_.ease_per_second * seconds;
   // The climb gauge reads the vertical speed against gravity's pull over a
   // few ticks, falling or rising.
-  const float ticks = input.vertical_speed < 0.0F ? style_.climb_fall_ticks : style_.climb_rise_ticks;
+  const float ticks =
+      input.vertical_speed < 0.0F ? style_.climb_fall_ticks : style_.climb_rise_ticks;
   const float full = input.gravity * ticks / std::max(style_.tick_rate, 1.0F);
   const float climb = full > 0.0F ? std::fabs(input.vertical_speed) / full : 0.0F;
   climb_ = std::clamp(approach(climb_, climb, step), 0.0F, 1.0F);
   speed_ = std::clamp(approach(speed_, input.speed_ratio, step), 0.0F, 1.0F);
   const float fade = style_.visor_fade_ticks > 0.0F ? style_.tick_rate / style_.visor_fade_ticks
                                                     : 1.0F / std::max(seconds, 1e-6F);
-  visor_ = std::clamp(approach(visor_, input.camouflaged ? 1.0F : 0.0F, fade * seconds), 0.0F,
-                      1.0F);
+  visor_ =
+      std::clamp(approach(visor_, input.camouflaged ? 1.0F : 0.0F, fade * seconds), 0.0F, 1.0F);
   animation_ = std::fmod(animation_ + seconds, 3600.0F);
 }
 

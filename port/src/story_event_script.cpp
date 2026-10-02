@@ -1,6 +1,7 @@
 // Parsing of the converted tables/events.json and tables/talk.json.
 
 #include "phantomcrash/story_event.hpp"
+#include "phantomcrash/story_progression.hpp"
 
 #include "phantomcrash/json_fields.hpp"
 
@@ -152,21 +153,11 @@ EventCommand parse_command(const json::JsonValue &value, const GlyphFont &font) 
   return command;
 }
 
-// The record's bytes +0x0e to +0x13. 0xd1861 checks, each only when its byte
-// is in range: +0x0f a test function (0-0x4a, 0x40e888) with argument +0x11;
-// +0x10 the chapter (0-0x37); +0x11 a garage value (0-3); +0x12 a table entry
-// for the chapter (0-0x1b); +0x13 another save value (0-1). The first events
-// set none of them.
-bool unported_conditions(const json::JsonValue::Array &bytes) {
-  if (bytes.size() != 6) {
-    throw std::runtime_error("condition_bytes needs 6 bytes");
-  }
-  const auto byte = [&](const std::size_t index) {
-    return static_cast<int>(static_cast<std::int8_t>(bytes[index].number()));
-  };
+// 0xd1861: predicate, contest, area, contest class and day/night conditions.
+bool requires_progression(const std::array<int, 6> &bytes) {
   const auto in = [](const int value, const int last) { return value >= 0 && value <= last; };
-  return in(byte(1), 0x4a) || in(byte(2), 0x37) || in(byte(3), 3) || in(byte(4), 0x1b) ||
-         in(byte(5), 1);
+  return in(bytes[1], 0x4a) || in(bytes[2], 0x37) || in(bytes[3], 3) || in(bytes[4], 0x1b) ||
+         in(bytes[5], 1);
 }
 
 StoryEvent parse_event(const json::JsonValue &value, const GlyphFont &font) {
@@ -181,7 +172,19 @@ StoryEvent parse_event(const json::JsonValue &value, const GlyphFont &font) {
     }
   }
   if (const auto *conditions = value.find("condition_bytes")) {
-    event.unported_conditions = unported_conditions(conditions->array());
+    if (conditions->array().size() != event.conditions.size()) {
+      throw std::runtime_error("condition_bytes needs 6 bytes");
+    }
+    for (std::size_t index = 0; index < event.conditions.size(); ++index) {
+      const auto &entry = conditions->array()[index];
+      if (!entry.is_number() || entry.number() < -128 || entry.number() > 255 ||
+          entry.number() != static_cast<int>(entry.number())) {
+        throw std::runtime_error("condition_bytes must contain integer bytes");
+      }
+      const int byte = static_cast<int>(entry.number());
+      event.conditions[index] = byte > 127 ? byte - 256 : byte;
+    }
+    event.unported_conditions = requires_progression(event.conditions);
   }
   event.background = static_cast<int>(value.number_or("background", -1));
   for (const auto &member : required(value, "cast").array()) {
@@ -284,12 +287,13 @@ TalkTables parse_talk_tables(const json::JsonValue &document) {
 }
 
 const StoryEvent *event_between(const std::vector<StoryEvent> &events, const int from_scene,
-                                const int to_scene, const std::vector<int> &seen) {
+                                const int to_scene, const std::vector<int> &seen,
+                                const StoryConditionContext *context) {
   const auto played = [&](const int scene) { return std::ranges::find(seen, scene) != seen.end(); };
   for (const auto &event : events) {
-    if (!event.enabled || event.unported_conditions || event.from_scene != from_scene ||
-        event.to_scene != to_scene || played(event.scene) ||
-        !std::ranges::all_of(event.requires_seen, played)) {
+    if (!event.enabled || event.from_scene != from_scene || event.to_scene != to_scene ||
+        played(event.scene) || !std::ranges::all_of(event.requires_seen, played) ||
+        (event.unported_conditions && (!context || !story_conditions_pass(event, *context)))) {
       continue;
     }
     return &event;

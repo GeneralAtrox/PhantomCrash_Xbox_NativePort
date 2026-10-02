@@ -11,6 +11,7 @@ struct RumblingEntry {
   int gate{};
   bool rental{};
   int rental_robot{-1}; // a tables/garage.json robot
+  int ranker_gate{-1};  // where a ranker's contest's ranker waits (save +0x6120)
 };
 
 } // namespace phantomcrash

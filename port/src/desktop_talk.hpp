@@ -31,11 +31,17 @@ public:
   [[nodiscard]] float music_volume() const override {
     return scene_.event().music_volume;
   }
+  [[nodiscard]] bool day_clicked(const InputFrame &input) const override {
+    return frame_.day_clicked(input, quest_);
+  }
   void set_music(const std::string &file) override {
     frame_.set_music(file);
   }
   void hear_music(const std::vector<float> &levels) override {
     frame_.hear_music(levels);
+  }
+  [[nodiscard]] AudioBus sound_bus() const override {
+    return AudioBus::dialogue;
   }
   [[nodiscard]] std::vector<std::string> take_sounds() override {
     return scene_.take_sounds();
@@ -43,6 +49,8 @@ public:
   [[nodiscard]] bool done() const override {
     return scene_.done();
   }
+  // The event's command reached of its commands.
+  [[nodiscard]] std::optional<SceneProgress> scene_progress() const override;
   [[nodiscard]] std::string next() const override {
     return scene_.next();
   }

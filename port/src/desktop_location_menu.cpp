@@ -25,6 +25,7 @@ LocationMenuScreen::LocationMenuScreen(TextureCache &textures, const GlyphFont &
 
 void LocationMenuScreen::tick(const InputFrame &input, const double tick_seconds) {
   menu_.update(tick_seconds, input);
+  pointer_input(input);
   if (menu_.faded_in()) {
     frame_.start_riding_plate();
   }

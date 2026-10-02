@@ -1,4 +1,5 @@
 #include "phantomcrash/module_shop.hpp"
+#include "phantomcrash/shop_pointer.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -87,7 +88,8 @@ void ModuleShop::show(const ModuleShopView view, const std::string &message, con
   choice_ = 1; // NO
 }
 
-void ModuleShop::update(const double tick_seconds, const InputFrame &input) {
+void ModuleShop::update(const double tick_seconds, const InputFrame &raw_input) {
+  const InputFrame input = pointer_input(raw_input);
   if (done()) {
     return;
   }
@@ -124,6 +126,24 @@ void ModuleShop::update(const double tick_seconds, const InputFrame &input) {
 // on a fresh press (0x017060); confirm opens the category or leaves on
 // EXIT; cancel jumps to EXIT (sys 4).
 void ModuleShop::grid_input(const double tick_seconds, const InputFrame &input) {
+  if (input.clicked) {
+    for (std::size_t i = 0; i < script_.categories.size(); ++i) {
+      const ShopCategory &item = script_.categories[i];
+      const float dx = (item.from_x - item.icon.position[0]) * (1.0F - slide());
+      if (item.shown && shop_hit(input, item.icon, dx)) {
+        column_ = static_cast<int>(i) / script_.grid_rows;
+        row_ = static_cast<int>(i) % script_.grid_rows;
+        refresh_help();
+        sound(script_.select_sound);
+        if (item.kind) {
+          open_category();
+        } else {
+          leave(script_.exit_to);
+        }
+        return;
+      }
+    }
+  }
   bool fresh = false;
   if (const int step = across_.step(tick_seconds, input, script_.left, script_.right, fresh)) {
     if (const int moved = move_cursor(column_, step, fresh, script_.columns); moved != column_) {
@@ -199,6 +219,18 @@ void ModuleShop::sort_goods(const int key) {
 // list scrolling a row at a time; cancel goes back to the grid (sys 8).
 // STOCK MODULE's list (0x03dfed) only shows: confirm does nothing.
 void ModuleShop::list_input(const double tick_seconds, const InputFrame &input) {
+  if (input.clicked && list_seconds_ >= script_.list.window.seconds) {
+    const int row = shop_row_at(input, script_.list);
+    if (row >= 0 && list_.scroll() + row < static_cast<int>(list_.goods().size())) {
+      list_.move(row - list_.row(), script_.list.rows);
+      refresh_help();
+      sound(script_.select_sound);
+      if (script_.mode != ModuleShopMode::stock) {
+        choose();
+      }
+      return;
+    }
+  }
   bool fresh = false;
   if (const int step = repeat_.step(tick_seconds, input, script_.up, script_.down, fresh)) {
     if (list_.move(step, script_.list.rows)) {
@@ -300,6 +332,9 @@ void ModuleShop::back_to_list() {
 // 0x22afe, 0x22bab, 0x22da6 and 0x22ea6: a notice closes on confirm; a
 // question takes YES or NO (left/right), cancel moving to NO (sys 4).
 void ModuleShop::message_input(const double tick_seconds, const InputFrame &input) {
+  if (input.dialog_choice) {
+    choice_ = *input.dialog_choice;
+  }
   if (view_ == ModuleShopView::question) {
     bool fresh = false;
     if (const int step = across_.step(tick_seconds, input, script_.left, script_.right, fresh)) {

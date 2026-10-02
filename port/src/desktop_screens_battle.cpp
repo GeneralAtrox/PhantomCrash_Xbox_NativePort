@@ -16,7 +16,7 @@
 namespace phantomcrash {
 
 bool ScreenRunner::mouse_aim() const {
-  return screen_ && screen_->mouse_aim();
+  return !schedule_overlay_ && screen_ && screen_->mouse_aim();
 }
 
 std::unique_ptr<Screen> ScreenRunner::make_battle(const std::string &name) {
@@ -39,14 +39,27 @@ std::unique_ptr<Screen> ScreenRunner::make_battle(const std::string &name) {
       }
     }
     // The RUMBLING screen that entered is still the one showing.
-    const RumblingEntry *entry = quick ? &*quick : screen_ ? screen_->rumbling_entry() : nullptr;
+    const RumblingEntry *entry = quick            ? &*quick
+                                 : pending_entry_ ? &*pending_entry_
+                                 : screen_        ? screen_->rumbling_entry()
+                                                  : nullptr;
     if (entry == nullptr) {
       return nullptr;
     }
     active_match_ = *entry;
+    pending_entry_.reset();
+    entry = &*active_match_;
+    story_match_ = {entry->area, entry->contest};
     battle_training_ =
         rumbling_training(training_, test_drive_, rumbling_battle_, *entry, quest_.garage,
                           game_->part_tables(), game_->garage_tables());
+    SceneTuning &scenes = battle_training_.battle.scenes;
+    scenes.ranker = ranker_contest(game_->regulation_check().rules, entry->area, entry->contest) !=
+                    RankerContest::none;
+    scenes.ranker_gate = entry->ranker_gate;
+    if (cooperative()) {
+      return make_coop_battle(*entry);
+    }
     RumblingWorld *live = rumbling_world();
     if (live == nullptr) {
       return make_training(battle_training_, rumbling_battle_.lesson, {}, -1, true);
@@ -59,18 +72,20 @@ std::unique_ptr<Screen> ScreenRunner::make_battle(const std::string &name) {
     return make_training(battle_training_, rumbling_battle_.lesson, live->lend(entry->area, quest_),
                          entry->area, true);
   }
+  if (name == "final_battle") {
+    return make_finale();
+  }
   if (name == "vs_battle") {
-    // The first entered player's Scoobee rides; a screen for each player.
-    const VsSession &session = game_->vs_session();
-    const auto rider = std::ranges::find_if(
-        session.robots, [](const std::optional<RobotRecord> &robot) { return robot.has_value(); });
-    if (rider == session.robots.end()) {
+    // Each entered player's Scoobee rides, a screen for each player.
+    VsSession &session = game_->vs_session();
+    battle_training_ = vs_training(training_, test_drive_, vs_battle_, session,
+                                   game_->part_tables(), game_->garage_tables());
+    if (battle_training_.battle.riders.empty()) {
       return nullptr;
     }
-    battle_training_ = vs_training(training_, test_drive_, vs_battle_, **rider,
-                                   game_->part_tables(), game_->garage_tables());
-    const auto players = static_cast<int>(std::ranges::count(session.joined, true));
-    return make_training(battle_training_, vs_lesson(vs_battle_, players));
+    const auto players = static_cast<int>(battle_training_.battle.riders.size());
+    return make_training(battle_training_, vs_lesson(vs_battle_, players), {}, -1, false, {},
+                         &session);
   }
   return nullptr;
 }
@@ -89,29 +104,45 @@ PreviewWorld ScreenRunner::world() {
 std::unique_ptr<Screen> ScreenRunner::make_training(const TrainingScript &script,
                                                     const TrainingLesson &lesson,
                                                     std::shared_ptr<Battle> live,
-                                                    const int live_area,
-                                                    const bool match_results) {
+                                                    const int live_area, const bool match_results,
+                                                    std::shared_ptr<CoopMatch> coop_match,
+                                                    VsSession *vs, const bool finale) {
   static_cast<void>(world());
   const auto stage = stages_.find(script.stage);
   staged_training_ = script;
   if (stage != stages_.end()) {
     apply_stage(staged_training_.battle.scenes, stage->second);
   }
-  const TrainingContext context{roots_,
-                                world_.get(),
-                                robots_.get(),
-                                staged_training_,
-                                stage == stages_.end() ? nullptr : &stage->second,
-                                talk_,
-                                talk_tuning_,
-                                quest_.player_name,
-                                options_.controls.standard(),
-                                quest_.day,
-                                quest_.money,
-                                std::move(live),
-                                rumbling_world_.get(),
-                                live_area,
-                                match_results};
+  TrainingContext context{roots_,
+                          world_.get(),
+                          robots_.get(),
+                          staged_training_,
+                          stage == stages_.end() ? nullptr : &stage->second,
+                          talk_,
+                          talk_tuning_,
+                          quest_.player_name,
+                          options_.controls.standard(),
+                          quest_.day,
+                          quest_.money,
+                          std::move(live),
+                          rumbling_world_.get(),
+                          live_area,
+                          match_results,
+                          std::move(coop_match),
+                          coop_slot_,
+                          vs == nullptr ? nullptr : &vs_battle_,
+                          vs};
+  context.beginner = options_.controls.beginner != 0;
+  if (match_results && active_match_ && !quest_.cleared &&
+      active_match_->contest == game_->regulation_check().rules.first_ranker) {
+    context.victory_hold_seconds = story_rules_.clear_hold_frames / part_frames_per_second;
+  }
+  if (finale) {
+    context.finale = &finale_tables_;
+    context.finale_tuning = &finale_tuning_;
+    context.finale_armour = finale_armour_;
+    context.finale_lost = finale_lost_;
+  }
   return std::make_unique<TrainingScreen>(textures_, font_, context, lesson);
 }
 

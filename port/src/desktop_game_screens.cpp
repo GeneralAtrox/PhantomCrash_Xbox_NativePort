@@ -137,7 +137,7 @@ std::unique_ptr<Screen> GameScreens::make_assemble(const std::string &from,
   }
   Assemble logic(assemble_, quest, parts_, garage_, part_stats_, dealer_cursors_["hangar"], resume);
   return std::make_unique<AssembleScreen>(textures_, font_, std::move(logic), message_box_, from,
-                                          frame_, credits_, quest);
+                                          frame_, credits_, quest, preview_world(), robot_preview_);
 }
 
 // A dealer's offers are its lineup on the day's calendar entry (0x06ce5d).
@@ -190,10 +190,14 @@ std::unique_ptr<Screen> GameScreens::make_sv_spec(const std::string &from,
                                                   const std::string &place_before,
                                                   const QuestSave &quest) const {
   std::optional<std::vector<SvOffer>> offers;
+  int chosen = -1;
   if (const auto dealer = dealer_.dealers.find(from); dealer != dealer_.dealers.end()) {
     offers = dealer_lineup(dealer->second.index, quest);
+    // Dealer cursors include COMPANY PROFILE before the three SV offers.
+    chosen = dealer_cursors_[from] - 1;
   } else if (from == "wild_machines_used_sv") {
     offers = used_sv_lineup(quest);
+    chosen = dealer_cursors_[from];
   }
   SpecRobot robot;
   const int kept = keep_cursor_.first + keep_cursor_.row;
@@ -207,9 +211,12 @@ std::unique_ptr<Screen> GameScreens::make_sv_spec(const std::string &from,
     }
   } else if (!offers) {
     robot = hangar_spec(quest.garage, dealer_cursors_["hangar"]);
-  } else if (const int chosen = dealer_cursors_[from];
-             chosen >= 0 && chosen < static_cast<int>(offers->size())) {
+  } else if (chosen >= 0 && chosen < static_cast<int>(offers->size())) {
     robot = record_spec((*offers)[static_cast<std::size_t>(chosen)].robot, parts_, garage_);
+  }
+  if (offers) {
+    SDL_Log("SV Spec: shop=%s menu=%d offer=%d name=%s", from.c_str(), dealer_cursors_[from],
+            chosen, robot.name.c_str());
   }
   SvSpec logic(sv_spec_, std::move(robot), parts_, garage_, part_stats_,
                resolve(sv_spec_.exit_to, place_before));

@@ -50,7 +50,11 @@ InputFrame port_frame(const InputFrame &frame, const int port) {
     return {};
   }
   const PortInput &own = frame.ports[static_cast<std::size_t>(port)];
-  return InputFrame{own.held, own.pressed, own.connected ? 1 : 0};
+  InputFrame out{own.held, own.pressed, own.connected ? 1 : 0};
+  out.left_stick = own.left_stick;
+  out.right_stick = own.right_stick;
+  out.ports[0] = own;
+  return out;
 }
 
 std::optional<Buttons> button_from_name(const std::string_view name) {

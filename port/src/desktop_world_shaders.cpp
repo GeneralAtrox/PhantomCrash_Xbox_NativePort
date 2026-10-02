@@ -1,4 +1,5 @@
 #include "desktop_world_shaders.hpp"
+#include "desktop_dynamic_light_shader.hpp"
 
 #include <d3dcompiler.h>
 
@@ -8,11 +9,11 @@
 namespace phantomcrash {
 namespace {
 
-// Approximates the original's fixed-function path (0x0b3240): the vertex
-// colour is the diffuse colour, lit by an ambient term and one directional
-// light unless the batch is unlit (flag 0x100), times the base texture; a
-// bump batch perturbs the normal with its normal map. Fog is linear by
-// distance. Matrices are row-major for row vectors, as on the CPU side.
+// Material flags and ambient RGB/power come from 0x0b3240. Vertex colour
+// supplies diffuse; bump batches light the tangent-space normal map and
+// specular batches add an eye-dependent highlight after texturing. This
+// native per-pixel lighting retains the original batch controls. Matrices
+// are row-major for row vectors, as on the CPU side.
 //
 // Optic Camouflage follows multi_optical.xvu and Blend.xpu: per vertex, how
 // much is seen (inside the sphere) and where the frame behind is picked:
@@ -42,10 +43,13 @@ cbuffer Draw : register(b1) {
   float flash;
   float2 uv_offset;
   float optical;         // 1: Optic Camouflage
-  float draw_pad;
+  float local_light;
   float4 optical_sphere; // centre, radius
   float4 optical_shape;  // edge, reach, least, push
   float4 uv_transform;   // UV scale and offset (TV atlas rectangle -> complete live feed)
+  float4 rainbow;        // phase, UV scroll, enabled, unused
+  float4 material_light; // ambient RGB, specular power
+  float4 material_modes; // specular, texture add, texture alpha, original
 };
 
 struct VertexIn {
@@ -65,19 +69,37 @@ struct VertexOut {
   float2 uv : TEXCOORD0;
   float4 behind : TEXCOORD1;
   float seen : TEXCOORD2;
+  float fog_depth : TEXCOORD3;
 };
 
 VertexOut vs_main(VertexIn input) {
   VertexOut output;
   float4 placed = mul(float4(input.position, 1.0), world);
   output.position = mul(placed, view_projection);
+  // The original's vertex programs fog by the clip-space z (multi_matrix.xvu
+  // writes oFog = r3.z), and the fixed-function draws by the depth: range
+  // fog is never enabled. Neither is the distance from the eye.
+  output.fog_depth = output.position.z;
   output.world_position = placed.xyz;
-  output.normal = mul(input.normal, (float3x3)world);
-  output.tangent = float4(mul(input.tangent.xyz, (float3x3)world), input.tangent.w);
+  float3x3 axes = (float3x3)world;
+  float3x3 cofactor = float3x3(cross(axes[1], axes[2]), cross(axes[2], axes[0]),
+                              cross(axes[0], axes[1]));
+  float handedness = dot(axes[0], cofactor[0]) < 0.0 ? -1.0 : 1.0;
+  // Inverse transpose up to a positive scale, removed by normalization.
+  output.normal = mul(input.normal, cofactor) * handedness;
+  output.tangent = float4(mul(input.tangent.xyz, axes), input.tangent.w * handedness);
   output.colour = input.colour;
   output.uv = input.uv * uv_transform.xy + uv_transform.zw + uv_offset;
   output.behind = output.position;
   output.seen = 1.0;
+  if (rainbow.z > 0.5) {
+    float3 phase = rainbow.x + float3(-0.6666, 0.0, 0.6666);
+    float3 d = abs(input.position.y + phase);
+    float3 bands = abs(step(1.0, d) * 2.0 - d);
+    float3 light = ambient + sun_colour * saturate(dot(normalize(output.normal), -sun_direction));
+    output.colour = float4(0.75 * light + 0.5 * bands, 1.0);
+    output.uv = input.position.xy + float2(0.5, 0.5 + rainbow.y);
+  }
   if (optical > 0.5) {
     float d = distance(placed.xyz, optical_sphere.xyz);
     output.seen = saturate((optical_sphere.w - d) / optical_shape.x);
@@ -98,14 +120,9 @@ SamplerState scene_sampler : register(s2);
 
 float4 ps_main(VertexOut input, bool front : SV_IsFrontFace) : SV_Target {
   float4 colour = input.colour * base_colour;
-  if (has_base > 0.5) {
-    colour *= base_texture.Sample(base_sampler, input.uv);
-  }
-  if (alpha_test > 0.5) {
-    clip(colour.a - alpha_cutoff);
-  }
-  if (unlit < 0.5) {
-    float3 n = normalize(input.normal) * (front ? 1.0 : -1.0);
+  float3 highlight = 0.0;
+  float3 n = normalize(input.normal) * (front ? 1.0 : -1.0);
+  if ((unlit < 0.5 || local_light > 0.5) && rainbow.z < 0.5) {
     if (has_normal > 0.5) {
       float3 t = input.tangent.xyz - n * dot(n, input.tangent.xyz);
       t = normalize(t + 1e-6);
@@ -113,12 +130,38 @@ float4 ps_main(VertexOut input, bool front : SV_IsFrontFace) : SV_Target {
       float3 m = normal_texture.Sample(normal_sampler, input.uv).xyz * 2.0 - 1.0;
       n = normalize(t * m.x + b * m.y + n * m.z);
     }
-    float diffuse = saturate(dot(n, -sun_direction));
-    colour.rgb *= saturate(ambient + sun_colour * diffuse);
   }
+  if (unlit < 0.5 && rainbow.z < 0.5) {
+    float diffuse = saturate(dot(n, -sun_direction));
+    colour.rgb *= saturate(ambient * material_light.rgb + sun_colour * diffuse);
+    if (material_modes.x > 0.5 && diffuse > 0.0) {
+      float3 toward_eye = normalize(eye - input.world_position);
+      float3 halfway = normalize(toward_eye - sun_direction);
+      float specular = pow(saturate(dot(n, halfway)), max(material_light.w, 1e-4));
+      highlight = sun_colour * specular;
+    }
+  }
+  if (local_light > 0.5) {
+    colour.rgb += input.colour.rgb * base_colour.rgb * local_lighting(input.world_position, n);
+  }
+  if (has_base > 0.5) {
+    float4 texel = base_texture.Sample(base_sampler, input.uv);
+    if (rainbow.z > 0.5) {
+      colour.a *= texel.a;
+    } else {
+      colour.rgb = material_modes.y > 0.5 ? saturate(colour.rgb + texel.rgb)
+                                          : colour.rgb * texel.rgb;
+      if (material_modes.z > 0.5) {
+        colour.a = material_modes.w > 0.5 ? texel.a * base_colour.a : colour.a * texel.a;
+      }
+    }
+  }
+  if (alpha_test > 0.5) {
+    clip(colour.a - alpha_cutoff);
+  }
+  colour.rgb += highlight;
   if (fog_enabled > 0.5 && fogged > 0.5) {
-    float distance_to_eye = distance(input.world_position, eye);
-    float amount = saturate((distance_to_eye - fog_start) / max(fog_end - fog_start, 1e-3));
+    float amount = saturate((input.fog_depth - fog_start) / max(fog_end - fog_start, 1e-3));
     colour.rgb = lerp(colour.rgb, fog_colour, amount);
   }
   colour.rgb = lerp(colour.rgb, float3(1.0, 1.0, 1.0), flash * 0.6);
@@ -156,7 +199,7 @@ Microsoft::WRL::ComPtr<ID3DBlob> compile_world_hlsl(const std::string_view hlsl,
 
 WorldShaders create_world_shaders(ID3D11Device *device) {
   WorldShaders shaders;
-  const std::string_view hlsl(source, sizeof(source) - 1);
+  const std::string hlsl = std::string(dynamic_light_hlsl) + source;
   const auto vertex = compile_world_hlsl(hlsl, "vs_main", "vs_5_0");
   const auto pixel = compile_world_hlsl(hlsl, "ps_main", "ps_5_0");
   if (FAILED(device->CreateVertexShader(vertex->GetBufferPointer(), vertex->GetBufferSize(),

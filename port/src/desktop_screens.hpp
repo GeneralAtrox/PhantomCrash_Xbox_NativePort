@@ -1,6 +1,7 @@
 #pragma once
 
 #include "desktop_audio.hpp"
+#include "desktop_coop_state.hpp"
 #include "desktop_screen.hpp"
 #include "desktop_textures.hpp"
 #include "phantomcrash/data_roots.hpp"
@@ -10,16 +11,19 @@
 #include "phantomcrash/location_menu.hpp"
 #include "phantomcrash/town_map.hpp"
 #include "phantomcrash/event_player.hpp"
+#include "phantomcrash/finale.hpp"
 #include "phantomcrash/intro_sequence.hpp"
 #include "phantomcrash/jukebox.hpp"
 #include "phantomcrash/load_game.hpp"
 #include "phantomcrash/location_frame.hpp"
 #include "phantomcrash/music_spectrum.hpp"
+#include "phantomcrash/music_program.hpp"
 #include "phantomcrash/name_entry.hpp"
 #include "phantomcrash/option_menu.hpp"
 #include "phantomcrash/pepper_guide.hpp"
 #include "phantomcrash/screen_adjust.hpp"
 #include "phantomcrash/settings.hpp"
+#include "phantomcrash/story_progression.hpp"
 #include "phantomcrash/sound_config.hpp"
 #include "phantomcrash/rumbling_battle.hpp"
 #include "phantomcrash/rumbling_world.hpp"
@@ -29,6 +33,7 @@
 
 #include <SDL3/SDL.h>
 
+#include <array>
 #include <map>
 #include <memory>
 #include <optional>
@@ -57,7 +62,8 @@ struct PreviewWorld;
 class ScreenRunner final {
 public:
   ScreenRunner(SDL_Renderer *renderer, const DataRoots &roots, const std::string &first,
-               GameOptions options, QuestSave quest, std::vector<VsScoobee> vs_scoobees);
+               GameOptions options, QuestSave quest, std::vector<VsScoobee> vs_scoobees,
+               AudioOptions audio = {}, std::shared_ptr<CoopState> coop = {}, int coop_slot = -1);
   ~ScreenRunner();
   ScreenRunner(const ScreenRunner &) = delete;
   ScreenRunner &operator=(const ScreenRunner &) = delete;
@@ -70,10 +76,24 @@ public:
   [[nodiscard]] Viewport placed(const Viewport &viewport) const;
   void draw(const Viewport &viewport);
   void set_paused(bool paused);
+  void set_coop_enabled(bool enabled);
+  [[nodiscard]] bool cooperative() const {
+    return coop_slot_ >= 0;
+  }
+  [[nodiscard]] Screen *active_screen() const {
+    return screen_.get();
+  }
+  [[nodiscard]] const std::string &coop_location() const {
+    return coop_location_;
+  }
+  [[nodiscard]] std::optional<MenuPresence> coop_presence(const std::string &screen) const;
   [[nodiscard]] bool mouse_aim() const;
   // Each controller port's motors for this tick (rumble.hpp): off without
   // the vibration option.
   [[nodiscard]] std::array<RumbleMotors, controller_ports> rumble() const {
+    if (name_ == "coop" && screen_) {
+      return screen_->session_rumble();
+    }
     return options_.vibration ? rumble_.all_motors() : std::array<RumbleMotors, controller_ports>{};
   }
 
@@ -96,6 +116,12 @@ public:
     return options_;
   }
   [[nodiscard]] const QuestSave &quest_save() const noexcept {
+    if (cooperative() && screen_ && naming_stock_ < 0 && naming_hangar_ < 0 &&
+        naming_program_ < 0) {
+      if (const auto *save = screen_->session_save()) {
+        return *save;
+      }
+    }
     return quest_;
   }
   [[nodiscard]] const std::vector<VsScoobee> &vs_scoobees() const;
@@ -106,18 +132,44 @@ public:
   }
   // The live RUMBLING's robots an area (Settings::rumble_robots).
   void set_rumble_robots(int robots);
+  void set_audio_options(const AudioOptions &options);
+  void set_post_process(const PostProcessOptions &options) {
+    post_process_ = options;
+  }
+  // The scene dump (desktop_screens_dump.cpp): the screen, the way it was
+  // reached and the save; and that with the task, the steps from `launch`
+  // and the files to read and edit.
+  [[nodiscard]] json::JsonValue scene_state() const;
+  [[nodiscard]] json::JsonValue scene_dump(const std::string &launch) const;
+  [[nodiscard]] std::optional<SceneProgress> scene_progress() const {
+    return screen_ ? screen_->scene_progress() : std::nullopt;
+  }
   void set_save_slots(SaveSlots slots, const bool unreadable = false) {
     save_slots_ = std::move(slots);
     save_slots_unreadable_ = unreadable;
   }
 
 private:
+  std::shared_ptr<CoopState> coop_;
+  int coop_slot_{-1};
+  std::string coop_location_{"garage"};
+  std::vector<std::pair<std::string, MenuPresence>> coop_menu_path_;
+  void remember_coop_menu(const std::string &target);
+  void bind_coop_screen(Screen &screen);
+  void configure_coop_menu();
+  [[nodiscard]] std::unique_ptr<Screen> make_coop();
+  [[nodiscard]] std::unique_ptr<Screen> make_coop_battle(const RumblingEntry &entry);
   [[nodiscard]] std::unique_ptr<Screen> make_save_load(const std::string &name,
                                                        const std::string &from);
+  // A temporary Schedule keeps the originating screen and all its state alive.
+  bool tick_schedule(const InputFrame &input, double seconds);
+  std::unique_ptr<Screen> schedule_overlay_;
   // Story events play between screens unless `events` is false.
   void show(const std::string &name, bool events = true);
   // The screen's music, unless it keeps the track playing.
   void play_music();
+  void reset_music_program();
+  bool play_music_program();
   // A radio song, from its start, played through once.
   void play_song(const std::string &file);
   // Tells the screen the music file playing, when it has changed (or `always`).
@@ -135,16 +187,23 @@ private:
   // A training lesson, TEST DRIVE or a RUMBLING entry's battle
   // (desktop_screens_battle.cpp), or null for another screen.
   [[nodiscard]] std::unique_ptr<Screen> make_battle(const std::string &name);
+  // RESULT, or null on the first clear, which goes to clear_route_ instead.
   [[nodiscard]] std::unique_ptr<Screen> make_match_result();
+  // Hands the battle screen being left to `receipt` (a MatchResultScreen),
+  // to run the contest's robots behind it.
+  void adopt_backdrop(Screen *receipt);
+  // The finale's epilogue and the ending movie (desktop_screens_finale.cpp).
+  [[nodiscard]] std::unique_ptr<Screen> make_finale();
+  [[nodiscard]] std::unique_ptr<Screen> make_ending();
   // The 3D renderer and robots, made the first time a screen needs them.
   [[nodiscard]] PreviewWorld world();
   // The training ground's battle on `script`, which outlives the screen.
   // `live` is the live RUMBLING's battle at `live_area`, lent by the world.
-  [[nodiscard]] std::unique_ptr<Screen> make_training(const TrainingScript &script,
-                                                      const TrainingLesson &lesson,
-                                                      std::shared_ptr<Battle> live = {},
-                                                      int live_area = -1,
-                                                      bool match_results = false);
+  [[nodiscard]] std::unique_ptr<Screen>
+  make_training(const TrainingScript &script, const TrainingLesson &lesson,
+                std::shared_ptr<Battle> live = {}, int live_area = -1, bool match_results = false,
+                std::shared_ptr<struct CoopMatch> coop_match = {}, VsSession *vs = nullptr,
+                bool finale = false);
   // The live RUMBLING (desktop_screens_rumbling.cpp): the world, made the
   // first time a game is under way (null without its data), and its run
   // for `seconds` unless the screen is one before a game.
@@ -157,12 +216,15 @@ private:
   [[nodiscard]] std::unique_ptr<Screen> make_menu(const std::string &name, const std::string &from);
   // A menu's exit and hud as entered from `from`. The screen it was entered
   // from is kept while its own sub-screens come and go.
+  [[nodiscard]] std::unique_ptr<Screen> make_coop_save_load(LoadGameScript script,
+                                                            const MenuEntry &entry);
   [[nodiscard]] MenuEntry entered(const std::string &name, const MenuBasics &basics,
                                   const std::string &from);
 
   const DataRoots &roots_;
   TextureCache textures_;
   AudioMixer audio_;
+  AudioOptions audio_options_;
   IntroScript intro_;
   IntroScript new_game_;
   IntroScript staff_roll_; // data/story/staff_roll.json
@@ -201,9 +263,15 @@ private:
   std::vector<StoryEvent> events_;
   std::map<std::string, int> scene_ids_; // screen -> original scene
   int return_scene_{-1};                 // events to it return to the screen before
-  std::string event_next_;               // where the playing event leads
+  StoryProgressionRules story_rules_;
+  StoryMatchState story_match_;
+  std::string event_from_;
+  std::string event_next_; // where the playing event leads
   std::vector<MusicCredit> credits_;
   std::optional<Jukebox> radio_;
+  MusicProgram music_program_;
+  std::string program_file_;
+  int program_track_{-1};
   std::string told_music_;                         // the music file the screen was last told of
   std::vector<int> volume_millibels_;              // tables/music.json
   std::map<std::string, std::string> track_files_; // music name -> file
@@ -214,19 +282,30 @@ private:
   TestDriveScript test_drive_;
   RumblingBattle rumbling_battle_;
   std::optional<RumblingEntry> active_match_;
+  std::optional<RumblingEntry> pending_entry_;
+  std::unique_ptr<Screen> pending_result_;
+  std::string clear_route_; // a first clear's screen, in place of RESULT
+  // The finale (story/finale.json, tables/finale.json), read as it opens,
+  // and the armour share and weapons the contest was won with.
+  FinaleTables finale_tables_;
+  FinaleTuning finale_tuning_;
+  float finale_armour_{1.0F};
+  std::array<bool, 4> finale_lost_{};
   VsBattle vs_battle_;
   TrainingScript battle_training_; // the entered robot's, while TEST DRIVE or RUMBLING runs
   TrainingScript staged_training_; // the battle's script on its stage (apply_stage)
   std::map<std::string, StageDefinition> stages_;
+  PostProcessOptions post_process_;
   std::unique_ptr<WorldRenderer> world_; // made when a 3D screen first opens
   std::unique_ptr<RobotLibrary> robots_;
-  std::unique_ptr<RumblingWorld> rumbling_world_;
+  std::shared_ptr<RumblingWorld> rumbling_world_;
   bool rumbling_failed_{}; // its data would not load: not tried again
   std::optional<std::vector<std::string>> rumbling_paused_; // rumbling.json live's
   int rumble_robots_{default_rumble_robots};
   std::unique_ptr<Screen> screen_;
   std::string name_;
   std::string place_before_;                        // the screen before, story events skipped
+  std::vector<std::string> trail_;                  // the screens shown last, oldest first
   std::map<std::string, std::string> menu_origins_; // menu -> screen entered from
   int intro_pass_{};
 };

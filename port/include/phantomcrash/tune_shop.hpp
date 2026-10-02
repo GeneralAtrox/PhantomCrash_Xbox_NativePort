@@ -98,6 +98,7 @@ public:
   }
 
 private:
+  InputFrame pointer_input(InputFrame input);
   enum class After { items, list, meter };
 
   void items_input(double tick_seconds, const InputFrame &input);
@@ -119,6 +120,7 @@ private:
   const PartStatsTable &table_;
   CursorRepeat repeat_; // up and down
   CursorRepeat across_; // left and right
+  LevelControl level_control_;
   TuneShopView view_{TuneShopView::items};
   int item_{};
   bool in_list_{};

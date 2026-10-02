@@ -4,6 +4,7 @@
 
 #include <SDL3/SDL.h>
 
+#include <algorithm>
 #include <exception>
 #include <utility>
 
@@ -11,9 +12,7 @@ namespace phantomcrash {
 namespace {
 
 constexpr const char *bank_asset = "tables/effects.json";
-constexpr float half = 0.5F;           // 0x17accc: the size is the sprite's whole width
-constexpr float cluster_centre = 3.5F; // 0x19f918: a cluster's centre is drawn larger
-constexpr float short_streak = 0.2F;   // 0x3e4ccccd: streak_short's share of a frame's motion
+constexpr float short_streak = 0.2F; // 0x3e4ccccd: streak_short's share of a frame's motion
 constexpr float byte_max = 255.0F;
 
 Vec3 between(const Vec3 from, const Vec3 to, const float t) {
@@ -48,6 +47,40 @@ std::unique_ptr<DesktopEffects> DesktopEffects::load(WorldRenderer *world, const
 DesktopEffects::DesktopEffects(std::shared_ptr<const EffectBank> bank, const int atlas)
     : system_(std::move(bank)), atlas_(atlas) {}
 
+void DesktopEffects::tick(const float seconds) {
+  system_.tick(seconds);
+  log_seconds_ += seconds;
+  constexpr float log_interval = 2.0F;
+  if (log_seconds_ < log_interval) {
+    return;
+  }
+  log_seconds_ = 0;
+  int live = 0, clusters = 0, trailing = 0, fragments = 0, resting = 0;
+  float largest_radius = 0, fastest = 0;
+  for (const auto &emitter : system_.emitters()) {
+    for (const auto &particle : emitter.particles) {
+      if (!particle.alive) {
+        continue;
+      }
+      ++live;
+      clusters += particle.kind == 1 || particle.kind == 2;
+      trailing += (emitter.flags & effect_flags::inherit_velocity) != 0;
+      fragments += (emitter.flags & effect_flags::fragments) != 0;
+      resting += particle.resting;
+      largest_radius = std::max(largest_radius, particle.sprite_half_extent());
+      fastest = std::max(fastest, length(particle.velocity));
+    }
+  }
+  const bool active = live != 0 || !system_.flashes().empty();
+  if (active || logged_active_) {
+    SDL_Log("VFX: %.0f Hz, emitters=%zu particles=%d clusters=%d trailing=%d fragments=%d "
+            "resting=%d flashes=%zu max radius=%.3f max speed/frame=%.3f",
+            system_.bank().frame_rate, system_.emitters().size(), live, clusters, trailing,
+            fragments, resting, system_.flashes().size(), largest_radius, fastest);
+  }
+  logged_active_ = active;
+}
+
 void DesktopEffects::add_sprites(std::vector<WorldSprite> &sprites) const {
   const EffectBank &bank = system_.bank();
   const float t = system_.between();
@@ -56,6 +89,9 @@ void DesktopEffects::add_sprites(std::vector<WorldSprite> &sprites) const {
     const EffectDefinition &d = bank.definitions[static_cast<std::size_t>(emitter.definition)];
     const bool streak = (emitter.flags & effect_flags::streaks) != 0;
     const float reach = (emitter.flags & effect_flags::streak_short) != 0 ? short_streak : 1.0F;
+    const auto centre =
+        std::find_if(emitter.particles.begin(), emitter.particles.end(),
+                     [](const EffectParticle &p) { return p.alive && p.kind == 1; });
     for (const EffectParticle &particle : emitter.particles) {
       if (!particle.alive) {
         continue;
@@ -63,11 +99,12 @@ void DesktopEffects::add_sprites(std::vector<WorldSprite> &sprites) const {
       WorldSprite sprite;
       sprite.texture = atlas_;
       sprite.position = between(particle.previous, particle.position, t);
-      sprite.size = particle.scale * particle.size * half;
-      if (particle.kind == 1) {
-        sprite.size *= cluster_centre;
-      }
+      sprite.size = particle.sprite_half_extent();
       sprite.rotation = particle.rotation;
+      sprite.particle_kind = particle.kind;
+      if (centre != emitter.particles.end()) {
+        sprite.cluster_centre = between(centre->previous, centre->position, t);
+      }
       if (streak) {
         sprite.streak = true;
         sprite.end = sprite.position + particle.velocity * reach;

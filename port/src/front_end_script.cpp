@@ -26,6 +26,7 @@ MenuItem parse_item(const json::JsonValue &value) {
   item.id = value.string_or("id", "");
   try {
     item.normal = item_sprite(value, "normal");
+    item.label = value.string_or("label", "");
     item.selected = item_sprite(value, "selected");
     item.submenu = value.string_or("submenu", "");
     item.go_to = value.string_or("goto", "");

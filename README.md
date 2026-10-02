@@ -107,6 +107,23 @@ out of date, puts the vcpkg DLL folders on PATH, and runs the port from the
 project folder with `--root`, passing any extra arguments through. It pauses to
 show the error if the build fails or the game exits with an error. Run
 `build-port.ps1` once first to configure the build.
+Both build paths resolve the installed PowerShell executable and exclude the
+WindowsApps execution-alias directory from the build process PATH, so vcpkg
+does not mistake the Store alias for a readable executable. Windows PATH
+settings are left unchanged.
+
+**Settings > Visuals...** opens a panel that stays open while you compare changes
+in the running game. It contains fullscreen, VSync, frame-rate cap/counter,
+**Dynamic lighting and shadows**, **SMAA anti-aliasing**, **Depth blur**,
+**Shinjuku distortion**, **Stage colour tint** and **Original softness**, which
+gives the 3D view the softness of the original's 640x480 picture while still
+rendering at native resolution. The port's additions default off;
+selections apply immediately, save without checkpointing the match, and reload
+on the next launch. The game keeps rendering while the panel has focus.
+Dynamic night lighting adds shadowed entrance lights and moving video-ship
+spotlights. Its editable sources are `data/world/dynamic_lighting.json`.
+See [dynamic lighting](docs/DYNAMIC_LIGHTING.md) and
+[post-processing](docs/POST_PROCESSING.md) for details.
 
 `Start Game Quick.bat` uses the same launcher and opens the garage with your
 saved quest, skipping the intro and title. It uses the normal settings/save
@@ -177,9 +194,10 @@ change, as in the original. A new game has neither. The staff roll
 (`data\story\staff_roll.json`, `--start staff_roll`) marks the game cleared
 as it starts: the staff and epilogue movies, then THE END looping for 30
 seconds (A or START ends it after two seconds and goes to sleep; left to
-run out, the Kudryavka and cloud movies play first). The final contest that
-leads there is not ported yet, so a cleared game otherwise comes from a
-save: copy
+run out, the Kudryavka and cloud movies play first). A first win over the
+First Ranker leads there through the finale: an epilogue on Umihotaru by
+day, then the ending movie (`docs\FINAL_BATTLE.md`, `--start final_battle`,
+`--start ending`). To start from a cleared game, copy
 `port\tests\cleared_save.json` and pass the copy to `--settings` (the game
 saves back into that file). Each event plays once per game;
 the save remembers which have played. The
@@ -326,7 +344,8 @@ Start it with `--start training_free` (or `training_basic`,
 After updating the city stage converter, run
 `python .\tools\phantomcrash.py convert-robots` to refresh existing city models.
 This resolves object slots from each model resource and excludes static shadow
-volumes from solid scenery; static city shadow rendering is not yet implemented.
+volumes from solid scenery and draws them as static stencil shadows (the Shinjuku and Umihotaru
+night variants have none).
 VS MODE needs two controllers (the keyboard counts as one). The
 layouts, sounds and timings are in `data\ui\title.json`,
 `data\ui\main_menu.json` and `data\audio\`.
@@ -339,11 +358,14 @@ Scoobee select. There each player chooses from their own strip, which
 holds the three preset Scoobees and the ones kept by KEEP SV. Then any
 player chooses the area and its time of day, or RANDOM; with three or more
 players only the arena is offered. The panels, strips, pictures and timings
-follow the original's scene 44. The versus battle is not ported yet: it
-runs as the training ground's FreePlay, one split screen per player, with
-the first player's Scoobee (`data\world\vs_battle.json`), then returns
-to the area select. `--press frame:button@port` presses a button on port
-1 to 4 in scripted runs.
+follow the original's scene 44. The battle runs on the chosen stage, one
+split screen per player, each player's Scoobee driven from their own port
+(`data\world\vs_battle.json`). A robot is out once its armour or its
+weapons are gone. When one or none stands, each screen shows YOU WIN, YOU
+LOSE or DRAW, and any player picks RETRY, SELECT AREA, SELECT SV or EXIT.
+The choice adds the round to the players' wins and losses.
+`--press frame:button@port` presses a button on port 1 to 4 in scripted
+runs.
 
 OPTION opens the option screen with its scrolling help line and the credit
 for the current music. VIBRATION asks YES/NO and is saved with the settings
@@ -364,16 +386,17 @@ updating the converter, run `python .\tools\phantomcrash.py convert
 buttons, stick directions and triggers. Select an action, choose an input and
 click Assign; OK applies and saves the bindings with your settings on exit.
 Restore defaults resets the bindings and mouse options; Cancel discards edits.
-In battle, move the mouse to aim and use left/right click to fire the left/right
-arm weapons. F10 releases the mouse for the menus; click the game to capture it
-again. Mouse sensitivity, Y inversion and mouse capture can be changed in the
-same dialog. WASD still moves/turns; controller aiming remains on the right stick.
+In battle, W/S move forward/backward and A/D strafe. The mouse or controller's
+right stick turns and aims; the left stick moves. Left/right click fires the
+left/right arm weapon. F10 releases the mouse for the menus; click the game to
+capture it again. Mouse sensitivity, Y inversion and mouse capture can be changed
+in the same dialog. The torso-twist training steps retain right-stick torso control.
 
 Controls: keyboard Enter = START, Z/Space = A, X/Backspace = B, Esc = BACK,
-arrows or WASD = D-pad; gamepads map by position (south = A). F11 or Alt+Enter toggles
-fullscreen. The window's Settings menu has VSync, a frame-rate cap from 30 to
-144 FPS (VSync off with no cap is unlimited), a frame counter and Pause When
-Unfocused; choices are saved in `%APPDATA%\PhantomCrash\PhantomCrash Port`.
+arrows or WASD = D-pad; gamepads map by position (south = A). F11, Alt+Enter, or Alt+Numpad Enter toggles
+fullscreen. Settings > Visuals contains VSync, a frame-rate cap from 30 to
+144 FPS (VSync off with no cap is unlimited), and a frame counter. Pause When
+Unfocused remains in Settings; choices are saved in `%APPDATA%\PhantomCrash\PhantomCrash Port`.
 
 vcpkg is checked out under `.tools\vcpkg` at the same baseline as Lodoss, so
 packages already built for Lodoss are restored from the local binary cache.

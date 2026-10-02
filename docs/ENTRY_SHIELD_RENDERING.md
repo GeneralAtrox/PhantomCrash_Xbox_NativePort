@@ -63,14 +63,20 @@ waves, not the rainbow colours. The draw colour `0x64ffffff` is passed by the
 caller, but the rainbow vertex program supplies alpha from c9.x instead of
 consuming that diffuse alpha. `0x0c4373` clamps the supplied glow to [0, 1].
 
-## Native discrepancy
+## Native implementation
 
-`effect_convert._shield_mesh` currently generates twice-repeated planar UVs,
-white vertices and an unlit material. `BattleView::add_shield` submits it through
-the ordinary textured shader with white colour and an additional `100/255`
-alpha multiplier. That path omits the original height-dependent animated RGB,
-scrolling UV calculation and vertex lighting contribution, and reduces opacity.
+The world vertex shader now evaluates the recovered height-dependent RGB
+bands, lighting contribution and scrolling planar UVs. `WorldItem::rainbow`
+carries phase and scroll into every view and the replay archive. The shell's
+texture still supplies wave alpha; it is not recoloured in extraction. The
+extra 100/255 opacity multiplier has been removed.
 
-This validation changes documentation only. The runtime still needs the
-recovered rainbow shader path; changing the white texture to a rainbow image
-would not reproduce the original mechanism.
+`BattleView` advances a shared 30 Hz clock once per simulation tick. Defaults
+are phase step -0.03 and scroll step -0.01, editable in the entry-shield
+settings in `data/world/training.json`. Rendering additional monitor or split
+views does not advance this clock. The exported glTF UVs remain a fallback
+for external viewers; the native rainbow shader replaces them.
+
+This implementation has been inspected in source only. No build, tests or
+runtime capture were performed for this change; appearance remains for user
+review. It is not a claim of exact shader or draw-state parity.

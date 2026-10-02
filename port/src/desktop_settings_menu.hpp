@@ -9,8 +9,9 @@
 
 namespace phantomcrash {
 
-// The window's menu bar (after the Lodoss stage menu). Settings: Fullscreen,
-// VSync, Frame Rate Cap..., Frame Rate Counter and Pause When Unfocused.
+// The window menu: Settings > Visuals opens live display/render controls;
+// audio, input controls and Pause When Unfocused remain in Settings.
+// Beside Settings, a copy icon copies the game context (desktop_scene_dump.hpp).
 // Tools: Level Select, which jumps straight to a screen for testing.
 // Commands arrive through the window procedure; the game loop reads
 // settings() and take_level() each frame. Windows only; elsewhere it holds
@@ -30,10 +31,13 @@ public:
   // True once after the user interacts with the menu, so the loop can drop
   // the time spent inside the menu instead of catching up.
   bool take_interaction();
+  [[nodiscard]] bool visuals_open() const;
   // Tools > Level Select's entries, in order.
   void set_levels(const std::vector<std::string> &labels);
   // The entry picked from Level Select since the last call, if any.
   [[nodiscard]] std::optional<int> take_level();
+  // True once after the copy icon is clicked.
+  [[nodiscard]] bool take_copy();
 
 private:
   struct Impl;

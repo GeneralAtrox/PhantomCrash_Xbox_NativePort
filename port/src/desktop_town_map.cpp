@@ -21,10 +21,19 @@ TownMapScreen::TownMapScreen(TextureCache &textures, const GlyphFont &font, Town
   }
   static_cast<void>(textures_.get(data.rider.image));
   frame_.preload(textures_);
+  SDL_Log("Town map: from=%s place=%d back=0x%X forward=0x%X", from.c_str(), map_.place() + 1,
+          data.back_buttons, data.forward_buttons);
 }
 
 void TownMapScreen::tick(const InputFrame &input, const double tick_seconds) {
+  const int before = map_.place();
   map_.update(tick_seconds, input);
+  if (before != map_.place() || (input.pressed & button::directions) != 0) {
+    SDL_Log("Town map input: left=%d right=%d up=%d down=%d held=0x%X mouse_moved=%d place=%d->%d",
+            (input.pressed & button::left) != 0, (input.pressed & button::right) != 0,
+            (input.pressed & button::up) != 0, (input.pressed & button::down) != 0, input.held,
+            input.pointer_moved, before + 1, map_.place() + 1);
+  }
   // The frame's RIDING SV plate starts once the map has faded in (0x3f2d7).
   if (map_.black_alpha() <= 0.0F) {
     frame_.start_riding_plate();

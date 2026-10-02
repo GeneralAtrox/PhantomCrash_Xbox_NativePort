@@ -18,6 +18,7 @@ struct WorldShaders {
 // their layout (ShadowVertex), and the cover laid where they counted.
 struct ShadowShaders {
   Microsoft::WRL::ComPtr<ID3D11VertexShader> volume;
+  Microsoft::WRL::ComPtr<ID3D11VertexShader> static_volume;
   Microsoft::WRL::ComPtr<ID3D11InputLayout> layout;
   Microsoft::WRL::ComPtr<ID3D11VertexShader> cover;
   Microsoft::WRL::ComPtr<ID3D11PixelShader> cover_colour;

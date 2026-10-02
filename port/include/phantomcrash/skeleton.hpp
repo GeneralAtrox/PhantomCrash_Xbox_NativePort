@@ -50,30 +50,78 @@ struct RobotSkeletons {
 [[nodiscard]] RobotSkeletons parse_robot_skeletons(const json::JsonValue &document);
 
 // A motion playing at a frame, optionally fading in from the one before it.
+// A motion frozen where a change caught it, and its weight against the
+// layers before it.
+struct MotionLayer {
+  const Motion *motion{};
+  float frame{};
+  float weight{1.0F};
+};
+inline constexpr std::size_t motion_layers = 4;
+
 struct MotionSource {
   const Motion *motion{};
   float frame{};
-  const Motion *previous{};
-  float previous_frame{};
+  // What `motion` blends from, oldest first. A change that interrupts a
+  // blend freezes the whole blend here, so the pose carries on from it.
+  std::array<MotionLayer, motion_layers> previous{};
+  std::size_t previous_count{};
   float weight{1.0F}; // of `motion` against `previous`
 
+  [[nodiscard]] bool blending() const noexcept {
+    return motion != nullptr && previous_count > 0 && weight < 1.0F;
+  }
   [[nodiscard]] TrackSample sample(int track) const;
+  // `as_matrix(motion, frame)` of each frozen layer, blended oldest first
+  // with `mix(from, to, weight)`; nothing when no layer has a motion.
+  template <typename Matrix, typename AsMatrix, typename Mix>
+  [[nodiscard]] std::optional<Matrix> blend_from(AsMatrix as_matrix, Mix mix) const {
+    std::optional<Matrix> out;
+    for (std::size_t i = 0; i < previous_count && i < previous.size(); ++i) {
+      const MotionLayer &layer = previous[i];
+      if (layer.motion != nullptr) {
+        const Matrix next = as_matrix(*layer.motion, layer.frame);
+        out = out ? mix(*out, next, layer.weight) : next;
+      }
+    }
+    return out;
+  }
 };
 
 inline constexpr int bone_slots = 20;
 inline constexpr int pose_parts = 3; // 0: body and legs, 1: left arm, 2: right arm
 
+struct PoseContact {
+  Vec3 position;
+  const Motion *motion{};
+  std::array<std::size_t, 3> keys{};
+};
+[[nodiscard]] PoseContact pose_contact(const SkeletonNode &node, const Mat4 &parent,
+                                       const MotionSource &source);
+
 struct PosePart {
+  std::vector<PoseContact> contacts;
   std::array<Mat4, bone_slots> bones{};
   std::array<bool, bone_slots> set{};
+  std::optional<Mat4> mount;
+  std::array<std::optional<Mat4>, 14> movement_mounts;
 };
 
 using Pose = std::array<PosePart, pose_parts>;
+
+struct ArmAim {
+  float weight{};
+  Vec3 target;
+  float pitch_limit{0.8F};
+};
 
 struct PoseInput {
   Mat4 root;         // the robot's ground point and heading (yaw, then position)
   MotionSource legs; // drives the body-and-legs skeleton
   std::array<MotionSource, 2> arms;
+  std::array<MotionSource, 2> firing_poses;
+  std::array<MotionSource, 7> body_auxiliary;
+  std::array<ArmAim, 2> arm_aim;
   std::array<const SkeletonNode *, 2> arm_skeletons{};
   float aim_yaw{};      // turns the nodes flagged 0x4 (the upper body)
   float aim_pitch{};    // pitches the nodes flagged 0x100, within +-0.4 rad

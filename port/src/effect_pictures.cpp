@@ -92,6 +92,12 @@ void parse_effect_pictures(const JsonValue &value, EffectBank &bank) {
     }
   }
   bank.exhaust = picture(value.find("exhaust"));
+  if (const JsonValue *beam = value.find("beam")) {
+    bank.beam.model = picture(beam);
+    bank.beam.width = static_cast<float>(beam->number_or("width", bank.beam.width));
+    bank.beam.fade_frames =
+        static_cast<float>(beam->number_or("fade_frames", bank.beam.fade_frames));
+  }
   if (const JsonValue *impacts = value.find("impacts")) {
     for (const JsonValue &entry : impacts->array()) {
       bank.impacts.push_back({static_cast<int>(entry.number_or("group", -1.0)),
@@ -112,6 +118,22 @@ void parse_effect_pictures(const JsonValue &value, EffectBank &bank) {
     }
     bank.decals.scale = static_cast<float>(decals->number_or("scale", bank.decals.scale));
     bank.decals.count = static_cast<int>(decals->number_or("count", bank.decals.count));
+    bank.decals.depth_offset =
+        static_cast<float>(decals->number_or("depth_offset", bank.decals.depth_offset));
+    bank.decals.scorch_scale =
+        static_cast<float>(decals->number_or("scorch_scale", bank.decals.scorch_scale));
+  }
+  if (const auto *trail = value.find("missile_trail")) {
+    auto &look = bank.missile_trail;
+    look.texture = trail->string_or("texture", "");
+    look.points = std::clamp(static_cast<int>(trail->number_or("points", look.points)), 2, 128);
+    look.capacity = std::max(0, static_cast<int>(trail->number_or("capacity", look.capacity)));
+    look.sample_hz =
+        std::max(1.0F, static_cast<float>(trail->number_or("sample_hz", look.sample_hz)));
+    look.fade_seconds =
+        std::max(0.01F, static_cast<float>(trail->number_or("fade_seconds", look.fade_seconds)));
+    look.head_width = static_cast<float>(trail->number_or("head_width", look.head_width));
+    look.tail_width = static_cast<float>(trail->number_or("tail_width", look.tail_width));
   }
   // A bank without flashes (an older conversion) leaves the groups' lists unused.
   if (bank.flashes.empty()) {

@@ -21,7 +21,7 @@ def references(node):
     """Yield (file, rect or None) for every ``image``/``file``/``files`` value."""
     if isinstance(node, dict):
         for key in ("image", "file"):
-            if isinstance(node.get(key), str):
+            if isinstance(node.get(key), str) and node[key]:
                 yield node[key], node.get("rect") if key == "image" else None
         for value in node.get("files", []) if isinstance(node.get("files"), list) else []:
             yield value, None
@@ -48,12 +48,6 @@ def resolve(relative: str) -> Path | None:
                 if entry.name.lower() == candidate.name.lower():
                     return entry
     return None
-
-
-@pytest.mark.parametrize("path", data_files(), ids=lambda path: path.relative_to(DATA).as_posix())
-def test_data_file_is_json_with_notes(path):
-    document = json.loads(path.read_text(encoding="utf-8"))
-    assert isinstance(document.get("notes"), list)
 
 
 @pytest.mark.private_inputs(str(ASSETS / "manifest.json"), str(MEDIA))

@@ -50,7 +50,7 @@ HangarMenuScreen::HangarMenuScreen(TextureCache &textures, const GlyphFont &font
 }
 
 void HangarMenuScreen::tick(const InputFrame &input, const double tick_seconds) {
-  logic_.update(tick_seconds, input);
+  logic_.update(tick_seconds, notice_.pointer_input(input, logic_.script().confirm_buttons));
   tick_frame(tick_seconds, logic_.faded_in());
   notice_.update(logic_.message(), logic_.view() == HangarView::buy, logic_.choice(),
                  logic_.script().messages, tick_seconds);

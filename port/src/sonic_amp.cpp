@@ -111,7 +111,8 @@ void SonicAmp::open(const SonicAmpView view) {
   restart_help();
 }
 
-void SonicAmp::update(const double tick_seconds, const InputFrame &input) {
+void SonicAmp::update(const double tick_seconds, const InputFrame &raw_input) {
+  const InputFrame input = pointer_input(raw_input);
   if (done()) {
     return;
   }

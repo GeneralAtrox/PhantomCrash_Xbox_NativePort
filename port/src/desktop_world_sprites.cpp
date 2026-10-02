@@ -8,6 +8,7 @@
 // both kinds of sprite share the one state, in the order given.
 
 #include "desktop_world_renderer.hpp"
+#include "phantomcrash/effect_sprite.hpp"
 
 #include <cmath>
 #include <cstring>
@@ -41,9 +42,10 @@ Corner vs_sprite(float3 position : POSITION, float2 uv : TEXCOORD0, float4 colou
   out_corner.position = mul(float4(position, 1.0), view_projection);
   out_corner.uv = uv;
   out_corner.colour = colour;
-  float distance = length(position - eye);
+  // Fogged by the clip-space z, as the original's point programs do.
+  float depth = out_corner.position.z;
   out_corner.fog = fog_enabled > 0.5
-      ? saturate((distance - fog_start) / max(fog_end - fog_start, 0.001)) : 0.0;
+      ? saturate((depth - fog_start) / max(fog_end - fog_start, 0.001)) : 0.0;
   return out_corner;
 }
 
@@ -67,8 +69,13 @@ static_assert(sizeof(SpriteVertex) == 36, "the sprite layout expects 36-byte ver
 constexpr UINT corners_per_sprite = 6;
 
 // The six corners of `sprite`, facing along the view's `right` and `up`.
-void corners(const WorldSprite &sprite, const Vec3 right, const Vec3 up, const Vec3 eye,
-             SpriteVertex *out) {
+void corners(const WorldSprite &sprite, Vec3 right, Vec3 up, const Vec3 eye, SpriteVertex *out) {
+  if (length(sprite.surface_normal) > 0.0F) {
+    const Vec3 normal = normalize(sprite.surface_normal);
+    const Vec3 helper = std::fabs(normal.y) < 0.99F ? Vec3{0, 1, 0} : Vec3{1, 0, 0};
+    right = normalize(cross(helper, normal));
+    up = cross(normal, right);
+  }
   const float alpha = sprite.colour[3];
   const std::array<float, 4> colour{sprite.colour[0] * alpha, sprite.colour[1] * alpha,
                                     sprite.colour[2] * alpha, sprite.additive ? 0.0F : alpha};
@@ -76,11 +83,12 @@ void corners(const WorldSprite &sprite, const Vec3 right, const Vec3 up, const V
   if (sprite.streak) {
     const Vec3 along = sprite.end - sprite.position;
     Vec3 side = cross(along, eye - (sprite.position + sprite.end) * 0.5F);
-    side = length(side) > 0.0F ? normalize(side) * sprite.size : right * sprite.size;
-    a = sprite.position - side;
-    b = sprite.position + side;
-    c = sprite.end + side;
-    d = sprite.end - side;
+    side = length(side) > 0.0F ? normalize(side) : right;
+    const float end_size = sprite.end_size >= 0.0F ? sprite.end_size : sprite.size;
+    a = sprite.position - side * sprite.size;
+    b = sprite.position + side * sprite.size;
+    c = sprite.end + side * end_size;
+    d = sprite.end - side * end_size;
   } else {
     const float cs = std::cos(sprite.rotation) * sprite.size;
     const float sn = std::sin(sprite.rotation) * sprite.size;
@@ -92,10 +100,17 @@ void corners(const WorldSprite &sprite, const Vec3 right, const Vec3 up, const V
     d = sprite.position - x - y;
   }
   const auto &uv = sprite.uv;
-  const SpriteVertex quad[4] = {{a, uv[0], uv[1], colour},
-                                {b, uv[2], uv[1], colour},
-                                {c, uv[2], uv[3], colour},
-                                {d, uv[0], uv[3], colour}};
+  auto end_colour = colour;
+  if (sprite.streak) {
+    for (float &channel : end_colour) {
+      channel *= sprite.end_alpha;
+    }
+  }
+  const SpriteVertex quad[4] = {
+      {a, uv[0], uv[1], colour},
+      {b, sprite.transpose_uv ? uv[0] : uv[2], sprite.transpose_uv ? uv[3] : uv[1], colour},
+      {c, uv[2], uv[3], end_colour},
+      {d, sprite.transpose_uv ? uv[2] : uv[0], sprite.transpose_uv ? uv[1] : uv[3], end_colour}};
   const int order[corners_per_sprite] = {0, 1, 2, 0, 2, 3};
   for (UINT i = 0; i < corners_per_sprite; ++i) {
     out[i] = quad[order[i]];
@@ -169,7 +184,12 @@ void WorldRenderer::render_sprites(const WorldFrame &frame) {
   }
   auto *out = static_cast<SpriteVertex *>(mapped.pData);
   for (UINT i = 0; i < count; ++i) {
-    corners(frame.sprites[i], right, up, frame.eye, out + i * corners_per_sprite);
+    WorldSprite sprite = frame.sprites[i];
+    const auto geometry = effect_sprite_geometry(sprite.particle_kind, sprite.position,
+                                                 sprite.cluster_centre, sprite.size, view);
+    sprite.position = geometry.position;
+    sprite.size = geometry.half_extent;
+    corners(sprite, right, up, frame.eye, out + i * corners_per_sprite);
   }
   context_->Unmap(sprite_vertices_.Get(), 0);
 

@@ -8,28 +8,28 @@ namespace phantomcrash {
 std::vector<HostBinding> default_host_bindings() {
   return {{"up", "Move forward / menu up", {"W", "Up"}, "lefty-"},
           {"down", "Move backward / menu down", {"S", "Down"}, "lefty+"},
-          {"left", "Turn left / menu left", {"A", "Left"}, "leftx-"},
-          {"right", "Turn right / menu right", {"D", "Right"}, "leftx+"},
-          {"aim_left", "Aim left (upper body)", {"J"}, "rightx-"},
-          {"aim_right", "Aim right (upper body)", {"L"}, "rightx+"},
+          {"left", "Strafe left / menu left", {"A", "Left"}, "leftx-"},
+          {"right", "Strafe right / menu right", {"D", "Right"}, "leftx+"},
+          {"aim_left", "Turn left / lesson torso twist", {"J"}, "rightx-"},
+          {"aim_right", "Turn right / lesson torso twist", {"L"}, "rightx+"},
           {"aim_up", "Aim up", {"I"}, "righty-"},
           {"aim_down", "Aim down", {"K"}, "righty+"},
           {"left_trigger", "Fire left arm", {"Q"}, "lefttrigger+"},
           {"right_trigger", "Fire right arm", {"E"}, "righttrigger+"},
           {"y", "Fire left shoulder / Y", {"V"}, "y"},
           {"b", "Fire right shoulder / cancel", {"X", "Backspace"}, "b"},
-          {"a", "Jump / confirm", {"Space", "Z"}, "a"},
+          {"a", "Jump / airborne fast descent / confirm", {"Space", "Z"}, "a"},
           {"x", "Optic camouflage / X", {"C"}, "x"},
           {"white", "Dodge left / white", {"R"}, "leftshoulder"},
           {"black", "Dodge right / black", {"F"}, "rightshoulder"},
-          {"left_thumb", "Dash / left stick click", {"Left Shift"}, "leftstick"},
+          {"left_thumb", "Dash / airborne fast descent", {"Left Shift"}, "leftstick"},
           {"right_thumb", "Reset torso / right stick click", {"T"}, "rightstick"},
           {"pad_up", "First-person camera / D-pad up", {"1"}, "dpup"},
           {"pad_down", "Behind camera / D-pad down", {"2"}, "dpdown"},
           {"pad_left", "Previous camera / D-pad left", {"3"}, "dpleft"},
           {"pad_right", "Next camera / D-pad right", {"4"}, "dpright"},
-          {"start", "Start / confirm", {"Return", "Keypad Enter"}, "start"},
-          {"back", "Back / leave battle", {"Escape"}, "back"}};
+          {"start", "Start / confirm / pause battle", {"Return", "Keypad Enter"}, "start"},
+          {"back", "Back / pause battle", {"Escape"}, "back"}};
 }
 
 HostControls host_controls_from_json(const json::JsonValue &value) {

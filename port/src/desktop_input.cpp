@@ -60,6 +60,18 @@ void DesktopInput::handle(const SDL_Event &event) {
     if (event.button.button == SDL_BUTTON_LEFT) {
       pointer_pixels_ = render_pixels(event.button.windowID, event.button.x, event.button.y);
       clicked_ = true;
+      double_clicked_ |= event.button.clicks == 2;
+    }
+    if (event.button.button == SDL_BUTTON_RIGHT) {
+      right_clicked_ = true;
+    }
+    break;
+  case SDL_EVENT_MOUSE_WHEEL:
+    if (!mouse_captured_) {
+      pointer_pixels_ =
+          render_pixels(event.wheel.windowID, event.wheel.mouse_x, event.wheel.mouse_y);
+      mouse_wheel_ +=
+          event.wheel.y * (event.wheel.direction == SDL_MOUSEWHEEL_FLIPPED ? -1.0F : 1.0F);
     }
     break;
   case SDL_EVENT_WINDOW_MOUSE_LEAVE:
@@ -74,7 +86,16 @@ void DesktopInput::handle(const SDL_Event &event) {
     break;
   }
   case SDL_EVENT_GAMEPAD_ADDED:
+    if (gamepads_.size() >= controller_ports) {
+      break;
+    }
     if (SDL_Gamepad *pad = SDL_OpenGamepad(event.gdevice.which)) {
+      for (const int port : {1, 2, 3, 0}) {
+        if (std::ranges::find(gamepad_ports_, port) == gamepad_ports_.end()) {
+          gamepad_ports_.push_back(port);
+          break;
+        }
+      }
       gamepads_.push_back(pad);
       rumbling_.emplace_back();
     }
@@ -85,6 +106,7 @@ void DesktopInput::handle(const SDL_Event &event) {
     if (found != gamepads_.end()) {
       SDL_CloseGamepad(*found);
       rumbling_.erase(rumbling_.begin() + (found - gamepads_.begin()));
+      gamepad_ports_.erase(gamepad_ports_.begin() + (found - gamepads_.begin()));
       gamepads_.erase(found);
     }
     break;
@@ -106,7 +128,8 @@ void DesktopInput::hold(const Buttons buttons, const int port) {
   scripted_ports_[at] = true;
 }
 
-void DesktopInput::rumble(const std::array<RumbleMotors, controller_ports> &motors) {
+void DesktopInput::rumble(const std::array<RumbleMotors, controller_ports> &motors,
+                          const bool shared_controls) {
   // Each send lasts this long, and is renewed halfway, so a pad the game
   // stops talking to stops by itself.
   constexpr Uint32 rumble_ms = 1000;
@@ -116,8 +139,10 @@ void DesktopInput::rumble(const std::array<RumbleMotors, controller_ports> &moto
   };
   for (std::size_t pad = 0; pad < gamepads_.size(); ++pad) {
     const RumbleMotors &own = motors[static_cast<std::size_t>(port_of(pad))];
-    const RumbleMotors wanted{std::max(own.low, motors.front().low),
-                              std::max(own.high, motors.front().high)};
+    const RumbleMotors wanted = shared_controls
+                                    ? RumbleMotors{std::max(own.low, motors.front().low),
+                                                   std::max(own.high, motors.front().high)}
+                                    : own;
     PadRumble &last = rumbling_[pad];
     const bool running = wanted != RumbleMotors{};
     if (wanted == last.motors && !(running && now - last.sent_ms >= rumble_ms / 2)) {
@@ -129,8 +154,7 @@ void DesktopInput::rumble(const std::array<RumbleMotors, controller_ports> &moto
 }
 
 int DesktopInput::port_of(const std::size_t pad) const {
-  const std::size_t port = gamepads_.size() >= controller_ports ? pad : pad + 1;
-  return static_cast<int>(std::min<std::size_t>(port, controller_ports - 1));
+  return gamepad_ports_.at(pad);
 }
 
 DesktopInput::PortButtons DesktopInput::held_buttons() const {
@@ -180,7 +204,9 @@ InputFrame DesktopInput::sample(const bool focused, const Viewport &viewport) {
     latched |= (focused ? latched_[port] : 0) | injected_[port];
   }
   InputFrame frame = edges_.update(held, latched, controllers());
+  frame.right_clicked = std::exchange(right_clicked_, false) && focused;
   frame.mouse_right_held = focused && (SDL_GetMouseState(nullptr, nullptr) & SDL_BUTTON_RMASK);
+  frame.mouse_left_held = focused && (SDL_GetMouseState(nullptr, nullptr) & SDL_BUTTON_LMASK);
   if (focused && mouse_captured_ && controls_) {
     constexpr float radians_per_degree = 0.01745329252F;
     const float sensitivity = controls_->mouse_degrees_per_pixel * radians_per_degree;
@@ -197,6 +223,12 @@ InputFrame DesktopInput::sample(const bool focused, const Viewport &viewport) {
   mouse_delta_ = {};
   mouse_pressed_ = 0;
   fill_ports(focused, ports, frame);
+  for (int port = 0; port < controller_ports; ++port) {
+    InputFrame own;
+    sticks(ports[port], own, focused, port);
+    frame.ports[port].left_stick = own.left_stick;
+    frame.ports[port].right_stick = own.right_stick;
+  }
   if (focused) {
     sticks(held, frame, true);
   } else {
@@ -213,9 +245,15 @@ InputFrame DesktopInput::sample(const bool focused, const Viewport &viewport) {
                                          (y - viewport.offset_y) / viewport.scale};
     frame.pointer_moved = pointer_moved_;
     frame.clicked = clicked_;
+    frame.mouse_double_clicked = double_clicked_;
+  }
+  frame.mouse_wheel = std::exchange(mouse_wheel_, 0.0F);
+  if (!focused) {
+    frame.mouse_wheel = 0;
   }
   pointer_moved_ = false;
   clicked_ = false;
+  double_clicked_ = false;
   return frame;
 }
 

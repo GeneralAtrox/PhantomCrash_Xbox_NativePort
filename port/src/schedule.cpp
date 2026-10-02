@@ -1,6 +1,7 @@
 // The contest schedule's cursor, scrolling and popup (0x363e7, 0x35a9f).
 
 #include "phantomcrash/schedule.hpp"
+#include "phantomcrash/shop_pointer.hpp"
 
 #include <algorithm>
 #include <utility>
@@ -111,7 +112,38 @@ void Schedule::update(const double tick_seconds, const InputFrame &input) {
   }
 }
 
-void Schedule::handle_input(const double tick_seconds, const InputFrame &input) {
+void Schedule::handle_input(const double tick_seconds, const InputFrame &raw) {
+  InputFrame input = raw;
+  if (input.clicked && input.pointer) {
+    if (popup_.is_open()) {
+      if (popup_.grown()) {
+        input.pressed |= script_.cancel_buttons;
+      }
+    } else if (shop_hit(input, script_.exit)) {
+      row_ = exit_row;
+      input.pressed |= script_.confirm_buttons;
+    } else {
+      for (int column = 0; column < script_.columns; ++column) {
+        for (int row = 0; row < exit_row; ++row) {
+          Sprite tile;
+          tile.rect = script_.closed;
+          tile.position = {script_.cell_origin[0] + script_.cell_step[0] * column,
+                           script_.cell_origin[1] + script_.cell_step[1] * row};
+          if (shop_hit(input, tile)) {
+            column_ = column;
+            row_ = row;
+            ticker_seconds_ = 0.0;
+            input.pressed |= script_.confirm_buttons;
+          }
+        }
+      }
+    }
+  }
+  if (!popup_.is_open() && input.mouse_wheel != 0) {
+    sounds_.play(script_.page_sound);
+    scroll(input.mouse_wheel > 0 ? -1 : 1);
+    return;
+  }
   if (popup_.is_open()) {
     if (input.any_pressed(script_.cancel_buttons)) {
       sounds_.play(script_.close_sound);

@@ -94,6 +94,10 @@ public:
   [[nodiscard]] const VsSession &vs_session() const noexcept {
     return vs_session_;
   }
+  // The VS battle keeps its tallies and its menu's way back here.
+  [[nodiscard]] VsSession &vs_session() noexcept {
+    return vs_session_;
+  }
   // The hangar whose Scoobee the hangar's KEEP chose, for KEEP SV to keep.
   void set_kept_hangar(const int hangar) noexcept {
     kept_hangar_ = hangar;

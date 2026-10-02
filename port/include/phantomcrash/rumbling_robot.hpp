@@ -30,6 +30,7 @@ struct RumblingTables {
   const RumblingRules &rules;
   const TestDriveScript &drive;                         // the weapon templates by kind ...
   const std::map<std::string, WeaponTuning> &templates; // ... among these
+  BattleHudStyle hud{};                                 // the chips' box sizes (ui/battle_hud.json)
 };
 
 // The maker and legs type RUMBLING's map draws a robot by (0x200838).
@@ -50,6 +51,7 @@ struct RumblingRobot {
   float armour{};
   CombatStats combat;
   float lock_seconds{}; // its chip's lock time
+  SightBoxes sight;     // and boxes
   MovementTuning movement;
   // The area map's icon for it (0x04438d, table 0x200838): its legs' maker
   // and type; -1 when unknown.
@@ -64,6 +66,6 @@ struct RumblingRobot {
 // `movement` is the battle's base movement the robot's load slows.
 [[nodiscard]] RumblingRobot rumbling_robot(const RumblingTables &tables, const QuestSave &quest,
                                            int entrant, const std::string &prefix,
-                                           const MovementTuning &movement);
+                                           const MovementTuning &movement, int level_offset = 0);
 
 } // namespace phantomcrash

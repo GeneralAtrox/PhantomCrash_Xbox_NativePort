@@ -169,6 +169,9 @@ ChipLevelWindow parse_level_window(const json::JsonValue &value) {
   level.price = member(value, "price", parse_number_style);
   level.poor_colour = parse_colour(required(value, "poor_colour").string());
   level.cancel_hint = member(value, "cancel_hint", parse_sprites);
+  if (const auto *hint = value.find("confirm_hint")) {
+    level.confirm_hint = parse_sprites(*hint);
+  }
   return level;
 }
 
@@ -223,6 +226,9 @@ ChipShopScript parse_chip_shop(const json::JsonValue &document, const ChipShopMo
     script.labels = member(document, "labels", parse_sprites);
     script.exit = member(document, "exit", parse_shop_icon);
     script.dialog = member(document, "dialog", parse_dialog);
+    if (const auto *control = document.find("level_control")) {
+      script.level_control = parse_level_control(*control);
+    }
     script.message_text_at = numbers<2>(required(document, "message_text_at"), "message_text_at");
     script.help_style = member(document, "help", parse_ticker);
     const auto &help_text = required(document, "help_text");

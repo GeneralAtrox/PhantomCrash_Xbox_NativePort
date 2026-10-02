@@ -67,7 +67,7 @@
     "label": {
      "id": "rumbling_record",
      "image": "textures/scroll/record_tex/0.png",
-     "rect": [288, 704, 480, 736],
+     "rect": [288, 704, 480, 735],
      "position": [223, 173],
      "layer": 258
     },
@@ -77,7 +77,7 @@
     "label": {
      "id": "convention_record",
      "image": "textures/scroll/record_tex/0.png",
-     "rect": [480, 704, 672, 736],
+     "rect": [480, 704, 672, 735],
      "position": [223, 207],
      "layer": 258
     },
@@ -87,7 +87,7 @@
     "label": {
      "id": "game_play_record",
      "image": "textures/scroll/record_tex/0.png",
-     "rect": [672, 704, 864, 736],
+     "rect": [672, 704, 864, 735],
      "position": [223, 241],
      "layer": 258
     },
@@ -97,7 +97,7 @@
     "label": {
      "id": "exit",
      "image": "textures/scroll/record_tex/0.png",
-     "rect": [864, 704, 1056, 736],
+     "rect": [864, 704, 1056, 735],
      "position": [223, 275],
      "layer": 258
     },

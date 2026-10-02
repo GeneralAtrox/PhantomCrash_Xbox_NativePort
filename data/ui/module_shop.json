@@ -11,7 +11,8 @@
  "buttons": {"left": "left", "right": "right", "up": "up", "down": "down", "sort_name": "x", "sort_price": "y"},
  "sounds": {"move": "cursor", "select": "confirm", "jump": "adjust", "back": "cancel", "trade": "purchase", "open": "shop_open", "sort": "confirm"},
  "layers": [
-  {"id": "2830", "image": "textures/scroll/wild_tex/1.png", "rect": [0, 0, 640, 480], "position": [0, 0], "layer": 1}
+  {"id": "2830", "image": "textures/scroll/wild_tex/1.png", "rect": [0, 0, 640, 480], "position": [0, 0], "layer": 1, "extend_edges": "both", "edge_bands": [[0, 72], [376, 480]],
+ "edge_bands_left": [[0, 72], [414, 480]], "edge_inset": [1, 1]}
  ],
  "frame": {
   "hud": true,
@@ -393,7 +394,8 @@
  "modes": {
   "buy": {
    "layers": [
-    {"id": "2830", "image": "textures/scroll/wild_tex/1.png", "rect": [0, 0, 640, 480], "position": [0, 0], "layer": 1}
+    {"id": "2830", "image": "textures/scroll/wild_tex/1.png", "rect": [0, 0, 640, 480], "position": [0, 0], "layer": 1, "extend_edges": "both", "edge_bands": [[0, 72], [376, 480]],
+ "edge_bands_left": [[0, 72], [414, 480]], "edge_inset": [1, 1]}
    ],
    "side": {
     "panels": [
@@ -482,7 +484,8 @@
   },
   "sell": {
    "layers": [
-    {"id": "2831", "image": "textures/scroll/wild_tex/1.png", "rect": [640, 0, 1280, 480], "position": [0, 0], "layer": 1}
+    {"id": "2831", "image": "textures/scroll/wild_tex/1.png", "rect": [640, 0, 1280, 480], "position": [0, 0], "layer": 1, "extend_edges": "both", "edge_bands": [[0, 72], [376, 480]],
+ "edge_bands_left": [[0, 72], [414, 480]], "edge_inset": [1, 1]}
    ],
    "side": {
     "panels": [

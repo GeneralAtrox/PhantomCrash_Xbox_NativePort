@@ -139,15 +139,22 @@ void Battle::apply_hits(const std::vector<WeaponHit> &hits) {
   const auto count = robots_.size();
   std::vector<float> piloted_damage(count, 0.0F);
   for (const WeaponHit &hit : hits) {
-    if (hit_object(hit) || hit_supply(hit)) {
+    if (hit_wreck(hit) || hit_object(hit) || hit_supply(hit)) {
       continue;
     }
     const auto victim_index = static_cast<std::size_t>(hit.victim);
+    if (victim_index >= robots_.size()) {
+      continue;
+    }
     Combatant &victim = robots_[victim_index];
     if (!victim.alive || victim.shield > 0.0F) {
       continue; // shielded while it enters or leaves (entry_shield.hpp)
     }
     const bool attacker = hit.attacker >= 0 && hit.attacker < static_cast<int>(count);
+    if (cooperative_ && attacker && hit.attacker != hit.victim && victim.piloted &&
+        robots_[hit.attacker].piloted) {
+      continue; // All damage, knockback and stun are blocked between co-op players.
+    }
     if (attacker && hit.attacker != hit.victim && hit.weapon != nullptr) {
       strike_chatter(robots_[static_cast<std::size_t>(hit.attacker)], *hit.weapon);
     }
@@ -164,6 +171,11 @@ void Battle::apply_hits(const std::vector<WeaponHit> &hits) {
       armour_chatter(victim, damage);
     }
     victim.hp -= damage;
+    if (damage > 0.0F && victim.camouflaged) {
+      // 0x07675e: damage breaks a running camouflage (0x075444, state 7).
+      victim.camouflaged = false;
+      victim.camouflage_broken = true;
+    }
     if (victim.piloted && damage > 0.0F) {
       piloted_damage[victim_index] += damage;
     }
@@ -211,10 +223,37 @@ void Battle::recover(Combatant &robot, const float seconds) const {
   robot.push = robot.push * std::pow(push_fade_per_tick, seconds * battle_ticks_per_second);
 }
 
+// A port safety net. Inside a building's footprint the stage has no ground
+// (0x053337 answers -1000 there too), so a push past a wall dropped a robot
+// into the void, alive and out of reach. It goes back to the last place it
+// stood with ground under it instead.
+float Battle::stage_floor(Combatant &robot) const {
+  RobotMover &mover = robot.mover;
+  const float floor =
+      stage_.ground_height(mover.position(), ground_snap, robot.radius, &robot.floor_surface);
+  if (floor != no_ground) {
+    if (mover.grounded()) {
+      robot.last_ground = mover.position();
+    }
+    return floor;
+  }
+  if (!robot.last_ground || mover.mode() == MoveMode::scripted ||
+      mover.mode() == MoveMode::destroyed) {
+    return floor;
+  }
+  robot.push = {};
+  const Vec3 back = *robot.last_ground;
+  const float ground = stage_.ground_height(back, ground_snap, robot.radius, &robot.floor_surface);
+  mover.set_floor(ground);
+  mover.place(back, mover.heading());
+  return ground;
+}
+
 void Battle::withdraw(const int index) {
   Combatant &robot = robots_[static_cast<std::size_t>(index)];
   release(index);
   robot.alive = false;
+  robot.dying = false;
   robot.camouflaged = false;
   robot.push = {};
   robot.respawn_left = settings_.drone_respawn_seconds;
@@ -227,6 +266,15 @@ void Battle::withdraw(const int index) {
 void Battle::shot_down(const int victim_index) {
   Combatant &victim = robots_[static_cast<std::size_t>(victim_index)];
   victim.alive = false;
+  victim.dying = true;
+  victim.death_seconds = 0.0F;
+  victim.mover.destroy();
+  victim.firing.fill(false);
+  victim.locks.fill(-1);
+  victim.lock_candidates.fill(-1);
+  victim.queued_rounds.fill(0);
+  victim.shield = victim.shield_glow = victim.camouflage_sweep = 0.0F;
+  pose_robot(victim_index, 0.0F);
   victim.camouflaged = false;
   victim.push = {};
   victim.respawn_left = settings_.drone_respawn_seconds;

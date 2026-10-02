@@ -79,7 +79,13 @@ std::optional<RosterMember> draw(Pools &pools, const RosterRules &rules, const i
     from = random() >= rules.unbeaten_share ? beaten : unbeaten;
   }
   if (!from) {
-    return std::nullopt;
+    // The native population setting requests occupied places. An empty
+    // reserve draw must not discard a place while regular entrants remain.
+    if (rules.live_size > 0 && !none) {
+      from = pools[unbeaten].left.empty() ? beaten : unbeaten;
+    } else {
+      return std::nullopt;
+    }
   }
   Pool &pool = pools[*from];
   const float reach = static_cast<float>(pool.left.size() - 1) * random();
@@ -255,7 +261,7 @@ std::optional<RosterMember> draw_replacement(const RegulationCheck &check,
 }
 
 bool refresh_rosters(const RegulationCheck &check, const ContestTables &contests, QuestSave &quest,
-                     const RosterRandom &random) {
+                     const RosterRandom &random, const bool fill_vacancies) {
   bool changed = false;
   for (int area = 0; area < roster_areas; ++area) {
     const int contest = contest_on(contests, quest.day, area, quest.cleared);
@@ -263,6 +269,18 @@ bool refresh_rosters(const RegulationCheck &check, const ContestTables &contests
     if (roster.day != quest.day || roster.contest != contest) {
       roster = draw_roster(check, contests, quest, contest, random);
       changed = true;
+    }
+    if (fill_vacancies && check.rules.roster.live_size > 0) {
+      const Contest *held = contests.contest(roster.drawn_for);
+      const int places = held != nullptr ? roster_places(*held, check.rules.roster) : 0;
+      while (static_cast<int>(roster.members.size()) + 1 < places) {
+        const auto member = draw_replacement(check, contests, quest, roster, -1, random);
+        if (!member) {
+          break; // No distinct eligible entrant remains.
+        }
+        roster.members.push_back(*member);
+        changed = true;
+      }
     }
   }
   return changed;

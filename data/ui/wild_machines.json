@@ -50,7 +50,9 @@
     640,
     480
    ],
-   "layer": 1
+   "layer": 1,
+   "extend_edges": "both", "edge_bands": [[0, 72], [376, 480]],
+ "edge_bands_left": [[0, 72], [414, 480]]
   },
   {
    "id": "help_panel",
@@ -81,7 +83,8 @@
     0,
     296
    ],
-   "layer": 4
+   "layer": 4,
+   "extend_edges": "both"
   }
  ],
  "help": {

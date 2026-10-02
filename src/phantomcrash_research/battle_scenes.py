@@ -4,7 +4,8 @@ The robot state table at ``0x242d38`` (enter, tick and leave handlers per
 state, run by ``0x088b69``) gives robot states 1-5 the entrance
 (``0x088ffa``, ``0x08928c``, ``0x0897a2``) and state 6 the exit
 (``0x089fa3``, ``0x08a161``, ``0x08a496``). A player's robot enters in one
-of states 1-4, picked at random; state 5 is a computer robot's.
+of states 1-4, picked at random; state 5 is a computer robot's. States 8-18 are
+the finale's epilogue (:mod:`finale`).
 
 - Scene table (``0x258f50``, 12 bytes per robot state, read by
   ``0x0ae01d``, ``0x0ae267`` and ``0x0ae69e``): a pointer to the scene's
@@ -56,7 +57,9 @@ from . import motion, stage_objects
 from .game_tables import _Image
 
 SCENE_TABLE = 0x258F50
-SCENE_STATES = range(1, 7)  # the entrance's states 1-5 and the exit, 6
+# The entrance's states 1-5, the exit, 6, and the finale's states 8-18 (:mod:`finale`),
+# whose cameras and walks are in world coordinates.
+SCENE_STATES = (*range(1, 7), *range(8, 19))
 SCENE_ENTRY = 12
 CAMERA_CHANNELS = ("roll", "fov", "eye_x", "eye_y", "eye_z", "target_x", "target_y", "target_z")
 GATE_TABLE = 0x201598

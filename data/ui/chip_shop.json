@@ -58,7 +58,7 @@
  "details": {
   "name": {"position": [191, 322], "colour": "#ffffff", "layer": 257},
   "price": {"right": [299, 351], "digits": 9, "commas": true, "colour": "#f0f0f0"},
-  "level_label": {"id": "2919", "image": "textures/scroll/wild_tex/2.png", "rect": [800, 176, 856, 192], "position": [292, 153], "layer": 259},
+  "level_label": {"id": "2919", "image": "textures/scroll/wild_tex/2.png", "rect": [800, 176, 856, 192], "position": [292, 153], "layer": 259, "colour": "#000000"},
   "level": {"right": [333, 171], "digits": 2, "colour": "#000000"},
   "weight_label": {"id": "2932", "image": "textures/scroll/wild_tex/2.png", "rect": [944, 48, 1000, 72], "position": [267, 263], "layer": 259},
   "weight": {"right": [364, 263], "digits": 1, "decimals": 2, "colour": "#000000"},

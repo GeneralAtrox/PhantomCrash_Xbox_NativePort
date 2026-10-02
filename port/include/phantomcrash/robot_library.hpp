@@ -1,5 +1,8 @@
 #pragma once
 
+#include "phantomcrash/weapon_mounts.hpp"
+#include "phantomcrash/movement_mounts.hpp"
+
 #include "phantomcrash/data_roots.hpp"
 #include "phantomcrash/motion.hpp"
 #include "phantomcrash/robot.hpp"
@@ -18,6 +21,15 @@ namespace phantomcrash {
 // the asset roots (so a mod can replace any of them).
 class RobotLibrary final {
 public:
+  [[nodiscard]] const WeaponMounts &weapon_mounts() const {
+    return mounts_;
+  }
+  [[nodiscard]] const CombatAnimation &combat_animation() const {
+    return combat_;
+  }
+  [[nodiscard]] const MovementMounts &movement_mounts() const {
+    return movement_;
+  }
   explicit RobotLibrary(const DataRoots &roots);
 
   // False when the robots have not been converted (see errors()).
@@ -38,6 +50,9 @@ public:
   }
 
 private:
+  WeaponMounts mounts_;
+  MovementMounts movement_;
+  CombatAnimation combat_;
   const DataRoots &roots_;
   bool available_{};
   RobotCatalogue catalogue_;
@@ -54,8 +69,9 @@ public:
   RobotAnimator(RobotLibrary &library, const RobotAssembly &assembly);
 
   // Starts `motion` (a bank index) at `start_frame`, looping or holding its
-  // last frame. Asking for the playing motion again only changes `loop`.
-  void play(int motion, bool loop, float fade_frames = 8.0F, float start_frame = 0.0F);
+  // last frame. Set restart for a fresh action even when its clip is unchanged.
+  void play(int motion, bool loop, float fade_frames = 8.0F, float start_frame = 0.0F,
+            bool restart = false);
   // Plays on past the loop to the last frame (a walk's stop, a landing).
   void release() noexcept {
     loop_ = false;
@@ -66,6 +82,9 @@ public:
     speed_ = speed;
   }
   void tick(double seconds);
+  void set_auxiliary_frames(const std::array<float, 3> &frames) {
+    auxiliary_frames_ = frames;
+  }
 
   [[nodiscard]] int motion() const noexcept {
     return motion_;
@@ -79,7 +98,9 @@ public:
   }
 
   // Poses the robot standing at `root` (its ground point and heading).
-  void pose(const Mat4 &root, float aim_yaw, float aim_pitch, bool keep_sway, Pose &out) const;
+  void pose(const Mat4 &root, float aim_yaw, float aim_pitch, bool keep_sway, Pose &out,
+            const std::array<ArmAim, 2> &arms = {},
+            const std::array<int, 2> &firing_poses = {21, 22}) const;
 
 private:
   [[nodiscard]] MotionTiming timing(int motion) const;
@@ -87,12 +108,19 @@ private:
 
   const RobotAssembly &assembly_; // outlives the animator
   const MotionBank *legs_{};
+  const MotionBank *body_{};
+  std::array<float, 3> auxiliary_frames_{};
   std::array<const MotionBank *, 2> arms_{};
   int motion_{-1};
   bool loop_{};
   float frame_{};
-  int previous_motion_{-1};
-  float previous_frame_{};
+  struct Layer {
+    int motion{-1};
+    float frame{};
+    float weight{1.0F};
+  };
+  std::array<Layer, motion_layers> previous_{}; // what the motion blends from (MotionSource)
+  std::size_t previous_count_{};
   float speed_{1.0F};
   float fade_{1.0F}; // 0..1 weight of the current motion
   float fade_frames_{1.0F};

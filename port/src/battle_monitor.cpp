@@ -24,23 +24,25 @@ BattleMonitor::BattleMonitor(const BattleMonitorSettings &settings, const std::u
 
 void BattleMonitor::tick(const Battle &battle, const float seconds) {
   const auto &robots = battle.robots();
-  std::vector<int> living;
+  std::vector<int> eligible;
   for (std::size_t i = 0; i < robots.size(); ++i) {
-    if (robots[i].alive) {
-      living.push_back(static_cast<int>(i));
+    const Combatant &robot = robots[i];
+    if (robot.alive && robot.hp > 0.0F && robot.mover.mode() != MoveMode::scripted &&
+        battle.stage().in_play_area(robot.mover.position())) {
+      eligible.push_back(static_cast<int>(i));
     }
   }
-  const bool valid = std::ranges::find(living, subject_) != living.end();
+  const bool valid = std::ranges::find(eligible, subject_) != eligible.end();
   remaining_ -= std::max(seconds, 0.0F);
   bool snap = false;
   if (!valid || remaining_ <= 0.0F) {
-    if (living.size() > 1) {
-      std::erase(living, subject_); // never cut straight back to the same robot
+    if (eligible.size() > 1) {
+      std::erase(eligible, subject_); // never cut straight back to the same robot
     }
     subject_ =
-        living.empty()
+        eligible.empty()
             ? -1
-            : living[std::uniform_int_distribution<std::size_t>(0, living.size() - 1)(random_)];
+            : eligible[std::uniform_int_distribution<std::size_t>(0, eligible.size() - 1)(random_)];
     remaining_ = settings_.switch_seconds;
     snap = true;
   }
@@ -48,7 +50,20 @@ void BattleMonitor::tick(const Battle &battle, const float seconds) {
     return;
   }
   const auto &mover = robots[static_cast<std::size_t>(subject_)].mover;
-  camera_.tick(mover.position(), mover.aim_heading(), mover.pitch(), battle.stage(), seconds, snap);
+  camera_.tick(mover.position(), mover.aim_heading(), 0.0F, battle.stage(), seconds, snap);
+  if (const auto *objects = battle.objects()) {
+    for (const auto &object : objects->objects()) {
+      if (!object.solid()) {
+        continue;
+      }
+      if (const auto hit = object.collision.segment_hit(camera_.anchor(), camera_.eye())) {
+        camera_.block_eye(camera_.anchor(), *hit);
+      }
+    }
+  }
+  if (const auto hit = battle.wrecks().segment_hit(camera_.anchor(), camera_.eye())) {
+    camera_.block_eye(camera_.anchor(), *hit);
+  }
   if (const auto *doors = battle.doors()) {
     if (const auto hit = doors->segment_hit(camera_.anchor(), camera_.eye())) {
       camera_.block_eye(camera_.anchor(), *hit);

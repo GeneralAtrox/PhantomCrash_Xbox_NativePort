@@ -22,9 +22,10 @@
  "arrive_sounds": { "town_map": "club_arrive" },
  "image": "textures/scroll/garage_tex/0.png",
  "layers": [
-  { "id": "background", "image": "textures/scroll/garage_tex/0.png", "rect": [0, 0, 640, 480], "layer": 1 },
+  { "id": "background", "image": "textures/scroll/garage_tex/0.png", "rect": [0, 0, 640, 480], "layer": 1 , "extend_edges": "both", "edge_bands": [[0, 72], [376, 480]],
+ "edge_bands_left": [[0, 72], [414, 480]]},
   { "id": "help_panel", "image": "textures/scroll/garage_tex/0.png", "rect": [0, 664, 432, 840], "position": [240, 208], "centered": true, "layer": 3 },
-  { "id": "music_strip", "image": "textures/scroll/garage_tex/0.png", "rect": [0, 480, 640, 664], "position": [0, 296], "layer": 4 }
+  { "id": "music_strip", "image": "textures/scroll/garage_tex/0.png", "rect": [0, 480, 640, 664], "position": [0, 296], "layer": 4 , "extend_edges": "both"}
  ],
  "help": { "position": [85, 211], "clip": [85, 211, 265, 229], "colour": "#3c3c3c", "speed": 60, "lead": 180, "trail": 0, "layer": 11 },
  "frame": {

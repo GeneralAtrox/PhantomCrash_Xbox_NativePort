@@ -11,8 +11,9 @@
  "buttons": {"up": "up", "down": "down", "left": "left", "right": "right", "page_back": "left_trigger", "page_forward": "right_trigger", "preview": "y", "back_space": "x"},
  "sounds": {"move": "cursor", "select": "confirm", "jump": "adjust", "cancel": "cancel", "add": "confirm", "remove": "cancel"},
  "layers": [
-  {"id": "background", "image": "textures/scroll/media_playlist_tex/0.png", "rect": [0, 0, 640, 480], "position": [0, 0], "layer": 1},
-  {"id": "music_band", "image": "textures/scroll/media_playlist_tex/0.png", "rect": [944, 288, 1584, 392], "position": [0, 376], "layer": 3}
+  {"id": "background", "image": "textures/scroll/media_playlist_tex/0.png", "rect": [0, 0, 640, 480], "position": [0, 0], "layer": 1, "extend_edges": "both", "edge_bands": [[0, 72], [376, 480]],
+ "edge_bands_left": [[0, 72], [414, 480]], "edge_inset": [1, 1]},
+  {"id": "music_band", "image": "textures/scroll/media_playlist_tex/0.png", "rect": [944, 288, 1584, 392], "position": [0, 376], "layer": 3, "extend_edges": "both"}
  ],
  "help": {"position": [0, 72], "clip": [0, 0, 640, 480], "colour": "#f0f0f0", "speed": 60, "lead": 270, "trail": 27, "layer": 263},
  "help_text": "Set the music during battle.",

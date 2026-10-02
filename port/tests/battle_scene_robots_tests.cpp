@@ -99,7 +99,7 @@ bool near(const Vec3 a, const Vec3 b) {
 
 } // namespace
 
-TEST_CASE("a computer robot walks out of its gate three times as fast and opens its door") {
+TEST_CASE("a computer robot uses the player entrance timing and opens its door") {
   BattleScene scene(test_tables(), SceneTuning{}, 1);
   TestBattle test;
   Battle &battle = test.battle;
@@ -110,95 +110,22 @@ TEST_CASE("a computer robot walks out of its gate three times as fast and opens 
   CHECK(scene.robot_state(1) == scene_state::computer);
   CHECK(near(battle.robots()[1].mover.position(), second_gate));
   Heard heard;
-  step(scene, battle, &heard, 9);
+  step(scene, battle, &heard, 29);
   CHECK(battle.doors()->idle(1));
-  step(scene, battle, &heard, 2); // 60 frames at three times: 480 left
+  step(scene, battle, &heard, 2); // 60 frames: 480 left
   CHECK(!battle.doors()->idle(1));
-  step(scene, battle, &heard, 48);
+  step(scene, battle, &heard, 238);
   CHECK(scene.robot_state(1) == scene_state::computer);
-  step(scene, battle, &heard, 2); // 360 frames: it stands where it is
+  step(scene, battle, &heard, 2); // the complete 540-frame sequence
   CHECK(scene.robot_state(1) == scene_state::none);
   CHECK(battle.robots()[1].mover.mode() != MoveMode::scripted);
   CHECK(near(battle.robots()[1].mover.position(), second_gate + Vec3{0.0F, 0.0F, 15.0F}));
-  CHECK(scene.active()); // the lessons' mode: the player's entrance runs alongside
+  CHECK(!scene.active()); // both entrances have the same duration
   CHECK(heard.lines.empty());
   CHECK(heard.music.empty());
 }
 
-TEST_CASE("a computer robot waits for a busy door, but no longer than its delay") {
-  BattleScene scene(test_tables(), SceneTuning{}, 1);
-  TestBattle test;
-  Battle &battle = test.battle;
-  battle.set_doors(test_doors());
-  CHECK(battle.doors()->open(1));
-  CHECK(scene.start_robot_entrance(battle, 1));
-  step(scene, battle, nullptr, 55);
-  CHECK(near(battle.robots()[1].mover.position(), second_gate));
-  step(scene, battle, nullptr, 45); // done waiting after 60 ticks, then 60 ticks out
-  CHECK(scene.robot_state(1) == scene_state::computer);
-  step(scene, battle, nullptr, 25);
-  CHECK(scene.robot_state(1) == scene_state::none);
-}
-
-TEST_CASE("in a regular battle computer robots wait for the player's entrance") {
-  SceneTuning tuning;
-  tuning.regular_battle = true;
-  BattleScene scene(test_tables(), tuning, 1);
-  TestBattle test;
-  Battle &battle = test.battle;
-  CHECK(scene.start_entrance(battle));
-  CHECK(scene.start_robot_entrance(battle, 1));
-  Heard heard;
-  step(scene, battle, &heard, 265);
-  CHECK(scene.robot_state(1) == scene_state::computer);
-  CHECK(near(battle.robots()[1].mover.position(), second_gate));
-  step(scene, battle, &heard, 10);
-  CHECK(!scene.active());
-  step(scene, battle, &heard, 62);
-  CHECK(scene.robot_state(1) == scene_state::none);
-  CHECK((heard.music == std::vector<std::string>{"battle_play_in"}));
-  const std::vector<std::pair<int, int>> lines{{0, chatter_event::entrance},
-                                               {1, chatter_event::rival_entrance}};
-  CHECK(heard.lines == lines);
-}
-
-TEST_CASE("the battle's first boss takes the camera while the others fight on") {
-  BattleScene scene(test_tables(), SceneTuning{}, 1);
-  TestBattle test;
-  Battle &battle = test.battle;
-  battle.set_boss(1, true);
-  CHECK(scene.start_robot_entrance(battle, 1));
-  CHECK(scene.start_robot_entrance(battle, 2));
-  Heard heard;
-  step(scene, battle, &heard);
-  CHECK(scene.cinematic());
-  CHECK(scene.scripted());
-  CHECK(scene.robot_state(1) == scene_state::boss);
-  CHECK(battle.robots()[2].shield > 0.0F); // waiting at its gate, shielded
-  CHECK((heard.music == std::vector<std::string>{"boss_start"}));
-  const auto shot = scene.shot(CameraShot{});
-  CHECK(shot.has_value() && near(shot->eye, second_gate + Vec3{0.0F, 5.0F, 10.0F}));
-  step(scene, battle, &heard, 200);
-  CHECK(scene.cinematic());
-  CHECK(scene.letterbox() == 1.0F);
-  CHECK(near(battle.robots()[2].mover.position(), first_gate)); // held at its gate
-  step(scene, battle, &heard, 72);
-  CHECK(!scene.cinematic());
-  CHECK(scene.robot_state(1) == scene_state::none);
-  CHECK(near(battle.robots()[1].mover.position(), second_gate + Vec3{0.0F, 0.0F, 15.0F}));
-  CHECK(scene.robot_state(2) == scene_state::computer); // now it walks out
-  step(scene, battle, &heard, 62);
-  CHECK(scene.robot_state(2) == scene_state::none);
-  CHECK(scene.letterbox() == 0.0F);
-  // Only the battle's first boss gets the scene.
-  CHECK(scene.start_robot_entrance(battle, 1));
-  step(scene, battle, &heard);
-  CHECK(!scene.cinematic());
-  CHECK(scene.robot_state(1) == scene_state::computer);
-  CHECK(heard.music.size() == 1);
-}
-
-TEST_CASE("a robot walking out of its gate is shielded for five seconds") {
+TEST_CASE("a robot is protected through entry and for five seconds afterwards") {
   SceneTuning tuning;
   BattleScene scene(test_tables(), tuning, 1);
   TestBattle test;
@@ -209,10 +136,10 @@ TEST_CASE("a robot walking out of its gate is shielded for five seconds") {
   CHECK(robot.shield > 0.0F);
   CHECK(robot.shield_glow > 0.0F);
   CHECK(robot.shield_glow <= EntryShield{}.peak);
-  // It lasts five seconds from the walk out's start (ticks of 1/30 s).
+  // Protection refreshes throughout the complete entrance (ticks of 1/30 s).
   step(scene, battle, nullptr, 90);
   CHECK(robot.shield > 0.0F);
-  step(scene, battle, nullptr, 40);
+  step(scene, battle, nullptr, 305);
   CHECK(robot.shield == 0.0F);
   CHECK(robot.shield_glow == 0.0F);
 }
@@ -227,7 +154,7 @@ TEST_CASE("a computer robot back in a gate walks in and leaves once its door has
   Battle &battle = test.battle;
   battle.set_doors(test_doors());
   CHECK(scene.start_robot_entrance(battle, 1));
-  step(scene, battle, nullptr, 61); // it stands outside its gate
+  step(scene, battle, nullptr, 271); // the full entrance has finished
   REQUIRE(scene.robot_state(1) == scene_state::none);
   battle.place(1, second_gate + Vec3{0.0F, 0.0F, 3.0F}, 0.0F);
   Heard heard;

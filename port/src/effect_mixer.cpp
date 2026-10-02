@@ -1,4 +1,5 @@
 #include "phantomcrash/effect_mixer.hpp"
+#include "phantomcrash/world_sound.hpp"
 
 #include <algorithm>
 #include <utility>
@@ -33,7 +34,8 @@ EffectMixer::Voice &EffectMixer::free_voice() {
 
 void EffectMixer::play(std::shared_ptr<const EffectSamples> samples, const std::string &name,
                        const float volume, const SoundMix mix, const bool loop,
-                       const std::uint64_t key) {
+                       const std::uint64_t key, const std::optional<Vec3> position,
+                       const AudioBus bus) {
   if (samples == nullptr || samples->frames() == 0) {
     return;
   }
@@ -43,15 +45,50 @@ void EffectMixer::play(std::shared_ptr<const EffectSamples> samples, const std::
     voice = found != voices_.end() ? &*found : nullptr;
   }
   if (voice == nullptr) {
+    // 0x0de8d0 cycles the bank entry's fixed set of buffers. Retriggering
+    // a busy slot restarts it (0x0de660), rather than layering another copy.
+    std::size_t count = 0;
+    Voice *oldest = nullptr;
+    for (Voice &candidate : voices_) {
+      if (candidate.samples == samples) {
+        ++count;
+        if (oldest == nullptr || candidate.started < oldest->started) {
+          oldest = &candidate;
+        }
+      }
+    }
+    if (samples->voice_limit != 0 && count >= samples->voice_limit) {
+      voice = oldest;
+    }
+  }
+  if (voice == nullptr) {
     voice = &free_voice();
   }
-  *voice = Voice{std::move(samples), name, volume, mix, loop, key, 0, ++count_};
+  *voice = Voice{std::move(samples), name, volume, mix, loop, key, 0, ++count_, position, bus};
 }
 
-void EffectMixer::set_mix(const std::uint64_t key, const SoundMix mix) {
+void EffectMixer::set_mix(const std::uint64_t key, const SoundMix mix,
+                          const std::optional<Vec3> position) {
   for (Voice &voice : voices_) {
     if (key != 0 && voice.key == key) {
       voice.mix = mix;
+      voice.position = position;
+    }
+  }
+}
+
+void EffectMixer::set_listener(const SoundFalloff &falloff, const SoundListener &listener) {
+  for (Voice &voice : voices_) {
+    if (voice.samples && voice.position) {
+      voice.mix = place_sound(falloff, listener, *voice.position);
+    }
+  }
+}
+
+void EffectMixer::stop_spatial() {
+  for (Voice &voice : voices_) {
+    if (voice.position) {
+      voice = Voice{};
     }
   }
 }
@@ -96,7 +133,7 @@ void EffectMixer::mix(float *out, const std::size_t frames) {
     const EffectSamples &sound = *voice.samples;
     const auto channels = static_cast<std::size_t>(sound.channels);
     const std::size_t length = sound.frames();
-    const float level = voice.volume * voice.mix.gain * gain_;
+    const float level = voice.volume * voice.mix.gain * gain_ * audio_.gain(voice.bus);
     const float left = level * pan_left(voice.mix.pan);
     const float right = level * pan_right(voice.mix.pan);
     for (std::size_t frame = 0; frame < frames; ++frame) {
@@ -113,6 +150,9 @@ void EffectMixer::mix(float *out, const std::size_t frames) {
       out[frame * 2] += first * left;
       out[frame * 2 + 1] += second * right;
       ++voice.at;
+    }
+    if (voice.samples && !voice.loop && voice.at >= length) {
+      voice = Voice{};
     }
   }
   for (std::size_t index = 0; index < frames * 2; ++index) {

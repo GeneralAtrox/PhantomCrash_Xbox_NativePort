@@ -36,6 +36,12 @@ void Battle::tick_supply(const float seconds) {
   if (const auto crash = supply_->take_crash()) {
     supply_explosion(*crash);
   }
+  for (const Vec3 at : supply_->take_bursts()) {
+    BattleEvent burst{-1, BattleEventKind::effect};
+    burst.slot = supply_->settings().look.burst_effect;
+    burst.at = at;
+    events_.push_back(burst);
+  }
   for (Combatant &robot : robots_) {
     if (!robot.alive) {
       continue;

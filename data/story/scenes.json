@@ -23,6 +23,8 @@
   "dealer_ventuno": 34,
   "dealer_kojima": 34,
   "dealer_american_stars": 34,
-  "match_result": 30
+  "match_result": 30,
+  "rumbling": 3,
+  "rumbling_battle": 6
  }
 }

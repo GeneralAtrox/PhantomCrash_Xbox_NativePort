@@ -1,6 +1,7 @@
 #include "desktop_sv_purchase.hpp"
 
 #include "desktop_draw_list.hpp"
+#include "phantomcrash/shop_pointer.hpp"
 
 #include <cmath>
 #include <utility>
@@ -38,6 +39,27 @@ void ShopNotice::update(const std::string &message, const MessageBox::Kind kind,
   }
   box_.set_choice(choice);
   box_.update(tick_seconds);
+}
+
+InputFrame ShopNotice::pointer_input(InputFrame input, const Buttons confirm) const {
+  if (!grown() || !input.clicked) {
+    return input;
+  }
+  if (box_.kind() == MessageBox::Kind::question) {
+    if (shop_hit(input, box_.style().yes.normal)) {
+      input.dialog_choice = 0;
+    } else if (shop_hit(input, box_.style().no.normal)) {
+      input.dialog_choice = 1;
+    }
+    if (input.dialog_choice) {
+      input.pressed |= confirm;
+      SDL_Log("Shop dialog: clicked %s", *input.dialog_choice == 0 ? "YES" : "NO");
+    }
+  } else if (box_.kind() == MessageBox::Kind::notice && shop_hit(input, box_.style().ok.normal)) {
+    input.pressed |= confirm;
+    SDL_Log("Shop dialog: clicked OK");
+  }
+  return input;
 }
 
 void ShopNotice::draw(DrawList &list) const {

@@ -82,12 +82,16 @@ SCRIPT_FLAGS = {
 SHAPES = {0: "point", 1: "point", 3: "sphere", 5: "cluster"}
 
 # (offset, name, format) of the plain fields; 'f' float, 'i' int, 'b' byte.
+# force_time, drag_time, mass_jitter and speed_time are never read by the
+# game (spawn 0x060b7c, emitter 0x060107/0x06077e, motion 0x061d35,
+# acceleration 0x063c16, draw 0x0625e4); they are named from the layout's
+# value, time, jitter runs and kept so each record is complete.
 FIELDS = (
     (0x00, "force_scale", "f"),
-    (0x04, "unknown_04", "f"),
+    (0x04, "force_time", "i"),
     (0x08, "force_jitter", "f"),
     (0x0C, "drag", "f"),
-    (0x10, "unknown_10", "f"),
+    (0x10, "drag_time", "i"),
     (0x14, "drag_jitter", "f"),
     (0x18, "additive", "b"),
     (0x1C, "no_gravity", "b"),
@@ -104,7 +108,7 @@ FIELDS = (
     (0x78, "life_jitter", "f"),
     (0x7C, "mass", "f"),
     (0x80, "mass_time", "i"),
-    (0x84, "unknown_84", "f"),
+    (0x84, "mass_jitter", "f"),
     (0x88, "size", "f"),
     (0x8C, "scale_time", "i"),
     (0x90, "size_jitter", "f"),
@@ -123,7 +127,7 @@ FIELDS = (
     (0x100, "spread_jitter", "f"),
     (0x104, "speed", "f"),
     (0x108, "speed_jitter", "f"),
-    (0x10C, "unknown_10c", "f"),
+    (0x10C, "speed_time", "i"),
     (0x110, "push", "f"),
 )
 VECTORS = (
@@ -289,6 +293,18 @@ def _bank(executable: bytes) -> tuple[dict, set[int], set[int]]:
     pictures, models, packs = effect_models.effect_models(executable)
     bank = {
         "frame_rate": EFFECT_RATE,
+        "particle_motion": {
+            "fragment_copies": 8, "fragment_step": 0.1, "fragment_jitter": 0.1,
+            # 0x062115 stops debris on flat ground at 0.05 rather than
+            # bouncing it. debris_stage_contacts settles it on the stage's
+            # surfaces instead, with editable bounce/slide controls.
+            "debris_restitution": 0.0, "debris_friction": 0.0,
+            "debris_rest_speed": 0.02, "debris_clearance": 0.05,
+            "debris_stage_contacts": False,
+            # 0x060107 starts an emitter at its definition's offset before
+            # 0x05fda8 moves it, so its first frame sweeps in from there.
+            "start_at_offset": True,
+        },
         "atlas": {
             "texture": f"textures/binlink/{ATLAS_RESOURCE}.png",
             "cell_size": list(ATLAS_CELL_SIZE),

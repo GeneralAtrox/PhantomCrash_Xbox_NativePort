@@ -20,7 +20,7 @@ target. Apply it before checking the 400-line limit:
 |---|---|
 | `src/phantomcrash_research/` | Python research package: XDVDFS reader, XBE parser, extraction, CLI |
 | `src/phantomcrash_research/{xbox_texture,texture_pack,png,audio,game_tables,events,model,gltf,convert}.py` | Asset conversion: Xbox textures and packs, PNG, Xbox ADPCM and SE BIN banks, XBE tables, event scripts and talk characters, `_mdl.bin` models to glTF |
-| `src/phantomcrash_research/{robots,motion,battle_data,collision,environment,parts,robot_convert}.py` | Robot conversion (`convert-robots`): part tables and the catalogue, the AI chip and weapon records (`tables/parts.json`), leg and arm skeletons, motion banks, part models and paints from the binlink packs, Pepper's lesson messages, the enemy path, the stages' collision (read and written) and their fog and light presets |
+| `src/phantomcrash_research/{robots,motion,battle_data,collision,environment,parts,finale,robot_convert}.py` | Robot conversion (`convert-robots`): part tables and the catalogue, the AI chip and weapon records (`tables/parts.json`), leg and arm skeletons, motion banks, part models and paints from the binlink packs, Pepper's lesson messages, the enemy path, the stages' collision (read and written), their fog and light presets and the finale's phases (`tables/finale.json`) |
 | `data/` | Editable port data (intro, title, menu, music, effects); paths resolve through `mods/` first |
 | `tools/phantomcrash.py` | Source-checkout CLI entry point |
 | `tools/ghidra/` | Pinned external-tool manifest and Ghidra Java scripts |

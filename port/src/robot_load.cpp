@@ -26,12 +26,25 @@ constexpr float jump_min = 2.5F;
 constexpr float jump_max = 100.0F;
 // Values over the model's motion speed give the playback rate (0x1b5ab4).
 constexpr float motion_rate_scale = 1.0F / 216.0F;
+// The turn's range, in degrees a battle tick (0x17ac38, 0x19ef0c).
+constexpr float turn_min = 0.1F;
+constexpr float turn_max = 90.0F;
+// The dodge's push range, units a battle tick (0x17ac38, 0x17ccfc). 0x08d98c
+// adds it times the 60 Hz frames a tick (DAT_a69c94 / DAT_ac73b8).
+constexpr float dodge_min = 0.1F;
+constexpr float dodge_max = 30.0F;
+constexpr float frames_per_battle_tick = part_frames_per_second / battle_tick_rate;
 
 template <typename Record>
 const Record *record(const std::vector<Record> &records, const int index) {
   return index >= 0 && index < static_cast<int>(records.size())
              ? &records[static_cast<std::size_t>(index)]
              : nullptr;
+}
+
+// An older extraction leaves a curve out: every term is zero.
+bool has_curve(const LevelCurve &curve) {
+  return curve.base != 0.0F || curve.mid != 0.0F || curve.top != 0.0F;
 }
 
 float weight_of(const ArmourRecord *part, const int level) {
@@ -94,16 +107,41 @@ LegsSpeeds legs_speeds(const PartTables &tables, const RobotLoadout &loadout,
 MovementTuning loaded_movement(const PartTables &tables, const RobotLoadout &loadout,
                                const LoadStats &load, MovementTuning base) {
   const float speed = load.speed_factor;
-  base.turn_degrees_per_second *= speed;
-  base.dash_turn_degrees_per_second *= speed;
-  const float jump = std::sqrt(std::max(0.0F, load.jump_factor));
-  base.jump_speed *= jump;
-  base.jump_boost *= jump;
   const ArmourRecord *legs = record(tables.legs, loadout.legs);
+  if (legs == nullptr || !has_curve(legs->turn)) {
+    base.turn_degrees_per_second *= speed;
+    base.dash_turn_degrees_per_second *= speed;
+    base.air_turn_degrees_per_second *= speed;
+  } else {
+    // 0x07c34e: the legs' turn times the speed factor, degrees a tick, for
+    // the ground, the dash and the air alike (0x08e257, 0x0905af).
+    const float turn =
+        std::clamp(legs->turn.value(loadout.legs_level) * speed, turn_min, turn_max) *
+        battle_tick_rate;
+    base.turn_degrees_per_second = turn;
+    base.dash_turn_degrees_per_second = turn;
+    base.air_turn_degrees_per_second = turn;
+    // 0x07d330: the twist turns by the same times the frames a tick.
+    base.twist_degrees_per_second = turn * frames_per_battle_tick;
+  }
   if (legs == nullptr) {
+    base.jump_height *= std::max(0.0F, load.jump_factor);
     return base;
   }
+  // 0x07c34e: the legs' dodge pushes times the speed factor (robot +0x80,
+  // +0x84), on the ground and in the air.
+  const auto push = [&](const LevelCurve &curve, const float fallback) {
+    if (!has_curve(curve)) {
+      return fallback;
+    }
+    return std::clamp(curve.value(loadout.legs_level) * speed, dodge_min, dodge_max) *
+           frames_per_battle_tick * battle_tick_rate;
+  };
+  base.dodge_speed = push(legs->dodge, base.dodge_speed);
+  base.air_dodge_speed = push(legs->air_dodge, base.air_dodge_speed);
   const LegsSpeeds speeds = legs_speeds(tables, loadout, load);
+  base.jump_height =
+      has_curve(legs->jump) ? speeds.jump : base.jump_height * std::max(0.0F, load.jump_factor);
   const float dash = speeds.dash;
   const float walk = speeds.walk;
   const auto *motion = record(tables.leg_motion_speeds, legs->model);

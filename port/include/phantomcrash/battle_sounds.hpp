@@ -43,8 +43,16 @@ struct WeaponSoundRule {
 // distance they carry.
 struct BattleSoundTable {
   SoundFalloff falloff;
-  SoundPair footstep;                      // 0x093cf0, from the walk's steps
-  SoundPair landing;                       // 0x093df2
+  SoundPair footstep; // 0x093cf0, from the walk's steps
+  SoundPair landing;  // 0x093df2
+  // 0x094d86: landing on these surfaces plays its own sound instead, the
+  // first that matches (surface flags, stage_collision.hpp).
+  struct SurfaceSound {
+    unsigned flags{};
+    std::string sound;
+  };
+  std::vector<SurfaceSound> landing_surfaces;
+  SoundPair down_boost;                    // 0x0905af, player bank 3 entry 20
   SoundPair jump;                          // 0x08ea5b, 0x08d7fa
   SoundPair boost_start;                   // 0x0945c1: a dash starts ...
   SoundPair boost;                         // ... and this loops, following it, until it ends
@@ -55,15 +63,35 @@ struct BattleSoundTable {
   float footstep_seconds{0.5F};            // between steps at the walk's full speed (port value)
   float low_armour_share{0.25F};           // below this share of the armour (0x199fd4)
   float low_armour_seconds{32.0F / 30.0F}; // 0x20 battle ticks between alarms
+  float beam_restart_seconds{9.0F};        // 0x09b9fe refreshes a held beam's long clip
   std::vector<WeaponSoundRule> fire;       // 0x099c02
   std::vector<WeaponSoundRule> impact;     // 0x098eda, 0x047ed9
   SoundPair fire_fallback;                 // a weapon without a record
+  // A piloted robot's own (battle_sounds_pilot.cpp, the rest of 0x093637).
+  // 0x0949a0: the upper body's servo starts while the twist stick pushes
+  // past twist_push and the twist is inside twist_limit_degrees, and stops
+  // once it is not.
+  std::string twist_start;
+  std::string twist_stop;
+  float twist_push{0.1F};           // 0x17ac38
+  float twist_limit_degrees{45.0F}; // 0x17d0e0
+  std::string camouflage_on;        // 0x093c5d: state 1, turning on
+  std::string camouflage_off;       // state 5, turning off
+  std::string camouflage_break;     // state 7, a hit broke it: played twice
+  std::string arm_lost;             // an arm weapon knocked off (+0x8c/+0x90 state 4) ...
+  float arm_lost_seconds{5.0F};     // ... repeats this often (DAT_ac73b8 * 5)
+  std::string locked_on;            // loops while another robot locks on (+0x8a2, 0x051045)
+  std::string carrier_engine;       // the supply carrier's loop (0x066940, stopped by 0x06828e)
 };
 
 [[nodiscard]] BattleSoundTable parse_battle_sounds(const json::JsonValue &value);
 
 // Every file the table names, once each.
 [[nodiscard]] std::vector<std::string> sound_files(const BattleSoundTable &table);
+
+// A robot's landing sound: by the surface it lands on (0x094d86), else its own.
+[[nodiscard]] const std::string &landing_sound(const BattleSoundTable &table,
+                                               const Combatant &robot);
 
 // The first rule's sound for a weapon on `slot`, or nullptr.
 [[nodiscard]] const SoundPair *weapon_sound(const std::vector<WeaponSoundRule> &rules,
@@ -102,19 +130,31 @@ private:
     bool grounded{true};
     bool alive{true};
     bool boosting{};
+    bool down_boosting{};
     float step_left{};
     float alarm_left{};
+    std::array<bool, weapon_slots> beams{};
+    std::array<float, weapon_slots> beam_left{};
+    bool twisting{};
+    bool camouflaged{};
+    bool locked{};
+    float arm_alarm_left{};
   };
 
-  void play(const std::string &name, Vec3 at);
+  void play(const std::string &name, Vec3 at, AudioBus bus = AudioBus::robots);
   void observe_robot(std::size_t index, const Combatant &robot, float seconds);
   void observe_boost(std::size_t index, const Combatant &robot, Watch &watch);
   void observe_events(const Battle &battle);
+  void observe_beams(const Battle &battle, float seconds);
+  void observe_pilot(const Battle &battle, std::size_t index, float seconds);
+  void observe_carrier(const Battle &battle);
+  void loop(bool on, bool was, const std::string &name, std::uint64_t key, Vec3 at, AudioBus bus);
   [[nodiscard]] static std::uint64_t boost_key(std::size_t index);
 
   BattleSoundTable table_;
   std::vector<Watch> watch_;
   std::vector<PlacedCue> cues_;
+  bool carrier_sounding_{};
 };
 
 } // namespace phantomcrash

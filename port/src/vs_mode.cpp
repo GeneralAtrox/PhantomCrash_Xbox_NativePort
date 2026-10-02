@@ -67,6 +67,12 @@ VsMode::VsMode(VsModeScript script, const PartTables &parts, const GarageTables 
       player.first = std::clamp(chosen, 0, std::max(count() - cards.visible, 0));
       player.row = chosen - player.first;
     }
+    if (session_.resume == VsPhase::select) {
+      // The battle's SELECT SV (0x03f4cf 1): the same players choose again.
+      session_.resume = VsPhase::area;
+      start_phase(VsPhase::select);
+      return;
+    }
     enter_area();
     area_cursor_ = std::clamp(session_.area_cursor, 0, static_cast<int>(items_.size()) - 1);
     picture_ = wanted_picture();

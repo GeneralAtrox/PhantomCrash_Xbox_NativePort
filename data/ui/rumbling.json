@@ -60,7 +60,9 @@
     0,
     0
    ],
-   "layer": 1
+   "layer": 1,
+   "extend_edges": "both", "edge_bands": [[0, 72], [376, 480]],
+ "edge_bands_left": [[0, 72], [414, 480]]
   },
   {
    "id": "876",
@@ -75,7 +77,8 @@
     0,
     0
    ],
-   "layer": 257
+   "layer": 257,
+   "extend_edges": "both"
   },
   {
    "id": "841",
@@ -90,7 +93,8 @@
     0,
     376
    ],
-   "layer": 257
+   "layer": 257,
+   "extend_edges": "both"
   }
  ],
  "frame": {

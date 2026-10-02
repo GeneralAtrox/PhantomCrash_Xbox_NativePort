@@ -138,6 +138,8 @@ ContestTables parse_contest_tables(const json::JsonValue &document) {
       entrant.pilot = static_cast<int>(value.number_or("pilot", -1));
       entrant.robot = static_cast<int>(value.number_or("robot", -1));
       entrant.level = static_cast<int>(value.number_or("level", 0));
+      entrant.ai_profile =
+          static_cast<int>(value.number_or("ai_profile", value.number_or("word_4", 4)));
       tables.entrants.push_back(entrant);
     }
   }

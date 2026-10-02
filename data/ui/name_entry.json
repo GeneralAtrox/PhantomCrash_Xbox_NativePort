@@ -74,9 +74,10 @@
   "pulse_alpha": 0.502
  },
  "layers": [
-  { "id": "background", "image": "textures/scroll/name_entry_tex/1.png", "rect": [0, 0, 640, 480], "layer": 1 },
-  { "id": "music_band", "image": "textures/scroll/name_entry_tex/0.png", "rect": [0, 160, 640, 264], "position": [0, 376], "layer": 1 },
-  { "id": "title_band", "image": "textures/scroll/name_entry_tex/0.png", "rect": [0, 264, 640, 360], "layer": 1 }
+  { "id": "background", "image": "textures/scroll/name_entry_tex/1.png", "rect": [0, 0, 640, 480], "layer": 1 , "extend_edges": "both", "edge_bands": [[0, 72], [376, 480]],
+ "edge_bands_left": [[0, 72], [414, 480]]},
+  { "id": "music_band", "image": "textures/scroll/name_entry_tex/0.png", "rect": [0, 160, 640, 264], "position": [0, 376], "layer": 1 , "extend_edges": "both", "edge_inset": [1, 1]},
+  { "id": "title_band", "image": "textures/scroll/name_entry_tex/0.png", "rect": [0, 264, 640, 360], "layer": 1 , "extend_edges": "both"}
  ],
  "intro_layers": [
   { "id": "grid", "image": "textures/scroll/name_entry_tex/0.png", "rect": [0, 0, 520, 160], "position": [64, 173], "layer": 2 },

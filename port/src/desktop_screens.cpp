@@ -15,7 +15,6 @@
 #include "phantomcrash/json_fields.hpp"
 
 #include <algorithm>
-#include <charconv>
 #include <random>
 #include <utility>
 
@@ -36,7 +35,8 @@ void name_label(NameEntryScript &script, const std::string &target) {
 
 ScreenRunner::ScreenRunner(SDL_Renderer *renderer, const DataRoots &roots, const std::string &first,
                            const GameOptions options, QuestSave quest,
-                           std::vector<VsScoobee> vs_scoobees)
+                           std::vector<VsScoobee> vs_scoobees, const AudioOptions audio,
+                           std::shared_ptr<CoopState> coop, const int coop_slot)
     : roots_(roots), textures_(renderer, roots),
       audio_(roots, roots.document("audio/music.json"), roots.document("audio/sfx.json")),
       intro_(parse_intro(roots.document("boot/intro.json"))),
@@ -124,6 +124,16 @@ ScreenRunner::ScreenRunner(SDL_Renderer *renderer, const DataRoots &roots, const
       track_files_[name] = track.string_or("file", "");
     }
   }
+  story_rules_ = parse_story_progression(roots.document("story/progression.json"));
+  const auto conditional = std::ranges::count_if(events_, &StoryEvent::unported_conditions);
+  const auto unsupported = std::ranges::count_if(events_, [&](const StoryEvent &event) {
+    const int predicate = event.conditions[1];
+    return predicate >= 0 && predicate < 75 && !story_rules_.predicates.contains(predicate);
+  });
+  SDL_Log(
+      "Story progression: events=%zu conditional=%lld unsupported_predicates=%lld saved_flags=%zu",
+      events_.size(), static_cast<long long>(conditional), static_cast<long long>(unsupported),
+      quest_.seen_events.size());
   game_ = std::make_unique<GameScreens>(textures_, roots, font_, frame_, credits_, events_);
   game_->set_preview_world([this] { return world(); });
   game_->set_vs_scoobees(std::move(vs_scoobees));
@@ -132,63 +142,53 @@ ScreenRunner::ScreenRunner(SDL_Renderer *renderer, const DataRoots &roots, const
   rumbling_battle_ = parse_rumbling_battle(roots.document("world/rumbling.json"));
   vs_battle_ = parse_vs_battle(roots.document("world/vs_battle.json"));
   stages_ = parse_stages(roots.document("world/stages.json"));
+  set_audio_options(audio);
   apply_volumes();
+  coop_ = std::move(coop);
+  coop_slot_ = coop_slot;
+  configure_coop_menu();
   show(first);
 }
 
 ScreenRunner::~ScreenRunner() {
+  schedule_overlay_.reset();
   screen_.reset(); // before the world it may draw with
-}
-
-const StoryEvent *ScreenRunner::story_event(const std::string &from, const std::string &to) const {
-  const auto from_scene = scene_ids_.find(from);
-  const auto to_scene = scene_ids_.find(to);
-  if (from_scene == scene_ids_.end() || to_scene == scene_ids_.end()) {
-    return nullptr;
-  }
-  return event_between(events_, from_scene->second, to_scene->second, quest_.seen_events);
-}
-
-// "event_<scene>": a talk scene, leading on to the screen it interrupted
-// (or, started on its own, the screen of its destination scene; the screen
-// it was opened from for the return scene).
-std::unique_ptr<Screen> ScreenRunner::make_event(const std::string &name, const std::string &from) {
-  int scene = -1;
-  const std::string_view digits = std::string_view(name).substr(6);
-  std::from_chars(digits.data(), digits.data() + digits.size(), scene);
-  const auto event =
-      std::ranges::find_if(events_, [&](const StoryEvent &item) { return item.scene == scene; });
-  if (event == events_.end()) {
-    return nullptr;
-  }
-  std::string next = std::exchange(event_next_, {});
-  if (next.empty() && event->to_scene == return_scene_ && !from.empty()) {
-    next = from;
-  }
-  if (next.empty()) {
-    const auto found = std::ranges::find_if(
-        scene_ids_, [&](const auto &entry) { return entry.second == event->to_scene; });
-    next = found == scene_ids_.end() ? "title" : found->first;
-  }
-  return std::make_unique<TalkScreen>(textures_, font_, *event, talk_, talk_tuning_,
-                                      std::move(next), quest_.player_name, frame_, credits_,
-                                      quest_);
+  pending_result_.reset();
 }
 
 std::unique_ptr<Screen> ScreenRunner::make(const std::string &name, const std::string &from) {
   naming_program_ = -1;
   naming_stock_ = -1;
   naming_hangar_ = -1;
+  if (name == "coop" && coop_ && coop_->enabled && !cooperative()) {
+    return make_coop();
+  }
+  if (name == "coop_name" && cooperative()) {
+    quest_ = new_quest_;
+    quest_.player_name.clear();
+    const auto coop_data = roots_.document("ui/coop.json");
+    for (const auto &event : required(coop_data, "intro_events").array()) {
+      quest_.seen_events.push_back(static_cast<int>(event.number()));
+    }
+    roll_chart(quest_.music, std::random_device{}());
+    NameEntryScript script = name_entry_;
+    script.exit_to = "garage";
+    return std::make_unique<NameEntryScreen>(textures_, font_, std::move(script), message_box_,
+                                             quest_, frame_, credits_);
+  }
   if (name == "intro") {
     // The licence screen and Dolby play on the first intro only.
     const bool first_boot = intro_pass_ == 0;
     return std::make_unique<IntroScreen>(textures_, roots_, intro_, first_boot, intro_pass_++);
   }
   if (name == "title") {
-    return std::make_unique<FrontEndScreen>(textures_, title_, menu_);
+    return std::make_unique<FrontEndScreen>(textures_, title_, menu_,
+                                            roots_.document("ui/main_menu_buttons.json"));
   }
   if (name == "main_menu") {
-    return std::make_unique<FrontEndScreen>(textures_, title_, menu_, from.empty() ? "?" : from);
+    return std::make_unique<FrontEndScreen>(textures_, title_, menu_,
+                                            roots_.document("ui/main_menu_buttons.json"),
+                                            from.empty() ? "?" : from);
   }
   if (auto menu = make_menu(name, from)) {
     return menu;
@@ -200,6 +200,9 @@ std::unique_ptr<Screen> ScreenRunner::make(const std::string &name, const std::s
     roll_chart(quest_.music, std::random_device{}()); // 0xbac51
     guide_memory_ = {};
     return std::make_unique<IntroScreen>(textures_, roots_, new_game_, true, 0);
+  }
+  if (name == "ending") {
+    return make_ending();
   }
   if (name == "staff_roll") {
     // Starting the staff roll marks the game cleared (0x06df71).
@@ -252,52 +255,43 @@ std::unique_ptr<Screen> ScreenRunner::make(const std::string &name, const std::s
   if (auto battle = make_battle(name)) {
     return battle;
   }
-  return game_->make(name, from, place_before_, quest_);
+  auto result = game_->make(name, from, place_before_, quest_);
+  if (cooperative() && result) {
+    bind_coop_screen(*result);
+  }
+  return result;
 }
 
-void ScreenRunner::show(const std::string &name, const bool events) {
-  std::string target = name;
-  auto result_screen = target == "match_result" ? make_match_result() : nullptr;
-  if (const StoryEvent *event = events ? story_event(name_, name) : nullptr) {
-    quest_.seen_events.push_back(event->scene);
-    event_next_ = name;
-    target = "event_" + std::to_string(event->scene);
+void ScreenRunner::tick(const InputFrame &raw_input, const double tick_seconds) {
+  InputFrame input = raw_input;
+  const auto &active = schedule_overlay_ ? schedule_overlay_ : screen_;
+  if (input.right_clicked && active->mouse_menu_back()) {
+    input.pressed |= button::b;
+    input.ports[0].pressed |= button::b;
+    SDL_Log("Menu mouse: right-click B on %s", schedule_overlay_ ? "schedule" : name_.c_str());
   }
-  if (!name_.starts_with("event_")) {
-    place_before_ = name_;
+  if (tick_schedule(input, tick_seconds)) {
+    return;
   }
-  rumble_.stop();
-  if (rumbling_world_ && rumbling_world_->lent() >= 0) {
-    rumbling_world_->give_back(quest_); // the player has left the area's battle
-  }
-  if (screen_) {
-    for (const std::string &sound : screen_->held_sounds()) {
-      audio_.stop_sound(sound);
-    }
-    audio_.stop_keyed();
-  }
-  auto next = result_screen ? std::move(result_screen) : make(target, name_);
-  if (next == nullptr) {
-    SDL_Log("No screen named \"%s\"; showing the title", target.c_str());
-    next = make("title", name_);
-    name_ = "title";
-  } else {
-    name_ = target;
-  }
-  screen_ = std::move(next);
-  for (const std::string &sound : screen_->sound_preloads()) {
-    audio_.preload(sound); // not loaded mid-battle, on its first play
-  }
-  play_music();
-  if (const auto song = radio_->open(name_)) {
-    play_song(*song);
-  }
-  tell_music(true);
-}
-
-void ScreenRunner::tick(const InputFrame &input, const double tick_seconds) {
   hear_music(tick_seconds);
+  const bool was_paused = screen_->gameplay_paused();
   screen_->tick(input, tick_seconds);
+  if (name_ == "coop") {
+    if (screen_->done()) {
+      show(screen_->next());
+    }
+    return; // The session owns its campaigns, simulation clocks and mixers.
+  }
+  if (screen_->gameplay_paused() != was_paused) {
+    audio_.set_paused(screen_->gameplay_paused());
+    rumble_.stop();
+  }
+  if (screen_->gameplay_paused() || was_paused) {
+    if (screen_->done()) {
+      show(screen_->next());
+    }
+    return; // Freeze the live arenas, music scheduling and all match clocks too.
+  }
   if (const GameOptions *changed = screen_->game_options()) {
     options_ = *changed;
     apply_volumes();
@@ -331,7 +325,7 @@ void ScreenRunner::tick(const InputFrame &input, const double tick_seconds) {
     game_->set_kept_hangar(hangar);
   }
   for (const auto &sound : screen_->take_sounds()) {
-    audio_.play_sound(sound);
+    audio_.play_sound(sound, {}, screen_->sound_bus());
   }
   for (const SoundCue &cue : screen_->take_sound_cues()) {
     audio_.play_cue(cue);
@@ -356,7 +350,7 @@ const std::vector<VsScoobee> &ScreenRunner::vs_scoobees() const {
 }
 
 void ScreenRunner::advance(const double elapsed_seconds) {
-  screen_->advance(elapsed_seconds);
+  (schedule_overlay_ ? schedule_overlay_ : screen_)->advance(elapsed_seconds);
   audio_.update();
 }
 
@@ -370,12 +364,19 @@ Viewport ScreenRunner::placed(const Viewport &viewport) const {
 }
 
 void ScreenRunner::draw(const Viewport &viewport) {
-  screen_->draw(viewport);
+  screen_->set_presentation(audio_options_, post_process_);
+  if (world_) {
+    world_->set_post_process(post_process_);
+  }
+  (schedule_overlay_ ? schedule_overlay_ : screen_)->draw(viewport);
 }
 
 void ScreenRunner::set_paused(const bool paused) {
-  screen_->set_paused(paused);
-  audio_.set_paused(paused);
+  screen_->set_paused(paused || bool(schedule_overlay_));
+  if (schedule_overlay_) {
+    schedule_overlay_->set_paused(paused);
+  }
+  audio_.set_paused(paused || screen_->gameplay_paused());
   if (paused) {
     rumble_.stop(); // 0x0b1140 stops every robot's pad
   }

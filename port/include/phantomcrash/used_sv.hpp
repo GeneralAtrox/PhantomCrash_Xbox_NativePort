@@ -87,6 +87,7 @@ public:
   }
 
 private:
+  InputFrame pointer_input(InputFrame input);
   void menu_input(double tick_seconds, const InputFrame &input);
   void purchase_input(double tick_seconds, const InputFrame &input);
   void set_help(const std::string &text);

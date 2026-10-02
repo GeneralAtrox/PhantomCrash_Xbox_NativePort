@@ -1,5 +1,7 @@
 #pragma once
 
+#include "phantomcrash/robot_combat.hpp"
+
 #include "desktop_robot.hpp"
 #include "desktop_world_renderer.hpp"
 #include "phantomcrash/battle.hpp"
@@ -48,24 +50,34 @@ public:
   // How the robots' shadows look, on a split screen or not; the flat
   // shadows' model loads here.
   void set_shadows(const RobotShadowLook &look, bool split_screen);
-  // Keeps each animator on its mover's motion, advances it and poses the
-  // robot.
-  void tick(const Battle &battle, float seconds);
+  // Connects the shared rigs before the simulation evaluates poses and fires.
+  void bind(Battle &battle);
+  // Copies simulation poses and advances the shared shield clock once per tick.
+  void tick(Battle &battle, float seconds);
   // Appends the robots' parts to `items`, all but robot `hidden`'s (the
   // one the camera sits in). `hidden_shield` suppresses only that robot's
   // shield visual during its entrance, without changing damage protection.
   void add_items(const Battle &battle, std::vector<WorldItem> &items, int hidden = -1,
                  int hidden_shield = -1);
+  // Forgets the wrecks posed so far: another battle takes over.
+  void clear_wrecks();
 
 private:
+  void sync_wrecks(Battle &battle);
+  void add_wreck_items(const Battle &battle, std::vector<WorldItem> &items) const;
+  std::vector<std::vector<WorldItem>> wreck_items_;
+  std::vector<bool> wreck_solid_;
+
   void add_shield(const Combatant &robot, std::vector<WorldItem> &items) const;
 
   struct Visual {
     RobotAssembly assembly;
-    std::unique_ptr<RobotAnimator> animator;
+    std::shared_ptr<RobotCombat> combat;
     std::unique_ptr<RobotVisual> parts;
     Pose pose{};
     int ground_node{-1}; // its flat shadow's node in the shadows' model
+    bool dying{};        // presentation transition logging
+    std::optional<std::uint64_t> motion_revision;
   };
 
   [[nodiscard]] std::unique_ptr<Visual> make_visual(const RobotParts &parts) const;
@@ -84,6 +96,9 @@ private:
   bool split_screen_{};
   int ground_model_{-1};
   float shield_spin_{}; // 0x06f592's angle (global 0x988570)
+  float shield_phase_{};
+  float shield_scroll_{1.0F};
+  double shield_clock_{};
 };
 
 // A point of the world on a `width` x `height` picture: pixel x, y and the

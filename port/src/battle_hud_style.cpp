@@ -1,4 +1,5 @@
 #include "phantomcrash/battle_hud_style.hpp"
+#include "phantomcrash/robot_parts.hpp"
 
 #include <algorithm>
 #include <stdexcept>
@@ -98,7 +99,7 @@ void parse_control(const json::JsonValue &control, BattleHudStyle::Control &out)
 
 std::uint32_t BattleHudStyle::team_colour(const int team) const {
   if (team < 0 || team >= static_cast<int>(markers.team_colours.size())) {
-    return 0xffffff;
+    return markers.team_colours.empty() ? 0xffffff : markers.team_colours.front();
   }
   return markers.team_colours[static_cast<std::size_t>(team)];
 }
@@ -169,6 +170,16 @@ std::array<float, 2> reticle_half_size(const ReticleSizes &sizes, const float va
                                        const float value_max) {
   const float t = value_max > 0.0F ? std::clamp(value / value_max, 0.0F, 1.0F) : 0.0F;
   return {sizes[0] + (sizes[1] - sizes[0]) * t, sizes[2] + (sizes[3] - sizes[2]) * t};
+}
+
+SightBoxes sight_boxes(const BattleHudStyle &style, const ChipStats &chip) {
+  const auto shape = [](const int value) {
+    return static_cast<std::size_t>(std::clamp(value, 0, reticle_shapes - 1));
+  };
+  const auto &reticle = style.reticle;
+  const float most = style.control.value_max;
+  return {reticle_half_size(reticle.inner_sizes[shape(chip.inner_shape)], chip.inner_value, most),
+          reticle_half_size(reticle.outer_sizes[shape(chip.outer_shape)], chip.outer_value, most)};
 }
 
 std::array<float, 2> reticle_corner_inset(const HudPiece &corner, const float pad) {

@@ -38,6 +38,24 @@ void LocationMenu::move_to(const int item) {
   sound(script_.move_sound);
 }
 
+void LocationMenu::choose(const int item) {
+  if (item < 0 || item >= static_cast<int>(script_.items.size()) || fade_.fading_in() ||
+      fade_.leaving()) {
+    return;
+  }
+  const auto &chosen = script_.items[static_cast<std::size_t>(item)];
+  cursor_ = shown_ = item;
+  sound(chosen.select_sound.empty() ? script_.select_sound : chosen.select_sound);
+  fade_.leave(chosen.next);
+}
+
+void LocationMenu::rotate(const int steps) {
+  if (turning() || fade_.fading_in() || fade_.leaving() || steps == 0) {
+    return;
+  }
+  move_to(move_cursor(cursor_, steps, true, static_cast<int>(script_.items.size())));
+}
+
 void LocationMenu::update(const double tick_seconds, const InputFrame &input) {
   seconds_ += tick_seconds;
   help_seconds_ += tick_seconds;

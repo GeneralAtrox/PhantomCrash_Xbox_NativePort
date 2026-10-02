@@ -90,6 +90,7 @@ class MusicCredit:
     jacket_small: int = -1
     artist_name: int = -1
     artist_link: int = -1
+    artist_profile: int = 0  # text script at +0x1a0, shared by an artist's tracks
 
 
 class _Image:
@@ -241,9 +242,8 @@ def _music_credits(image: _Image) -> list[MusicCredit]:
         track = struct.unpack_from("<i", image.data, image.offset(base))[0]
         if track >= 0:
             title, artist = image.raw_string(base + 4), image.raw_string(base + 0x69)
-            # + 0x1a0 points at the preview's animation, which the port leaves out.
-            large, small, _, name, link = struct.unpack_from("<5i", image.data, image.offset(base + 0x198, 20))
-            credits.append(MusicCredit(track, _plain(title), _plain(artist), large, small, name, link))
+            large, small, profile, name, link = struct.unpack_from("<5i", image.data, image.offset(base + 0x198, 20))
+            credits.append(MusicCredit(track, _plain(title), _plain(artist), large, small, name, link, profile))
     return credits
 
 

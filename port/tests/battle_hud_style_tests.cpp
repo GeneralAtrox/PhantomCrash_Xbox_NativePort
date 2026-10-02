@@ -39,7 +39,11 @@ TEST_CASE("the shipped battle HUD reads the original's reticle tables") {
   CHECK(style.reticle.outer_pad == 14.0F);
   CHECK(style.locks.colour == 0x00b496U);
   CHECK(style.team_colour(2) == 0xff8080U);
-  CHECK(style.team_colour(5) == 0xffffffU);
+  CHECK(style.team_colour(0) == 0xffff00U);
+  CHECK(style.team_colour(1) == 0x8080ffU);
+  CHECK(style.team_colour(3) == 0x00e100U);
+  CHECK(style.team_colour(5) == 0xffff00U);
+  CHECK(style.team_colour(-1) == 0xffff00U);
   // The name tag (0x04de50): 12 x 12 glyphs centred over the point - 35, 30 up.
   CHECK(style.markers.tag.offset[0] == -35.0F);
   CHECK(style.markers.tag.offset[1] == -30.0F);

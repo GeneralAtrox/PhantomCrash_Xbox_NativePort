@@ -39,7 +39,14 @@ struct ModelMaterial {
   float alpha_cutoff{0.5F};
   bool double_sided{};
   bool unlit{};
-  bool additive{}; // the original's SRCALPHA, ONE blend (batch flag 0x200)
+  bool additive{};              // the original's SRCALPHA, ONE blend (batch flag 0x200)
+  bool blend_depth_write{};     // original ordinary model blends still occlude later faces
+  Vec3 ambient_colour{1, 1, 1}; // original batch +0x28 -> material Ambient
+  float specular_power{};       // original batch +0x40
+  bool specular{};              // batch flag 0x40
+  bool texture_add{};           // stage flag 1: ADD instead of MODULATE
+  bool texture_alpha{true};     // stage flag 0x40; generic glTF multiplies alpha
+  bool original_material{};
 };
 
 struct ModelDraw {

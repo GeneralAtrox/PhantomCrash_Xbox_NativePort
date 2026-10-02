@@ -33,6 +33,7 @@ int message_for(const BattleEventKind kind) {
   case BattleEventKind::respawned:
   case BattleEventKind::supply:
   case BattleEventKind::carrier_down:
+  case BattleEventKind::object_reward:
   case BattleEventKind::fired:
   case BattleEventKind::impact:
     break;

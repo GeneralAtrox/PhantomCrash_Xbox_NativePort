@@ -19,6 +19,7 @@ class DrawList;
 // levels it changes go back into the quest.
 class TuneShopScreen final : public TownScreen {
 public:
+  [[nodiscard]] std::optional<MenuPresence> menu_presence() const override;
   TuneShopScreen(TextureCache &textures, const GlyphFont &font, TuneShop logic,
                  const MessageBoxStyle &box, const std::string &from, const FrameStyle &frame,
                  const std::vector<MusicCredit> &credits, QuestSave quest, PreviewWorld world,

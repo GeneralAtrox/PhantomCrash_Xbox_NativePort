@@ -31,6 +31,32 @@ BREAK_SOUND = 0x10  # bank 1; converter WAV filenames use decimal indices
 WRECK_HIT_DELAY = 6.0  # type 1 returns to its hit handler after six seconds
 
 
+def wreck_collision(mesh: model.Mesh) -> list[list[float]]:
+    """Use the remaining rendered surfaces, not the intact object's tall box."""
+    triangles = []
+    seen = set()
+    for node in mesh.nodes:
+        if (node.translation != (0.0, 0.0, 0.0) or node.rotation != (0.0, 0.0, 0.0)
+                or node.scale != (1.0, 1.0, 1.0)):
+            raise ValueError("Scenery wreck collision requires baked node transforms")
+        for batch in mesh.batches[node.first_batch:node.first_batch + node.batch_count]:
+            start = batch.first_triangle * 3
+            for offset in range(start, start + batch.triangle_count * 3, 3):
+                points = [mesh.vertices[i].position for i in mesh.indices[offset:offset + 3]]
+                key = tuple(sorted(points))
+                a, b, c = points
+                u = tuple(b[i] - a[i] for i in range(3))
+                v = tuple(c[i] - a[i] for i in range(3))
+                normal = (u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2],
+                          u[0] * v[1] - u[1] * v[0])
+                if key not in seen and sum(n * n for n in normal) > 1e-12:
+                    triangles.append([component for point in points for component in point])
+                    seen.add(key)
+    if not triangles:
+        raise ValueError("Scenery wreck has no collision surfaces")
+    return triangles
+
+
 def records(image: game_tables._Image, stage: int) -> list[dict]:
     address = image.u32(OBJECT_RECORDS + stage * 4)
     types = image.u32(OBJECT_TYPES + stage * 4)
@@ -53,7 +79,8 @@ def records(image: game_tables._Image, stage: int) -> list[dict]:
         entry["break_effect"] = BREAK_EFFECTS.get(kind, -1)
         entry["break_sound"] = (f"sound/sfx/battle/{BREAK_SOUND:02d}.wav"
                                 if kind in (0, 1, 2, 3, 4, 7) else "")
-        entry["wreck_solid"] = kind in (0, 1)
+        # Retained wrecks block movement and shots until the wreck is removed.
+        entry["wreck_solid"] = entry["wreck_slot"] >= 0
         entry["wreck_break_effect"] = 15 if kind == 1 else -1
         entry["wreck_hit_delay"] = WRECK_HIT_DELAY if kind == 1 else 0.0
     return result
@@ -86,6 +113,8 @@ def convert_objects(executable: bytes, read: Callable[[int], bytes | None], outp
                 raise ValueError(f"Invalid scenery mesh on stage {stage}")
             if entry["wreck_mesh"] >= len(parsed.meshes):
                 raise ValueError(f"Invalid wreck mesh on stage {stage}")
+            if entry["wreck_mesh"] >= 0:
+                entry["wreck_collision"] = wreck_collision(parsed.meshes[entry["wreck_mesh"]])
         # Moving gate leaves use StageDoors, so they must not also be baked into scenery.
         props = [entry for entry in objects if entry["kind"] != DOOR_TYPE]
         props_path = f"models/stages/{stage}_props.gltf"

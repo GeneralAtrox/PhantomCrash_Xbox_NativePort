@@ -99,6 +99,27 @@ Sprite parse_sprite(const json::JsonValue &value) {
       sprite.size = numbers<2>(*size, "size");
     }
     sprite.centered = value.boolean_or("centered", false);
+    const std::string edges = value.string_or("extend_edges", "none");
+    if (edges != "none" && edges != "left" && edges != "right" && edges != "both") {
+      throw std::runtime_error("extend_edges must be none, left, right or both");
+    }
+    sprite.extend_left = edges == "left" || edges == "both";
+    sprite.extend_right = edges == "right" || edges == "both";
+    if (const auto *inset = value.find("edge_inset")) {
+      sprite.edge_inset = numbers<2>(*inset, "edge_inset");
+    }
+    const std::array<const char *, 2> band_keys{"edge_bands_left", "edge_bands_right"};
+    for (std::size_t side = 0; side < band_keys.size(); ++side) {
+      const auto *bands = value.find(band_keys[side]);
+      if (bands == nullptr) {
+        bands = value.find("edge_bands");
+      }
+      if (bands != nullptr) {
+        for (const auto &band : bands->array()) {
+          sprite.edge_bands[side].push_back(numbers<2>(band, band_keys[side]));
+        }
+      }
+    }
     sprite.layer = static_cast<int>(value.number_or("layer", 0x101));
     if (const auto *colour = value.find("colour")) {
       sprite.colour = parse_colour(colour->string());

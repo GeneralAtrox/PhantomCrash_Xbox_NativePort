@@ -1,5 +1,7 @@
 #include "phantomcrash/enemy_path.hpp"
 
+#include <algorithm>
+#include <limits>
 #include <stdexcept>
 #include <string>
 
@@ -64,6 +66,28 @@ EnemyPath parse_enemy_path(const json::JsonValue &document) {
 void PathFollower::start(const EnemyPath &path, const int segment) {
   segment_ = segment >= 0 && segment < static_cast<int>(path.segments.size()) ? segment : -1;
   point_ = 0;
+}
+
+void PathFollower::join(const EnemyPath &path, const int segment, const Vec3 position) {
+  start(path, segment);
+  if (segment_ < 0) {
+    return;
+  }
+  const auto &points = path.segments[static_cast<std::size_t>(segment_)].points;
+  float nearest = std::numeric_limits<float>::max();
+  for (std::size_t point = 1; point < points.size(); ++point) {
+    Vec3 along = points[point] - points[point - 1];
+    Vec3 from = position - points[point - 1];
+    along.y = from.y = 0.0F;
+    const float squared_length = dot(along, along);
+    const float share =
+        squared_length > 0.0F ? std::clamp(dot(from, along) / squared_length, 0.0F, 1.0F) : 0.0F;
+    const float distance = length(from - along * share);
+    if (distance <= nearest) {
+      nearest = distance;
+      point_ = point;
+    }
+  }
 }
 
 Vec3 PathFollower::update(const EnemyPath &path, const Vec3 position, const float reach,

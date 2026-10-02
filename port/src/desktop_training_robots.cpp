@@ -18,6 +18,20 @@ std::optional<PartTables> load_part_tables(const DataRoots &roots) {
   return std::nullopt;
 }
 
+std::optional<GarageTables> load_garage_tables(const DataRoots &roots) {
+  const auto file = roots.find_asset("tables/garage.json");
+  if (!file) {
+    SDL_Log("tables/garage.json is missing; robots fit no modules");
+    return std::nullopt;
+  }
+  try {
+    return parse_garage_tables(json::read_file(*file));
+  } catch (const std::exception &error) {
+    SDL_Log("tables/garage.json: %s", error.what());
+  }
+  return std::nullopt;
+}
+
 float robot_hp(const TrainingScript &script, const std::optional<PartTables> &parts,
                const char *name, const TrainingRobot &robot, const bool player) {
   const auto found = script.robots.find(name);
@@ -30,13 +44,18 @@ float robot_hp(const TrainingScript &script, const std::optional<PartTables> &pa
 }
 
 CombatStats robot_combat(const TrainingScript &script, const std::optional<PartTables> &parts,
-                         const char *name, const TrainingRobot &robot) {
+                         const std::optional<GarageTables> &garage, const char *name,
+                         const TrainingRobot &robot) {
   const auto found = script.robots.find(name);
   if (!parts) {
     return {};
   }
   const int legs = found == script.robots.end() ? -1 : found->second.legs;
-  return combat_stats(*parts, robot.chip, robot.chip_level, legs, robot.legs_level);
+  CombatStats combat = combat_stats(*parts, robot.chip, robot.chip_level, legs, robot.legs_level);
+  if (garage) {
+    add_module_bonuses(combat, *garage, robot.modules);
+  }
+  return combat;
 }
 
 void load_stage_collision(const DataRoots &roots, const std::string &asset, Battle &battle) {

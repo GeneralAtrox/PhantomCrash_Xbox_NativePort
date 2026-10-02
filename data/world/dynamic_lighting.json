@@ -1,0 +1,337 @@
+{
+  "notes": [
+    "Optional native enhancement, disabled by default in Settings > Visuals. These are port-authored lights, not a reconstruction of Xbox local lighting.",
+    "Night ship emitters sit below the four authored rotor pivots; their beams turn with the rotors and follow the route. Night entrance lights are authored above the gate approaches.",
+    "Maximum eight spotlights per frame, each with a 1024px shadow map. Cone angles are half-angles in degrees; positions/ranges use world units. Ship coordinates are local, stage coordinates world."
+  ],
+  "ship": {
+    "0": [],
+    "1": [
+      {
+        "position": [
+          3.06,
+          -10.66,
+          13.33
+        ],
+        "direction": [
+          0.22,
+          -1,
+          0.18
+        ],
+        "colour": [
+          0.8,
+          0.9,
+          1
+        ],
+        "range": 260,
+        "intensity": 5,
+        "inner_degrees": 14,
+        "outer_degrees": 25
+      },
+      {
+        "position": [
+          -2.67,
+          -10.66,
+          -3.96
+        ],
+        "direction": [
+          0.22,
+          -1,
+          0.18
+        ],
+        "colour": [
+          0.8,
+          0.9,
+          1
+        ],
+        "range": 260,
+        "intensity": 5,
+        "inner_degrees": 14,
+        "outer_degrees": 25
+      },
+      {
+        "position": [
+          3.24,
+          -10.66,
+          -20.97
+        ],
+        "direction": [
+          0.22,
+          -1,
+          0.18
+        ],
+        "colour": [
+          0.8,
+          0.9,
+          1
+        ],
+        "range": 260,
+        "intensity": 5,
+        "inner_degrees": 14,
+        "outer_degrees": 25
+      },
+      {
+        "position": [
+          -4.54,
+          -10.66,
+          -38.55
+        ],
+        "direction": [
+          0.22,
+          -1,
+          0.18
+        ],
+        "colour": [
+          0.8,
+          0.9,
+          1
+        ],
+        "range": 260,
+        "intensity": 5,
+        "inner_degrees": 14,
+        "outer_degrees": 25
+      }
+    ]
+  },
+  "stages": {
+    "1": [
+      {
+        "position": [
+          112.148,
+          18.32,
+          -145.4
+        ],
+        "direction": [
+          0.028224001611973443,
+          -1,
+          0.1979984993200891
+        ],
+        "colour": [
+          0.8,
+          0.9,
+          1
+        ],
+        "range": 55,
+        "intensity": 2.5,
+        "inner_degrees": 30,
+        "outer_degrees": 46
+      },
+      {
+        "position": [
+          181.644,
+          15.35,
+          -5.754
+        ],
+        "direction": [
+          -0.18504230415763367,
+          -1,
+          0.07589035295763091
+        ],
+        "colour": [
+          0.8,
+          0.9,
+          1
+        ],
+        "range": 55,
+        "intensity": 2.5,
+        "inner_degrees": 30,
+        "outer_degrees": 46
+      },
+      {
+        "position": [
+          -22.33,
+          14.72,
+          55.27
+        ],
+        "direction": [
+          -0.0,
+          -1,
+          -0.2
+        ],
+        "colour": [
+          0.8,
+          0.9,
+          1
+        ],
+        "range": 55,
+        "intensity": 2.5,
+        "inner_degrees": 30,
+        "outer_degrees": 46
+      }
+    ],
+    "3": [
+      {
+        "position": [
+          43.68,
+          18.32,
+          13.06
+        ],
+        "direction": [
+          -0.19990516612109582,
+          -1,
+          -0.006158291816493224
+        ],
+        "colour": [
+          0.8,
+          0.9,
+          1
+        ],
+        "range": 55,
+        "intensity": 2.5,
+        "inner_degrees": 30,
+        "outer_degrees": 46
+      },
+      {
+        "position": [
+          -26.652,
+          18.32,
+          -40.254
+        ],
+        "direction": [
+          0.028224001611973443,
+          -1,
+          0.1979984993200891
+        ],
+        "colour": [
+          0.8,
+          0.9,
+          1
+        ],
+        "range": 55,
+        "intensity": 2.5,
+        "inner_degrees": 30,
+        "outer_degrees": 46
+      }
+    ],
+    "5": [
+      {
+        "position": [
+          -212.504,
+          18.3,
+          -0.006
+        ],
+        "direction": [
+          0.19999993658636694,
+          -1,
+          -0.00015926534214665269
+        ],
+        "colour": [
+          0.8,
+          0.9,
+          1
+        ],
+        "range": 55,
+        "intensity": 2.5,
+        "inner_degrees": 30,
+        "outer_degrees": 46
+      },
+      {
+        "position": [
+          154.699,
+          18.191,
+          0.291
+        ],
+        "direction": [
+          -0.19999993658636694,
+          -1,
+          -0.00015926534214665269
+        ],
+        "colour": [
+          0.8,
+          0.9,
+          1
+        ],
+        "range": 55,
+        "intensity": 2.5,
+        "inner_degrees": 30,
+        "outer_degrees": 46
+      }
+    ],
+    "7": [
+      {
+        "position": [
+          -94.696,
+          18.3,
+          94.84
+        ],
+        "direction": [
+          0.14347121817990457,
+          -1,
+          -0.1393413418694331
+        ],
+        "colour": [
+          0.8,
+          0.9,
+          1
+        ],
+        "range": 55,
+        "intensity": 2.5,
+        "inner_degrees": 30,
+        "outer_degrees": 46
+      },
+      {
+        "position": [
+          94.696,
+          18.3,
+          94.84
+        ],
+        "direction": [
+          -0.14347121817990457,
+          -1,
+          -0.1393413418694331
+        ],
+        "colour": [
+          0.8,
+          0.9,
+          1
+        ],
+        "range": 55,
+        "intensity": 2.5,
+        "inner_degrees": 30,
+        "outer_degrees": 46
+      },
+      {
+        "position": [
+          94.836,
+          18.3,
+          -94.7
+        ],
+        "direction": [
+          -0.13945554765198756,
+          -1,
+          0.14336021145730857
+        ],
+        "colour": [
+          0.8,
+          0.9,
+          1
+        ],
+        "range": 55,
+        "intensity": 2.5,
+        "inner_degrees": 30,
+        "outer_degrees": 46
+      },
+      {
+        "position": [
+          -94.836,
+          18.3,
+          -94.7
+        ],
+        "direction": [
+          0.13945554765198756,
+          -1,
+          0.14336021145730857
+        ],
+        "colour": [
+          0.8,
+          0.9,
+          1
+        ],
+        "range": 55,
+        "intensity": 2.5,
+        "inner_degrees": 30,
+        "outer_degrees": 46
+      }
+    ]
+  }
+}

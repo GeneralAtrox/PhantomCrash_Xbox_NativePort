@@ -24,7 +24,9 @@ public:
 
   // Appends the robot's parts, posed by `pose`, to `items`; `root` places
   // parts whose bones the pose did not reach.
-  void add_items(const Pose &pose, const Mat4 &root, std::vector<WorldItem> &items);
+  void add_items(const Pose &pose, const Mat4 &root, std::vector<WorldItem> &items,
+                 const std::array<Mat4, 2> *shoulder_mounts = nullptr,
+                 const std::array<bool, 4> &lost = {});
   // Where `pose` puts the upper body's bone, if it reached it.
   [[nodiscard]] std::optional<Vec3> torso(const Pose &pose) const;
 

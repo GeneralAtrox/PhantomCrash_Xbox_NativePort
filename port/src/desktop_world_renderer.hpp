@@ -1,6 +1,7 @@
 #pragma once
 
 #include "desktop_world_gpu.hpp"
+#include "desktop_dynamic_lights.hpp"
 #include "desktop_world_shaders.hpp"
 #include "phantomcrash/math3d.hpp"
 #include "phantomcrash/optical_camouflage.hpp"
@@ -19,6 +20,8 @@
 
 namespace phantomcrash {
 
+class SmaaPass;
+
 // One model placed in the world. Nodes named in `sky_nodes` are drawn first,
 // around the camera (the view without its translation) and without depth,
 // as the original draws a stage's sky with its own view (layer 1 of the
@@ -33,6 +36,8 @@ struct WorldItem {
   int model{-1};
   Mat4 world;
   std::vector<std::string> sky_nodes;
+  std::vector<std::string> shadow_nodes;
+  std::vector<int> two_sided_materials; // resolved stage texture overrides
   std::vector<SkyMotion> sky_motion;
   double sky_seconds{};
   std::vector<std::string> monitor_nodes;
@@ -55,9 +60,18 @@ struct WorldItem {
   // Casts a stencil shadow volume from its nodes (WorldRenderer::
   // prepare_shadow builds it) and is itself never shadowed.
   bool casts_shadow{};
+  // Flat shadow decals follow world surfaces and never occlude later draws.
+  bool ground_shadow{};
   // Drawn from both sides whatever its materials say (the flat ground
   // shadows, whose quads face down).
   bool double_sided{};
+  // Some world draws, including the advertising ship, disable distance fog.
+  bool fogged{true};
+  // The port's dynamic lights fall on it (when they are on). Off for wide
+  // see-through effects, whose every pixel would pay for each light's shadow.
+  bool local_light{true};
+  // rainbow.xvu phase and vertical UV scroll, recorded with the world frame.
+  std::optional<std::array<float, 2>> rainbow;
 };
 
 // A picture in the world that faces the camera, or runs along a streak from
@@ -75,6 +89,14 @@ struct WorldSprite {
   std::array<float, 4> uv{0.0F, 0.0F, 1.0F, 1.0F};
   std::array<float, 4> colour{1.0F, 1.0F, 1.0F, 1.0F};
   bool additive{};
+  // Cluster particles retain their source coordinates until each view draws.
+  // 1 is a world-space centre; 2 is a child relative to cluster_centre.
+  int particle_kind{};
+  Vec3 cluster_centre;
+  Vec3 surface_normal;   // nonzero fixes this sprite to a surface instead of facing the eye
+  float end_size{-1.0F}; // streak's far radius; negative keeps the same width
+  float end_alpha{1.0F}; // multiplier at a streak's far end
+  bool transpose_uv{};   // ribbon textures whose transparent cross-section runs along V
 };
 
 struct WorldFrame {
@@ -84,6 +106,7 @@ struct WorldFrame {
   Vec3 eye;
   StageLighting lighting;
   std::vector<WorldItem> items;
+  std::vector<WorldLight> lights;
   // Drawn last, in order, in the eye's space (+z ahead) with the same
   // projection, without fog and over everything: the cockpit (view layer
   // 0xb).
@@ -126,6 +149,17 @@ public:
   [[nodiscard]] int texture(const std::string &asset_path);
   // Renders `frame` and draws it over the whole window.
   void draw(const WorldFrame &frame, const WorldFrame *monitor = nullptr);
+  void set_post_process(const PostProcessOptions &options) {
+    if (post_process_.smaa != options.smaa) {
+      smaa_failed_ = false;
+      SDL_Log("SMAA: %s", options.smaa ? "enabled" : "disabled");
+    }
+    if (post_process_.dynamic_lighting != options.dynamic_lighting) {
+      dynamic_failed_ = false;
+      SDL_Log("Dynamic lighting: %s", options.dynamic_lighting ? "enabled" : "disabled");
+    }
+    post_process_ = options;
+  }
 
 private:
   struct Draw {
@@ -144,9 +178,13 @@ private:
     std::array<float, 2> uv_offset{};
   };
 
+  [[nodiscard]] static bool surface_layer(const Draw &draw);
   void create_states();
   void ensure_targets(int width, int height);
   void render_monitor(const WorldFrame &frame);
+  void render_lights(const WorldFrame &frame);
+  std::unique_ptr<DynamicLightPass> dynamic_lights_;
+  bool dynamic_failed_{};
   [[nodiscard]] std::array<float, 4> monitor_uv(const Draw &draw) const;
   void render(const WorldFrame &frame);
   // Appends the batches of `item` (item `index` of the frame) to `out`.
@@ -158,6 +196,7 @@ private:
   void create_shadow_states();
   // Counts the casters' volumes into the stencil; false when there were none.
   [[nodiscard]] bool render_volumes(const WorldFrame &frame);
+  [[nodiscard]] bool render_static_volumes(const WorldFrame &frame);
   // Lays the stage's shadow colour where the count is not 0.
   void cover_shadows(const StageLighting &lighting);
   void create_sprite_states();
@@ -175,6 +214,9 @@ private:
   void draw_one(const Draw &draw, bool sky, const StageLighting &lighting,
                 bool depth_prepass = false, bool overlay = false);
 
+  PostProcessOptions post_process_;
+  std::unique_ptr<SmaaPass> smaa_;
+  bool smaa_failed_{};
   SDL_Renderer *renderer_;
   const DataRoots &roots_;
   Com<ID3D11Device1> device_;
@@ -191,6 +233,9 @@ private:
   Com<ID3D11Buffer> draw_constants_;
   Com<ID3D11RasterizerState> cull_back_;
   Com<ID3D11RasterizerState> cull_none_;
+  Com<ID3D11RasterizerState> layer_cull_back_;
+  Com<ID3D11RasterizerState> layer_cull_none_;
+  Com<ID3D11RasterizerState> decal_cull_none_; // ground shadows, above the layers
   Com<ID3D11BlendState> opaque_;
   Com<ID3D11BlendState> alpha_;
   Com<ID3D11BlendState> additive_;
@@ -224,7 +269,7 @@ private:
   bool capturing_monitor_{};
   Com<ID3D11SamplerState> scene_sampler_;
   Com<ID3D11ShaderResourceView> depth_read_view_; // the depth, for the screen pass
-  // The screen pass: its shaders, and the two half-size targets it blurs into.
+  // Reference-height 320x240 / 160x120 blur targets (widescreen extends width).
   Com<ID3D11VertexShader> screen_vertex_;
   Com<ID3D11PixelShader> blur_pixel_;
   Com<ID3D11PixelShader> screen_pixel_;    // reads a single-sampled depth
@@ -238,7 +283,9 @@ private:
   std::array<Com<ID3D11Texture2D>, 2> blur_;
   std::array<Com<ID3D11RenderTargetView>, 2> blur_targets_;
   std::array<Com<ID3D11ShaderResourceView>, 2> blur_views_;
-  int blur_width_{}, blur_height_{};
+  std::array<int, 2> blur_width_{}, blur_height_{};
+  Com<ID3D11Texture2D> wave_;
+  Com<ID3D11ShaderResourceView> wave_view_;
   SDL_Texture *output_{};
   ID3D11Texture2D *output_texture_{}; // owned by output_
 };

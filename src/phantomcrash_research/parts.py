@@ -271,6 +271,10 @@ def legs(image: _Image, index: int) -> dict:
         "knockback_resistance": _float_curve(image, record + 0x7C),  # percent (0x0988e1)
         "armour_floor": {"player": PLAYER_LEGS_FLOOR, "computer": computer_floor},
         "price": _int_curve(image, record + 0x8C),
+        # The dodge's push on the ground and in the air, units a tick under the
+        # load (0x07c34e to robot +0x80 and +0x84; 0x08d98c).
+        "dodge": _float_curve(image, record + 0x9C),
+        "air_dodge": _float_curve(image, record + 0xAC),
     }
 
 

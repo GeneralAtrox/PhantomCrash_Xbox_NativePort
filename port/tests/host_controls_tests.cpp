@@ -52,3 +52,63 @@ TEST_CASE("mouse aim is a displacement and does not repeat after it is consumed"
   CHECK(std::abs(mover.heading() - 0.2F) < 0.0001F);
   CHECK(std::abs(mover.pitch() - 0.1F) < 0.0001F);
 }
+
+TEST_CASE("left stick and AD strafe while right stick turns the whole robot") {
+  MovementTuning tuning;
+  tuning.dash_hold_seconds = 10;
+  for (const float side : {-1.0F, 1.0F}) {
+    RobotMover mover(tuning);
+    mover.place({}, 0);
+    InputFrame input;
+    input.left_stick = {side, 0};
+    const auto control = battle_control(input, BattleButtons{}, nullptr);
+    for (int frame = 0; frame < 60; ++frame) {
+      mover.tick(control, 1.0F / 60);
+    }
+    CHECK(std::abs(mover.heading()) < 1e-5F);
+    CHECK(dot(mover.position(), heading_right(0)) * side > 1);
+    CHECK(std::abs(mover.position().z) < 1e-5F);
+    for (int frame = 0; frame < 60; ++frame) {
+      mover.tick({}, 1.0F / 60);
+    }
+    CHECK(length(mover.velocity()) < 1e-5F);
+  }
+  RobotMover turning(tuning);
+  turning.place({}, 0);
+  InputFrame input;
+  input.right_stick = {1, 0};
+  for (int frame = 0; frame < 120; ++frame) {
+    turning.tick(battle_control(input, BattleButtons{}, nullptr), 1.0F / 60);
+  }
+  CHECK(std::abs(wrap_angle(turning.heading() - radians(220))) < 1e-4F);
+  CHECK(length(turning.position()) < 1e-5F);
+  CHECK(std::abs(turning.twist()) < 1e-5F);
+}
+
+TEST_CASE("diagonal movement stays at walking speed and mouse turning rotates a strafe") {
+  MovementTuning tuning;
+  tuning.dash_hold_seconds = 10;
+  for (const int rate : {30, 60, 144}) {
+    RobotMover mover(tuning);
+    mover.place({}, 0);
+    InputFrame input;
+    input.left_stick = {1, 1};
+    for (int frame = 0; frame < rate; ++frame) {
+      mover.tick(battle_control(input, BattleButtons{}, nullptr), 1.0F / rate);
+    }
+    CHECK(std::abs(length(mover.velocity()) - tuning.walk_speed) < 1e-4F);
+    mover.place({}, 0);
+    input.left_stick = {1, 0};
+    input.mouse_aim = {radians(90), 0};
+    mover.tick(battle_control(input, BattleButtons{}, nullptr), 1.0F / rate);
+    CHECK(std::abs(mover.velocity().x) < 1e-5F);
+    CHECK(dot(mover.velocity(), heading_right(radians(90))) > 0);
+    input.mouse_aim = {};
+    input.held = BattleButtons{}.jump;
+    mover.tick(battle_control(input, BattleButtons{}, nullptr), 1.0F / rate);
+    const float previous = dot(mover.velocity(), heading_right(mover.heading()));
+    mover.tick(battle_control(input, BattleButtons{}, nullptr), 1.0F / rate);
+    CHECK(!mover.grounded());
+    CHECK(dot(mover.velocity(), heading_right(mover.heading())) > previous);
+  }
+}

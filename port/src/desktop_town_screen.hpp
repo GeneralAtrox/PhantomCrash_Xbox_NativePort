@@ -24,8 +24,14 @@ class DrawList;
 // fade. The font, frame style and credits outlive the screen.
 class TownScreen : public Screen {
 public:
+  [[nodiscard]] const QuestSave *session_save() const override {
+    return &quest_;
+  }
   [[nodiscard]] std::string music() const override {
     return music_;
+  }
+  [[nodiscard]] bool day_clicked(const InputFrame &input) const override {
+    return frame_.day_clicked(input, quest_);
   }
   void set_music(const std::string &file) override {
     frame_.set_music(file);
@@ -58,6 +64,7 @@ protected:
   }
   // X SORT NAME and Y SORT PRICE over a goods list taking input (0x0178e0).
   void draw_sort_hints(DrawList &list, const GoodsList &goods) const;
+  InputFrame sort_pointer(InputFrame input, Buttons name, Buttons price) const;
 
   TextureCache &textures_;
   const GlyphFont &font_;

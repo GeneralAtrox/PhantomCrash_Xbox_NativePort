@@ -2,6 +2,8 @@
 // screens' robots, chase cameras and HUDs, and one screen's world and HUD.
 #include "desktop_training.hpp"
 #include "desktop_stage_objects.hpp"
+#include "desktop_light_sources.hpp"
+#include "desktop_coop_matches.hpp"
 
 #include <SDL3/SDL.h>
 
@@ -14,7 +16,11 @@ void TrainingScreen::load_stage_art(const StageDefinition *stage, const DataRoot
     return;
   }
   lighting_ = stage->lighting;
+  local_lights_ = light_sources(roots, "stages", stage->scene_stage);
+  SDL_Log("Stage %d: %zu configured local lights", stage->scene_stage, local_lights_.size());
+  lighting_.screen = screen_for_day(lighting_.screen, day_);
   stage_.sky_nodes = stage->sky_nodes;
+  stage_.shadow_nodes = stage->shadow_nodes;
   stage_.sky_motion = stage->sky_motion;
   stage_.monitor_nodes = stage->monitor_nodes;
   if (!stage_.monitor_nodes.empty()) {
@@ -23,8 +29,36 @@ void TrainingScreen::load_stage_art(const StageDefinition *stage, const DataRoot
   }
   if (world_ != nullptr) {
     monitor_ship_ = std::make_unique<MonitorShip>(*world_, roots, stage->scene_stage);
+    if (coop_match_) {
+      stage_.sky_seconds = coop_match_->elapsed;
+      monitor_ship_->tick(static_cast<float>(coop_match_->elapsed));
+    }
     if (!stage->model.empty()) {
       stage_.model = world_->model(stage->model);
+      if (const auto *model = world_->model_data(stage_.model)) {
+        stage_.two_sided_materials.clear();
+        for (std::size_t index = 0; index < model->materials.size(); ++index) {
+          const int texture = model->materials[index].base_texture;
+          if (texture >= 0 &&
+              std::ranges::find(stage->two_sided_textures, model->textures[texture].image) !=
+                  stage->two_sided_textures.end()) {
+            stage_.two_sided_materials.push_back(static_cast<int>(index));
+          }
+        }
+        SDL_Log("Stage %d: %zu two-sided fence/post materials resolved from %zu textures",
+                stage->scene_stage, stage_.two_sided_materials.size(),
+                stage->two_sided_textures.size());
+        for (const auto &name : stage_.shadow_nodes) {
+          const bool submitted = std::ranges::any_of(model->draws, [&](const ModelDraw &draw) {
+            return model->nodes[draw.node].name == name;
+          });
+          if (!submitted) {
+            SDL_Log("Stage shadow volume missing from extraction: %s", name.c_str());
+          }
+        }
+        SDL_Log("Stage %d: %d authored shadow nodes configured", stage->scene_stage,
+                static_cast<int>(stage_.shadow_nodes.size()));
+      }
     }
     if (!stage->props_model.empty()) {
       props_.model = world_->model(stage->props_model);
@@ -42,6 +76,7 @@ void TrainingScreen::build_split(const DataRoots &roots) {
 
 void TrainingScreen::tick_split(const float seconds) {
   stage_.sky_seconds += seconds;
+  lighting_.screen.seconds += seconds;
   if (monitor_ship_) {
     monitor_ship_->tick(seconds);
   }
@@ -73,8 +108,10 @@ WorldFrame TrainingScreen::battle_frame(const ChaseCamera &camera, const int wid
   frame.lighting = lighting_;
   frame.shadow_length = script_.battle.shadows.volume_length;
   frame.items.push_back(stage_);
+  frame.lights = local_lights_;
   if (monitor_ship_) {
     monitor_ship_->add_items(frame.items);
+    monitor_ship_->add_lights(frame.lights);
   }
   if (object_model_ >= 0) {
     add_object_items(*battle_, object_model_, frame.items);
@@ -82,6 +119,7 @@ WorldFrame TrainingScreen::battle_frame(const ChaseCamera &camera, const int wid
     frame.items.push_back(props_);
   }
   add_door_items(*battle_, door_model_, frame.items);
+  add_finale_items(frame.items);
   if (supply_ && battle_->supply() != nullptr) {
     supply_->add_items(*battle_->supply(), frame.items, screens_ > 1);
     if (screens_ == 1) {
@@ -101,7 +139,7 @@ WorldFrame TrainingScreen::battle_frame(const ChaseCamera &camera, const int wid
         state >= scene_state::entrance_first && state <= scene_state::entrance_last;
     // The player is protected throughout entry, but the shell appears only
     // when the scene releases control. Apply this to the arena monitors too.
-    view_->add_items(*battle_, frame.items, hidden_robot, entering ? 0 : -1);
+    view_->add_items(*battle_, frame.items, hidden_robot, entering ? player_index_ : -1);
   }
   return frame;
 }
@@ -115,11 +153,15 @@ void TrainingScreen::draw_screen(const Viewport &screen, const std::size_t index
   // messages stay in the screen's canvas.
   const float aspect =
       static_cast<float>(screen.pixel_width) / static_cast<float>(screen.pixel_height);
+  if (split == nullptr) {
+    target_aspect_ = aspect;
+    update_target_view();
+  }
   const Mat4 view = camera.view();
   const Mat4 projection = camera.projection(aspect);
   if (world_ != nullptr && world_->available() && stage_.model >= 0) {
     WorldFrame frame = battle_frame(camera, screen.pixel_width, screen.pixel_height,
-                                    split == nullptr && in_cockpit() ? 0 : -1);
+                                    split == nullptr && in_cockpit() ? player_index_ : -1);
     if (split == nullptr && cockpit_ && cockpit_up()) {
       cockpit_->add_items(cockpit_input(), clock_, frame.overlay);
     }
@@ -133,7 +175,9 @@ void TrainingScreen::draw_screen(const Viewport &screen, const std::size_t index
         feed->lighting.clear_colour = {};
       }
     }
-    if (index == 0) record_world(frame, feed);
+    if (index == 0) {
+      record_world(frame, feed);
+    }
     world_->draw(frame, feed ? &*feed : nullptr);
   }
   const Mat4 view_projection = view * projection;

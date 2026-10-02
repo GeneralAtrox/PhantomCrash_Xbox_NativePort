@@ -142,3 +142,78 @@ TEST_CASE("shooting the carrier emits its explosion in the hit frame and again o
   }
   CHECK(later_explosions == 1);
 }
+
+TEST_CASE("a bullet destroys a landed pickup and submits its destruction effect once") {
+  BattleSettings settings;
+  WeaponTuning gun;
+  gun.kind = WeaponKind::gun;
+  gun.speed = 600;
+  settings.weapons.emplace("gun", gun);
+  Battle battle(settings, {});
+  battle.add_robot("player", 0, {}, 0, {"gun", "", "", ""}, 100);
+  auto supply = delivery();
+  supply.rest_height = battle.muzzle(battle.player(), WeaponSlot::right_arm).y;
+  supply.look.burst_effect = 65; // exercise the editable group, not a hard-coded event
+  battle.set_supply(supply);
+  for (int i = 0; i < 400; ++i) {
+    battle.tick({}, {}, tick);
+  }
+  REQUIRE(battle.supply()->pickups()[0].state == SupplyState::landed);
+  const Vec3 at = battle.supply()->pickups()[0].position;
+  battle.place(0, at - battle.muzzle(battle.player(), WeaponSlot::right_arm) + Vec3{0, 0, 15}, 0);
+  FireControl fire;
+  fire.fire[0] = true;
+  battle.tick({}, fire, tick);
+  REQUIRE(battle.supply()->pickups()[0].state == SupplyState::burst);
+  int effects = 0;
+  for (int i = 0; i < 5; ++i) {
+    battle.tick({}, {}, tick);
+    for (const auto &event : battle.events()) {
+      if (event.kind == BattleEventKind::effect && event.slot == supply.look.burst_effect) {
+        ++effects;
+        CHECK(length(event.at - at) < 0.001F);
+      }
+    }
+  }
+  CHECK(effects == 1);
+  CHECK(battle.supply()->pickups()[0].state == SupplyState::gone);
+}
+
+TEST_CASE("falling pickup bursts survive multiple ticks and drain only once") {
+  SupplyDrop drop(delivery(), 7);
+  for (int i = 0; i < 200 && drop.pickups()[0].state == SupplyState::carried; ++i) {
+    drop.tick(tick, ground);
+  }
+  REQUIRE(drop.pickups()[0].state == SupplyState::falling);
+  const Vec3 at = drop.pickups()[0].position;
+  drop.shoot_pickup(0);
+  drop.shoot_pickup(0);
+  drop.shoot_pickup(1); // still carried, cannot be shot individually
+  for (int i = 0; i < 4; ++i) {
+    drop.tick(tick, ground);
+  }
+  const auto bursts = drop.take_bursts();
+  REQUIRE(bursts.size() == 1);
+  CHECK(length(bursts[0] - at) < 0.001F);
+  CHECK(drop.take_bursts().empty());
+}
+
+TEST_CASE("expiry bursts all remaining pickups, but collection and lost cargo do not") {
+  auto settings = delivery();
+  settings.lifetime_ticks = 500;
+  SupplyDrop drop(settings, 7);
+  for (int i = 0; i < 400; ++i) {
+    drop.tick(tick, ground);
+  }
+  const Vec3 at = drop.pickups()[0].position;
+  REQUIRE(drop.take(at, 0).has_value());
+  for (int i = 0; i < 450; ++i) {
+    drop.tick(tick, ground);
+  }
+  CHECK(drop.take_bursts().size() == 2);
+  CHECK(drop.take_bursts().empty());
+  SupplyDrop carried(settings, 7);
+  REQUIRE(carried.shoot_carrier());
+  carried.tick(tick, ground);
+  CHECK(carried.take_bursts().empty());
+}

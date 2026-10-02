@@ -1,4 +1,5 @@
 #include "phantomcrash/robot_mover.hpp"
+#include "phantomcrash/robot.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -8,6 +9,16 @@ namespace {
 
 float number(const json::JsonValue &value, const char *key, const float fallback) {
   return static_cast<float>(value.number_or(key, fallback));
+}
+
+constexpr float motion_frames_a_second = 60.0F; // as RobotAnimator plays them
+
+// How long a leg motion takes to play to its last frame at its own pace.
+float motion_seconds(const std::vector<MotionTiming> *timings, const int motion) {
+  if (timings == nullptr || motion < 0 || motion >= static_cast<int>(timings->size())) {
+    return 0.0F;
+  }
+  return (*timings)[static_cast<std::size_t>(motion)].last / motion_frames_a_second;
 }
 
 // Moves `value` toward `target` by at most `step`.
@@ -30,17 +41,50 @@ MovementTuning parse_movement_tuning(const json::JsonValue &value) {
   t.turn_degrees_per_second = number(value, "turn_degrees_per_second", t.turn_degrees_per_second);
   t.dash_turn_degrees_per_second =
       number(value, "dash_turn_degrees_per_second", t.dash_turn_degrees_per_second);
+  t.air_turn_degrees_per_second =
+      number(value, "air_turn_degrees_per_second", t.air_turn_degrees_per_second);
   t.stick_threshold = number(value, "stick_threshold", t.stick_threshold);
   t.dash_stick = number(value, "dash_stick", t.dash_stick);
   t.dash_hold_seconds = number(value, "dash_hold_seconds", t.dash_hold_seconds);
+  t.brake_cut_seconds = number(value, "brake_cut_seconds", t.brake_cut_seconds);
+  if (const auto *legs = value.find("dash_turn_legs")) {
+    t.dash_turn_legs.clear();
+    for (const auto &leg : legs->array()) {
+      t.dash_turn_legs.push_back(static_cast<int>(leg.number()));
+    }
+  }
+  t.dash_turn_stick = number(value, "dash_turn_stick", t.dash_turn_stick);
+  t.dash_turn_ease_ticks =
+      std::max(1.0F, number(value, "dash_turn_ease_ticks", t.dash_turn_ease_ticks));
+  t.flick_stick = number(value, "flick_stick", t.flick_stick);
+  t.flick_seconds = number(value, "flick_seconds", t.flick_seconds);
+  t.standard_air_turn_stick = number(value, "standard_air_turn_stick", t.standard_air_turn_stick);
+  t.quick_turn_stick = number(value, "quick_turn_stick", t.quick_turn_stick);
+  t.quick_turn_degrees = number(value, "quick_turn_degrees", t.quick_turn_degrees);
+  t.quick_turn_share = number(value, "quick_turn_share", t.quick_turn_share);
+  t.quick_turn_cooldown_seconds =
+      number(value, "quick_turn_cooldown_seconds", t.quick_turn_cooldown_seconds);
   t.hit_seconds = number(value, "hit_seconds", t.hit_seconds);
-  t.jump_speed = number(value, "jump_speed", t.jump_speed);
-  t.jump_boost = number(value, "jump_boost", t.jump_boost);
-  t.jump_boost_seconds = number(value, "jump_boost_seconds", t.jump_boost_seconds);
+  t.jump_height = std::max(0.0F, number(value, "jump_height", t.jump_height));
+  t.down_boost_acceleration =
+      std::max(0.0F, number(value, "down_boost_acceleration", t.down_boost_acceleration));
   t.gravity = number(value, "gravity", t.gravity);
   t.air_control = number(value, "air_control", t.air_control);
   t.dodge_speed = number(value, "dodge_speed", t.dodge_speed);
+  t.air_dodge_speed = number(value, "air_dodge_speed", t.dodge_speed);
+  t.dodge_keep = number(value, "dodge_keep", t.dodge_keep);
+  t.dodge_ease = number(value, "dodge_ease", t.dodge_ease);
+  t.air_dodge_keep = number(value, "air_dodge_keep", t.air_dodge_keep);
   t.dodge_seconds = number(value, "dodge_seconds", t.dodge_seconds);
+  t.strike_speed = number(value, "strike_speed", t.strike_speed);
+  t.lunge_rate_speed = number(value, "lunge_rate_speed", t.lunge_rate_speed);
+  t.computer_lunge_rate_speed =
+      number(value, "computer_lunge_rate_speed", t.computer_lunge_rate_speed);
+  t.lunge_turn_degrees = number(value, "lunge_turn_degrees", t.lunge_turn_degrees);
+  t.computer_lunge_turn_degrees =
+      number(value, "computer_lunge_turn_degrees", t.computer_lunge_turn_degrees);
+  t.lunge_cone_degrees = number(value, "lunge_cone_degrees", t.lunge_cone_degrees);
+  t.lunge_climb_rate = number(value, "lunge_climb_rate", t.lunge_climb_rate);
   t.twist_degrees_per_second =
       number(value, "twist_degrees_per_second", t.twist_degrees_per_second);
   t.twist_limit_degrees = number(value, "twist_limit_degrees", t.twist_limit_degrees);
@@ -50,6 +94,18 @@ MovementTuning parse_movement_tuning(const json::JsonValue &value) {
   t.pitch_limit = number(value, "pitch_limit", t.pitch_limit);
   t.pitch_per_second = number(value, "pitch_per_second", t.pitch_per_second);
   return t;
+}
+
+JumpTakeoff jump_takeoff(const float height, const float gravity) {
+  if (height <= 0.0F || gravity <= 0.0F) {
+    return {};
+  }
+  // sqrt(2 g h) would throw the robot the whole height (0x075a36).
+  const float throw_speed = std::sqrt(2.0F * gravity * height);
+  JumpTakeoff out;
+  out.speed = jump_takeoff_share * throw_speed + gravity / battle_tick_rate;
+  out.lift_seconds = jump_lift_share * height / out.speed;
+  return out;
 }
 
 Vec3 heading_forward(const float heading) {
@@ -78,14 +134,19 @@ void RobotMover::place(const Vec3 position, const float heading) {
   twist_ = 0.0F;
   twist_stick_ = 0.0F;
   twist_reset_left_ = 0.0F;
+  quick_turn_left_ = quick_turn_cooldown_ = 0.0F;
   pitch_ = 0.0F;
+  lunge_at_.reset();
   grounded_ = position.y <= floor_ + ground_snap;
   if (grounded_) {
     position_.y = std::max(position_.y, floor_);
   }
   local_velocity_ = {};
   vertical_speed_ = 0.0F;
-  set_mode(MoveMode::stand, robot_motion::stand, true);
+  down_boosting_ = false;
+  jump_was_held_ = false;
+  lift_left_ = 0.0F;
+  set_mode(MoveMode::stand, robot_motion::stand, true, true);
 }
 
 Vec3 RobotMover::velocity() const {
@@ -93,9 +154,11 @@ Vec3 RobotMover::velocity() const {
          heading_right(heading_) * local_velocity_.x + Vec3{0.0F, vertical_speed_, 0.0F};
 }
 
-void RobotMover::set_mode(const MoveMode mode, const int motion, const bool loops) {
-  if (mode != mode_ || motion != motion_) {
+void RobotMover::set_mode(const MoveMode mode, const int motion, const bool loops,
+                          const bool restart) {
+  if (mode != mode_ || motion != motion_ || restart) {
     mode_seconds_ = 0.0F;
+    ++motion_revision_;
   }
   mode_ = mode;
   motion_ = motion;
@@ -104,6 +167,9 @@ void RobotMover::set_mode(const MoveMode mode, const int motion, const bool loop
 }
 
 void RobotMover::stagger(const float seconds, const Vec3 push) {
+  lunge_at_.reset(); // a hit breaks the strike off
+  down_boosting_ = false;
+  lift_left_ = 0.0F;
   stagger_left_ = std::max({stagger_left_, seconds, tuning_.hit_seconds});
   // The push in the robot's own frame picks the reaction: along or across,
   // whichever is larger, and its sign.
@@ -120,11 +186,14 @@ void RobotMover::stagger(const float seconds, const Vec3 push) {
   } else {
     motion += robot_motion::air_hit_offset;
   }
-  set_mode(MoveMode::hit, motion, false);
+  set_mode(MoveMode::hit, motion, false, true);
 }
 
 void RobotMover::script(const ScriptedStep &step) {
-  if (mode_ != MoveMode::scripted || motion_ != step.motion) {
+  lunge_at_.reset();
+  down_boosting_ = false;
+  lift_left_ = 0.0F;
+  if (mode_ != MoveMode::scripted || motion_ != step.motion || loops_ != step.loops) {
     set_mode(MoveMode::scripted, step.motion, step.loops);
   }
   heading_ = wrap_angle(step.heading);
@@ -134,21 +203,43 @@ void RobotMover::script(const ScriptedStep &step) {
 }
 
 void RobotMover::release() {
+  down_boosting_ = false;
+  jump_was_held_ = false;
+  lift_left_ = 0.0F;
   local_velocity_ = {};
   set_mode(MoveMode::stand, robot_motion::stand, true);
+}
+
+void RobotMover::destroy() {
+  lunge_at_.reset();
+  down_boosting_ = false;
+  lift_left_ = 0.0F;
+  local_velocity_ = {};
+  vertical_speed_ = std::min(vertical_speed_, 0.0F);
+  twist_ = pitch_ = 0.0F;
+  motion_speed_ = 1.0F;
+  set_mode(MoveMode::destroyed, robot_motion::death, false);
 }
 
 void RobotMover::turn(const float stick, const float degrees_per_second, const float seconds) {
   heading_ = wrap_angle(heading_ + radians(degrees_per_second) * stick * seconds);
 }
 
-void RobotMover::tick(const RobotControl &control, const float seconds) {
+void RobotMover::tick(const RobotControl &input, const float seconds) {
+  RobotControl control = input;
+  if (control.standard) {
+    const int flicked = flick(control.strafe, seconds);
+    control.dodge = control.dodge != 0 ? control.dodge : flicked;
+  }
   mode_seconds_ += seconds;
   dodged_ = 0;
-  if (mode_ == MoveMode::scripted) {
+  if (mode_ == MoveMode::scripted || mode_ == MoveMode::destroyed) {
     if (!grounded_) {
       vertical_speed_ -= tuning_.gravity * seconds;
     }
+  } else if (mode_ == MoveMode::strike) {
+    tick_twist(control, seconds);
+    tick_strike(seconds);
   } else {
     tick_twist(control, seconds);
     if (grounded_) {
@@ -160,7 +251,7 @@ void RobotMover::tick(const RobotControl &control, const float seconds) {
   position_ = position_ + velocity() * seconds;
   if (grounded_ && position_.y > floor_ + ground_snap) {
     grounded_ = false; // walked off an edge
-    if (mode_ != MoveMode::scripted) {
+    if (mode_ != MoveMode::scripted && mode_ != MoveMode::destroyed && mode_ != MoveMode::strike) {
       set_mode(MoveMode::jump, robot_motion::jump, true);
     }
   }
@@ -169,6 +260,7 @@ void RobotMover::tick(const RobotControl &control, const float seconds) {
   } else if (grounded_) {
     position_.y = floor_;
   }
+  jump_was_held_ = control.jump;
 }
 
 void RobotMover::land(const float height) {
@@ -177,6 +269,9 @@ void RobotMover::land(const float height) {
     return;
   }
   grounded_ = true;
+  down_boosting_ = false;
+  lift_left_ = 0.0F;
+  lift_spent_ = 0.0F;
   vertical_speed_ = 0.0F;
   if (mode_ == MoveMode::hit) {
     local_velocity_ = {}; // the rest of the reaction on the spot
@@ -189,35 +284,13 @@ void RobotMover::land(const float height) {
 
 void RobotMover::bump_head() {
   vertical_speed_ = std::min(vertical_speed_, 0.0F);
-  boost_left_ = 0.0F;
-}
-
-void RobotMover::tick_twist(const RobotControl &control, const float seconds) {
-  heading_ = wrap_angle(heading_ + control.mouse_aim[0]);
-  if (control.reset_twist && twist_reset_left_ <= 0.0F) {
-    twist_reset_from_ = twist_;
-    twist_reset_left_ = tuning_.twist_reset_seconds;
-  }
-  if (twist_reset_left_ > 0.0F) {
-    twist_reset_left_ = std::max(twist_reset_left_ - seconds, 0.0F);
-    twist_ = twist_reset_from_ * twist_reset_left_ / tuning_.twist_reset_seconds;
-  } else {
-    const float keep = std::pow(tuning_.twist_stick_keep, seconds * battle_tick_rate);
-    twist_stick_ = twist_stick_ * keep + std::abs(control.twist) * (1.0F - keep);
-    const float limit =
-        radians(tuning_.twist_limit_degrees + tuning_.twist_stretch_degrees * twist_stick_);
-    twist_ =
-        std::clamp(twist_ + radians(tuning_.twist_degrees_per_second) * control.twist * seconds,
-                   -limit, limit);
-  }
-  pitch_ =
-      std::clamp(pitch_ + control.mouse_aim[1] + tuning_.pitch_per_second * control.pitch * seconds,
-                 -tuning_.pitch_limit, tuning_.pitch_limit);
+  lift_left_ = 0.0F;
 }
 
 void RobotMover::tick_ground(const RobotControl &control, const float seconds) {
   const float forward = control.move[1];
   const float side = control.move[0];
+  const float strafe = std::abs(control.strafe) > tuning_.stick_threshold ? control.strafe : 0;
   const bool pushed = std::abs(forward) > tuning_.stick_threshold;
   const bool steering = std::abs(side) > tuning_.stick_threshold;
 
@@ -229,10 +302,10 @@ void RobotMover::tick_ground(const RobotControl &control, const float seconds) {
     set_mode(MoveMode::stand, robot_motion::stand, true);
   }
   if (mode_ == MoveMode::dodge) {
-    if (mode_seconds_ < tuning_.dodge_seconds) {
+    turn(side, tuning_.turn_degrees_per_second, seconds); // 0x08ef79 steers it
+    if (tick_dodge(seconds)) {
       return;
     }
-    local_velocity_.x = 0.0F;
     set_mode(MoveMode::stand, robot_motion::stand, true);
   }
   if (mode_ == MoveMode::jump && !loops_ && mode_seconds_ < 0.25F) {
@@ -240,17 +313,17 @@ void RobotMover::tick_ground(const RobotControl &control, const float seconds) {
     return; // landing
   }
   if (control.dodge != 0) {
-    dodged_ = control.dodge;
-    local_velocity_ = {tuning_.dodge_speed * static_cast<float>(control.dodge), 0.0F, 0.0F};
-    set_mode(MoveMode::dodge,
-             control.dodge < 0 ? robot_motion::dodge_left : robot_motion::dodge_right, false);
+    start_dodge(control.dodge);
     return;
   }
-  if (control.jump) {
+  if (control.jump && !jump_was_held_) {
     grounded_ = false;
-    vertical_speed_ = tuning_.jump_speed;
-    boost_left_ = tuning_.jump_boost_seconds;
-    set_mode(MoveMode::jump, robot_motion::jump, true);
+    // 0x08ea5b: the take-off adds to any rise and fills the lift.
+    const JumpTakeoff takeoff = jump_takeoff(tuning_.jump_height, tuning_.gravity);
+    vertical_speed_ = std::max(vertical_speed_, 0.0F) + takeoff.speed;
+    lift_left_ = takeoff.lift_seconds;
+    lift_spent_ = 0.0F;
+    set_mode(MoveMode::jump, robot_motion::jump, true, true);
     return;
   }
 
@@ -262,15 +335,24 @@ void RobotMover::tick_ground(const RobotControl &control, const float seconds) {
       set_mode(MoveMode::brake, robot_motion::brake, false);
     } else {
       const float speed = backward_ ? -tuning_.dash_back_speed : tuning_.dash_speed;
-      local_velocity_.z = approach(local_velocity_.z, speed, tuning_.walk_accel * 2.0F * seconds);
-      local_velocity_.x = 0.0F;
+      const float divisor = std::hypot(strafe, 1.0F);
+      local_velocity_.z =
+          approach(local_velocity_.z, speed / divisor, tuning_.walk_accel * 2.0F * seconds);
+      local_velocity_.x = approach(local_velocity_.x, std::abs(speed) * strafe / divisor,
+                                   tuning_.walk_accel * 2.0F * seconds);
       motion_speed_ = tuning_.dash_motion_rate;
+      steer_dash(side, seconds);
       return;
     }
   }
   if (mode_ == MoveMode::brake) {
     local_velocity_.z = approach(local_velocity_.z, 0.0F, tuning_.walk_accel * 1.5F * seconds);
-    if (mode_seconds_ < 0.35F) {
+    local_velocity_.x = approach(local_velocity_.x, 0.0F, tuning_.walk_accel * 1.5F * seconds);
+    // The stop plays through its hold and settle to the last frame before
+    // the robot stands; the stick may cut it short once brake_cut_seconds pass.
+    const bool steered = pushed || strafe != 0 || steering;
+    if (mode_seconds_ < tuning_.brake_cut_seconds ||
+        (!steered && mode_seconds_ < motion_seconds(timings_, robot_motion::brake))) {
       return;
     }
   }
@@ -283,21 +365,23 @@ void RobotMover::tick_ground(const RobotControl &control, const float seconds) {
   }
   dash_hold_ = std::abs(forward) > tuning_.dash_stick ? dash_hold_ + seconds : 0.0F;
 
-  if (pushed) {
+  if (pushed || strafe != 0) {
     backward_ = forward < 0.0F;
     turn(side, tuning_.turn_degrees_per_second, seconds);
     const float full = backward_ ? tuning_.back_speed : tuning_.walk_speed;
     // The walk runs at half to full speed with the stick (0x08e6b6).
-    const float amount = std::clamp(std::abs(forward), 0.5F, 1.0F);
-    const float target = (backward_ ? -full : full) * amount;
+    const float magnitude = std::hypot(strafe, pushed ? forward : 0);
+    const float amount = std::clamp(magnitude, 0.5F, 1.0F);
+    const float target = (pushed ? forward : 0) * full * amount / magnitude;
     local_velocity_.z = approach(local_velocity_.z, target, tuning_.walk_accel * seconds);
-    local_velocity_.x = 0.0F;
+    local_velocity_.x = approach(local_velocity_.x, strafe * full * amount / magnitude,
+                                 tuning_.walk_accel * seconds);
     set_mode(MoveMode::walk, backward_ ? robot_motion::walk_back : robot_motion::walk, true);
     motion_speed_ = amount * tuning_.walk_motion_rate;
     return;
   }
   local_velocity_.z = approach(local_velocity_.z, 0.0F, tuning_.walk_accel * seconds);
-  local_velocity_.x = 0.0F;
+  local_velocity_.x = approach(local_velocity_.x, 0.0F, tuning_.walk_accel * seconds);
   if (steering) {
     // Sideways on the spot turns in place (the lesson at state 0x1a).
     turn(side, tuning_.turn_degrees_per_second, seconds);
@@ -305,41 +389,9 @@ void RobotMover::tick_ground(const RobotControl &control, const float seconds) {
              true);
     return;
   }
-  if (mode_ != MoveMode::stand && std::abs(local_velocity_.z) < 0.5F) {
+  if (mode_ != MoveMode::stand && length(local_velocity_) < 0.5F) {
     set_mode(MoveMode::stand, robot_motion::stand, true);
   }
-}
-
-void RobotMover::tick_air(const RobotControl &control, const float seconds) {
-  if (mode_ == MoveMode::hit) {
-    stagger_left_ -= seconds;
-    boost_left_ = 0.0F;
-    vertical_speed_ -= tuning_.gravity * seconds;
-    if (stagger_left_ <= 0.0F) {
-      set_mode(MoveMode::jump, robot_motion::air, true);
-    }
-    return;
-  }
-  if (control.dodge != 0 && mode_ != MoveMode::dodge) {
-    dodged_ = control.dodge;
-    local_velocity_.x = tuning_.dodge_speed * static_cast<float>(control.dodge);
-    set_mode(MoveMode::dodge,
-             control.dodge < 0 ? robot_motion::air_dodge_left : robot_motion::air_dodge_right,
-             false);
-  }
-  if (mode_ == MoveMode::dodge && mode_seconds_ >= tuning_.dodge_seconds) {
-    local_velocity_.x = 0.0F;
-    set_mode(MoveMode::jump, robot_motion::air, true);
-  }
-  if (control.jump && boost_left_ > 0.0F) {
-    vertical_speed_ += tuning_.jump_boost * seconds;
-  }
-  boost_left_ = control.jump ? boost_left_ - seconds : 0.0F;
-  vertical_speed_ -= tuning_.gravity * seconds;
-  turn(control.move[0], tuning_.turn_degrees_per_second * 0.5F, seconds);
-  const float steer = control.move[1] * tuning_.walk_speed * tuning_.air_control;
-  local_velocity_.z =
-      std::clamp(local_velocity_.z + steer * seconds, -tuning_.dash_speed, tuning_.dash_speed);
 }
 
 } // namespace phantomcrash

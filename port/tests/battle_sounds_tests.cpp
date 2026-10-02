@@ -79,6 +79,62 @@ TEST_CASE("a weapon's fire sound is the first rule its record matches") {
   CHECK(weapon_sound(table.impact, weapon, -1)->player.empty()); // a beam lands silently
 }
 
+TEST_CASE(
+    "beam audio starts once while held and stops on release, weapon loss, empty charge or death") {
+  for (int ending = 0; ending < 4; ++ending) {
+    BattleSettings settings;
+    WeaponTuning beam;
+    beam.kind = WeaponKind::gun;
+    beam.hud_kind = hud_kind::beam;
+    beam.fire_sound = 5;
+    beam.max_ammo = 100;
+    beam.cooldown = .1F;
+    settings.weapons.emplace("beam", beam);
+    Battle battle(settings, {});
+    battle.add_robot("player", 0, {}, 0, {"beam", "", "", ""}, 100);
+    BattleSounds sounds(parse_battle_sounds(
+        json::parse(R"({"fire":[{"style":5,"sound":"beam_sound"}],"beam_restart_seconds":9})")));
+    FireControl fire;
+    fire.fire[0] = true;
+    battle.tick({}, fire, tick);
+    sounds.observe(battle, tick);
+    const auto started = sounds.take();
+    REQUIRE(started.size() == 1);
+    CHECK(started[0].cue.name == "beam_sound");
+    const auto key = started[0].cue.key;
+    CHECK(key != 0);
+    for (int i = 0; i < 12; ++i) {
+      battle.tick({}, fire, tick);
+      sounds.observe(battle, tick);
+      const auto held = sounds.take();
+      REQUIRE(held.size() == 1);
+      CHECK(held[0].cue.action == SoundCue::Action::move);
+      CHECK(held[0].cue.key == key);
+    }
+    if (ending == 0) {
+      fire.fire[0] = false;
+    }
+    if (ending == 1) {
+      battle.robot(0).lost[0] = true;
+    }
+    if (ending == 2) {
+      battle.robot(0).magazines[0].ammo = 0;
+    }
+    if (ending == 3) {
+      battle.robot(0).alive = false;
+    }
+    battle.tick({}, fire, tick);
+    sounds.observe(battle, tick);
+    const auto stopped = sounds.take();
+    REQUIRE(stopped.size() == 1);
+    CHECK(stopped[0].cue.action == SoundCue::Action::stop);
+    CHECK(stopped[0].cue.key == key);
+    battle.tick({}, fire, tick);
+    sounds.observe(battle, tick);
+    CHECK(sounds.take().empty());
+  }
+}
+
 TEST_CASE("a battle sounds its shots where they leave and land, and a walk's steps") {
   Battle battle(test_settings(), EnemyPath{});
   battle.add_robot("player", 0, {}, 0.0F, {"handgun", "", "", ""}, 100.0F);
@@ -102,7 +158,7 @@ TEST_CASE("a battle sounds its shots where they leave and land, and a walk's ste
 
   heard.clear();
   RobotControl walk;
-  walk.move = {0.0F, 0.7F}; // at the dash's threshold: still a walk
+  walk.move = {0.0F, 0.7F};       // at the dash's threshold: still a walk
   for (int i = 0; i < 120; ++i) { // two seconds at 0.7 of the walk: 5.6 steps
     battle.tick(walk, {}, tick);
     sounds.observe(battle, tick);
@@ -152,4 +208,32 @@ TEST_CASE("placed cues fade with the camera's distance; the split screen hears t
   const SoundListener listener;
   CHECK(place_cues(SoundFalloff{}, &listener, cues).front().mix.gain < 0.1F);
   CHECK(place_cues(SoundFalloff{}, nullptr, cues).front().mix.gain == 1.0F);
+  CHECK(place_cues(SoundFalloff{}, &listener, cues).front().position.has_value());
+  CHECK(!place_cues(SoundFalloff{}, nullptr, cues).front().position.has_value());
+  const auto silent_tick = place_cues(SoundFalloff{}, &listener, {});
+  REQUIRE(silent_tick.size() == 1);
+  CHECK(silent_tick.front().action == SoundCue::Action::listener);
+}
+
+TEST_CASE("a landing on surfaces 5 to 7 plays their sound, elsewhere the robot's own") {
+  const BattleSoundTable table = parse_battle_sounds(json::parse(R"({"robot": {
+    "landing": {"player": "own.wav", "computer": "computer.wav"},
+    "landing_surfaces": [{"surfaces": [5, 7], "sound": "hard.wav"},
+                         {"surfaces": [6], "sound": "soft.wav"}]}})"));
+  Combatant robot{MovementTuning{}};
+  robot.piloted = true;
+  robot.floor_surface = 9; // the training ground's floor
+  CHECK(landing_sound(table, robot) == "own.wav");
+  robot.floor_surface = 7;
+  CHECK(landing_sound(table, robot) == "hard.wav");
+  robot.floor_surface = 1006; // surface % 1000
+  CHECK(landing_sound(table, robot) == "soft.wav");
+  robot.floor_surface = -1;
+  robot.stage_contact = surface_flags(5); // touched as it landed
+  CHECK(landing_sound(table, robot) == "hard.wav");
+  robot.stage_contact = 0;
+  robot.piloted = false;
+  CHECK(landing_sound(table, robot) == "computer.wav");
+  const auto files = sound_files(table);
+  CHECK(std::ranges::find(files, "soft.wav") != files.end());
 }

@@ -4,12 +4,82 @@
 
 #include "desktop_draw_list.hpp"
 #include "desktop_rumbling.hpp"
+#include "desktop_coop_matches.hpp"
 #include "phantomcrash/rumbling_robot.hpp"
 
 #include <cmath>
 #include <string>
 
 namespace phantomcrash {
+
+std::shared_ptr<CoopMatch> RumblingScreen::live_match() const {
+  if (!coop_matches_) {
+    return {};
+  }
+  const CoopMatches::Key key{logic_.quest().day, logic_.area(), logic_.contest(logic_.area())};
+  const auto found = coop_matches_->matches.find(key);
+  return found == coop_matches_->matches.end() ? nullptr : found->second;
+}
+
+void RumblingScreen::draw_coop_robots(DrawList &list, const CoopMatch &match) const {
+  const auto &markers = logic_.script().robot_markers;
+  const auto &map = logic_.script().areas.at(logic_.area()).robot_map;
+  const auto &check = logic_.check();
+  const auto *shown = shown_member();
+  for (int actor = 0; actor < static_cast<int>(match.battle->robots().size()); ++actor) {
+    const auto &robot = match.battle->robots()[actor];
+    const auto position = robot.mover.position();
+    if (!robot.alive || robot.hp <= 0 || robot.mover.mode() == MoveMode::scripted ||
+        !match.battle->stage().in_play_area(position)) {
+      continue;
+    }
+    int player = -1;
+    for (int slot = 0; slot < static_cast<int>(match.players.size()); ++slot) {
+      if (match.players[slot].actor == actor) {
+        player = slot;
+      }
+    }
+    // Human actors include slot zero and extra actors in ranker-only matches;
+    // neither is necessarily represented by an NPC roster member.
+    if (robot.piloted && player < 0) {
+      continue;
+    }
+    RobotRecord record;
+    record.parts[static_cast<std::size_t>(PartSlot::legs)] = RobotPart{match.look(actor).legs, 0};
+    const auto kind = robot_kind(check.parts, check.rules, record);
+    const auto icon = markers.icons.find({kind.maker, kind.legs_type});
+    if (icon == markers.icons.end()) {
+      continue;
+    }
+    const auto *npc = player < 0 ? match.world->robot(match.area, actor) : nullptr;
+    const bool selected = shown && npc && shown->entrant == npc->entrant;
+    Sprite sprite = icon->second;
+    sprite.position = rumbling_map_point(markers, map, position.x, position.z);
+    sprite.centered = true;
+    sprite.angle = rumbling_map_degrees(map, robot.mover.heading());
+    sprite.colour = player >= 0 || selected ? markers.chosen_colour : markers.colour;
+    list.sprite(sprite);
+    if (player >= 0) {
+      const auto at = sprite.position;
+      auto label = layout_run(font_, glyph_run(font_, "P" + std::to_string(player + 1)), 0, 0);
+      for (auto &glyph : label) {
+        glyph.x = at[0] + glyph.x * 0.5F;
+        glyph.y = at[1] + glyph.y * 0.5F;
+        glyph.width *= 0.5F;
+        glyph.height *= 0.5F;
+      }
+      list.text(sprite.layer + 1, std::move(label), markers.chosen_colour);
+    }
+    if (selected) {
+      Sprite ring = markers.ring;
+      ring.position = sprite.position;
+      ring.centered = true;
+      ring.angle =
+          std::fmod(static_cast<float>(logic_.seconds()) * markers.ring_degrees_per_second, 360.0F);
+      list.sprite(ring);
+    }
+  }
+}
 
 const RosterMember *RumblingScreen::shown_member() const {
   const int area = logic_.area();
@@ -35,6 +105,16 @@ void RumblingScreen::draw_robots(DrawList &list) const {
   if (!markers.present || area < 0 || area >= roster_areas) {
     return;
   }
+  if (const auto match = live_match()) {
+    if (logged_match_.lock() != match) {
+      SDL_Log("Co-op live map: day=%d area=%d contest=%d source=shared battle robots=%zu",
+              match->day + 1, match->area, match->contest, match->battle->robots().size());
+      logged_match_ = match;
+    }
+    draw_coop_robots(list, *match);
+    return;
+  }
+  logged_match_.reset();
   const auto &members = logic_.quest().rosters[static_cast<std::size_t>(area)].members;
   if (members.size() < markers.fewest) {
     return;

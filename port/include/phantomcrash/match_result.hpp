@@ -16,6 +16,7 @@ struct MatchSummary {
   double play_seconds{};
   bool rental{};
   std::array<bool, 4> lost{};
+  float armour{1.0F}; // the share of its armour the robot ends with
   RobotRecord robot;
 };
 

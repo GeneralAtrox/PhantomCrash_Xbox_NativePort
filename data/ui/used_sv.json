@@ -11,9 +11,10 @@
  "buttons": {"left": "left", "right": "right"},
  "sounds": {"move": "cursor", "select": "confirm", "jump": "adjust", "cancel": "cancel", "buy": "purchase", "open": "shop_open"},
  "layers": [
-  {"id": "2958", "image": "textures/scroll/wild_tex/4.png", "rect": [0, 0, 640, 480], "position": [0, 0], "layer": 1},
-  {"id": "2960", "image": "textures/scroll/wild_tex/4.png", "rect": [0, 584, 640, 680], "position": [0, 0], "layer": 257},
-  {"id": "2959", "image": "textures/scroll/wild_tex/4.png", "rect": [0, 480, 640, 584], "position": [0, 376], "layer": 257}
+  {"id": "2958", "image": "textures/scroll/wild_tex/4.png", "rect": [0, 0, 640, 480], "position": [0, 0], "layer": 1, "extend_edges": "both", "edge_bands": [[0, 72], [376, 480]],
+ "edge_bands_left": [[0, 72], [414, 480]]},
+  {"id": "2960", "image": "textures/scroll/wild_tex/4.png", "rect": [0, 584, 640, 680], "position": [0, 0], "layer": 257, "extend_edges": "both", "edge_inset": [1, 1]},
+  {"id": "2959", "image": "textures/scroll/wild_tex/4.png", "rect": [0, 480, 640, 584], "position": [0, 376], "layer": 257, "extend_edges": "both"}
  ],
  "frame": {
   "hud": true,

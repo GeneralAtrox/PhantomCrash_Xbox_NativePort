@@ -22,7 +22,7 @@ struct SoundFalloff {
   float rolloff{0.1F};
 };
 
-// data/audio/sfx.json "falloff"; missing values keep the original's.
+// data/audio/battle_sounds.json "falloff"; missing values keep the original's.
 [[nodiscard]] SoundFalloff parse_sound_falloff(const json::JsonValue &value);
 
 // The camera hearing the world (0x0804eb: its eye and view).
@@ -38,12 +38,16 @@ struct SoundListener {
 // A sound for the runner to play: once (key 0), or a keyed loop that is
 // started, moved and stopped by its key.
 struct SoundCue {
-  enum class Action { play, move, stop };
+  enum class Action { play, move, stop, listener, stop_spatial };
   Action action{Action::play};
   std::string name;
   SoundMix mix;
   bool loop{};
   std::uint64_t key{};
+  std::optional<Vec3> position;
+  SoundListener listener;
+  SoundFalloff falloff;
+  AudioBus bus{AudioBus::ui};
 };
 
 // A sound in the world, placed when heard; without `at` it is heard
@@ -51,6 +55,7 @@ struct SoundCue {
 struct WorldSound {
   std::string name;
   std::optional<Vec3> at;
+  AudioBus bus{AudioBus::environment};
 };
 
 } // namespace phantomcrash

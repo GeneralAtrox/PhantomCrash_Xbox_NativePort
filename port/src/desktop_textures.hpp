@@ -24,11 +24,16 @@ public:
 
   // Null when the image is missing (logged once).
   [[nodiscard]] SDL_Texture *get(const std::string &file);
+  [[nodiscard]] bool hit(const Sprite &sprite, const std::array<float, 2> &point);
   // Loads every image a data document names (each string ending ".png"),
   // so a screen's first use of one does not load it mid-frame.
   void preload(const json::JsonValue &document);
-  void record_into(ReplayOverlay *overlay) { recording_ = overlay; }
-  ReplayOverlay *recording() const { return recording_; }
+  void record_into(ReplayOverlay *overlay) {
+    recording_ = overlay;
+  }
+  ReplayOverlay *recording() const {
+    return recording_;
+  }
 
   [[nodiscard]] SDL_Renderer *renderer() const noexcept {
     return renderer_;
@@ -39,7 +44,18 @@ private:
   ReplayOverlay *recording_{};
   const DataRoots &roots_;
   std::map<std::string, SDL_Texture *> textures_;
+  struct HitMask {
+    int width{}, height{};
+    std::vector<std::uint8_t> alpha;
+  };
+  std::map<std::string, HitMask> hit_masks_;
 };
+
+// Draw a constant-U strip, sampling one texel column through the existing GPU pass.
+void draw_texture_edge(SDL_Renderer *renderer, SDL_Texture *texture, const SDL_FRect &source,
+                       const SDL_FRect &target);
+void draw_sprite_edges(TextureCache &textures, SDL_Texture *texture, const Sprite &sprite,
+                       const Viewport &viewport, SDL_FRect &source, SDL_FRect &target);
 
 // Draws a sprite's quads with its animation and colour, times `alpha`.
 void draw_sprite(TextureCache &textures, const Sprite &sprite, const Viewport &viewport,

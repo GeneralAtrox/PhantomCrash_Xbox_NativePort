@@ -20,6 +20,14 @@ int load_stage_objects(WorldRenderer *world, const DataRoots &roots, const int s
       if (battle.objects() == nullptr) {
         battle.set_objects(parse_stage_objects(document, stage));
       }
+      std::size_t wrecks = 0, shaped = 0;
+      for (const auto &object : battle.objects()->objects()) {
+        if (object.wreck_mesh >= 0 && !object.destroyed) {
+          ++wrecks;
+          shaped += object.wreck_collision.has_value();
+        }
+      }
+      SDL_Log("Scenery collision: %zu/%zu intact props have wreck geometry", shaped, wrecks);
       return world != nullptr && world->available()
                  ? world->model(entry.string_or("door_model", ""))
                  : -1;

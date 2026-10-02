@@ -22,18 +22,18 @@ void TrainingScreen::start_recording(const TrainingContext &context) {
   }
 }
 void TrainingScreen::begin_recording() {
-  if (!replay_) {
+  if (!replay_ || paused_) {
     return;
   }
   replay_frame_ = {};
   replay_frame_.seconds = clock_;
-  replay_frame_.music = music();
+  replay_frame_.music = heard_music_.empty() ? music() : heard_music_;
   replay_frame_.sounds = replay_->take_sounds();
   textures_.record_into(&replay_frame_.overlay);
 }
 void TrainingScreen::record_world(const WorldFrame &frame,
                                   const std::optional<WorldFrame> &monitor) {
-  if (!replay_) {
+  if (!replay_ || paused_) {
     return;
   }
   replay_frame_.player = frame;
@@ -44,38 +44,45 @@ void TrainingScreen::record_world(const WorldFrame &frame,
   if (in_cockpit() && view_) {
     view_->add_items(*battle_, replay_frame_.hidden_player, -1);
     std::erase_if(replay_frame_.hidden_player,
-                  [](const WorldItem &item) { return item.robot != 0; });
+                  [this](const WorldItem &item) { return item.robot != player_index_; });
   }
   for (std::size_t i = 0; i < battle_->robots().size(); ++i) {
-    const auto &robot = battle_->robots()[i];
-    ReplaySubject subject;
-    subject.alive = robot.alive;
-    subject.name = robot.tag.empty() ? robot.name : robot.tag;
+    ReplaySubject subject = replay_subject(i);
     if (i == 0 && !replay_->player_name.empty()) {
       subject.name = replay_->player_name;
     }
-    const auto velocity = robot.mover.velocity();
-    subject.cockpit.vertical_speed = velocity.y;
-    subject.cockpit.gravity = robot.mover.tuning().gravity;
-    const float dash = robot.mover.tuning().dash_speed;
-    subject.cockpit.speed_ratio = dash > 0 ? std::hypot(velocity.x, velocity.z) / dash : 0;
-    subject.cockpit.armour = robot.max_hp > 0 ? robot.hp / robot.max_hp : 0;
-    subject.cockpit.hit = robot.hit_flash > 0;
-    subject.cockpit.camouflage = robot.camouflage;
-    subject.cockpit.camouflaged = robot.camouflaged;
-    subject.camera.position = robot.mover.position();
-    subject.camera.yaw = robot.mover.aim_heading();
-    subject.camera.pitch = robot.mover.pitch();
-    subject.camera.height = robot.radius;
-    subject.camera.torso =
-        view_ ? view_->torso(static_cast<int>(i)).value_or(robot.aim_origin()) : robot.aim_origin();
-    subject.camera.legs_model = view_ ? view_->legs_model(static_cast<int>(i)) : 0;
     replay_frame_.subjects.push_back(std::move(subject));
   }
 }
+
+ReplaySubject TrainingScreen::replay_subject(const std::size_t index) const {
+  const auto &robot = battle_->robots()[index];
+  ReplaySubject subject;
+  subject.alive = robot.alive || robot.dying; // keep the death pose selectable in replay
+  subject.in_play = robot.mover.mode() != MoveMode::scripted &&
+                    battle_->stage().in_play_area(robot.mover.position());
+  subject.name = robot.tag.empty() ? robot.name : robot.tag;
+  const auto velocity = robot.mover.velocity();
+  subject.cockpit.vertical_speed = velocity.y;
+  subject.cockpit.gravity = robot.mover.tuning().gravity;
+  const float dash = robot.mover.tuning().dash_speed;
+  subject.cockpit.speed_ratio = dash > 0 ? std::hypot(velocity.x, velocity.z) / dash : 0;
+  subject.cockpit.armour = robot.max_hp > 0 ? robot.hp / robot.max_hp : 0;
+  subject.cockpit.hit = robot.hit_flash > 0;
+  subject.cockpit.camouflage = robot.camouflage;
+  subject.cockpit.camouflaged = robot.camouflaged;
+  subject.camera.position = robot.mover.position();
+  subject.camera.yaw = robot.mover.aim_heading();
+  subject.camera.pitch = robot.mover.pitch();
+  subject.camera.height = robot.radius;
+  subject.camera.torso =
+      view_ ? view_->torso(index).value_or(robot.aim_origin()) : robot.aim_origin();
+  subject.camera.legs_model = view_ ? view_->legs_model(index) : 0;
+  return subject;
+}
 void TrainingScreen::finish_recording() {
   textures_.record_into(nullptr);
-  if (!replay_ || replay_frame_.player.width <= 0) {
+  if (!replay_ || paused_ || replay_frame_.player.width <= 0) {
     return;
   }
   try {

@@ -35,6 +35,7 @@ def test_city_scenery_slots_resolve_to_their_own_textured_effect_models():
             assert 0 <= entry["slot"] - resource.first_mesh_slot < resource.mesh_count
             if entry["wreck_slot"] >= 0:
                 assert 0 <= entry["wreck_slot"] - resource.first_mesh_slot < resource.mesh_count
+                assert entry["wreck_solid"]
             assert len(entry["collision"]) == 12
             assert all(len(triangle) == 9 for triangle in entry["collision"])
             if entry["kind"] == 0:

@@ -58,7 +58,9 @@
     0,
     0
    ],
-   "layer": 1
+   "layer": 1,
+   "extend_edges": "both", "edge_bands": [[0, 72], [376, 480]],
+ "edge_bands_left": [[0, 72], [414, 480]]
   },
   {
    "id": "top_band",
@@ -73,7 +75,8 @@
     0,
     0
    ],
-   "layer": 2
+   "layer": 2,
+   "extend_edges": "both", "edge_inset": [1, 1]
   },
   {
    "id": "music_band",
@@ -88,7 +91,8 @@
     0,
     376
    ],
-   "layer": 2
+   "layer": 2,
+   "extend_edges": "both", "edge_inset": [1, 1]
   },
   {
    "id": "grid",

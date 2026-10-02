@@ -62,8 +62,7 @@ inline constexpr int supply_kind_count = 10;
 // doors, turned about their hinges by the hatch's angle, a part turned by
 // the carrier's spin (a searchlight cone at night), the shot-down wreck
 // drawn alone, and pickup kind k at first_pickup + k. (0x069d52 picks the
-// day or night model's pickup at random each frame; the port keeps the
-// stage's.)
+// day or night model's pickup at random each frame, and so does the port.)
 struct SupplyModel {
   std::string model;
   int body{0};
@@ -109,6 +108,7 @@ struct SupplyLook {
   float crash_radius{6.0F}; // the wreck's fireball (effect 0x3f; port size)
   float crash_seconds{1.0F};
   int crash_effect{0x3f};                // the effect group 0x06828e sets off
+  int burst_effect{0x40};                // a shot/expired pickup, 0x069d52 state 3
   std::string take_sound{"supply_take"}; // battle_player 0x26, to a player's robot
 };
 
@@ -207,6 +207,10 @@ public:
   [[nodiscard]] std::optional<Vec3> take_crash() noexcept {
     return std::exchange(crash_, std::nullopt);
   }
+  // Completed pickup bursts, retained until the battle submits their effects.
+  [[nodiscard]] std::vector<Vec3> take_bursts() noexcept {
+    return std::exchange(bursts_, {});
+  }
   // A pickup's blink, 0..1 (|sin| of its phase).
   [[nodiscard]] static float blink(const SupplyPickup &pickup);
 
@@ -246,6 +250,7 @@ private:
   Vec3 velocity_;      // a tick
   float wreck_left_{}; // ticks
   std::optional<Vec3> crash_;
+  std::vector<Vec3> bursts_;
 };
 
 } // namespace phantomcrash

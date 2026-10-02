@@ -12,13 +12,17 @@ void TrainingScreen::seat_player(const BattleSettings &settings, const float hp)
   for (std::size_t slot = 0; slot < weapon_slots; ++slot) {
     const auto found = settings.weapons.find(setup.player.weapons[slot]);
     if (found != settings.weapons.end()) {
-      weapons[slot] = battle_->add_weapon(found->second).name;
+      auto tuning = found->second;
+      if (coop_match_) {
+        tuning.name = "coop_" + std::to_string(coop_slot_) + "_" + std::to_string(slot);
+      }
+      weapons[slot] = battle_->add_weapon(std::move(tuning)).name;
     }
   }
-  battle_->set_identity(0, "player", 0, hp);
-  battle_->arm(0, weapons);
-  battle_->bring_in(0);
-  battle_->place(0, setup.player_start, setup.player_heading);
+  battle_->set_identity(player_index_, "player", 0, hp);
+  battle_->arm(player_index_, weapons);
+  battle_->bring_in(player_index_);
+  battle_->place(player_index_, setup.player_start, setup.player_heading);
 }
 
 void TrainingScreen::add_live_views() {
@@ -36,6 +40,10 @@ void TrainingScreen::add_live_views() {
 }
 
 void TrainingScreen::follow_live() {
+  if (coop_match_) {
+    sync_coop_views();
+    return;
+  }
   if (live_world_ == nullptr || !view_ || live_world_->changes(live_area_) == live_changes_) {
     return;
   }

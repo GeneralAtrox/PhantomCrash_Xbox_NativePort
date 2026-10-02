@@ -156,7 +156,8 @@ void ChipShop::close_dialog(const bool pulse) {
   menu_help();
 }
 
-void ChipShop::update(const double tick_seconds, const InputFrame &input) {
+void ChipShop::update(const double tick_seconds, const InputFrame &raw_input) {
+  const InputFrame input = pointer_input(raw_input);
   if (done()) {
     return;
   }
@@ -185,6 +186,7 @@ void ChipShop::browse_input(const double tick_seconds, const InputFrame &input) 
   if (step != 0 && !on_exit_ && count > 1) {
     previous_ = cursor_;
     cursor_ = (cursor_ + step + count) % count;
+    slide_direction_ = step;
     slide_seconds_ = 0.0;
     sound(script_.move_sound);
     menu_help();
@@ -293,6 +295,7 @@ void ChipShop::sell_chosen() {
   sound(script_.trade_sound);
   const int count = static_cast<int>(offers_.size());
   cursor_ = previous_ = std::min(cursor_, std::max(count - 1, 0));
+  slide_direction_ = 0;
   if (offers_.empty()) {
     message_.clear();
     leave(script_.exit_to);
@@ -304,6 +307,9 @@ void ChipShop::sell_chosen() {
 // 0x2530d (buy) and 0x25460, 0x2566c (sell): the notices, and the sell
 // question with YES and NO.
 void ChipShop::message_input(const InputFrame &input) {
+  if (input.dialog_choice) {
+    choice_ = *input.dialog_choice;
+  }
   if (view_ == ChipShopView::question) {
     if (input.any_pressed(script_.left | script_.right)) {
       choice_ = 1 - choice_;

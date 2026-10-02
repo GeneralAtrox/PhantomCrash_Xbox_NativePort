@@ -40,6 +40,29 @@ FramePlacement credit_band(const MenuTickers &tickers) {
   return placement;
 }
 
+bool LocationFrame::day_clicked(const InputFrame &input, const QuestSave &quest) const {
+  if (!placement_.hud || !input.clicked || !input.pointer) {
+    return false;
+  }
+  const HudStyle hud = placement_.hud_at ? placed_hud(style_.hud, *placement_.hud_at) : style_.hud;
+  auto sprites = number_sprites(hud.font, hud.day, quest.day + 1, hud.layer);
+  sprites.push_back(hud.day_label);
+  // Include the space between DAY- and its digits as one mouse target.
+  float left = canvas_width, top = canvas_height, right = 0, bottom = 0;
+  for (const auto &sprite : sprites) {
+    const auto size = sprite.size.value_or(
+        std::array{sprite.rect[2] - sprite.rect[0], sprite.rect[3] - sprite.rect[1]});
+    const float x = sprite.position[0] - (sprite.centered ? size[0] * 0.5F : 0);
+    const float y = sprite.position[1] - (sprite.centered ? size[1] * 0.5F : 0);
+    left = std::min(left, x);
+    top = std::min(top, y);
+    right = std::max(right, x + size[0]);
+    bottom = std::max(bottom, y + size[1]);
+  }
+  return (*input.pointer)[0] >= left && (*input.pointer)[0] < right && (*input.pointer)[1] >= top &&
+         (*input.pointer)[1] < bottom;
+}
+
 void LocationFrame::draw(DrawList &list, const QuestSave &quest) const {
   if (placement_.hud) {
     const HudStyle hud =

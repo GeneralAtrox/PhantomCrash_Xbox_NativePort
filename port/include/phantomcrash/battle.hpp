@@ -1,6 +1,8 @@
 #pragma once
 
-#include "phantomcrash/battle_weapons.hpp"
+#include "phantomcrash/battle_events.hpp"
+#include "phantomcrash/battle_hud_style.hpp"
+#include "phantomcrash/battle_settings.hpp"
 #include "phantomcrash/entry_shield.hpp"
 #include "phantomcrash/enemy_path.hpp"
 #include "phantomcrash/robot_mover.hpp"
@@ -17,66 +19,55 @@
 #include <vector>
 
 namespace phantomcrash {
+class RobotCombat;
+
+// The active player's camera; opponents use their weapon's 3D aim cone.
+// The fire control's reticle on the view, in normalised device
+// coordinates (x right, y up): where it has tracked to (robot +0x108,
+// +0x10c, 0x04f6a0) and the half sizes of its inner and outer boxes.
+struct LockBoxes {
+  std::array<float, 2> centre{};
+  std::array<float, 2> inner_half{};
+  std::array<float, 2> outer_half{};
+};
+
+struct TargetView {
+  Mat4 view_projection;
+  Vec3 eye;
+  std::optional<LockBoxes> boxes; // none: the weapons' lock cones stand in
+};
 
 // The four weapon mounts, in the order the fire buttons use them: right
 // trigger, left trigger, B, Y (Pepper's attack lesson, states 0x24-0x27).
 enum class WeaponSlot { right_arm, left_arm, right_shoulder, left_shoulder };
 inline constexpr int weapon_slots = 4;
 
-// How drones fight when they do (the live RUMBLING's opponents, a port
-// addition: the training ground's drones only walk). Each goes for the
-// nearest robot of another team within engage_range, turns to face it,
-// closes in or backs off to keep_distance and fires every weapon that has
-// a lock.
-struct DroneAi {
-  bool fight{};
-  float engage_range{150.0F};
-  float keep_distance{40.0F};
-  float distance_slack{10.0F}; // it holds still within this of keep_distance
-  float walk{0.8F};            // the stick when closing in or backing off
-  float turn_gain{2.0F};       // stick per radian off the target
-  float face_degrees{40.0F};   // it walks only once facing this closely
-};
-
-[[nodiscard]] DroneAi parse_drone_ai(const json::JsonValue &value);
-
-struct BattleSettings {
-  ArenaBounds arena; // the walls while the stage has no collision
-  MovementTuning movement;
-  std::map<std::string, WeaponTuning> weapons;
-  float robot_radius{2.0F}; // robots without a leg radius
-  float robot_height{4.4F};
-  float arena_wall_height{20.0F};
-  float drone_respawn_seconds{4.0F};
-  float drone_walk{0.6F};                   // the drones' stick when patrolling
-  float drone_reach{3.0F};                  // a path point counts as reached this close
-  float camouflage_seconds{12.0F};          // a full gauge lasts this long ...
-  float camouflage_recharge_seconds{20.0F}; // ... and refills in this long
-  float camouflage_fade_seconds{2.0F};      // it sweeps over the robot in this long
-                                            // (60 ticks, states 1/2 and 5/6 of 0x074e80)
-  float ammo_refill_seconds{};              // an empty weapon refills after this long (0: never)
-  float idle_chatter_seconds{30.0F};        // standing with the pad untouched this long (0x08e480)
-  EntryShield entry_shield;
-  DroneAi ai;
-};
-
-[[nodiscard]] BattleSettings parse_battle_settings(const json::JsonValue &value);
-
 struct Combatant {
+  std::shared_ptr<RobotCombat> pose;
+  bool pose_updated{};
   std::string name;
   std::string tag;       // the marker's name tag (its pilot's); empty for none
   bool leader{};         // its team's leader: the marker shows the leader icon
   int player_number{-1}; // versus mode's 1P-4P label (0-3), shown without a tag
   int team{};
+  // HUD palette override; -1 follows the combat team (training/versus).
+  // RUMBLING uses roster status independently of its free-for-all allegiance.
+  int marker_colour{-1};
+  std::array<bool, weapon_slots> firing{}; // accepted held triggers, for sustained weapon audio
   bool piloted{}; // a player controls it (robot +8 not -1): the first robot added
   bool rival{};   // on the side against the players (loadout +0x6c 2): the drones
   bool boss{};    // a boss (loadout +0x70 1): enters with its own scene (0x082cff)
   RobotMover mover;
-  float radius{2.0F};       // the collision spheres' (0x22f424 per leg type)
-  unsigned stage_contact{}; // stage_contact flags from the last tick
+  float radius{2.0F};              // the collision spheres' (0x22f424 per leg type)
+  unsigned stage_contact{};        // stage_contact flags from the last tick
+  int floor_surface{-1};           // the stage surface it stands over (-1: none, or a prop)
+  std::optional<Vec3> last_ground; // where it last stood with stage ground under it
+  float fence_contact_left{};      // delay until another force-field contact pulse
   float hp{100.0F};
   float max_hp{100.0F};
   bool alive{true};
+  bool dying{}; // no longer targetable, but still playing the death motion
+  float death_seconds{};
   bool drone{};  // walks the enemy path and respawns
   bool frozen{}; // stands still (the lessons freeze the drones, 0x091ff4)
   float respawn_left{};
@@ -92,6 +83,10 @@ struct Combatant {
   std::array<float, weapon_slots> lock_held{};
   std::array<int, weapon_slots> locks{-1, -1, -1, -1};
   float lock_seconds{};
+  SightBoxes sight; // its chip's boxes, for locking without a drawn reticle
+  // The mount whose melee weapon is striking with its blade armed, or -1
+  // (0x09c337; the attacker's +0x25a5).
+  int strike_slot{-1};
   // A homing missile's rounds leave one at a time (0x09b4ed): how many
   // are still to leave from each mount, and when the next one does.
   std::array<int, weapon_slots> queued_rounds{};
@@ -108,9 +103,11 @@ struct Combatant {
   bool camouflaged{};
   float camouflage{1.0F};   // gauge, 0..1
   float camouflage_sweep{}; // 0 seen .. 1 fully camouflaged, easing after `camouflaged`
+  bool camouflage_broken{}; // a hit turned it off (0x075444): it fades out faster
   float ammo_share{1.0F};   // robot +0x110 (0x08248b), as of the last tick
   float idle_seconds{};     // standing untouched (robot +0x251c)
   PathFollower path;
+  RobotAiState ai;
 
   explicit Combatant(const MovementTuning &tuning) : mover(tuning) {}
   [[nodiscard]] Vec3 centre(float height) const {
@@ -121,46 +118,6 @@ struct Combatant {
   [[nodiscard]] Vec3 aim_origin() const {
     return mover.position() + Vec3{0.0F, radius, 0.0F};
   }
-};
-
-// What the HUD's messages report (0x04da6c queues them per robot): a hit
-// the robot landed (0x09d2ce), the robot shot down, or a robot it helped
-// shoot down (both 0x07675e); and the chatter events raised for the robot
-// (0x049470, battle_chatter.hpp). A drone that respawned reports it.
-// A robot that takes a supply pickup reports it, and one that shoots the
-// supply carrier down (`amount`: the credits of a money pickup, the
-// carrier's bounty). The sounds hear a weapon fired (a round leaving, a
-// strike swung: the robot's, from `slot` at `at`) and a shot or strike
-// landing (the attacker's, at `at`: on a robot, a wall or the floor). A
-// robot destroyed, by anyone or anything, is `destroyed` at its middle. An
-// `effect` sets off effect group `slot` at `at` (the supply wreck's crash).
-// A piloted robot that took damage this tick is `damaged` by the sum, its
-// `amount` (the original's controller rumble, 0x07675e).
-enum class BattleEventKind {
-  shot_down,
-  hit,
-  bingo,
-  chatter,
-  respawned,
-  supply,
-  carrier_down,
-  fired,
-  impact,
-  destroyed,
-  effect,
-  damaged
-};
-
-struct BattleEvent {
-  int robot{};
-  BattleEventKind kind{};
-  int chatter{-1}; // the chatter event (chatter_event)
-  float amount{};
-  int slot{-1}; // fired: the weapon's mount (WeaponSlot); supply: the pickup's type
-  const WeaponTuning *weapon{};
-  Vec3 at;
-  bool on_robot{}; // impact: it struck a robot
-  std::optional<StageHit> surface;
 };
 
 // The player's buttons for weapons this tick.
@@ -196,6 +153,8 @@ public:
   void set_auto_respawn(int index, bool automatic);
   // Drone `index` comes in whole at one of the path's entries.
   void bring_in(int index);
+  // External arrivals survive until the scene handles them, across battle ticks.
+  [[nodiscard]] std::vector<int> take_arrivals();
   // Robot `index` is out of the battle until brought back (not shot down).
   void take_out(int index);
   // Robot `index`, to restore or change its state.
@@ -204,6 +163,29 @@ public:
   }
 
   void tick(const RobotControl &player, const FireControl &fire, float seconds);
+  void select_player(int index) {
+    player_index_ = index;
+  }
+  [[nodiscard]] int player_index() const {
+    return player_index_;
+  }
+  void set_cooperative(bool value) {
+    cooperative_ = value;
+  }
+  [[nodiscard]] bool cooperative() const {
+    return cooperative_;
+  }
+  // VS: every piloted robot has its own controls (set_player_control) and,
+  // unlike co-op, they damage each other.
+  void set_versus(bool value) {
+    versus_ = value;
+  }
+  [[nodiscard]] bool versus() const {
+    return versus_;
+  }
+  void set_player_control(int index, RobotControl control, FireControl fire) {
+    controls_[index] = {control, fire};
+  }
 
   void set_drones_active(bool active);
   // Robot `index` moves with its own tuning (its leg part's stride speeds).
@@ -225,6 +207,13 @@ public:
   }
   // The gates' doors: robots push against them and open them (stage_doors.hpp).
   void set_doors(StageDoors doors);
+  [[nodiscard]] RobotWrecks &wrecks() {
+    return wrecks_;
+  }
+  [[nodiscard]] const RobotWrecks &wrecks() const {
+    return wrecks_;
+  }
+
   void set_objects(StageObjects objects) {
     objects_ = std::move(objects);
   }
@@ -251,6 +240,7 @@ public:
   }
   // Robot `index` locks missiles and grenades after holding a target this long.
   void set_lock_seconds(int index, float seconds);
+  void set_sight(int index, const SightBoxes &boxes);
   // Puts robot `index` `distance` ahead of the player, facing it (the
   // Optic Camouflage lesson, 0x08d09e).
   void place_facing_player(int index, float distance);
@@ -276,7 +266,7 @@ public:
     return robots_;
   }
   [[nodiscard]] const Combatant &player() const {
-    return robots_.front();
+    return robots_.at(static_cast<std::size_t>(player_index_));
   }
   [[nodiscard]] const Armory &armory() const noexcept {
     return armory_;
@@ -301,16 +291,32 @@ public:
   // Where a robot's shots leave from and where it aims (a unit vector).
   [[nodiscard]] Vec3 muzzle(const Combatant &robot, WeaponSlot slot) const;
   [[nodiscard]] Vec3 aim(const Combatant &robot) const;
+  void set_player_target_view(std::optional<TargetView> view) {
+    target_views_[player_index_] = std::move(view);
+  }
+  // Shared by the tracking reticle and weapon acquisition/lock maintenance.
+  [[nodiscard]] bool target_visible(const Combatant &observer, const Combatant &target) const;
 
 private:
+  [[nodiscard]] bool clear_target_sight(Vec3 from, Vec3 to) const;
   [[nodiscard]] std::vector<Target> targets() const;
-  [[nodiscard]] int find_lock(const Combatant &robot, const WeaponTuning &weapon) const;
-  [[nodiscard]] RobotControl drone_control(Combatant &drone);
-  // DroneAi (battle_ai.cpp): the robot a drone goes for, or -1; how it
-  // moves toward it; which of its weapons it fires.
-  [[nodiscard]] int ai_target(const Combatant &drone) const;
-  [[nodiscard]] RobotControl ai_control(Combatant &drone, int target);
-  [[nodiscard]] static FireControl ai_fire(const Combatant &drone);
+  // Where the robot locks: the drawn reticle's boxes, or boxes around its
+  // sight seen through its camera, or through its own eyes (sight_view).
+  [[nodiscard]] std::optional<TargetView> sight_view(const Combatant &robot) const;
+  // The robot to lock `weapon` on `slot` onto: the nearest within its lock
+  // range inside the inner box (arms) or the outer box (shoulders and
+  // melee); or `held` while it stays within the weapon's hold.
+  [[nodiscard]] int find_lock(const Combatant &robot, const WeaponTuning &weapon, std::size_t slot,
+                              int held = -1) const;
+  [[nodiscard]] RobotControl drone_control(Combatant &drone, float seconds);
+  [[nodiscard]] RobotControl ai_control(Combatant &drone, float seconds);
+  void ai_sense(Combatant &drone, float seconds);
+  void ai_move(Combatant &drone, float seconds);
+  void ai_route(Combatant &drone, float seconds);
+  void ai_pickup(Combatant &drone, float seconds);
+  void ai_weapons(Combatant &drone, float seconds);
+  void ai_reactions(Combatant &drone, float seconds);
+  [[nodiscard]] FireControl ai_fire(const Combatant &drone) const;
   void fire_drones(float seconds);
   void update_lock(Combatant &robot, std::size_t slot, float seconds);
   void fire_weapons(int index, const FireControl &fire, float seconds);
@@ -328,8 +334,16 @@ private:
   void watch_idle(Combatant &robot, const RobotControl &control, const FireControl &fire,
                   float seconds);
   void recover(Combatant &robot, float seconds) const;
+  float stage_floor(Combatant &robot) const;
+  std::optional<Vec3> tracked_sight(const Combatant &robot, Vec3 crosshair) const;
   void shot_down(int victim);
-  void collide(Combatant &robot);
+  void collide(int index, float seconds);
+  void pose_robot(int index, float seconds);
+  void tick_death(int index, float seconds);
+  void add_wreck_targets(std::vector<Target> &out) const;
+  bool hit_wreck(const WeaponHit &hit);
+  [[nodiscard]] Vec3 muzzle_direction(const Combatant &robot, WeaponSlot slot) const;
+  [[nodiscard]] bool muzzle_blocked(const Combatant &robot, WeaponSlot slot) const;
   void separate();
   void respawn(Combatant &drone);
   void tick_supply(float seconds);
@@ -344,15 +358,22 @@ private:
   bool hit_supply(const WeaponHit &hit);
 
   BattleSettings settings_;
+  int player_index_{};
+  bool cooperative_{};
+  bool versus_{};
+  std::map<int, std::pair<RobotControl, FireControl>> controls_;
+  std::map<int, std::optional<TargetView>> target_views_;
   StageCollision stage_;
   std::optional<StageDoors> doors_;
   std::optional<StageObjects> objects_;
+  RobotWrecks wrecks_;
   std::optional<SupplyDrop> supply_;
   EnemyPath path_;
   std::minstd_rand random_;
   std::vector<Combatant> robots_;
   Armory armory_;
   std::vector<BattleEvent> events_;
+  std::vector<int> arrivals_;
   unsigned allowed_weapons_{0xf};
   int destroyed_{};
   bool drones_active_{true};

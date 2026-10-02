@@ -17,7 +17,7 @@ Output, under the converted assets:
   entries ``{slot, kind, ...}`` up to slot -1) entries of kind 1, drawn in
   view layer 1 around the camera; slot ``resource.first_mesh_slot + n`` is
   mesh ``n``. Layer 7 contains static stencil volumes, not colour geometry;
-  these are excluded until the static-volume pass is implemented.
+  these are tagged separately for the native static-volume pass.
 - ``models/stages/<stage>_props.gltf``: separately placed scenery from
   :mod:`stage_objects`, using effect-model texture packs 1575-1580.
   ``<stage>_objects.gltf`` supplies the moving gate leaves; placements and
@@ -92,14 +92,19 @@ def convert_stages(
         objects = _objects(image, stage)
         parsed = model.parse(data)
         selected, sky = colour_meshes(objects, resources[model_id].first_mesh_slot, len(parsed.meshes))
+        volumes = {slot - resources[model_id].first_mesh_slot for slot, kind in objects
+                   if kind == OBJECT_STATIC_VOLUME}
         summary = gltf.write(parsed, output / "models" / "stages" / f"{model_id}.gltf", uris,
-                             mesh_indices=selected)
+                             mesh_indices=selected | volumes)
         path = paths.get(AREA_PATHS[stage // 2])
         records.append({
             "stage": stage,
             "model": f"models/stages/{model_id}.gltf",
             "textures": pack_id,
             "sky_nodes": sky,
+            "shadow_nodes": [f"mesh{index}_node{node}" for index in sorted(volumes)
+                             for node, entry in enumerate(parsed.meshes[index].nodes)
+                             if entry.batch_count],
             "enemy_path": path,
             **summary,
         })

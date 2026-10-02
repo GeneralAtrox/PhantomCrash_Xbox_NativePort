@@ -18,6 +18,7 @@ namespace phantomcrash {
 // screen.
 class TownMapScreen final : public Screen {
 public:
+  [[nodiscard]] std::optional<MenuPresence> menu_presence() const override;
   TownMapScreen(TextureCache &textures, const GlyphFont &font, TownMapScript script,
                 const std::string &from, const FrameStyle &frame,
                 const std::vector<MusicCredit> &credits, QuestSave quest);
@@ -26,6 +27,9 @@ public:
   void draw(const Viewport &viewport) override;
   [[nodiscard]] std::string music() const override {
     return map_.script().music;
+  }
+  [[nodiscard]] bool day_clicked(const InputFrame &input) const override {
+    return frame_.day_clicked(input, map_.quest());
   }
   void set_music(const std::string &file) override {
     frame_.set_music(file);

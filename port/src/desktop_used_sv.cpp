@@ -30,7 +30,12 @@ UsedSvScreen::UsedSvScreen(TextureCache &textures, const GlyphFont &font, UsedSv
 }
 
 void UsedSvScreen::tick(const InputFrame &input, const double tick_seconds) {
-  logic_.update(tick_seconds, input);
+  const auto before = logic_.purchase().view();
+  logic_.update(tick_seconds, purchase_.pointer_input(input, logic_.script().confirm_buttons));
+  if (before != logic_.purchase().view()) {
+    SDL_Log("Shop purchase: view=%d->%d action=%d mouse=%d", int(before),
+            int(logic_.purchase().view()), logic_.purchase().action(), input.clicked);
+  }
   tick_frame(tick_seconds, logic_.faded_in());
   purchase_.update(logic_.purchase(), tick_seconds);
   remembered_ = logic_.cursor();

@@ -136,6 +136,12 @@ TrainingScript test_drive_training(const TrainingScript &base, const TestDriveSc
     player.chip = chip->id;
     player.chip_level = chip->level;
   }
+  player.modules.clear();
+  for (const int stock : bay.modules) {
+    if (const auto found = garage.stock.find(stock); found != garage.stock.end()) {
+      player.modules.push_back(found->second.id);
+    }
+  }
   auto &weapons = script.battle.settings.weapons;
   for (const SlotWeapon &slot : slot_weapons) {
     const StockItem *item = entry(slot.part);

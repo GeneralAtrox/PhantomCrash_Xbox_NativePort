@@ -1,22 +1,23 @@
 #include "desktop_training.hpp"
+#include "desktop_coop_matches.hpp"
 
 #include "desktop_draw_list.hpp"
 #include "desktop_event_text.hpp"
 #include "desktop_text.hpp"
+#include "desktop_training_finale.hpp"
 #include "desktop_training_robots.hpp"
+#include "desktop_training_vs.hpp"
 #include "desktop_stage_objects.hpp"
 
 #include <SDL3/SDL.h>
 
 #include <algorithm>
-#include <cmath>
 #include <iterator>
 #include <optional>
 #include <utility>
 
 namespace phantomcrash {
 namespace {
-
 // Every slot's weapon (FreePlay, and the lessons' own weapon masks).
 constexpr unsigned all_weapons = (1U << weapon_slots) - 1;
 // The lesson mode of Pepper's Optic Camouflage lesson (save +0x10f10).
@@ -40,8 +41,18 @@ TrainingScreen::TrainingScreen(TextureCache &textures, const GlyphFont &font,
       player_name_run_(glyph_run(font, context.player_name)) {
   screens_ = std::clamp(lesson.screens, 1, max_screens);
   day_ = context.day;
+  standard_controls_ = context.standard_controls;
+  beginner_ = context.beginner;
   money_ = context.money;
   match_results_ = context.match_results;
+  victory_hold_ = context.victory_hold_seconds;
+  coop_match_ = context.coop_match;
+  coop_slot_ = context.coop_slot;
+  if (coop_match_) {
+    clock_ = coop_match_->elapsed;
+  }
+  player_index_ = coop_match_ ? coop_match_->players.at(coop_slot_).actor : 0;
+  load_pause(context.roots);
   start_recording(context);
   load_stage_art(context.stage, context.roots);
   if (world_ == nullptr || !world_->available()) {
@@ -49,128 +60,47 @@ TrainingScreen::TrainingScreen(TextureCache &textures, const GlyphFont &font,
   } else if (stage_.model < 0) {
     missing_run_ = glyph_run(font, "The stage model is missing: convert the game files");
   }
+  start_vs(context);
   build_battle(context);
+  start_finale(context);
+  if (vs_) {
+    place_riders(context.roots);
+  }
   object_model_ = load_stage_objects(world_, context.roots, script_.battle.scenes.stage, *battle_);
   load_sounds(context.roots);
   cockpit_ = load_cockpit(world_, context.roots);
   effects_ = DesktopEffects::load(world_, context.roots);
   if (effects_) {
-    shots_ = std::make_unique<DesktopShots>(*world_, effects_->system().bank());
+    effects_->system().set_stage(&battle_->stage());
+    shots_ = std::make_unique<DesktopShots>(*world_, effects_->system().bank(),
+                                            load_fence_contact(context.roots));
   }
   door_model_ = load_stage_doors(world_, context.roots, script_.battle.scenes, *battle_);
-  if (free_play_) {
+  if (free_play_ && !finale_) {
     supply_ =
         load_supply(world_, context.roots, script_.battle.scenes, script_.battle.supply, *battle_);
   }
   if (!free_play_) {
     load_messages(context.roots, context.standard_controls);
-  } else if (!battle_->robots().empty()) {
+  } else if (!battle_->robots().empty() && !vs_ && !finale_) {
     // FreePlay walks out of a gate (0x082552, robot state 1-4).
-    scene_ = load_battle_scene(textures_, font_, context.roots, script_.battle.scenes,
+    auto scene_tuning = script_.battle.scenes;
+    if (coop_match_) {
+      scene_tuning.computer_entrance = false;
+      scene_tuning.computer_exit = false;
+    }
+    scene_ = load_battle_scene(textures_, font_, context.roots, scene_tuning,
                                static_cast<std::uint32_t>(SDL_GetTicks()));
     if (scene_) {
+      if (!coop_match_) {
+        static_cast<void>(battle_->take_arrivals());
+      }
       static_cast<void>(scene_->scene().start_entrance(*battle_));
       for (int index = 1;
            live_world_ == nullptr && index < static_cast<int>(battle_->robots().size()); ++index) {
         static_cast<void>(scene_->scene().start_robot_entrance(*battle_, index));
       }
     }
-  }
-}
-
-void TrainingScreen::build_battle(const TrainingContext &context) {
-  const TrainingBattle &setup = script_.battle;
-  EnemyPath path;
-  if (const auto file = context.roots.find_asset(setup.enemy_path)) {
-    try {
-      path = parse_enemy_path(json::read_file(*file));
-    } catch (const std::exception &error) {
-      SDL_Log("%s: %s", setup.enemy_path.c_str(), error.what());
-    }
-  } else {
-    SDL_Log("Enemy path %s is missing; convert the robots again", setup.enemy_path.c_str());
-  }
-  const bool drones = !path.entries().empty();
-  const std::optional<PartTables> parts = load_part_tables(context.roots);
-  BattleSettings settings = setup.settings;
-  if (parts) {
-    for (const std::string &name : apply_weapon_records(settings.weapons, *parts)) {
-      SDL_Log("Weapon %s: its part is not in %s", name.c_str(), part_tables_asset);
-    }
-  }
-  const float player_hp = robot_hp(script_, parts, "player", setup.player, true);
-  live_world_ = context.live_battle ? context.live_world : nullptr;
-  live_area_ = context.live_area;
-  if (live_world_ != nullptr) {
-    battle_ = context.live_battle;
-    seat_player(settings, player_hp);
-  } else {
-    battle_ = std::make_shared<Battle>(std::move(settings), std::move(path));
-    if (context.stage != nullptr && !context.stage->collision.empty()) {
-      load_stage_collision(context.roots, context.stage->collision, *battle_);
-    }
-    battle_->add_robot("player", 0, setup.player_start, setup.player_heading, setup.player.weapons,
-                       player_hp);
-  }
-  battle_->set_tag(0, pilot_tag(parts, setup.player.pilot));
-  battle_->set_combat(0, robot_combat(script_, parts, "player", setup.player));
-  const float drone_hp = robot_hp(script_, parts, "drone", setup.drone, false);
-  const CombatStats drone_combat = robot_combat(script_, parts, "drone", setup.drone);
-  for (int index = 0; drones && live_world_ == nullptr && index < setup.drones; ++index) {
-    const int drone = battle_->add_drone("drone" + std::to_string(index), drone_hp);
-    battle_->set_tag(drone, pilot_tag(parts, setup.drone.pilot));
-    battle_->set_combat(drone, drone_combat);
-    battle_->set_boss(drone, setup.drone.boss);
-  }
-  hud_ = make_battle_hud(textures_, font_, context.roots, screens_, 0);
-  build_split(context.roots);
-  chatter_ = load_chatter_window(textures_, font_, context.roots, talk_, tuning_, setup);
-  if (const ChipRecord *chip = parts ? parts->chip(setup.player.chip) : nullptr) {
-    const ChipStats stats = chip_stats(*chip, setup.player.chip_level);
-    battle_->set_lock_seconds(0, stats.lock_frames / part_frames_per_second);
-    hud_->set_fire_control(stats);
-    if (chatter_) {
-      chatter_->set_speaker(0, chip_speaker(*chip, context.player_name));
-    }
-  }
-  if (world_ == nullptr || !world_->available() || context.robots == nullptr ||
-      !context.robots->available()) {
-    return;
-  }
-  view_ = std::make_unique<BattleView>(*world_, *context.robots);
-  view_->set_optical(setup.optical);
-  view_->set_shield(setup.shield_look);
-  view_->set_shadows(setup.shadows, !splits_.empty());
-  try {
-    const auto player = script_.robots.find("player");
-    const auto drone = script_.robots.find("drone");
-    view_->add(player == script_.robots.end() ? RobotParts{} : player->second);
-    if (live_world_ != nullptr) {
-      add_live_views();
-    }
-    for (std::size_t index = view_->size(); index < battle_->robots().size(); ++index) {
-      view_->add(drone == script_.robots.end() ? RobotParts{} : drone->second);
-    }
-  } catch (const std::exception &error) {
-    SDL_Log("Training robots: %s", error.what());
-    view_.reset();
-    return;
-  }
-  // Each robot strides at its leg motions' pace, slowed by its load; the
-  // live RUMBLING's opponents came in with their own.
-  for (std::size_t index = 0; index < view_->size(); ++index) {
-    battle_->set_radius(static_cast<int>(index), view_->radius(index, setup.settings.robot_radius));
-    if (index > 0 && live_world_ != nullptr) {
-      continue;
-    }
-    MovementTuning movement = setup.stride_speeds ? view_->movement(index, setup.settings.movement)
-                                                  : setup.settings.movement;
-    if (parts) {
-      const RobotLoadout loadout = index == 0 ? training_loadout(script_, "player", setup.player)
-                                              : training_loadout(script_, "drone", setup.drone);
-      movement = loaded_movement(*parts, loadout, load_stats(*parts, loadout), movement);
-    }
-    battle_->set_movement(static_cast<int>(index), movement);
   }
 }
 
@@ -221,9 +151,7 @@ void TrainingScreen::update_message(const InputFrame &input, const double tick_s
     return;
   }
   message_->update(tick_seconds, input);
-  for (std::string &sound : message_->take_sounds()) {
-    sounds_.push_back(std::move(sound));
-  }
+  queue_dialogue(message_->take_sounds());
   if (message_->finished()) {
     message_.reset();
     message_event_.reset();
@@ -238,11 +166,13 @@ void TrainingScreen::tick_battle(const InputFrame &input, const float seconds) {
   const bool practising = free_play_ || tutorial_.practising();
   // A scene walks the robot, or a boss's entrance holds it (0x082e60).
   const bool scripted = in_scene();
-  const bool locked = message_ != nullptr || !practising || scripted;
+  const bool locked = message_ != nullptr || !practising || scripted || paused_ || done_;
   RobotControl control;
   FireControl fire;
   if (!locked) {
-    control = battle_control(input, setup.buttons, free_play_ ? nullptr : step);
+    // The tutorial's lessons keep BEGINNER MODE off (0x0817a8).
+    control = battle_control(input, setup.buttons, free_play_ ? nullptr : step, standard_controls_,
+                             beginner_ && free_play_);
     fire = battle_fire(input, setup.buttons);
     fire.camouflage = fire.camouflage && (free_play_ || mode_ == optic_mode);
   }
@@ -258,12 +188,22 @@ void TrainingScreen::tick_battle(const InputFrame &input, const float seconds) {
     battle_->place_facing_player(1, step->place_drone);
   }
   const float heading_before = battle_->player().mover.heading();
+  if (view_) {
+    view_->bind(*battle_);
+  }
   if (scene_) {
     scene_->scene().prepare(*battle_, seconds);
   }
-  battle_->tick(control, fire, seconds);
+  if (vs_) {
+    vs_controls(input, locked);
+  }
+  if (coop_match_) {
+    battle_->set_player_control(player_index_, control, fire);
+  } else {
+    battle_->tick(control, fire, seconds);
+  }
   for (const BattleEvent &event : battle_->events()) {
-    if (event.kind == BattleEventKind::damaged && event.robot == 0) {
+    if (event.kind == BattleEventKind::damaged && event.robot == player_index_) {
       rumble_.push_back({0, event.amount});
     }
   }
@@ -283,22 +223,35 @@ void TrainingScreen::tick_battle(const InputFrame &input, const float seconds) {
 }
 
 void TrainingScreen::tick(const InputFrame &input, const double tick_seconds) {
-  if (input.any_pressed(script_.battle.buttons.exit)) {
-    done_ = true;
+  battle_->select_player(player_index_);
+  // A decided VS round's menu takes START itself.
+  const bool menu = vs_ && vs_->round.decided();
+  if (!menu && tick_pause(input) && !coop_match_) {
     return;
   }
   const auto seconds = static_cast<float>(tick_seconds);
+  if (coop_match_) {
+    follow_live();
+  }
   clock_ += tick_seconds;
   if (!free_play_) {
     update_message(input, tick_seconds);
   }
+  if (finale_) {
+    tick_finale(tick_seconds);
+  }
   tick_battle(input, seconds);
-  follow_live();
+  if (vs_) {
+    tick_vs(input, tick_seconds);
+  }
+  if (!coop_match_) {
+    follow_live();
+  }
   if (chatter_) {
     chatter_->set_scene(scene_ && scene_->scene().active()); // the player's own scene
-    // Pepper's lesson messages have the chatter's window to themselves.
-    chatter_->tick(*battle_, tick_seconds, message_ != nullptr);
-    std::ranges::move(chatter_->take_sounds(), std::back_inserter(sounds_));
+    // Pepper's lesson messages and the finale's lines have the chatter's window to themselves.
+    chatter_->tick(*battle_, tick_seconds, message_ != nullptr || finale_);
+    queue_dialogue(chatter_->take_sounds());
   }
   if (view_) {
     view_->tick(*battle_, seconds);
@@ -321,7 +274,9 @@ BattleHudInfo TrainingScreen::hud_info() const {
   BattleHudInfo info;
   const LessonStep *step = tutorial_.step();
   info.panels.day = day_;
-  info.panels.money = money_;
+  // The battle's bounties show as they are won; settling halves a rental's.
+  info.panels.money =
+      money_ + (coop_match_ ? coop_match_->players[coop_slot_].bounty : extra_prize_);
   info.panels.mission_seconds = clock_;
   info.panels.gauges = !cockpit_up();
   info.sights = views_.view() <= camera_view::behind; // 0x04eaa3
@@ -357,6 +312,7 @@ void TrainingScreen::draw_notice(const std::vector<int> &run, const Viewport &vi
 }
 
 void TrainingScreen::draw(const Viewport &viewport) {
+  battle_->select_player(player_index_);
   SDL_Renderer *renderer = textures_.renderer();
   const Vec3 clear = lighting_.clear_colour;
   SDL_SetRenderDrawColorFloat(renderer, clear.x, clear.y, clear.z, 1.0F);
@@ -376,12 +332,15 @@ void TrainingScreen::draw(const Viewport &viewport) {
       const SDL_Rect rect{static_cast<int>(area.x), static_cast<int>(area.y),
                           static_cast<int>(area.width), static_cast<int>(area.height)};
       SDL_SetRenderViewport(renderer, &rect);
-      draw_screen(fit_screen({0.0F, 0.0F, area.width, area.height}, screens[index].canvas[0],
-                             screens[index].canvas[1]),
-                  index);
+      const Viewport screen = fit_screen({0.0F, 0.0F, area.width, area.height},
+                                         screens[index].canvas[0], screens[index].canvas[1]);
+      draw_screen(screen, index);
+      draw_vs_result(screen, index);
     }
     SDL_SetRenderViewport(renderer, nullptr);
+    draw_vs_covers(viewport);
   }
+  draw_vs(viewport);
   if (scene_) {
     scene_->draw(viewport);
   }
@@ -389,10 +348,12 @@ void TrainingScreen::draw(const Viewport &viewport) {
   if (chatter_) {
     chatter_->draw(viewport);
   }
+  draw_finale(viewport);
   if (!missing_run_.empty()) {
     draw_notice(missing_run_, viewport);
   }
   finish_recording();
+  draw_pause(viewport);
 }
 
 } // namespace phantomcrash

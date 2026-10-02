@@ -1,5 +1,6 @@
 #pragma once
 
+#include "desktop_robot_preview.hpp"
 #include "desktop_shop_list.hpp"
 #include "desktop_sv_purchase.hpp"
 #include "desktop_town_screen.hpp"
@@ -19,7 +20,8 @@ class AssembleScreen final : public TownScreen {
 public:
   AssembleScreen(TextureCache &textures, const GlyphFont &font, Assemble logic,
                  const MessageBoxStyle &box, const std::string &from, const FrameStyle &frame,
-                 const std::vector<MusicCredit> &credits, QuestSave quest);
+                 const std::vector<MusicCredit> &credits, QuestSave quest, PreviewWorld world,
+                 const RobotPreviewScript &preview);
 
   void tick(const InputFrame &input, double tick_seconds) override;
   void draw(const Viewport &viewport) override;
@@ -49,9 +51,11 @@ private:
                   float alpha) const;
   [[nodiscard]] std::vector<GoodsRowLook> row_looks() const;
   [[nodiscard]] GoodsRowLook row_look(const ShopGoods &line) const;
+  void show_robot();
 
   Assemble logic_;
   ShopNotice notice_;
+  RobotPreview preview_; // the hangar's robot turning in the panel (0x0836a1)
 };
 
 } // namespace phantomcrash

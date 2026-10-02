@@ -34,8 +34,8 @@ struct MusicLibrary {
   std::array<std::vector<int>, music_program_count> programs;
   // Empty names show as PROGRAM 1 to PROGRAM 8.
   std::array<std::string, music_program_count> names;
-  int program{}; // the one battles play (+ 0xd74)
-  bool random{}; // RANDOM rather than SEQUENTIAL (+ 0xd70)
+  int program{};          // the one battles play (+ 0xd74)
+  bool random{};          // RANDOM rather than SEQUENTIAL (+ 0xd70)
   std::vector<int> chart; // Sonic Amp's, No. 1 first
 
   [[nodiscard]] bool owns(const int track) const {

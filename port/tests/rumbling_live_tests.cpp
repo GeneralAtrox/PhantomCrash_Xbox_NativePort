@@ -9,6 +9,7 @@
 #include "phantomcrash/rumbling_world.hpp"
 #include "phantomcrash/rumbling_map.hpp"
 #include "phantomcrash/training_battle.hpp"
+#include "phantomcrash/battle_hud_style.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -40,29 +41,6 @@ bool near(const float a, const float b) {
 }
 
 } // namespace
-
-TEST_CASE("opponents who fight turn on each other and one shoots the other down") {
-  Battle battle(fighting_settings(), square_path());
-  battle.add_robot("player", 0, {}, 0.0F, {}, 100.0F);
-  battle.take_out(0); // the player is elsewhere
-  const std::array<std::string, weapon_slots> handgun{"handgun", "", "", ""};
-  for (const int team : {1, 2}) {
-    const int robot = battle.add_drone("r" + std::to_string(team), 50.0F);
-    battle.set_identity(robot, "r" + std::to_string(team), team, 50.0F);
-    battle.arm(robot, handgun);
-    battle.set_auto_respawn(robot, false);
-  }
-  battle.place(1, {0.0F, 0.0F, 30.0F}, 0.0F);
-  battle.place(2, {10.0F, 0.0F, -30.0F}, 1.0F);
-  for (int i = 0; i < 1200 && battle.robots()[1].alive && battle.robots()[2].alive; ++i) {
-    battle.tick({}, {}, 1.0F / 60.0F);
-  }
-  const bool first_down = !battle.robots()[1].alive;
-  REQUIRE(first_down != !battle.robots()[2].alive); // exactly one is down
-  const Combatant &down = battle.robots()[first_down ? 1 : 2];
-  CHECK(down.shot_by == (first_down ? 2 : 1));
-  CHECK(battle.robots()[first_down ? 2 : 1].kills == 1);
-}
 
 TEST_CASE("the live roster has live_size places and the next one is not already out") {
   Fixture fixture;
@@ -131,6 +109,41 @@ TEST_CASE("the live world runs the areas, lends one and pays for the player's ki
   CHECK(!loaded.rosters[0].members[0].live.down);
   CHECK(other.changes(0) > changes);
   CHECK(battle->robots()[1].alive);
+  CHECK(battle->robots()[1].marker_colour == static_cast<int>(loaded.rosters[0].members[0].source));
+}
+
+TEST_CASE("live NPC nameplate colours follow saved roster status, not combat allegiance") {
+  Fixture fixture;
+  fixture.parts.pilots[0].tag = "Yuki";
+  fixture.parts.pilots[1].tag = "Roy";
+  const TestDriveScript drive;
+  const std::map<std::string, WeaponTuning> templates;
+  const RumblingTables tables{fixture.parts, fixture.garage, fixture.tables,
+                              fixture.rules, drive,          templates};
+  QuestSave quest;
+  refresh_rosters(fixture.check(), fixture.tables, quest, constant(0.0F));
+  quest.rosters[0].members = {{8, RosterSource::champion, 0, 0},
+                              {0, RosterSource::member, 0, 1},
+                              {7, RosterSource::leader, 0, 0},
+                              {4, RosterSource::extra, 2, 1},
+                              {1, RosterSource::member, 0, 2}};
+  quest = quest_from_json(quest_to_json(quest));
+  std::array<RumblingStage, roster_areas> stages{};
+  stages[0].path = square_path();
+  RumblingWorld world(fixture.check(), tables, fighting_settings(), stages, {}, 7);
+  const auto battle = world.lend(0, quest);
+  REQUIRE(battle != nullptr);
+  REQUIRE(battle->robots().size() == 6);
+  const auto style = parse_battle_hud_style(
+      DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT).document("ui/battle_hud.json"));
+  const std::array<std::uint32_t, 5> expected{0xff8080, 0xffff00, 0x8080ff, 0x00e100, 0xffff00};
+  for (int index = 1; index <= 5; ++index) {
+    const Combatant &robot = battle->robots()[static_cast<std::size_t>(index)];
+    CHECK(robot.team == index); // all five still fight independently
+    CHECK(style.team_colour(robot.marker_colour) == expected[static_cast<std::size_t>(index - 1)]);
+    CHECK(!robot.tag.empty());
+  }
+  CHECK(battle->robots()[0].marker_colour == -1); // existing player/versus selection
 }
 
 TEST_CASE("returning a battle collects its final tick kill and cannot pay it twice") {

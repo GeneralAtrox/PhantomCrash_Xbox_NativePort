@@ -33,8 +33,20 @@ TuneShopScreen::TuneShopScreen(TextureCache &textures, const GlyphFont &font, Tu
       number_font_(frame.hud.font), logic_(std::move(logic)),
       notice_(box, logic_.script().message_text_at), preview_(world, preview, "tune_shop") {}
 
-void TuneShopScreen::tick(const InputFrame &input, const double tick_seconds) {
-  logic_.update(tick_seconds, input);
+void TuneShopScreen::tick(const InputFrame &raw_input, const double tick_seconds) {
+  const int before_level = logic_.level();
+  const auto before_view = logic_.view();
+  const auto &script = logic_.script();
+  const InputFrame input =
+      logic_.view() == TuneShopView::list && logic_.list_seconds() >= script.list.window.seconds
+          ? sort_pointer(raw_input, script.sort_name, script.sort_price)
+          : raw_input;
+  logic_.update(tick_seconds, notice_.pointer_input(input, logic_.script().confirm_buttons));
+  if (before_level != logic_.level() || before_view != logic_.view()) {
+    SDL_Log("Tune shop: view=%d->%d item=%d level=%d->%d held=0x%X stick=%.2f click=%d drag=%d",
+            int(before_view), int(logic_.view()), logic_.item(), before_level, logic_.level(),
+            input.held, input.left_stick[0], input.clicked, input.mouse_left_held);
+  }
   tick_frame(tick_seconds, logic_.faded_in());
   notice_.update(logic_.message(), logic_.view() == TuneShopView::question, logic_.choice(),
                  logic_.script().messages, tick_seconds);
@@ -105,7 +117,16 @@ void TuneShopScreen::draw_chosen(DrawList &list) const {
   const TuneShopScript &script = logic_.script();
   const Goods tuned = logic_.tuned();
   const auto lines = part_stats(logic_.table(), logic_.parts(), logic_.garage(), tuned);
-  draw_part_stats(list, font_, script.list.stats, lines, tuned, script.list.stats_top);
+  StatComparison comparison;
+  if (const ShopGoods *selected = logic_.chosen()) {
+    comparison.before =
+        part_stats(logic_.table(), logic_.parts(), logic_.garage(), selected->goods);
+  }
+  comparison.increase = script.increase_colour;
+  comparison.decrease = script.decrease_colour;
+  comparison.scale = script.comparison_scale;
+  comparison.width = script.comparison_width;
+  draw_part_stats(list, font_, script.list.stats, lines, tuned, script.list.stats_top, &comparison);
   const auto load = logic_.fitted_load();
   if (!load) {
     return;
@@ -172,6 +193,9 @@ void TuneShopScreen::draw_meter(DrawList &list) const {
     return;
   }
   if (logic_.view() == TuneShopView::meter) {
+    for (const Sprite &hint : meter.confirm_hint) {
+      list.sprite(hint);
+    }
     for (const Sprite &hint : meter.cancel_hint) {
       list.sprite(hint);
     }

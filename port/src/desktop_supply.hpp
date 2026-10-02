@@ -7,6 +7,7 @@
 #include "phantomcrash/data_roots.hpp"
 #include "phantomcrash/supply_drop.hpp"
 
+#include <array>
 #include <cstdint>
 #include <memory>
 #include <random>
@@ -28,6 +29,8 @@ public:
   // Appends the carrier's and the pickups' pieces to `items`; on a split
   // screen the pickups are tinted in place of their glow.
   void add_items(const SupplyDrop &drop, std::vector<WorldItem> &items, bool split_screen);
+  // Appends the carrier's pieces alone (the finale's camera carrier).
+  void add_carrier(const SupplyCarrier &carrier, std::vector<WorldItem> &items);
   // Appends the pickups' glows, facing the camera at `eye`.
   void add_sprites(const SupplyDrop &drop, Vec3 eye, std::vector<WorldSprite> &sprites) const;
   // Starts this tick's takes' bursts in `effects` and keeps the bursts in
@@ -43,11 +46,17 @@ private:
   [[nodiscard]] int effect_of(const SupplyDrop &drop, int type) const;
 
   void add_mesh(int mesh, const Mat4 &world, std::vector<WorldItem> &items) const;
+  // The day or night model's mesh (0x069d52 draws each pickup from either).
+  void add_pickup_mesh(std::size_t parity, int mesh, const Mat4 &world,
+                       std::vector<WorldItem> &items) const;
 
   SupplyLook look_;
   SupplyModel parts_; // the stage parity's
   int model_{-1};
   std::vector<std::vector<int>> mesh_nodes_;
+  // Both parities' models for the pickups, -1 where one did not load.
+  std::array<int, 2> pickup_models_{-1, -1};
+  std::array<std::vector<std::vector<int>>, 2> pickup_nodes_;
   int glow_texture_{-1};
   std::vector<Burst> bursts_;
   std::minstd_rand random_{0x5eed};

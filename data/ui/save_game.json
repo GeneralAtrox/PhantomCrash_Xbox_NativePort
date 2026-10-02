@@ -19,8 +19,8 @@
  "sounds": {"move": "adjust", "select": "confirm", "row": "cursor", "to_no": "adjust"},
  "layers": [
   {"id": "background", "image": "textures/scroll/save_load_tex/0.png", "rect": [0, 0, 640, 480], "position": [320, 240], "centered": true, "layer": 1},
-  {"id": "top_band", "image": "textures/scroll/save_load_tex/0.png", "rect": [0, 784, 640, 880], "position": [0, 0], "layer": 1},
-  {"id": "music_strip", "image": "textures/scroll/save_load_tex/0.png", "rect": [0, 480, 640, 584], "position": [0, 376], "layer": 1},
+  {"id": "top_band", "image": "textures/scroll/save_load_tex/0.png", "rect": [0, 784, 640, 880], "position": [0, 0], "layer": 1, "extend_edges": "both"},
+  {"id": "music_strip", "image": "textures/scroll/save_load_tex/0.png", "rect": [0, 480, 640, 584], "position": [0, 376], "layer": 1, "extend_edges": "both"},
   {"id": "details_panel", "image": "textures/scroll/save_load_tex/0.png", "rect": [768, 304, 912, 432], "position": [81, 281], "layer": 1}
  ],
  "help_text": "Save play data",

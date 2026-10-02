@@ -146,9 +146,44 @@ Settings settings_from_json(const json::JsonValue &value) {
     target.cap =
         std::clamp(static_cast<int>(std::lround(cap)), frame_cap_minimum, frame_cap_maximum);
   }
+  if (const auto *post = value.find("post_process")) {
+    const PostProcessOptions defaults;
+    settings.post_process.depth_blur = post->boolean_or("depth_blur", defaults.depth_blur);
+    settings.post_process.distortion = post->boolean_or("distortion", defaults.distortion);
+    settings.post_process.colour_tint = post->boolean_or("colour_tint", defaults.colour_tint);
+    settings.post_process.smaa = post->boolean_or("smaa", false);
+    settings.post_process.dynamic_lighting = post->boolean_or("dynamic_lighting", false);
+    settings.post_process.original_softness = post->boolean_or("original_softness", false);
+    settings.post_process.softness_strength = std::clamp(
+        static_cast<float>(post->number_or("softness_strength", defaults.softness_strength)), 0.0F,
+        1.0F);
+  }
+  if (const auto *audio = value.find("audio")) {
+    settings.audio.master = clamped(*audio, "master", 100, 0, 100);
+    for (std::size_t i = 0; i < audio_bus_count; ++i) {
+      settings.audio.levels[i] =
+          clamped(*audio, std::string(audio_bus_names[i]).c_str(), 100, 0, 100);
+    }
+  }
   settings.fullscreen = value.boolean_or("fullscreen", settings.fullscreen);
   settings.frame_counter = value.boolean_or("frame_counter", settings.frame_counter);
   settings.pause_unfocused = value.boolean_or("pause_unfocused", settings.pause_unfocused);
+  settings.experimental_coop = value.boolean_or("experimental_coop", false);
+  if (const auto *coop = value.find("coop")) {
+    settings.coop.enemy_level_offset = clamped(*coop, "enemy_level_offset", 0, -99, 99);
+    settings.coop.kill_ny_percent = clamped(*coop, "kill_ny_percent", 100, 0, 1000);
+    settings.coop.share_shootdowns = coop->boolean_or("share_shootdowns", false);
+    settings.coop.share_cash = coop->boolean_or("share_cash", false);
+    settings.coop.share_boss_clears = coop->boolean_or("share_boss_clears", true);
+  }
+  if (const auto *profiles = value.find("coop_profiles"); profiles && profiles->is_array()) {
+    for (std::size_t i = 0; i < settings.coop_profiles.size() && i < profiles->array().size();
+         ++i) {
+      if (profiles->array()[i].is_object()) {
+        settings.coop_profiles[i] = quest_from_json(profiles->array()[i]);
+      }
+    }
+  }
   if (const auto *controls = value.find("host_controls")) {
     settings.host_controls = host_controls_from_json(*controls);
   }
@@ -180,21 +215,51 @@ Settings settings_from_json(const json::JsonValue &value) {
 }
 
 json::JsonValue settings_to_json(const Settings &settings) {
+  json::JsonValue::Array profiles;
+  for (const auto &profile : settings.coop_profiles) {
+    profiles.push_back(profile ? quest_to_json(*profile) : json::JsonValue{});
+  }
   using json::JsonValue;
   JsonValue::Object frame_rate{
       {"vsync", JsonValue{settings.frame_rate.vsync}},
       {"cap_enabled", JsonValue{settings.frame_rate.cap_enabled}},
       {"cap", JsonValue{static_cast<std::int64_t>(settings.frame_rate.cap)}},
   };
+  JsonValue::Object audio{{"master", JsonValue{static_cast<std::int64_t>(settings.audio.master)}}};
+  for (std::size_t i = 0; i < audio_bus_count; ++i) {
+    audio.emplace_back(std::string(audio_bus_names[i]),
+                       JsonValue{static_cast<std::int64_t>(settings.audio.levels[i])});
+  }
   JsonValue::Array slots;
   for (const auto &slot : settings.save_slots) {
     slots.push_back(slot ? quest_to_json(*slot) : JsonValue{});
   }
   return JsonValue{JsonValue::Object{
       {"frame_rate", JsonValue{std::move(frame_rate)}},
+      {"audio", JsonValue{std::move(audio)}},
+      {"post_process",
+       JsonValue{JsonValue::Object{
+           {"depth_blur", JsonValue{settings.post_process.depth_blur}},
+           {"distortion", JsonValue{settings.post_process.distortion}},
+           {"colour_tint", JsonValue{settings.post_process.colour_tint}},
+           {"smaa", JsonValue{settings.post_process.smaa}},
+           {"dynamic_lighting", JsonValue{settings.post_process.dynamic_lighting}},
+           {"original_softness", JsonValue{settings.post_process.original_softness}},
+           {"softness_strength",
+            JsonValue{static_cast<double>(settings.post_process.softness_strength)}}}}},
       {"fullscreen", JsonValue{settings.fullscreen}},
       {"frame_counter", JsonValue{settings.frame_counter}},
       {"pause_unfocused", JsonValue{settings.pause_unfocused}},
+      {"experimental_coop", JsonValue{settings.experimental_coop}},
+      {"coop",
+       JsonValue{JsonValue::Object{
+           {"enemy_level_offset",
+            JsonValue{static_cast<std::int64_t>(settings.coop.enemy_level_offset)}},
+           {"kill_ny_percent", JsonValue{static_cast<std::int64_t>(settings.coop.kill_ny_percent)}},
+           {"share_shootdowns", JsonValue{settings.coop.share_shootdowns}},
+           {"share_cash", JsonValue{settings.coop.share_cash}},
+           {"share_boss_clears", JsonValue{settings.coop.share_boss_clears}}}}},
+      {"coop_profiles", JsonValue{std::move(profiles)}},
       {"host_controls", host_controls_to_json(settings.host_controls)},
       {"rumble_robots", JsonValue{static_cast<std::int64_t>(settings.rumble_robots)}},
       {"game", game_to_json(settings.game)},

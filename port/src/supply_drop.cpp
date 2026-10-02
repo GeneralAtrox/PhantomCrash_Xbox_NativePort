@@ -250,6 +250,7 @@ void SupplyDrop::tick_pickups(const float ticks, const std::function<float(Vec3)
       }
       break;
     case SupplyState::burst:
+      bursts_.push_back(pickup.position); // 0x069d52 starts group 0x40 at unit scale
       pickup.state = SupplyState::gone;
       break;
     case SupplyState::gone:

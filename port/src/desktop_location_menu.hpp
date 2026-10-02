@@ -17,6 +17,8 @@ namespace phantomcrash {
 // credits outlive the screen.
 class LocationMenuScreen final : public Screen {
 public:
+  [[nodiscard]] std::optional<MenuPresence> menu_presence() const override;
+  [[nodiscard]] std::optional<MenuPresence> peer_presence(const MenuPresence &peer) const override;
   LocationMenuScreen(TextureCache &textures, const GlyphFont &font, LocationMenuScript script,
                      const std::string &from, const FrameStyle &frame,
                      const std::vector<MusicCredit> &credits, QuestSave quest);
@@ -25,6 +27,9 @@ public:
   void draw(const Viewport &viewport) override;
   [[nodiscard]] std::string music() const override {
     return menu_.script().music;
+  }
+  [[nodiscard]] bool day_clicked(const InputFrame &input) const override {
+    return frame_.day_clicked(input, quest_);
   }
   void set_music(const std::string &file) override {
     frame_.set_music(file);
@@ -43,6 +48,15 @@ public:
   }
 
 private:
+  void pointer_input(const InputFrame &input);
+  int item_at(const InputFrame &input);
+  std::optional<std::array<float, 2>> drag_start_;
+  float drag_angle_{};
+  float drag_turn_{};
+  int drag_steps_{};
+  float wheel_steps_{};
+  int pressed_item_{-1};
+  bool dragged_{};
   TextureCache &textures_;
   const GlyphFont &font_;
   LocationMenu menu_;

@@ -57,7 +57,8 @@ public:
   // Sets the gamepads' motors: each pad its own port's, and the first
   // port's too, since the player's robot takes every controller's buttons.
   // Sent when they change, and again while they last.
-  void rumble(const std::array<RumbleMotors, controller_ports> &motors);
+  void rumble(const std::array<RumbleMotors, controller_ports> &motors,
+              bool shared_controls = true);
   // Gamepads plus the keyboard, which counts as one controller.
   [[nodiscard]] int controllers() const {
     return static_cast<int>(gamepads_.size()) + 1;
@@ -71,7 +72,7 @@ private:
   [[nodiscard]] PortButtons held_buttons() const;
   void fill_ports(bool focused, const PortButtons &held, InputFrame &frame);
   // The analog sticks, or the held directions as the left stick.
-  void sticks(Buttons held, InputFrame &frame, bool focused) const;
+  void sticks(Buttons held, InputFrame &frame, bool focused, int port = -1) const;
   [[nodiscard]] Buttons key_button(SDL_Scancode key) const;
   [[nodiscard]] Buttons pad_button(Uint8 button) const;
   [[nodiscard]] Buttons pad_held(SDL_Gamepad *pad) const;
@@ -95,6 +96,7 @@ private:
   Uint32 mouse_pressed_{};
 
   std::vector<SDL_Gamepad *> gamepads_;
+  std::vector<int> gamepad_ports_;
   struct PadRumble {
     RumbleMotors motors; // what the pad was last sent
     Uint64 sent_ms{};
@@ -109,6 +111,9 @@ private:
   std::optional<std::array<float, 2>> pointer_pixels_; // over the window
   bool pointer_moved_{};
   bool clicked_{};
+  bool right_clicked_{};
+  bool double_clicked_{};
+  float mouse_wheel_{};
   std::optional<std::array<float, 2>> scripted_pointer_;
   bool scripted_moved_{};
   bool scripted_click_{};

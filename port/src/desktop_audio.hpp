@@ -36,7 +36,7 @@ public:
   // names it, and playing() is then false.
   void play_music(const std::string &track, float volume = 1.0F, bool loop = true);
   // A named effect, or an effect file when the name has a '/' (SE TEST).
-  void play_sound(const std::string &name, SoundMix mix = {});
+  void play_sound(const std::string &name, SoundMix mix = {}, AudioBus bus = AudioBus::ui);
   // Plays, moves or stops a sound (a keyed loop by its key).
   void play_cue(const SoundCue &cue);
   // Loads an effect (a name or a file, as play_sound takes) ahead of its
@@ -44,10 +44,11 @@ public:
   void preload(const std::string &name);
   // Stops every voice still playing the named effect.
   void stop_sound(const std::string &name);
-  // Stops every keyed sound (a screen's loops, when it ends).
+  // Stops keyed and spatial sounds when their screen ends.
   void stop_keyed();
   // The game's BGM and SE volumes as gains; they apply to what is playing.
   void set_volumes(float music, float effects);
+  void set_audio_options(const AudioOptions &options);
   // Keeps the music queue topped up, and notices a track's end; once per frame.
   void update();
   void set_paused(bool paused);
@@ -90,6 +91,8 @@ private:
   SDL_AudioDeviceID device_{};
   std::map<std::string, Track> tracks_;
   std::map<std::string, Effect> effects_;
+  std::map<std::string, std::size_t> effect_limits_;
+  std::map<std::string, std::shared_ptr<const EffectSamples>> sample_files_;
   std::map<std::string, std::pair<std::string, float>> effect_files_;
   std::string track_;
   SDL_AudioStream *music_{};
@@ -98,6 +101,8 @@ private:
   float music_track_volume_{1.0F};
   float music_volume_{1.0F}; // the screen's scale of the track's volume
   float music_gain_{1.0F};
+  AudioOptions audio_options_;
+  std::array<std::size_t, audio_bus_count> cue_counts_{};
   float effect_gain_{1.0F};
   Sint64 data_start_{};
   Sint64 data_end_{};

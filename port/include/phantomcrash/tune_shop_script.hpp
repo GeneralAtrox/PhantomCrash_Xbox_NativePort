@@ -2,6 +2,7 @@
 
 #include "phantomcrash/glyph_font.hpp"
 #include "phantomcrash/input.hpp"
+#include "phantomcrash/level_control.hpp"
 #include "phantomcrash/json.hpp"
 #include "phantomcrash/location_frame.hpp"
 #include "phantomcrash/part_stats.hpp"
@@ -46,6 +47,7 @@ struct TuneStrip {
 struct TuneMeter {
   PopWindow window;
   Sprite cursor; // the list's cursor, dark, while the meter is up
+  std::vector<Sprite> confirm_hint;
   std::vector<Sprite> cancel_hint;
   std::array<Sprite, 3> signs; // LIGHT (below 0), NORMAL (0), HEAVY (above 0)
   std::array<float, 2> old_sign_at{};
@@ -86,6 +88,10 @@ struct TuneShopScript : TownBasics {
   ShopGoodsList list;
   TuneLoad load;
   TuneMeter meter;
+  LevelControlStyle level_control;
+  std::uint32_t increase_colour{0x80dfff}, decrease_colour{0xff6666};
+  float comparison_scale{0.7F};
+  float comparison_width{88.0F};
   int level_min{-99};
   int level_max{99};
 

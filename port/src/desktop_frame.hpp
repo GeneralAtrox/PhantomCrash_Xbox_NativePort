@@ -36,6 +36,7 @@ public:
     }
   }
   void draw(DrawList &list, const QuestSave &quest) const;
+  [[nodiscard]] bool day_clicked(const InputFrame &input, const QuestSave &quest) const;
   [[nodiscard]] const FrameStyle &style() const noexcept {
     return style_;
   }

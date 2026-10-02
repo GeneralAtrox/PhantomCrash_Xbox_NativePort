@@ -1,5 +1,8 @@
 #pragma once
+#include "phantomcrash/coop_options.hpp"
+#include "phantomcrash/audio_options.hpp"
 #include "phantomcrash/host_controls.hpp"
+#include "phantomcrash/post_process.hpp"
 
 #include "phantomcrash/area_roster.hpp"
 #include "phantomcrash/frame_rate.hpp"
@@ -156,13 +159,19 @@ inline constexpr int default_rumble_robots = 10;
 inline constexpr int max_rumble_robots = 16;
 
 struct Settings {
+  AudioOptions audio;
   HostControls host_controls;
+  PostProcessOptions post_process;
   // VSync on and no cap by default: presentation follows the display. VSync
   // off with no cap is the unlimited mode.
   FrameRateSettings frame_rate{true, false, 60};
   bool fullscreen{};
   bool frame_counter{};
   bool pause_unfocused{true};
+  bool experimental_coop{};
+  CoopOptions coop;
+  // Independent experimental campaigns; importing a solo slot never overwrites it.
+  std::array<std::optional<QuestSave>, 4> coop_profiles{};
   // The live RUMBLING's robots in each area, the player's place among them
   // (data/world/rumbling.json roster "live_size"); 0 keeps the original's
   // roster size. A port addition.

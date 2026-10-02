@@ -4,6 +4,7 @@
 
 #include "desktop_game_screens.hpp"
 #include "desktop_screens.hpp"
+#include "desktop_coop_matches.hpp"
 
 #include <algorithm>
 #include <random>
@@ -32,6 +33,9 @@ auto stage_file(const DataRoots &roots, const std::string &asset, Parse parse)
 
 void ScreenRunner::set_rumble_robots(const int robots) {
   rumble_robots_ = robots;
+  if (coop_ && !cooperative()) {
+    coop_->robots = robots;
+  }
   game_->set_rumble_robots(robots);
 }
 
@@ -43,6 +47,7 @@ RumblingWorld *ScreenRunner::rumbling_world() {
   RumblingLive live;
   try {
     live = parse_rumbling_live(roots_.document("world/rumbling.json"));
+    live.ai.original = parse_original_ai(roots_.document("world/robot_ai.json"));
   } catch (const std::exception &error) {
     SDL_Log("%s", error.what());
     return nullptr;
@@ -68,11 +73,15 @@ RumblingWorld *ScreenRunner::rumbling_world() {
   BattleSettings settings = training_.battle.settings;
   static_cast<void>(apply_weapon_records(settings.weapons, game_->part_tables()));
   const RegulationCheck check = game_->regulation_check();
-  const RumblingTables tables{game_->part_tables(), game_->garage_tables(),
-                              game_->contests(),    check.rules,
-                              test_drive_,          training_.battle.settings.weapons};
+  const RumblingTables tables{game_->part_tables(),
+                              game_->garage_tables(),
+                              game_->contests(),
+                              check.rules,
+                              test_drive_,
+                              training_.battle.settings.weapons,
+                              parse_battle_hud_style(roots_.document("ui/battle_hud.json"))};
   rumbling_world_ =
-      std::make_unique<RumblingWorld>(check, tables, std::move(settings), std::move(stages),
+      std::make_shared<RumblingWorld>(check, tables, std::move(settings), std::move(stages),
                                       std::move(live), std::random_device{}());
   rumbling_failed_ = false;
   SDL_Log("Live RUMBLING: %d robots an area", rumble_robots_);
@@ -80,6 +89,19 @@ RumblingWorld *ScreenRunner::rumbling_world() {
 }
 
 void ScreenRunner::run_rumbling(const double seconds) {
+  if (name_ == "coop_name") {
+    return;
+  }
+  if (cooperative() && rumbling_world_ && rumbling_world_->lent() >= 0 && coop_->matches) {
+    for (const auto &[key, match] : coop_->matches->matches) {
+      if (match->world == rumbling_world_ && match->day != quest_.day) {
+        rumbling_world_.reset();
+        rumbling_failed_ = false;
+        quest_.live_epoch = 0;
+        break;
+      }
+    }
+  }
   if (!rumbling_paused_) {
     rumbling_paused_.emplace();
     try {
@@ -93,6 +115,9 @@ void ScreenRunner::run_rumbling(const double seconds) {
     return;
   }
   if (RumblingWorld *world = rumbling_world()) {
+    if (cooperative() && world->lent() >= 0) {
+      return; // Co-op's match owner runs it once.
+    }
     world->update(quest_, seconds);
   }
 }

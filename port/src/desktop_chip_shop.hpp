@@ -17,6 +17,7 @@ class DrawList;
 // changes go back into the quest as they change.
 class ChipShopScreen final : public TownScreen {
 public:
+  [[nodiscard]] std::optional<MenuPresence> menu_presence() const override;
   ChipShopScreen(TextureCache &textures, const GlyphFont &font, ChipShop logic,
                  const MessageBoxStyle &box, const std::string &from, const FrameStyle &frame,
                  const std::vector<MusicCredit> &credits, QuestSave quest, int &remembered);

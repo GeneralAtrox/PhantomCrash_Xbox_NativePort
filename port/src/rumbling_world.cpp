@@ -84,13 +84,15 @@ float RumblingWorld::random_share() {
 }
 
 void RumblingWorld::update(QuestSave &quest, const double seconds) {
-  refresh_rosters(check_, tables_.contests, quest, [this] { return random_share(); });
   const bool taken_up = quest.live_epoch != epoch_;
+  refresh_rosters(check_, tables_.contests, quest, [this] { return random_share(); }, taken_up);
   const double step_seconds = 1.0 / live_.tick_hz;
   for (int index = 0; index < roster_areas; ++index) {
     Area &area = areas_[static_cast<std::size_t>(index)];
     const AreaRoster &incoming = quest.rosters[static_cast<std::size_t>(index)];
-    const bool redrawn = incoming.day != area.roster.day || incoming.contest != area.roster.contest;
+    const bool redrawn = incoming.day != area.roster.day ||
+                         incoming.contest != area.roster.contest ||
+                         incoming.members.size() != area.roster.members.size();
     if (index != lent_ && (taken_up || redrawn)) {
       area.roster = incoming;
       build(index, quest);
@@ -141,19 +143,24 @@ void RumblingWorld::build(const int index, const QuestSave &quest) {
     if (live.placed) {
       restore(battle, robot, live);
     } else {
-      scatter(index, robot);
+      scatter(battle, index, robot);
     }
   }
 }
 
 void RumblingWorld::fit(const int index, const std::size_t place, const QuestSave &quest) {
   Area &area = areas_[static_cast<std::size_t>(index)];
-  Battle &battle = *area.battle;
+  area.robots[place] = seat(*area.battle, index, place, quest);
+}
+
+RumblingRobot RumblingWorld::seat(Battle &battle, const int index, const std::size_t place,
+                                  const QuestSave &quest) {
+  const Area &area = areas_[static_cast<std::size_t>(index)];
   const RosterMember &member = area.roster.members[place];
   const int robot_index = static_cast<int>(place) + 1;
   RumblingRobot robot = rumbling_robot(tables_, quest, member.entrant,
                                        "live" + std::to_string(index) + "_" + std::to_string(place),
-                                       settings_.movement);
+                                       settings_.movement, area.enemy_level_offset);
   std::array<std::string, weapon_slots> weapons{};
   for (std::size_t slot = 0; slot < weapon_slots; ++slot) {
     if (robot.weapons[slot]) {
@@ -163,17 +170,28 @@ void RumblingWorld::fit(const int index, const std::size_t place, const QuestSav
   // A team each: everyone out is against everyone else.
   battle.set_identity(robot_index, robot.name, robot_index,
                       robot.armour > 0.0F ? robot.armour : missing_armour);
+  auto &brain = battle.robot(robot_index).ai;
+  if (const auto *entrant = tables_.contests.entrant(member.entrant)) {
+    brain.ability = entrant->level;
+    brain.profile = entrant->ai_profile;
+  }
+  brain.entrant = member.entrant;
+  brain.reset();
   battle.arm(robot_index, weapons);
   battle.set_tag(robot_index, robot.tag);
+  // 0x0456b7 copies member/leader/champion to loadout +0x6c; the reserve
+  // pool is +0x70 == 3. 0x04de50 maps them to yellow/blue/red/green.
+  // RosterSource's four values index the editable HUD palette in that order.
+  battle.robot(robot_index).marker_colour = static_cast<int>(member.source);
   battle.set_combat(robot_index, robot.combat);
   battle.set_lock_seconds(robot_index, robot.lock_seconds);
+  battle.set_sight(robot_index, robot.sight);
   battle.set_movement(robot_index, robot.movement);
   battle.set_auto_respawn(robot_index, false);
-  area.robots[place] = std::move(robot);
+  return robot;
 }
 
-void RumblingWorld::scatter(const int area, const int index) {
-  Battle &battle = *areas_[static_cast<std::size_t>(area)].battle;
+void RumblingWorld::scatter(Battle &battle, const int area, const int index) {
   const EnemyPath &path = stages_[static_cast<std::size_t>(area)].path;
   std::vector<int> starts;
   for (std::size_t segment = 0; segment < path.segments.size(); ++segment) {
@@ -243,6 +261,9 @@ void RumblingWorld::step(const int index, const QuestSave &quest, const float se
     RosterMember &member = area.roster.members[place];
     const int robot_index = static_cast<int>(place) + 1;
     Combatant &robot = battle.robot(robot_index);
+    if (battle.cooperative() && robot.piloted) {
+      continue;
+    }
     if (robot.alive && out_of_ammo(robot)) {
       battle.take_out(robot_index); // nothing left to fight with: it leaves
     }
@@ -256,7 +277,7 @@ void RumblingWorld::step(const int index, const QuestSave &quest, const float se
     }
     if (member.live.down) {
       member.live.arrival -= seconds;
-      if (member.live.arrival > 0.0F) {
+      if (member.live.arrival > 0.0F || robot.dying) {
         continue;
       }
       if (const auto next =
@@ -289,10 +310,9 @@ bool RumblingWorld::player_won() const {
   if (lent_ < 0) {
     return false;
   }
-  return std::ranges::any_of(areas_[static_cast<std::size_t>(lent_)].player_kills,
-                             [](const RosterMember &kill) {
-                               return kill.source == RosterSource::champion;
-                             });
+  return std::ranges::any_of(
+      areas_[static_cast<std::size_t>(lent_)].player_kills,
+      [](const RosterMember &kill) { return kill.source == RosterSource::champion; });
 }
 
 std::int64_t RumblingWorld::give_back(QuestSave &quest) {

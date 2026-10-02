@@ -41,9 +41,8 @@ struct CameraViewSettings {
   float pitch_limit_degrees{45.0F};
   float pitch_lift{2.0F}; // 0x2327c4: height per radian of pitch
   // Views 2-4 (0x2327c8..0x2327e8).
-  std::array<OrbitView, 3> orbits{{{{-5.5F, 1.65F, 0.0F}, false},
-                                   {{8.0F, 5.0F, 0.0F}, true},
-                                   {{0.0F, 1.65F, -8.0F}, true}}};
+  std::array<OrbitView, 3> orbits{
+      {{{-5.5F, 1.65F, 0.0F}, false}, {{8.0F, 5.0F, 0.0F}, true}, {{0.0F, 1.65F, -8.0F}, true}}};
   // First person: the eye's height above and distance ahead of the torso,
   // by legs model (0x2327f0, 0x232848), and how far ahead it looks.
   std::vector<float> eye_height{0.8F, 0.9F, 0.8F, 1.0F, 1.1F, 0.9F, 1.1F, 1.1F,
@@ -65,12 +64,12 @@ struct CameraViewSettings {
 
 // The robot the camera follows.
 struct CameraSubject {
-  Vec3 position;     // its feet (robot +0xb0)
-  float yaw{};       // heading plus twist
-  float pitch{};     // the aim's
-  float height{};    // one leg radius (robot +0x14)
-  Vec3 torso;        // the torso node (camera +0xa0)
-  int legs_model{};  // picks the first-person eye
+  Vec3 position;    // its feet (robot +0xb0)
+  float yaw{};      // heading plus twist
+  float pitch{};    // the aim's
+  float height{};   // one leg radius (robot +0x14)
+  Vec3 torso;       // the torso node (camera +0xa0)
+  int legs_model{}; // picks the first-person eye
 };
 
 // The view buttons (robot +0x2f6c bits 0x400..0x2000, set by 0x0774ad).
@@ -121,7 +120,7 @@ private:
   float blend_left_{}; // ticks
   float yaw_{};
   float pitch_{};
-  float pick_left_{};  // ticks to the next fixed-camera pick
+  float pick_left_{}; // ticks to the next fixed-camera pick
   int fixed_point_{-1};
   CameraShot shot_;
 };

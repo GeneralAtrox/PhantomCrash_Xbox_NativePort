@@ -11,7 +11,8 @@
  "buttons": {"left": "left", "right": "right", "up": "up", "down": "down", "riding": "x"},
  "sounds": {"move": "wheel", "row": "schedule_row", "select": "confirm", "back": "cancel", "exit": "hangar_exit", "close": "cursor", "no": "adjust", "trade": "purchase", "board": "board", "board_notices": ["boarded", "keep_board"]},
  "layers": [
-  {"id": "1526", "image": "textures/scroll/hanger_tex/0.png", "rect": [0, 0, 640, 480], "position": [0, 0], "layer": 1}
+  {"id": "1526", "image": "textures/scroll/hanger_tex/0.png", "rect": [0, 0, 640, 480], "position": [0, 0], "layer": 1,
+   "extend_edges": "both", "edge_bands": [[0, 95], [376, 480]], "edge_bands_left": [[0, 95], [414, 480]]}
  ],
  "bands": [
   {"id": "1574", "image": "textures/scroll/hanger_tex/0.png", "rect": [816, 600, 968, 608], "position": [0, 95], "layer": 257, "size": [319.0, 8]},

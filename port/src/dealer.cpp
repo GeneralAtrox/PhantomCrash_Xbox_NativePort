@@ -55,7 +55,10 @@ Dealer::Dealer(DealerScript script, const std::string &dealer, std::vector<Deale
       offers_(std::move(offers)), quest_(std::move(quest)),
       purchase_(script_.purchase, parts, garage),
       side_(script_.repeat_delay, script_.repeat_interval) {
-  static_cast<void>(from);
+  if (from == script_.purchase.spec_screen) {
+    // Returning from the shop's spec panel is not a new store visit.
+    band_ = menu_ = 1.0F;
+  }
   const int count = static_cast<int>(script_.items.size());
   cursor_ = previous_ = std::clamp(resume_item, 0, count - 1);
   logo_ = chosen_offer() >= 0 ? 0.0F : 1.0F;
@@ -137,7 +140,8 @@ void Dealer::animate(const double tick_seconds) {
   trail_.pop_back();
 }
 
-void Dealer::update(const double tick_seconds, const InputFrame &input) {
+void Dealer::update(const double tick_seconds, const InputFrame &raw_input) {
+  const InputFrame input = pointer_input(raw_input);
   if (done()) {
     return;
   }
@@ -182,7 +186,8 @@ void Dealer::purchase_input(const double tick_seconds, const InputFrame &input) 
     open(DealerView::menu);
     break;
   case PurchaseResult::spec:
-    close_to(script_.purchase.spec_screen);
+    // Keep the store open; its closing sequence displays the farewell.
+    leave(script_.purchase.spec_screen);
     break;
   case PurchaseResult::name_entry:
     close_to("name_entry");

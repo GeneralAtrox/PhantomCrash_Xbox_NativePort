@@ -23,11 +23,6 @@ Sprite shifted(Sprite sprite, const float dx) {
   return sprite;
 }
 
-NumberStyle shifted(NumberStyle style, const float dx) {
-  style.right[0] += dx;
-  return style;
-}
-
 void number(DrawList &list, const NumberFont &font, const NumberStyle &style,
             const std::int64_t value, const int layer) {
   for (const Sprite &digit : number_sprites(font, style, value, layer)) {
@@ -90,13 +85,25 @@ void draw_chip_card(DrawList &list, const ChipCards &cards, const ChipRecord *ch
   }
 }
 
+std::vector<Sprite> chip_card_detail_sprites(const NumberFont &font, const ChipDetails &details,
+                                             const ChipOffer &offer, const ChipSpec &spec) {
+  std::vector<Sprite> sprites{details.level_label, details.weight_label, details.weight_unit};
+  for (const auto &digit :
+       number_sprites(font, details.level, offer.level, details.level_label.layer)) {
+    sprites.push_back(digit);
+  }
+  for (const auto &digit :
+       number_sprites(font, details.weight, spec.weight, details.weight_label.layer)) {
+    sprites.push_back(digit);
+  }
+  return sprites;
+}
+
 void draw_chip_card_details(DrawList &list, const NumberFont &font, const ChipDetails &details,
                             const ChipOffer &offer, const ChipSpec &spec, const float shift) {
-  list.sprite(shifted(details.level_label, shift));
-  number(list, font, shifted(details.level, shift), offer.level, details.level_label.layer);
-  list.sprite(shifted(details.weight_label, shift));
-  number(list, font, shifted(details.weight, shift), spec.weight, details.weight_label.layer);
-  list.sprite(shifted(details.weight_unit, shift));
+  for (const Sprite &sprite : chip_card_detail_sprites(font, details, offer, spec)) {
+    list.sprite(shifted(sprite, shift));
+  }
 }
 
 // 0x030bdb: UPLIFT's window, popped open with the frames; once open, the
@@ -124,6 +131,9 @@ void draw_level_window(DrawList &list, const HudStyle &hud, const ChipShop &shop
     list.sprite(sprite);
   }
   if (shop.view() == ChipShopView::dialog) {
+    for (const Sprite &hint : level.confirm_hint) {
+      list.sprite(hint);
+    }
     for (const Sprite &hint : level.cancel_hint) {
       list.sprite(hint);
     }

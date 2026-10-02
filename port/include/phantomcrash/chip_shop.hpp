@@ -88,6 +88,11 @@ public:
   [[nodiscard]] int previous() const noexcept {
     return previous_;
   }
+  // Preserve the input direction: with two cards, both directions wrap to
+  // the same index, so the indices cannot determine the slide direction.
+  [[nodiscard]] int slide_direction() const noexcept {
+    return slide_direction_;
+  }
   [[nodiscard]] bool on_exit() const noexcept {
     return on_exit_;
   }
@@ -142,6 +147,8 @@ public:
   }
 
 private:
+  InputFrame pointer_input(InputFrame input);
+  LevelControl level_control_;
   enum class After { browse, dialog, name_chip, name_entry, leave, sold, see_level, uplifted };
 
   void browse_input(double tick_seconds, const InputFrame &input);
@@ -169,6 +176,7 @@ private:
   bool in_dialog_{}; // the dialog shows, under any notice
   int cursor_{};
   int previous_{};
+  int slide_direction_{};
   double slide_seconds_{};
   bool on_exit_{};
   bool highlight_pulse_{};

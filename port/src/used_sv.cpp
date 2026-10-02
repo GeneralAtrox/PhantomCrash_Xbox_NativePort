@@ -91,7 +91,8 @@ void UsedSv::menu_help() {
   set_help(found != script_.help.end() ? found->second : std::string{});
 }
 
-void UsedSv::update(const double tick_seconds, const InputFrame &input) {
+void UsedSv::update(const double tick_seconds, const InputFrame &raw_input) {
+  const InputFrame input = pointer_input(raw_input);
   if (done()) {
     return;
   }

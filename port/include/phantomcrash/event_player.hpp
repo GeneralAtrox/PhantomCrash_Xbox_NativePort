@@ -85,6 +85,10 @@ public:
   [[nodiscard]] double seconds() const noexcept {
     return seconds_;
   }
+  // The furthest of the event's commands reached.
+  [[nodiscard]] std::size_t command() const noexcept {
+    return reached_;
+  }
   [[nodiscard]] std::vector<std::string> take_sounds();
 
 private:
@@ -152,6 +156,9 @@ public:
   }
   [[nodiscard]] float black_alpha() const noexcept {
     return fade_.black_alpha();
+  }
+  [[nodiscard]] std::size_t command() const noexcept {
+    return player_.command();
   }
   [[nodiscard]] bool done() const noexcept {
     return fade_.done();

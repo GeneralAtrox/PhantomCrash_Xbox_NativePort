@@ -37,7 +37,12 @@ ChipShopScreen::ChipShopScreen(TextureCache &textures, const GlyphFont &font, Ch
       notice_(box, logic_.script().message_text_at), remembered_(remembered) {}
 
 void ChipShopScreen::tick(const InputFrame &input, const double tick_seconds) {
-  logic_.update(tick_seconds, input);
+  const int before = logic_.cursor();
+  logic_.update(tick_seconds, notice_.pointer_input(input, logic_.script().confirm_buttons));
+  if (before != logic_.cursor()) {
+    SDL_Log("CHIP carousel: count=%zu from=%d to=%d direction=%d", logic_.offers().size(), before,
+            logic_.cursor(), logic_.slide_direction());
+  }
   tick_frame(tick_seconds, logic_.faded_in());
   notice_.update(logic_.message(), logic_.view() == ChipShopView::question, logic_.choice(),
                  logic_.script().messages, tick_seconds);
@@ -102,8 +107,7 @@ void ChipShopScreen::draw_cards(DrawList &list) const {
     return;
   }
   const float t = logic_.slide();
-  const int moved = (logic_.cursor() - logic_.previous() + count) % count;
-  const int direction = moved == 0 ? 0 : (moved == 1 ? 1 : -1);
+  const int direction = logic_.slide_direction();
   const float offset = static_cast<float>(direction) * cards.step * (1.0F - t);
   for (int k = -cards.side; k <= cards.side; ++k) {
     if (std::abs(k) >= count) {
@@ -126,17 +130,33 @@ void ChipShopScreen::draw_cards(DrawList &list) const {
     const std::array<float, 2> at{cards.centre[0] + static_cast<float>(k) * cards.step + offset,
                                   cards.centre[1] + drop};
     draw_chip_card(list, cards, logic_.record(offer), at, scale, colour, logic_.card_alpha(ring));
+    const ChipRecord *chip = logic_.record(offer);
+    const ChipSpec spec = chip ? chip_spec(script.dialog.spec, *chip, offer.level) : ChipSpec{};
+    for (Sprite sprite : chip_card_detail_sprites(number_font_, script.details, offer, spec)) {
+      sprite.position = {at[0] + (sprite.position[0] - cards.centre[0]) * scale,
+                         at[1] + (sprite.position[1] - cards.centre[1]) * scale};
+      const auto size = sprite.size.value_or(
+          std::array{sprite.rect[2] - sprite.rect[0], sprite.rect[3] - sprite.rect[1]});
+      sprite.size = std::array{size[0] * scale, size[1] * scale};
+      // The carousel tint is grey; preserve each label/number's own colour.
+      const auto tint = colour & 0xff;
+      const auto channel = [&](int shift) {
+        return ((sprite.colour >> shift) & 0xff) * tint / 255;
+      };
+      sprite.colour = (channel(16) << 16) | (channel(8) << 8) | channel(0);
+      list.sprite(sprite, cards.clip, logic_.card_alpha(ring));
+    }
   }
 }
 
 // 0x20690: once the window is open and the cards stand still (+0x684 at 8),
 // without waiting for the side cards to fade in, the chosen CHIP's name and
-// price; its LEVEL and weight on the card while no dialog is open.
+// price. LEVEL and weight travel with every card in draw_cards.
+// Focusing EXIT dims the carousel but keeps the selected CHIP's details.
 void ChipShopScreen::draw_details(DrawList &list) const {
   const ChipShopScript &script = logic_.script();
   const ChipDetails &details = script.details;
-  if (logic_.window_open() < 1.0F || logic_.slide() < 1.0F || logic_.on_exit() ||
-      logic_.offers().empty()) {
+  if (logic_.window_open() < 1.0F || logic_.slide() < 1.0F || logic_.offers().empty()) {
     return;
   }
   const ChipOffer &offer = logic_.offers()[static_cast<std::size_t>(logic_.cursor())];
@@ -146,12 +166,6 @@ void ChipShopScreen::draw_details(DrawList &list) const {
   for (const Sprite &digit :
        money_sprites(hud(), details.price, shown_ny(offer.price), details.name_layer)) {
     list.sprite(digit);
-  }
-  if (!logic_.dialog_open()) {
-    const ChipRecord *chip = logic_.record(offer);
-    const ChipSpec spec =
-        chip != nullptr ? chip_spec(script.dialog.spec, *chip, offer.level) : ChipSpec{};
-    draw_chip_card_details(list, number_font_, details, offer, spec, 0.0F);
   }
 }
 

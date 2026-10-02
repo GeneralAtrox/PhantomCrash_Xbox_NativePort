@@ -74,6 +74,13 @@ TEST_CASE("a pickup burst flies to its target and ends there") {
   effects.step();
   // 160 are due in the frame; at most 0x6e + 1 are thrown.
   CHECK(live(effects) == EffectSystem::particle_limit + 1);
+  for (const EffectParticle &particle : effects.emitters()[0].particles) {
+    if (particle.alive) {
+      // Definition 37's 0.8 size spans 0.4 world units across the original
+      // +/-0.5 quad after 0x0625e4's half-size submission.
+      CHECK(particle.sprite_half_extent() * 2.0F == 0.4F);
+    }
+  }
   effects.stop(burst);
   const float start = length(target);
   for (int frame = 0; frame < 30; ++frame) {
@@ -91,6 +98,25 @@ TEST_CASE("a pickup burst flies to its target and ends there") {
     effects.step();
   }
   CHECK(!effects.alive(burst)); // every particle reached the target or its life
+}
+
+TEST_CASE("particle widths include the original quad extent and cluster centre scale") {
+  EffectParticle particle;
+  particle.scale = 50.0F; // smoke definition 40's final scale
+  particle.size = 1.0F;   // a scale curve replaces the definition's size
+  particle.kind = 9;
+  CHECK(particle.sprite_half_extent() * 2.0F == 25.0F);
+
+  particle.scale = 5.0F; // explosion cluster at this curve sample
+  particle.kind = 1;
+  CHECK(particle.sprite_half_extent() * 2.0F == 8.75F);
+  particle.kind = 2;
+  CHECK(particle.sprite_half_extent() * 2.0F == 2.5F);
+
+  particle.scale = 2.0F;
+  particle.size = 3.0F;
+  particle.kind = 0;
+  CHECK(particle.sprite_half_extent() * 2.0F == 3.0F);
 }
 
 TEST_CASE("an emitter whose rate falls to nothing ends with its last particle") {

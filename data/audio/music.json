@@ -12,6 +12,8 @@
   "dealer": { "file": "sound/8DEALER.WAV", "loop": true, "volume": 1.0 },
   "tutorial_battle": { "file": "sound/12SENTOU.WAV", "loop": true, "volume": 1.0 },
   "battle_play_in": { "file": "sound/9PLAYIN.WAV", "loop": false, "volume": 1.0 },
-  "boss_start": { "file": "sound/13BossStart.wav", "loop": false, "volume": 1.0 }
+  "boss_start": { "file": "sound/13BossStart.wav", "loop": false, "volume": 1.0 },
+  "ending_theme": { "file": "sound/END1A.WAV", "loop": false, "volume": 1.0 },
+  "tv_off": { "file": "sound/TVOFF3.WAV", "loop": false, "volume": 1.0 }
  }
 }

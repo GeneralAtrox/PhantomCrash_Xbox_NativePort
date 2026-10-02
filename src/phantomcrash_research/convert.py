@@ -110,6 +110,7 @@ def convert_models(
 
 def convert_sound_banks(media: Path, output: Path, report: Callable[[str], None]) -> list[dict]:
     records = []
+    voices = {}
     for source in sorted((media / "sound").glob("*.bin")):
         data = source.read_bytes()
         if not data.startswith(audio.BANK_MAGIC):
@@ -117,6 +118,7 @@ def convert_sound_banks(media: Path, output: Path, report: Callable[[str], None]
         bank = source.stem
         effects = []
         for entry in audio.parse_bank(data):
+            voices[f"sound/sfx/{bank}/{entry.index:02d}.wav"] = {"voices": entry.voices}
             audio.write_pcm16_wav(output / "sound" / "sfx" / bank / f"{entry.index:02d}.wav", entry.wave)
             wave = entry.wave
             effects.append(
@@ -132,6 +134,7 @@ def convert_sound_banks(media: Path, output: Path, report: Callable[[str], None]
             )
         records.append({"bank": f"sound/{source.name}", "effects": effects})
         report(f"{len(effects):>3} effects   sound/{source.name}")
+    _write_json(output / "tables" / "sound_effects.json", {"effects": voices})
     return records
 
 
@@ -165,8 +168,9 @@ def _sprite_source(tables: game_tables.GameTables, sprite_id: int) -> dict | Non
     }
 
 
-def _credit_record(tables: game_tables.GameTables, credit: game_tables.MusicCredit) -> dict:
-    """A credit with its music file, and its jackets and artist images as sprites."""
+def _credit_record(tables: game_tables.GameTables, credit: game_tables.MusicCredit,
+                   image: game_tables._Image) -> dict:
+    """A credit with its music file, jacket/artist sprites and original biography."""
     record = {"file": f"sound/{tables.music[credit.track]}", "track": credit.track}
     record.update(title=credit.title, artist=credit.artist)
     for key, sprite_id in (
@@ -177,12 +181,23 @@ def _credit_record(tables: game_tables.GameTables, credit: game_tables.MusicCred
     ):
         if (source := _sprite_source(tables, sprite_id)) is not None:
             record[key] = source
+    if credit.artist_profile:
+        # Like conversation text, these scripts pair ruby with the main text.
+        # The biographies show one static text block and then hold until closed.
+        script = events.commands(image, tables, credit.artist_profile)
+        text = [command for command in script if command["op"] == "text"]
+        if len(text) != 1 or text[0]["frames_per_character"] != 0:
+            raise ValueError(f"Unsupported artist profile for {credit.artist}")
+        record["artist_profile"] = {
+            key: text[0][key] for key in ("text", "position", "colour", "layer")
+        }
     return record
 
 
 def write_tables(executable: Path, output: Path) -> dict:
     data = executable.read_bytes()
     tables = game_tables.load(data)
+    image = game_tables._Image(data)
     directory = output / "tables"
     _write_json(directory / "resources.json", [asdict(resource) for resource in tables.resources])
     _write_json(
@@ -198,7 +213,7 @@ def write_tables(executable: Path, output: Path) -> dict:
             "tracks": tables.music,
             "scene_music": tables.scene_music,
             "credits": [
-                _credit_record(tables, credit)
+                _credit_record(tables, credit, image)
                 for credit in tables.music_credits
                 if credit.track < len(tables.music)
             ],

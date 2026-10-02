@@ -12,7 +12,9 @@
 #include "desktop_monitor_ship.hpp"
 #include "desktop_textures.hpp"
 #include "desktop_replay_archive.hpp"
+#include "desktop_result_backdrop.hpp"
 #include "desktop_world_renderer.hpp"
+#include "phantomcrash/shop_dialog.hpp"
 #include "phantomcrash/battle.hpp"
 #include "phantomcrash/match_result.hpp"
 #include "phantomcrash/battle_sounds.hpp"
@@ -20,19 +22,26 @@
 #include "phantomcrash/chase_camera.hpp"
 #include "phantomcrash/data_roots.hpp"
 #include "phantomcrash/event_player.hpp"
+#include "phantomcrash/finale.hpp"
+#include "phantomcrash/garage_tables.hpp"
 #include "phantomcrash/glyph_font.hpp"
 #include "phantomcrash/robot_library.hpp"
 #include "phantomcrash/rumbling_world.hpp"
 #include "phantomcrash/split_screen.hpp"
 #include "phantomcrash/training_ground.hpp"
 #include "phantomcrash/tutorial.hpp"
+#include "phantomcrash/vs_battle.hpp"
 
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
 namespace phantomcrash {
+struct CoopMatch;
+struct TrainingFinale;
+struct TrainingVs;
 
 // Everything the tutorial battle reads that outlives the screen.
 struct TrainingContext {
@@ -54,6 +63,22 @@ struct TrainingContext {
   const RumblingWorld *live_world{};
   int live_area{-1};
   bool match_results{};
+  std::shared_ptr<CoopMatch> coop_match;
+  int coop_slot{-1};
+  // The VS battle's rules and the session its round tallies into; null
+  // elsewhere (the script's riders are the players' robots).
+  const VsBattle *vs{};
+  VsSession *vs_session{};
+  // The finale's epilogue (finale.hpp), and the share of its armour and
+  // the weapons the robot won the contest with; null elsewhere.
+  const FinaleTables *finale{};
+  const FinaleTuning *finale_tuning{};
+  float finale_armour{1.0F};
+  // A won match stands this long before it ends: the First Ranker's first
+  // clear (story/progression.json clear_hold_frames).
+  float victory_hold_seconds{};
+  std::array<bool, weapon_slots> finale_lost{};
+  bool beginner{}; // BUTTON CONFIG's BEGINNER MODE
 };
 
 // The tutorial battle (scene 42) on the training ground, opened by one of
@@ -61,23 +86,31 @@ struct TrainingContext {
 // stage's enemy path, with Pepper's messages leading through the lesson's
 // steps (robot states 0x18-0x2e) and back to her when the course ends.
 // FreePlay has no course: the robot walks out of a gate and the battle
-// runs until it walks back into one, or until the exit button.
-class TrainingScreen final : public Screen {
+// runs until it walks back into one, or chooses EXIT in the pause overlay.
+class TrainingScreen final : public Screen, public BackdropBattle {
 public:
   [[nodiscard]] bool mouse_aim() const override {
-    return true;
+    return !paused_;
+  }
+  [[nodiscard]] bool gameplay_paused() const override {
+    return paused_ && !coop_match_;
   }
   TrainingScreen(TextureCache &textures, const GlyphFont &font, const TrainingContext &context,
                  const TrainingLesson &lesson);
+  ~TrainingScreen() override;
 
   void tick(const InputFrame &input, double tick_seconds) override;
   void draw(const Viewport &viewport) override;
   // An entrance's jingle plays in place of the battle's music until it ends.
   [[nodiscard]] std::string music() const override {
-    return cue_music_.empty() ? script_.music : cue_music_;
+    return finale_ ? finale_music() : cue_music_.empty() ? script_.music : cue_music_;
+  }
+  [[nodiscard]] bool uses_music_program() const override {
+    return free_play_ && cue_music_.empty() && !finale_;
   }
   void set_music(const std::string &file) override {
-    if (file.empty()) {
+    heard_music_ = file;
+    if (file.empty() && !finale_) {
       cue_music_.clear(); // the jingle is over (or would not play)
     }
   }
@@ -94,18 +127,84 @@ public:
     return done_;
   }
   [[nodiscard]] std::string next() const override {
-    return match_results_ ? "match_result" : script_.return_to;
+    return finale_ ? finale_next() : match_results_ ? "match_result" : vs_next();
   }
+  // Kind, stage, clock, camera and robots (desktop_training_dump.cpp).
+  [[nodiscard]] json::JsonValue scene_details() const override;
+  [[nodiscard]] std::optional<SceneProgress> scene_progress() const override;
   [[nodiscard]] MatchSummary match_summary() const;
+  std::int64_t settle_coop(QuestSave &save);
+  [[nodiscard]] bool coop_contest_won() const;
   [[nodiscard]] WorldFrame result_background();
-  std::shared_ptr<ReplayArchive> replay() const { return replay_; }
-  [[nodiscard]] std::int64_t extra_prize() const { return extra_prize_; }
+  std::shared_ptr<ReplayArchive> replay() const {
+    return replay_;
+  }
+  [[nodiscard]] std::int64_t extra_prize() const {
+    return extra_prize_;
+  }
+  // The live RUMBLING area whose contest robots can stand up behind the
+  // receipt, or -1 (desktop_training_backdrop.cpp).
+  [[nodiscard]] int backdrop_area() const;
+  // That area's contest robots stood up afresh: from the co-op match's
+  // world and save, or else from `world` (the player's) with `quest`.
+  [[nodiscard]] std::shared_ptr<Battle> stand_up_backdrop(RumblingWorld *world,
+                                                          const QuestSave &quest) const;
+  // Turns this screen into the receipt's backdrop: `fresh`
+  // (RumblingWorld::stand_up) runs on this stage, drawn without the HUD
+  // and unheard. False when it cannot.
+  bool start_backdrop(std::shared_ptr<Battle> fresh);
+  void tick_backdrop(float seconds) override;
+  [[nodiscard]] std::vector<ReplaySubject> backdrop_subjects() const override;
+  [[nodiscard]] const StageCollision &backdrop_collision() const override;
+  [[nodiscard]] ChaseCameraSettings backdrop_chase() const override;
+  [[nodiscard]] WorldFrame backdrop_frame(const ChaseCamera &camera, int width,
+                                          int height) override;
 
 private:
+  std::shared_ptr<CoopMatch> coop_match_;
+  int coop_slot_{-1};
+  int player_index_{};
+  int coop_revision_{-1};
+  std::vector<RobotParts> coop_looks_;
+  void sync_coop_views();
+  // VS (desktop_training_vs.cpp): the riders, their controls, the round,
+  // and what it draws over the screens.
+  std::unique_ptr<TrainingVs> vs_;
+  void start_vs(const TrainingContext &context);
+  void seat_riders(const std::optional<PartTables> &parts,
+                   const std::optional<GarageTables> &garage);
+  void place_riders(const DataRoots &roots);
+  void vs_controls(const InputFrame &input, bool locked);
+  void tick_vs(const InputFrame &input, double seconds);
+  [[nodiscard]] std::string vs_next() const;
+  void draw_vs_result(const Viewport &screen, std::size_t index);
+  void draw_vs_covers(const Viewport &viewport);
+  void draw_vs(const Viewport &viewport);
+  // The finale (desktop_training_finale.cpp): its phases walk and film the
+  // player's robot, with their lines, banners and fades.
+  std::unique_ptr<TrainingFinale> finale_;
+  void start_finale(const TrainingContext &context);
+  void tick_finale(double seconds);
+  void tick_finale_lights(double seconds);
+  void add_finale_items(std::vector<WorldItem> &items);
+  [[nodiscard]] std::optional<CameraShot> finale_camera() const;
+  [[nodiscard]] std::string finale_music() const;
+  [[nodiscard]] std::string finale_next() const;
+  [[nodiscard]] bool finale_done() const;
+  void draw_finale(const Viewport &viewport);
+  void load_pause(const DataRoots &roots);
+  bool tick_pause(const InputFrame &input);
+  void draw_pause(const Viewport &viewport);
+  bool paused_{};
+  Sprite pause_exit_;
+  TextBlock pause_text_;
+  float pause_dim_{};
+  Buttons pause_buttons_{}, resume_buttons_{}, pause_exit_button_{};
   void start_recording(const TrainingContext &context);
   void begin_recording();
   void record_world(const WorldFrame &frame, const std::optional<WorldFrame> &monitor);
   void finish_recording();
+  [[nodiscard]] ReplaySubject replay_subject(std::size_t index) const;
   void update_result(double seconds);
   void load_stage_art(const StageDefinition *stage, const DataRoots &roots);
   void build_battle(const TrainingContext &context);
@@ -121,9 +220,11 @@ private:
   void load_sounds(const DataRoots &roots);
   // The robots', doors' and pickups' sounds of the tick just run.
   void gather_sounds(float seconds);
+  void queue_dialogue(std::vector<std::string> sounds);
   // The view buttons, then the chase camera and the view on top of it
   // (desktop_training_camera.cpp).
   void tick_camera(const InputFrame &input, float seconds);
+  void update_target_view();
   [[nodiscard]] CameraSubject camera_subject() const;
   // Whether the camera sits in the player's robot, and whether (and how
   // far slid out of view) the cockpit is up.
@@ -131,7 +232,7 @@ private:
   [[nodiscard]] bool cockpit_up() const;
   [[nodiscard]] CockpitInput cockpit_input() const;
   [[nodiscard]] bool in_scene() const {
-    return scene_ && scene_->scene().scripted();
+    return finale_ || (scene_ && scene_->scene().scripted());
   }
   [[nodiscard]] BattleHudInfo hud_info() const;
   // Split screen (desktop_training_split.cpp): the further screens'
@@ -151,6 +252,7 @@ private:
   const TalkTables &talk_;
   EventTuning tuning_;
   StageLighting lighting_;
+  std::vector<WorldLight> local_lights_;
   WorldItem stage_;
   std::unique_ptr<BattleMonitor> monitor_;
   std::unique_ptr<MonitorShip> monitor_ship_;
@@ -161,6 +263,8 @@ private:
   LessonMessages messages_;
   Tutorial tutorial_;
   ChaseCamera camera_;
+  float target_aspect_{4.0F / 3.0F}; // updated from the player's actual viewport
+  std::array<int, weapon_slots> target_candidates_{-1, -1, -1, -1}; // transition logging only
   CameraViews views_;
   std::shared_ptr<Battle> battle_; // the live RUMBLING's is shared with its world
   const RumblingWorld *live_world_{};
@@ -189,10 +293,12 @@ private:
   std::unique_ptr<DesktopEffects> effects_; // null without the effect bank
   std::unique_ptr<DesktopShots> shots_;     // with the effects, whose bank it draws
   std::string cue_music_;
+  std::string heard_music_; // the actual song, including the saved program, for replay
   // The message playing now, its script kept for the player.
   std::unique_ptr<StoryEvent> message_event_;
   std::unique_ptr<EventPlayer> message_;
   std::vector<std::string> sounds_; // heard whole: the menus', the chatter's
+  std::vector<SoundCue> unplaced_;  // dialogue and non-spatial categorized sounds
   std::unique_ptr<BattleSounds> battle_sounds_;
   std::vector<PlacedCue> placed_; // heard where they are
   std::vector<DamageRumble> rumble_;
@@ -207,8 +313,11 @@ private:
   MatchOutcome outcome_{MatchOutcome::leave};
   double play_seconds_{};
   std::int64_t extra_prize_{};
-  double clock_{}; // seconds of battle: the HUD's mission time and pulses
+  float victory_hold_{}; // seconds a win still stands before the match ends
+  double clock_{};       // seconds of battle: the HUD's mission time and pulses
   int day_{};
+  bool standard_controls_{true}; // BUTTON CONFIG's CONTROL TYPE
+  bool beginner_{};              // and its BEGINNER MODE
   std::int64_t money_{};
 };
 

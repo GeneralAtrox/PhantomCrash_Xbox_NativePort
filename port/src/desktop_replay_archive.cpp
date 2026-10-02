@@ -66,19 +66,20 @@ public:
     fields(v.node, v.rotation_per_second, v.uv_per_second);
   }
   void value(WorldItem &v) {
-    fields(v.robot, v.model, v.world, v.sky_nodes, v.sky_motion, v.sky_seconds, v.monitor_nodes,
-           v.node_worlds, v.paint, v.alpha, v.flash, v.node, v.colour, v.uv_offset, v.scale_x,
-           v.additive, v.optical, v.casts_shadow, v.double_sided);
+    fields(v.robot, v.model, v.world, v.sky_nodes, v.shadow_nodes, v.two_sided_materials,
+           v.sky_motion, v.sky_seconds, v.monitor_nodes, v.node_worlds, v.paint, v.alpha, v.flash,
+           v.node, v.colour, v.uv_offset, v.scale_x, v.additive, v.optical, v.casts_shadow,
+           v.ground_shadow, v.double_sided, v.fogged, v.rainbow);
   }
   void value(WorldFrame &v) {
     fields(v.width, v.height, v.view, v.projection, v.eye, v.lighting, v.items, v.overlay,
-           v.sprites, v.shadow_length, v.transparent);
+           v.sprites, v.lights, v.shadow_length, v.transparent);
   }
   void value(ReplaySubject &v) {
-    fields(v.camera, v.cockpit, v.name, v.alive);
+    fields(v.camera, v.cockpit, v.name, v.alive, v.in_play);
   }
   void value(SoundCue &v) {
-    fields(v.action, v.name, v.mix, v.loop, v.key);
+    fields(v.action, v.name, v.mix, v.loop, v.key, v.position, v.listener, v.falloff, v.bus);
   }
   void value(ReplayFrame &v) {
     fields(v.seconds, v.player, v.monitor, v.hidden_player, v.subjects, v.overlay, v.sounds,

@@ -17,6 +17,8 @@
 
 namespace phantomcrash {
 
+struct StoryConditionContext;
+
 // One piece of event text. Glyphs, line breaks and the player's name each
 // take one step of the typing; colour changes take none (0xbd720).
 struct TextToken {
@@ -106,9 +108,9 @@ struct StoryEvent {
   int to_scene{};
   bool enabled{true};
   std::vector<int> requires_seen; // scenes of events that must have played
-  // The record sets one of the other checks 0xd1861 makes (a test function,
-  // the chapter, the garage...), none ported yet: it does not play.
+  // Requires progression context; callers without one keep conditional events blocked.
   bool unported_conditions{};
+  std::array<int, 6> conditions{1, -1, -1, -1, -1, -1};
   int background{-1};
   std::vector<int> cast; // characters in cast order (blink and mouth state)
   std::string music;     // a WAV under sound/, "keep", or empty for none
@@ -128,9 +130,9 @@ struct StoryEvent {
 [[nodiscard]] EventCharacter parse_event_character(const json::JsonValue &value);
 
 // The event that plays on the first move from one scene to another, instead
-// of the scene it leads to (0xd1861); null when none does. Conditions on the
-// day, the garage and the like are not ported yet.
+// of the scene it leads to (0xd1861); null when none does.
 [[nodiscard]] const StoryEvent *event_between(const std::vector<StoryEvent> &events, int from_scene,
-                                              int to_scene, const std::vector<int> &seen);
+                                              int to_scene, const std::vector<int> &seen,
+                                              const StoryConditionContext *context = nullptr);
 
 } // namespace phantomcrash

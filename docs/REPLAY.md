@@ -13,8 +13,13 @@ view is a movable camera. Player View restores the recorded local player's
 camera, cockpit, HUD, sights, messages, cinematic bars, effects and monitor
 feed. It retains the recorded aspect ratio if the window is resized. Player
 View belongs to the human who played the match; choosing another robot from
-it switches to Rear. Other views can watch any recorded robot, including AI
-pilots, with names and models as they were at that time.
+it switches to Rear. Manual rotation from Player View also switches to Rear.
+Other views can watch robots inside the play area, including AI pilots, with
+names and models as they were at that time. Staged entrances and out-of-bounds
+robots are excluded. Eligibility is recorded per frame and rechecked during
+playback; a robot that becomes ineligible is replaced by an eligible target.
+If none are eligible, the camera holds its position. In-bounds death animations
+remain selectable until they finish.
 
 | Action | Controller | Mouse / keyboard |
 | --- | --- | --- |
@@ -24,10 +29,21 @@ pilots, with names and models as they were at that time.
 | Stop, return to RESULT | B/Back | Click Stop |
 | Hide/show replay controls | X | Mapped X key |
 | Move in Free view | Left stick | WASD / movement bindings |
-| Look in Free view | Right stick | Hold right mouse and drag |
+| Rotate the camera | Right stick | Hold left mouse and drag outside the controls |
+| Reset camera | Right-stick click (R3) | Double left-click outside the controls |
 | Lower/raise Free view | LT/RT | Mapped trigger keys |
 
 Switching robots in Free view places the camera by the newly selected robot.
+Rotation orbits the selected robot's torso in external views, including Rear;
+the chase camera's forward aiming point is not the orbit pivot. The robot
+remains the pivot even when the drag returns to zero rotation. Cockpit and
+Free view turn the look direction. Reset removes the rotation override; in Free view it
+returns to the selected robot's chase-camera position. Mouse presses on the
+control bar operate its buttons without starting a camera drag.
+
+`Replay orbit:` logs the selected view, robot and initial torso pivot when
+manual rotation starts. Recorded world items retain their ground-shadow and
+two-sided material overrides, so those rendering fixes survive playback.
 Controls fade after three seconds without button/pointer activity; X can hide
 them completely for an unobstructed Player View. Result buttons support both
 controller navigation and mouse clicks. View labels, help, camera speeds and

@@ -5,12 +5,15 @@
 #include "phantomcrash/contests.hpp"
 #include "phantomcrash/rumbling.hpp"
 
+#include <memory>
 #include <string>
 #include <vector>
 
 namespace phantomcrash {
 
 class DrawList;
+class CoopMatches;
+struct CoopMatch;
 
 // RUMBLING (Rumbling): the area select with the venue's picture and its
 // contest, the area's sub-menu over its map, the gates to come in by, the
@@ -18,6 +21,11 @@ class DrawList;
 // sub-menu was on for coming back from SELECT SV.
 class RumblingScreen final : public TownScreen {
 public:
+  void set_coop_matches(std::shared_ptr<CoopMatches> matches) {
+    coop_matches_ = std::move(matches);
+  }
+  [[nodiscard]] std::optional<MenuPresence> menu_presence() const override;
+  [[nodiscard]] std::optional<MenuPresence> peer_presence(const MenuPresence &peer) const override;
   RumblingScreen(TextureCache &textures, const GlyphFont &font, Rumbling logic,
                  const ContestTables &contests, const MessageBoxStyle &box, const std::string &from,
                  const FrameStyle &frame, const std::vector<MusicCredit> &credits, QuestSave quest,
@@ -52,6 +60,8 @@ private:
   // The live RUMBLING (desktop_rumbling_robots.cpp): the opponents out on
   // the map, and the shown one's armour on its card.
   void draw_robots(DrawList &list) const;
+  [[nodiscard]] std::shared_ptr<CoopMatch> live_match() const;
+  void draw_coop_robots(DrawList &list, const CoopMatch &match) const;
   void draw_armour(DrawList &list, int entrant) const;
   [[nodiscard]] const RosterMember *shown_member() const;
   void draw_character_info(DrawList &list) const;
@@ -62,6 +72,8 @@ private:
   const HudStyle &hud_;
   ShopNotice notice_;
   int &remembered_area_;
+  std::shared_ptr<CoopMatches> coop_matches_;
+  mutable std::weak_ptr<CoopMatch> logged_match_;
 };
 
 } // namespace phantomcrash

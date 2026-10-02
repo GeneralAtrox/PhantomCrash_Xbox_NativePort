@@ -43,8 +43,8 @@ void sleep_one_night(QuestSave &quest, const SleepScript &script) {
   quest.total_days = std::min(quest.total_days + 1, script.total_days_max);
   quest.spin_paid = 0;
   // Sonic Amp's chart changes overnight (0x2e47c); each night draws its own.
-  roll_chart(quest.music, static_cast<std::uint32_t>(quest.total_days * night_seed_step +
-                                                     quest.laps));
+  roll_chart(quest.music,
+             static_cast<std::uint32_t>(quest.total_days * night_seed_step + quest.laps));
 }
 
 Sleep::Sleep(SleepScript script, QuestSave quest)

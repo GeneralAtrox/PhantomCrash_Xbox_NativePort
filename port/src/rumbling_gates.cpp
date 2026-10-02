@@ -58,6 +58,7 @@ void Rumbling::enter() {
   entry.contest = contest(area_);
   entry.gate = gate_;
   entry.rental = rental_;
+  entry.ranker_gate = ranker_gate_;
   if (rental_ && !check_.rules.rental_robots.empty()) {
     std::minstd_rand random{std::random_device{}()};
     std::uniform_int_distribution<std::size_t> pick(0, check_.rules.rental_robots.size() - 1);

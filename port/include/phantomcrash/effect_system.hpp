@@ -10,6 +10,7 @@
 #include <vector>
 
 namespace phantomcrash {
+class StageCollision;
 
 // The particle effects in motion, after the original's effect system
 // (0x060508 and what it calls): a started group puts one emitter in play
@@ -35,6 +36,19 @@ struct EffectParticle {
   int kind{}; // 0 plain, 1 and 2 a cluster's centre and parts, 9 debris
   std::array<std::uint8_t, 4> colour{255, 255, 255, 255}; // r, g, b, a
   bool alive{};
+  bool resting{};
+  float swirl_yaw{};
+  float swirl_weight{};
+
+  [[nodiscard]] float sprite_half_extent() const noexcept {
+    // 0x0625e4 submits half the size; particle.xvu expands the quad from
+    // 0x280d90 with corners at +/-0.5. WorldSprite instead takes a radius.
+    constexpr float submitted_size_scale = 0.5F;
+    constexpr float quad_half_extent = 0.5F;
+    constexpr float cluster_centre_scale = 3.5F; // 0x0bf4cf, constant 0x19f918
+    const float extent = scale * size * submitted_size_scale * quad_half_extent;
+    return kind == 1 ? extent * cluster_centre_scale : extent;
+  }
 };
 
 // One emitter: up to `particle_slots` particles.
@@ -46,10 +60,12 @@ struct EffectEmitter {
   Vec3 previous;
   Vec3 velocity; // per frame
   Vec3 target;
-  Mat4 orientation; // turns +y to the effect's direction
-  Vec3 gravity;     // per frame, squared
-  float rate{};     // particles a second, when there is no rate curve
-  float owed{};     // particles due and not yet thrown
+  Vec3 spawn_offset; // random_offset's per-emitter anchor (0x060107, +0x74)
+  Mat4 orientation;  // turns +y to the effect's direction
+  Vec3 segment;      // an arc's span (0x065058 frame row 1); zero: the fragment step
+  Vec3 gravity;      // per frame, squared
+  float rate{};      // particles a second, when there is no rate curve
+  float owed{};      // particles due and not yet thrown
   int frame{};
   bool emitting{true};
   bool spawned{};
@@ -97,13 +113,21 @@ public:
   // that follow them.
   void move(EffectHandle handle, Vec3 position);
   void set_target(EffectHandle handle, Vec3 target);
+  void set_direction(EffectHandle handle, Vec3 direction);
+  // Spans a started group's fragment chains along `segment` from where it
+  // is, as the electric arcs' frames do (0x087063); zero restores the step.
+  void set_segment(EffectHandle handle, Vec3 segment);
   // Particles a second for the group's emitters (0x087eac sets a pickup's).
   void set_rate(EffectHandle handle, float per_second);
   // No more particles; those in flight live out their lives (0x06516c).
-  void stop(EffectHandle handle);
+  // include_pending also cancels an attached emitter before its first particle.
+  void stop(EffectHandle handle, bool include_pending = false);
   [[nodiscard]] bool alive(EffectHandle handle) const;
   // Ends every effect.
   void clear();
+  void set_stage(const StageCollision *stage) {
+    stage_ = stage;
+  }
 
   // Advances by `seconds`, whole frames at a time.
   void tick(float seconds);
@@ -126,6 +150,8 @@ private:
   void throw_particles(EffectEmitter &emitter);
   [[nodiscard]] float frame_rate_share(EffectEmitter &emitter);
   void spawn(EffectEmitter &emitter, EffectParticle &particle);
+  void spawn_fragments(EffectEmitter &emitter, EffectParticle &seed);
+  void move_debris(EffectEmitter &emitter, EffectParticle &particle);
   void update(EffectEmitter &emitter, EffectParticle &particle);
   void move_particle(EffectEmitter &emitter, EffectParticle &particle);
   void accelerate(const EffectEmitter &emitter, EffectParticle &particle);
@@ -142,6 +168,7 @@ private:
   void update(EffectFlashState &flash);
 
   std::shared_ptr<const EffectBank> bank_;
+  const StageCollision *stage_{}; // battle collision outlives this effect system
   std::vector<EffectEmitter> emitters_;
   std::vector<EffectFlashState> flashes_;
   float pulse_phase_{}; // 0x9665ac, shared by every pulsing flash

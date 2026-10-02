@@ -194,6 +194,28 @@ float EffectCurve::at(const float time) const {
 EffectBank parse_effect_bank(const JsonValue &value) {
   EffectBank bank;
   bank.frame_rate = std::max(static_cast<float>(value.number_or("frame_rate", 30.0)), 1.0F);
+  if (const auto *motion = value.find("particle_motion")) {
+    auto &out = bank.particle_motion;
+    constexpr int max_fragments = 0x6e; // original live-particle cap
+    out.fragment_copies =
+        std::clamp(static_cast<int>(motion->number_or("fragment_copies", out.fragment_copies)), 0,
+                   max_fragments);
+    out.fragment_step = static_cast<float>(motion->number_or("fragment_step", out.fragment_step));
+    out.fragment_jitter =
+        static_cast<float>(motion->number_or("fragment_jitter", out.fragment_jitter));
+    out.debris_restitution = std::clamp(
+        static_cast<float>(motion->number_or("debris_restitution", out.debris_restitution)), 0.0F,
+        1.0F);
+    out.debris_friction = std::clamp(
+        static_cast<float>(motion->number_or("debris_friction", out.debris_friction)), 0.0F, 1.0F);
+    out.debris_rest_speed = std::max(
+        0.0F, static_cast<float>(motion->number_or("debris_rest_speed", out.debris_rest_speed)));
+    out.debris_clearance = std::max(
+        0.0F, static_cast<float>(motion->number_or("debris_clearance", out.debris_clearance)));
+    out.debris_stage_contacts =
+        motion->boolean_or("debris_stage_contacts", out.debris_stage_contacts);
+    out.start_at_offset = motion->boolean_or("start_at_offset", out.start_at_offset);
+  }
   if (const JsonValue *atlas = value.find("atlas")) {
     bank.atlas.texture = atlas->string_or("texture", "");
     if (const JsonValue *size = atlas->find("cell_size")) {

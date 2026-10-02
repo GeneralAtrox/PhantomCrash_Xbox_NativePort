@@ -27,6 +27,9 @@ public:
   [[nodiscard]] std::string music() const override {
     return menu_.script().music;
   }
+  [[nodiscard]] bool day_clicked(const InputFrame &input) const override {
+    return frame_.day_clicked(input, quest_);
+  }
   void set_music(const std::string &file) override {
     frame_.set_music(file);
   }

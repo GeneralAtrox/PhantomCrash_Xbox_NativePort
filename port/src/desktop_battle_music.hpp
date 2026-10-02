@@ -16,6 +16,8 @@ class DrawList;
 // edited goes back into the quest once the screen is done.
 class BattleMusicScreen final : public TownScreen {
 public:
+  [[nodiscard]] std::optional<MenuPresence> menu_presence() const override;
+  [[nodiscard]] std::optional<MenuPresence> peer_presence(const MenuPresence &peer) const override;
   BattleMusicScreen(TextureCache &textures, const GlyphFont &font, BattleMusicScript script,
                     const std::string &from, const FrameStyle &frame,
                     const std::vector<MusicCredit> &credits, QuestSave quest);

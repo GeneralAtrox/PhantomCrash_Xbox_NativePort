@@ -21,3 +21,10 @@ projects are used as external tools or technical references:
 XDVDFS and XBE layouts are implemented from their publicly documented
 structures (see the [Xbox Dev Wiki](https://xboxdevwiki.net)). No game assets
 from any of these projects are included.
+
+## Included rendering library
+
+[SMAA](https://github.com/iryoku/smaa), by Jorge Jimenez, Jose I. Echevarria,
+Belen Masia, Fernando Navarro and Diego Gutierrez, is included under its MIT
+license. The pinned shader and precomputed area/search lookup headers are in
+`port/third_party/smaa`, together with the unmodified license and revision.

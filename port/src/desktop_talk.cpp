@@ -7,6 +7,13 @@
 
 namespace phantomcrash {
 
+std::optional<SceneProgress> TalkScreen::scene_progress() const {
+  const StoryEvent &event = scene_.event();
+  return SceneProgress{"Story event (scene " + std::to_string(event.scene) + ")",
+                       static_cast<int>(scene_.command()), static_cast<int>(event.commands.size()),
+                       "command"};
+}
+
 std::string talk_music(const StoryEvent &event) {
   if (event.music.empty() || event.music == "keep") {
     return event.music;

@@ -37,6 +37,8 @@ def test_textures_and_banks_convert_to_open_formats(tmp_path):
     assert effects[0]["bank"] == "sound/sys.bin"
     assert (output / "sound/sfx/sys/00.wav").read_bytes()[:4] == b"RIFF"
     assert json.dumps(effects)  # records are plain JSON
+    limits = json.loads((output / "tables/sound_effects.json").read_text())
+    assert limits == {"effects": {"sound/sfx/sys/00.wav": {"voices": 1}}}
 
 
 def test_replace_requires_an_earlier_conversion(tmp_path):

@@ -3,13 +3,15 @@
 Xbox ADPCM (format tag 0x69) is IMA ADPCM with fixed 36-byte blocks per
 channel: a 4-byte header (int16 first sample, uint8 step index, reserved) and
 32 bytes of 4-bit codes, low nibble first, interleaved per channel in 4-byte
-groups. A block decodes to 65 samples per channel.
+groups. Playback uses 64 samples per channel: the header sample and the
+first 63 decoded codes. The final code is padding, not a 65th output sample.
 
 An effect bank (``Media\\sound\\*.bin``) starts with ``"SE BIN  "``, ``u32
 count`` and ``count`` 16-byte directory records ``{u32 flags, u32 slot,
 u32 parameters, u32 offset}``; each offset points at a complete RIFF WAV.
-The meaning of ``flags``, ``slot`` and ``parameters`` is not yet known; they
-are reported unchanged.
+The flags' byte +2 is the number of reusable voices (0x0de8d0 cycles that
+many slots); byte +0 marks a 3D buffer. ``slot`` and ``parameters`` are
+buffer/3D-state offsets fixed up by the loader. Raw values are retained.
 """
 
 from __future__ import annotations
@@ -105,7 +107,9 @@ def decode_xbox_adpcm(data: bytes, channels: int) -> bytes:
                         (word >> shift) & 0xF, predictors[channel], indices[channel]
                     )
                     samples[channel].append(predictors[channel])
-        for frame in range(65):
+        # Xbox consumes 64 frames, including the header predictor. Generic IMA
+        # decoding also produces a final frame, which must not enter playback.
+        for frame in range(64):
             out.extend(samples[channel][frame] for channel in range(channels))
     return struct.pack(f"<{len(out)}h", *out)
 
@@ -147,6 +151,10 @@ class BankEntry:
     parameters: int
     offset: int
     wave: Wave
+
+    @property
+    def voices(self) -> int:
+        return (self.flags >> 16) & 0xff
 
 
 def parse_bank(data: bytes) -> list[BankEntry]:

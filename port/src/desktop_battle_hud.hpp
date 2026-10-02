@@ -45,6 +45,15 @@ public:
   // the last draw.
   void draw(const Viewport &viewport, const Battle &battle, const Mat4 &view_projection,
             const BattleHudInfo &info, double clock);
+  // The boxes `chip` gives with this HUD's sizes, for a robot that locks
+  // without a drawn reticle (Battle::set_sight).
+  [[nodiscard]] SightBoxes sight_boxes(const ChipStats &chip) const {
+    return sights_ ? phantomcrash::sight_boxes(sights_->style(), chip) : SightBoxes{};
+  }
+  // The reticle's boxes as last drawn (BattleSights::lock_boxes).
+  [[nodiscard]] std::optional<LockBoxes> lock_boxes() const {
+    return sights_ ? sights_->lock_boxes() : std::nullopt;
+  }
 
 private:
   void draw_goal(const Viewport &viewport, const BattleHudInfo &info) const;

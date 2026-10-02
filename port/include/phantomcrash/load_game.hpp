@@ -82,6 +82,8 @@ struct LoadGameScript : MenuBasics {
 // A slot's save, when it holds one.
 struct SaveSlot {
   std::optional<QuestSave> quest;
+  bool selectable{true};
+  std::string owner;
 };
 
 // The slot's save's date and time (0xbcfe2, 0xbd255).

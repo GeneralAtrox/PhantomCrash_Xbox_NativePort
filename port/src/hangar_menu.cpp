@@ -161,7 +161,7 @@ void HangarMenu::refresh_help() {
   }
 }
 
-void HangarMenu::update(const double tick_seconds, const InputFrame &input) {
+void HangarMenu::update(const double tick_seconds, const InputFrame &raw_input) {
   if (done()) {
     return;
   }
@@ -171,6 +171,7 @@ void HangarMenu::update(const double tick_seconds, const InputFrame &input) {
   if (!advance(tick_seconds)) {
     return;
   }
+  const InputFrame input = pointer_input(raw_input);
   switch (view_) {
   case HangarView::wheel:
     wheel_input(tick_seconds, input);
@@ -330,6 +331,10 @@ void HangarMenu::say(const std::string &message, const bool in_menu) {
 // 0x01e706: YES buys the hangar or says the money will not do; NO and
 // cancel (moving to NO, sys 4) go back to the wheel.
 void HangarMenu::buy_input(const double tick_seconds, const InputFrame &input) {
+  if (input.dialog_choice) {
+    choice_ = std::clamp(*input.dialog_choice, 0, 1);
+    refresh_help();
+  }
   bool fresh = false;
   if (const int step = across_.step(tick_seconds, input, script_.left, script_.right, fresh)) {
     if (const int moved = std::clamp(choice_ + step, 0, 1); moved != choice_) {

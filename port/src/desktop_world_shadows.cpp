@@ -13,6 +13,7 @@
 #include <SDL3/SDL.h>
 
 #include <cstring>
+#include <algorithm>
 #include <stdexcept>
 
 namespace phantomcrash {
@@ -49,6 +50,10 @@ float4 vs_cover(uint id : SV_VertexID) : SV_Position {
   return float4(at * float2(2.0, -2.0) + float2(-1.0, 1.0), 0.0, 1.0);
 }
 
+float4 vs_static_volume(float3 position : POSITION) : SV_Position {
+  return mul(mul(float4(position, 1.0), world), view_projection);
+}
+
 float4 ps_cover() : SV_Target {
   return base_colour;
 }
@@ -79,13 +84,16 @@ ShadowShaders create_shadow_shaders(ID3D11Device *device) {
   ShadowShaders shaders;
   const std::string_view hlsl(source, sizeof(source) - 1);
   const auto volume = compile_world_hlsl(hlsl, "vs_volume", "vs_5_0");
+  const auto scenery = compile_world_hlsl(hlsl, "vs_static_volume", "vs_5_0");
   const auto cover = compile_world_hlsl(hlsl, "vs_cover", "vs_5_0");
   const auto colour = compile_world_hlsl(hlsl, "ps_cover", "ps_5_0");
   const D3D11_INPUT_ELEMENT_DESC layout[] = {
       {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
       {"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
   };
-  if (FAILED(device->CreateVertexShader(volume->GetBufferPointer(), volume->GetBufferSize(),
+  if (FAILED(device->CreateVertexShader(scenery->GetBufferPointer(), scenery->GetBufferSize(),
+                                        nullptr, &shaders.static_volume)) ||
+      FAILED(device->CreateVertexShader(volume->GetBufferPointer(), volume->GetBufferSize(),
                                         nullptr, &shaders.volume)) ||
       FAILED(device->CreateVertexShader(cover->GetBufferPointer(), cover->GetBufferSize(), nullptr,
                                         &shaders.cover)) ||
@@ -186,6 +194,54 @@ bool WorldRenderer::render_volumes(const WorldFrame &frame) {
   }
   if (any) {
     context_->IASetInputLayout(shaders_.layout.Get());
+    context_->VSSetShader(shaders_.vertex.Get(), nullptr, 0);
+    context_->PSSetShader(shaders_.pixel.Get(), nullptr, 0);
+  }
+  return any;
+}
+
+bool WorldRenderer::render_static_volumes(const WorldFrame &frame) {
+  if (frame.lighting.shadow_colour[3] <= 0.0F) {
+    return false;
+  }
+  bool any = false;
+  for (const WorldItem &item : frame.items) {
+    if (item.shadow_nodes.empty() || item.model < 0 ||
+        item.model >= static_cast<int>(models_.size()) || !models_[item.model]) {
+      continue;
+    }
+    const GpuModel &model = *models_[item.model];
+    for (const ModelDraw &draw : model.data.draws) {
+      const ModelNode &node = model.data.nodes[draw.node];
+      if ((item.node >= 0 && draw.node != item.node) ||
+          std::ranges::find(item.shadow_nodes, node.name) == item.shadow_nodes.end()) {
+        continue;
+      }
+      if (!any) {
+        any = true;
+        context_->IASetInputLayout(shaders_.layout.Get());
+        context_->VSSetShader(shadow_shaders_.static_volume.Get(), nullptr, 0);
+        context_->PSSetShader(nullptr, nullptr, 0);
+        context_->RSSetState(volume_raster_.Get());
+        context_->OMSetBlendState(depth_only_.Get(), nullptr, 0xffffffff);
+        context_->OMSetDepthStencilState(volume_depth_.Get(), 0);
+      }
+      // These meshes already contain the volume's sides and caps. Do not
+      // extrude them again or let them enter the colour/texture pass.
+      ShadowConstants constants{};
+      constants.world = item.node_worlds.size() == model.data.nodes.size()
+                            ? item.node_worlds[draw.node]
+                            : node.world * item.world;
+      upload(context_.Get(), draw_constants_.Get(), constants);
+      ID3D11Buffer *vertices = model.vertices.Get();
+      const UINT stride = sizeof(ModelVertex);
+      const UINT offset = 0;
+      context_->IASetVertexBuffers(0, 1, &vertices, &stride, &offset);
+      context_->IASetIndexBuffer(model.indices.Get(), DXGI_FORMAT_R32_UINT, 0);
+      context_->DrawIndexed(draw.index_count, draw.first_index, 0);
+    }
+  }
+  if (any) {
     context_->VSSetShader(shaders_.vertex.Get(), nullptr, 0);
     context_->PSSetShader(shaders_.pixel.Get(), nullptr, 0);
   }

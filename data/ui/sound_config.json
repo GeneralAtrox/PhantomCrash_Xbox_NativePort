@@ -17,9 +17,10 @@
  "value_repeat": { "delay": 0.4, "interval": 0.025 },
  "sounds": { "move": "cursor", "select": "confirm" },
  "layers": [
-  { "id": "background", "image": "textures/scroll/sound_config_tex/0.png", "rect": [0, 0, 640, 480], "layer": 1 },
-  { "id": "top", "image": "textures/scroll/sound_config_tex/0.png", "rect": [0, 584, 640, 680], "layer": 4 },
-  { "id": "bottom", "image": "textures/scroll/sound_config_tex/0.png", "rect": [0, 480, 640, 584], "position": [0, 376], "layer": 4 },
+  { "id": "background", "image": "textures/scroll/sound_config_tex/0.png", "rect": [0, 0, 640, 480], "layer": 1 , "extend_edges": "both", "edge_bands": [[0, 72], [376, 480]],
+ "edge_bands_left": [[0, 72], [414, 480]]},
+  { "id": "top", "image": "textures/scroll/sound_config_tex/0.png", "rect": [0, 584, 640, 680], "layer": 4 , "extend_edges": "both"},
+  { "id": "bottom", "image": "textures/scroll/sound_config_tex/0.png", "rect": [0, 480, 640, 584], "position": [0, 376], "layer": 4 , "extend_edges": "both"},
   { "id": "bgm_frame", "image": "textures/scroll/sound_config_tex/0.png", "rect": [640, 344, 904, 360], "position": [308, 143], "layer": 4 },
   { "id": "se_frame", "image": "textures/scroll/sound_config_tex/0.png", "rect": [640, 344, 904, 360], "position": [308, 186], "layer": 4 }
  ],

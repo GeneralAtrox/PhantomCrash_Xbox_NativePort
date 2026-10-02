@@ -3,6 +3,7 @@
 
 #include "test_support.hpp"
 
+#include <algorithm>
 #include <cmath>
 
 #include "phantomcrash/robot_load.hpp"
@@ -106,8 +107,9 @@ TEST_CASE("the load sets the leg motions' rates and the speeds with them") {
   CHECK(close_to(moved.dash_speed, 32.0F * dash_rate));
   CHECK(close_to(moved.walk_motion_rate, walk_rate));
   CHECK(close_to(moved.walk_speed, 20.0F * walk_rate));
+  // These legs have no turn or jump curves: the speed and jump factors scale `strides`.
   CHECK(close_to(moved.turn_degrees_per_second, 100.0F * load.speed_factor));
-  CHECK(moved.jump_speed < strides.jump_speed);
+  CHECK(close_to(moved.jump_height, strides.jump_height * load.jump_factor));
 
   RobotLoadout roller = loadout;
   roller.legs = 1; // no root motion: translate at the clamped legs speed
@@ -130,4 +132,42 @@ TEST_CASE("the load sets the leg motions' rates and the speeds with them") {
     mover.tick(forward, 1.0F / 60.0F);
   }
   CHECK(length(mover.position() - after_dash) > 5.0F);
+}
+
+TEST_CASE("the legs' turn and jump set the robot's own under the load") {
+  PartTables tables = test_tables();
+  tables.legs[0].turn = flat(2.35F);
+  tables.legs[0].jump = flat(19.14F);
+  const RobotLoadout loadout = test_loadout();
+  const LoadStats load = load_stats(tables, loadout);
+  const MovementTuning moved = loaded_movement(tables, loadout, load, MovementTuning{});
+  // Degrees a battle tick on the ground, in a dash and in the air (0x08e257, 0x0905af).
+  const float turn = 2.35F * load.speed_factor * battle_tick_rate;
+  CHECK(close_to(moved.turn_degrees_per_second, turn));
+  CHECK(close_to(moved.dash_turn_degrees_per_second, turn));
+  CHECK(close_to(moved.air_turn_degrees_per_second, turn));
+  CHECK(close_to(moved.jump_height, legs_speeds(tables, loadout, load).jump));
+}
+
+TEST_CASE("a held jump rises its height and a tap the throw after the take-off") {
+  MovementTuning tuning;
+  tuning.jump_height = 19.14F;
+  const auto peak = [&](const int held_ticks) {
+    RobotMover mover(tuning);
+    mover.place({}, 0.0F);
+    float top = 0.0F;
+    for (int tick = 0; tick < 300; ++tick) {
+      RobotControl control;
+      control.jump = tick < held_ticks;
+      mover.tick(control, 1.0F / battle_tick_rate);
+      top = std::max(top, mover.position().y);
+    }
+    return top;
+  };
+  const float held = peak(300);
+  const float tap = peak(1);
+  CHECK(held > 0.95F * tuning.jump_height);
+  CHECK(held < 1.1F * tuning.jump_height);
+  CHECK(tap < 0.3F * tuning.jump_height);
+  CHECK(tap > 0.1F * tuning.jump_height);
 }

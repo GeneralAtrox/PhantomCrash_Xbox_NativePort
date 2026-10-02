@@ -7,11 +7,11 @@ Output, under the converted assets:
   alpha holds waves.
 - ``models/binlink/197_30.gltf``: the entry shield (``0x06f592`` draws object
   slot 0x41b, mesh 30 of resource 197: a sphere one unit across). The game
-  draws it with its barrier program (``Media/Shaders/barrier.xvu``), which
-  lays the texture over it; that program is not decoded, so the sphere is
-  written with texture coordinates of its own (a projection along its x and
-  y, the texture twice across) and white vertices, the draw colour tinting
-  it, and marked unlit, two-sided and added to what is behind it.
+  draws it with its rainbow program. The native shader supplies animated
+  height-dependent colour, lighting and scrolling planar UVs; see
+  docs/ENTRY_SHIELD_RENDERING.md. The export retains white vertices and
+  fallback planar UVs for external viewers, with an additive two-sided
+  material.
 """
 
 from __future__ import annotations

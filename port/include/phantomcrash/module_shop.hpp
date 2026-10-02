@@ -111,6 +111,7 @@ public:
   }
 
 private:
+  InputFrame pointer_input(InputFrame input);
   enum class After { list, categories };
 
   void grid_input(double tick_seconds, const InputFrame &input);

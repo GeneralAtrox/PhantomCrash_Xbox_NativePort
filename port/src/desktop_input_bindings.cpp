@@ -85,7 +85,8 @@ Buttons DesktopInput::pad_held(SDL_Gamepad *pad) const {
   return mask;
 }
 
-void DesktopInput::sticks(const Buttons held, InputFrame &frame, const bool focused) const {
+void DesktopInput::sticks(const Buttons held, InputFrame &frame, const bool focused,
+                          const int port) const {
   int count{};
   const bool *keyboard = SDL_GetKeyboardState(&count);
   for (const Binding &binding : bindings_) {
@@ -93,15 +94,17 @@ void DesktopInput::sticks(const Buttons held, InputFrame &frame, const bool focu
       continue;
     }
     float strength{};
-    if (SDL_GetKeyboardFocus() != nullptr && !(SDL_GetModState() & SDL_KMOD_ALT)) {
+    if (port <= 0 && SDL_GetKeyboardFocus() != nullptr && !(SDL_GetModState() & SDL_KMOD_ALT)) {
       for (const SDL_Scancode key : binding.keys) {
         if (key < count && keyboard[key]) {
           strength = 1.0F;
         }
       }
     }
-    for (SDL_Gamepad *pad : gamepads_) {
-      strength = std::max(strength, value(binding, pad));
+    for (std::size_t i = 0; i < gamepads_.size(); ++i) {
+      if (port < 0 || port_of(i) == port) {
+        strength = std::max(strength, value(binding, gamepads_[i]));
+      }
     }
     const auto &action = binding.action;
     if (action == "up") {

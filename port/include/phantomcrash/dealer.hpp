@@ -129,6 +129,7 @@ public:
   }
 
 private:
+  InputFrame pointer_input(InputFrame input);
   void open(DealerView view);
   void animate(double tick_seconds);
   void menu_input(double tick_seconds, const InputFrame &input);

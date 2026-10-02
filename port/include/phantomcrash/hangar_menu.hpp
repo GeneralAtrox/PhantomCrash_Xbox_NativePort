@@ -93,6 +93,7 @@ public:
   }
 
 private:
+  InputFrame pointer_input(InputFrame input);
   void wheel_input(double tick_seconds, const InputFrame &input);
   void menu_input(double tick_seconds, const InputFrame &input);
   void buy_input(double tick_seconds, const InputFrame &input);

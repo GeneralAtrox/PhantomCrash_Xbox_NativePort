@@ -5,7 +5,9 @@
 #include "movie_player.hpp"
 #include "phantomcrash/canvas.hpp"
 #include "phantomcrash/data_roots.hpp"
+#include "phantomcrash/glyph_font.hpp"
 #include "phantomcrash/intro_sequence.hpp"
+#include "phantomcrash/movie_subtitles.hpp"
 
 #include <SDL3/SDL.h>
 
@@ -32,6 +34,9 @@ public:
   // Once per presented frame: movie decoding and sound, in real time.
   void advance(double elapsed_seconds) override;
   void set_paused(bool paused) override;
+  void set_movie_gain(float gain) override;
+  // Draws `subtitles` over the movies in `font`, which must outlive the screen.
+  void show_subtitles(const GlyphFont &font, MovieSubtitles subtitles);
   void draw(const Viewport &viewport) override;
 
   [[nodiscard]] bool done() const override {
@@ -43,11 +48,14 @@ public:
   [[nodiscard]] std::vector<std::string> take_sounds() override {
     return sequence_.take_sounds();
   }
+  // The movie playing: its video frame of the total.
+  [[nodiscard]] std::optional<SceneProgress> scene_progress() const override;
 
 private:
   void enter_step();
   void open_movie(MoviePlayer &player, const std::string &file);
   void draw_image(const IntroStep &step, const Viewport &viewport);
+  void draw_subtitle(const Viewport &viewport);
 
   TextureCache &textures_;
   SDL_Renderer *renderer_{};
@@ -58,6 +66,8 @@ private:
   std::optional<std::string> preloaded_file_;
   int seen_generation_{-1};
   bool movie_failed_{};
+  const GlyphFont *font_{};
+  std::optional<MovieSubtitles> subtitles_;
 };
 
 } // namespace phantomcrash

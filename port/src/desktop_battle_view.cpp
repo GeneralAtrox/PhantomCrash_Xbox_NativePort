@@ -1,5 +1,7 @@
 #include "desktop_battle_view.hpp"
 
+#include <SDL3/SDL_log.h>
+
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -7,9 +9,6 @@
 
 namespace phantomcrash {
 namespace {
-
-// Frames a changed motion fades over.
-constexpr float motion_fade_frames = 6.0F;
 
 // The node of mesh `mesh` in a converted model ("mesh<m>_node0"), or -1.
 int mesh_node(const ModelData *model, const int mesh) {
@@ -45,8 +44,7 @@ bool project_point(const Mat4 &view_projection, const Vec3 point, const int widt
 std::unique_ptr<BattleView::Visual> BattleView::make_visual(const RobotParts &parts) const {
   auto visual = std::make_unique<Visual>();
   visual->assembly = assemble_robot(robots_.catalogue(), robots_.skeletons(), parts);
-  visual->animator = std::make_unique<RobotAnimator>(robots_, visual->assembly);
-  visual->animator->play(robot_motion::stand, true, 0.0F);
+  visual->combat = std::make_shared<RobotCombat>(robots_, visual->assembly);
   visual->parts = std::make_unique<RobotVisual>(world_, visual->assembly);
   visual->ground_node = mesh_node(world_.model_data(ground_model_), visual->assembly.shadow_mesh);
   return visual;
@@ -116,6 +114,7 @@ void BattleView::add_shadow(const Combatant &robot, const Visual &visual, const 
       shadow.node = visual.ground_node;
       shadow.world = root;
       shadow.colour = shadows_.ground_colour;
+      shadow.ground_shadow = true;
       shadow.double_sided = true;
       items.push_back(std::move(shadow));
     }
@@ -125,38 +124,79 @@ void BattleView::add_shadow(const Combatant &robot, const Visual &visual, const 
   }
 }
 
-void BattleView::tick(const Battle &battle, const float seconds) {
+void BattleView::bind(Battle &battle) {
+  for (std::size_t i = 0; i < visuals_.size() && i < battle.robots().size(); ++i) {
+    auto &robot = battle.robot(static_cast<int>(i));
+    if (battle.cooperative() && robot.pose) {
+      visuals_[i]->combat = robot.pose;
+    }
+    if (robot.pose != visuals_[i]->combat) {
+      robot.pose = visuals_[i]->combat;
+      std::array<Vec3, 4> targets;
+      targets.fill(robot.aim_origin() +
+                   heading_forward(robot.mover.aim_heading()) * robot.pose->aim_distance());
+      robot.pose->tick(robot.mover, {}, robot.lost, targets, 0);
+    }
+  }
+}
+
+void BattleView::tick(Battle &battle, const float seconds) {
+  bind(battle);
+  sync_wrecks(battle);
   shield_spin_ = std::fmod(shield_spin_ + shield_.spin_per_second * seconds, 2.0F * pi);
+  shield_clock_ += std::max(seconds, 0.0F) * shield_.update_hz;
+  while (shield_clock_ >= 1.0) {
+    shield_clock_ -= 1.0;
+    shield_phase_ += shield_.phase_step;
+    if (shield_phase_ < -1.0F) {
+      shield_phase_ = 1.0F;
+    } else if (shield_phase_ > 1.0F) {
+      shield_phase_ = -1.0F;
+    }
+    shield_scroll_ += shield_.scroll_step;
+    shield_scroll_ -= std::floor(shield_scroll_);
+  }
   const auto &robots = battle.robots();
   for (std::size_t index = 0; index < visuals_.size() && index < robots.size(); ++index) {
-    RobotAnimator &animator = *visuals_[index]->animator;
-    const RobotMover &mover = robots[index].mover;
-    if (animator.motion() != mover.motion()) {
-      animator.play(mover.motion(), mover.motion_loops(), motion_fade_frames);
-    } else if (!mover.motion_loops() && animator.looping()) {
-      animator.release();
+    const auto &robot = robots[index];
+    auto &visual = *visuals_[index];
+    if (visual.motion_revision != robot.mover.motion_revision()) {
+      if (robot.piloted || robot.dying) {
+        SDL_Log("Robot animation: robot=%zu motion=%d revision=%llu frame=%.2f speed=%.3f "
+                "loop=%d arms=%.2f/%.2f",
+                index, robot.mover.motion(),
+                static_cast<unsigned long long>(robot.mover.motion_revision()),
+                visual.combat->motion_frame(), robot.mover.motion_speed(),
+                robot.mover.motion_loops(), visual.combat->arm_weight(0),
+                visual.combat->arm_weight(1));
+      }
+      visual.motion_revision = robot.mover.motion_revision();
     }
-    animator.set_speed(mover.motion_speed());
-    animator.tick(seconds);
-    const Mat4 root = rotation_y(mover.heading()) * translation(mover.position());
-    const bool sway = mover.mode() == MoveMode::stand || mover.mode() == MoveMode::walk;
-    animator.pose(root, mover.twist(), mover.pitch(), sway, visuals_[index]->pose);
+    if (visuals_[index]->dying != robots[index].dying) {
+      SDL_Log("Death animation: robot=%zu %s motion=%d elapsed=%.3f frame=%.2f arms=%.2f/%.2f",
+              index, robots[index].dying ? "started" : "finished", robot_motion::death,
+              robots[index].death_seconds, visual.combat->motion_frame(),
+              visual.combat->arm_weight(0), visual.combat->arm_weight(1));
+      visuals_[index]->dying = robots[index].dying;
+    }
+    visuals_[index]->pose = visuals_[index]->combat->pose();
   }
 }
 
 void BattleView::add_items(const Battle &battle, std::vector<WorldItem> &items, const int hidden,
                            const int hidden_shield) {
+  add_wreck_items(battle, items);
   const auto &robots = battle.robots();
   for (std::size_t index = 0; index < visuals_.size() && index < robots.size(); ++index) {
     const Combatant &robot = robots[index];
-    if (!robot.alive || static_cast<int>(index) == hidden) {
+    if ((!robot.alive && !robot.dying) || static_cast<int>(index) == hidden) {
       continue;
     }
     Visual &visual = *visuals_[index];
     const RobotMover &mover = robot.mover;
     const Mat4 root = rotation_y(mover.heading()) * translation(mover.position());
     const std::size_t first = items.size();
-    visual.parts->add_items(visual.pose, root, items);
+    visual.parts->add_items(visual.pose, root, items, &visual.combat->shoulders(), robot.lost);
     const float flash = robot.hit_flash > 0.0F ? 1.0F : 0.0F;
     std::optional<OpticalSphere> optical;
     if (robot.camouflage_sweep > 0.0F) {
@@ -169,7 +209,7 @@ void BattleView::add_items(const Battle &battle, std::vector<WorldItem> &items, 
       items[item].flash = flash;
     }
     add_shadow(robot, visual, root, first, items);
-    if (static_cast<int>(index) != hidden_shield) {
+    if (static_cast<int>(index) != hidden_shield && robot.mover.mode() != MoveMode::scripted) {
       add_shield(robot, items);
     }
     for (std::size_t item = first; item < items.size(); ++item) {
@@ -191,6 +231,7 @@ void BattleView::add_shield(const Combatant &robot, std::vector<WorldItem> &item
                 translation(robot.aim_origin());
   shell.colour = shield_.colour;
   shell.alpha = robot.shield_glow;
+  shell.rainbow = std::array{shield_phase_, shield_scroll_};
   shell.additive = true;
   items.push_back(std::move(shell));
 }

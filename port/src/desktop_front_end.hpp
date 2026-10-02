@@ -2,6 +2,7 @@
 
 #include "desktop_screen.hpp"
 #include "desktop_textures.hpp"
+#include "desktop_menu_buttons.hpp"
 #include "phantomcrash/front_end.hpp"
 
 #include <SDL3/SDL.h>
@@ -17,7 +18,7 @@ public:
   // Starts on the title, or on the menu when `returning_from` names the
   // screen an item led to.
   FrontEndScreen(TextureCache &textures, TitleScript title, MainMenuScript menu,
-                 const std::string &returning_from = {});
+                 const json::JsonValue &button_style, const std::string &returning_from = {});
 
   void tick(const InputFrame &input, double tick_seconds) override;
   void draw(const Viewport &viewport) override;
@@ -37,6 +38,7 @@ public:
 private:
   TextureCache &textures_;
   FrontEnd front_end_;
+  MenuButtons buttons_;
 };
 
 // Stands in for a screen that is not ported yet: its name on black, and a

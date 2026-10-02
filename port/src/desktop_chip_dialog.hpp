@@ -20,6 +20,9 @@ void draw_chip_card(DrawList &list, const ChipCards &cards, const ChipRecord *ch
                     bool clipped = true);
 
 // The chosen CHIP's LEVEL and weight on its card, `shift` along x.
+std::vector<Sprite> chip_card_detail_sprites(const NumberFont &font, const ChipDetails &details,
+                                             const ChipOffer &offer, const ChipSpec &spec);
+
 void draw_chip_card_details(DrawList &list, const NumberFont &font, const ChipDetails &details,
                             const ChipOffer &offer, const ChipSpec &spec, float shift);
 

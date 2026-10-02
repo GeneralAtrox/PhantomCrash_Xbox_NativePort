@@ -1,4 +1,5 @@
 #include "phantomcrash/sv_spec.hpp"
+#include "phantomcrash/shop_pointer.hpp"
 
 #include <algorithm>
 #include <utility>
@@ -39,7 +40,19 @@ const Hangar &SvSpec::fitted() const {
 
 // 0x03bf07 and 0x03bfc0: left and right turn the page (sys 9), cancel
 // closes (sys 8).
-void SvSpec::update(const double tick_seconds, const InputFrame &input) {
+void SvSpec::update(const double tick_seconds, const InputFrame &raw_input) {
+  InputFrame input = raw_input;
+  if (shop_clicked(input, script_.close_hint)) {
+    input.pressed |= script_.cancel_buttons;
+  }
+  for (const auto &arrow : script_.arrows) {
+    if (input.clicked && shop_hit(input, arrow)) {
+      input.pressed |= script_.right;
+    }
+  }
+  if (input.mouse_wheel != 0) {
+    input.pressed |= script_.right;
+  }
   if (done()) {
     return;
   }

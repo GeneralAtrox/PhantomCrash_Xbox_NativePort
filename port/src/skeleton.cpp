@@ -1,4 +1,5 @@
 #include "phantomcrash/skeleton.hpp"
+#include "phantomcrash/weapon_mounts.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -83,6 +84,16 @@ struct Context {
 void visit(const SkeletonNode &node, const Mat4 &parent, Context &context);
 
 void store(Context &context, const SkeletonNode &node, const Mat4 &world) {
+  // 0x0acd11 registers the high-flag attachment matrices, separately from feet.
+  for (std::size_t slot = 0; slot < 14; ++slot) {
+    if ((node.flags & (std::uint32_t{0x40000} << slot)) != 0) {
+      context.pose[static_cast<std::size_t>(context.part)].movement_mounts[slot] = world;
+    }
+  }
+  if ((context.part == 0 && (node.flags & node_turns_with_aim) != 0) ||
+      (context.part > 0 && (node.flags & 0xc0) != 0)) {
+    context.pose[static_cast<std::size_t>(context.part)].mount = world;
+  }
   if (node.bone >= 0 && node.bone < bone_slots) {
     PosePart &part = context.pose[static_cast<std::size_t>(context.part)];
     part.bones[static_cast<std::size_t>(node.bone)] = world;
@@ -97,9 +108,21 @@ void visit_children(const SkeletonNode &node, const std::size_t first, const Mat
   }
 }
 
-Transform animated_transform(const SkeletonNode &node, Context &context) {
-  const TrackSample sample = node.track >= 0 ? context.source->sample(node.track) : TrackSample{};
+Mat4 animated_transform(const SkeletonNode &node, Context &context) {
+  TrackSample sample = node.track >= 0 ? context.source->sample(node.track) : TrackSample{};
+  if (node.track < 0) {
+    // 0x0ad51c samples track zero of a separate body-bank entry. These
+    // channels replace the bind transform, not the locomotion track.
+    constexpr std::uint32_t flags[] = {0x400, 0x800, 0, 0x2000, 0x4000, 0x8000, 0x10000};
+    for (std::size_t slot = 0; slot < std::size(flags); ++slot) {
+      if ((node.flags & flags[slot]) != 0) {
+        sample = context.input.body_auxiliary[slot].sample(0);
+        break;
+      }
+    }
+  }
   Transform t = node_transform(node, sample);
+  const Vec3 sampled_rotation = t.rotation;
   if (node.flags == node_root_motion && node.track >= 0) {
     // The walk's forward (and, outside idle and walking, sideways) body
     // motion moves onto the feet; the robot itself moves by the game.
@@ -119,7 +142,24 @@ Transform animated_transform(const SkeletonNode &node, Context &context) {
     // The body's type turns the forearms (0x0aa499: a Photon body's by -pi/2).
     t.rotation.x += context.input.forearm_turn;
   }
-  return t;
+  const MotionSource &source = *context.source;
+  if (node.track >= 0 && source.blending()) {
+    // 0x0ac757 converts both rotations to quaternions before interpolation.
+    const Vec3 adjustment = t.rotation - sampled_rotation;
+    const auto as_matrix = [&](const Motion &motion, const float frame) {
+      Transform out = node_transform(node, motion.sample(node.track, frame));
+      out.rotation = out.rotation + adjustment;
+      out.translation = t.translation;
+      return local_matrix(out);
+    };
+    const auto mix = [](const Mat4 &a, const Mat4 &b, const float share) {
+      return blend_pose_transform(a, b, share);
+    };
+    if (const auto from = source.blend_from<Mat4>(as_matrix, mix)) {
+      return blend_pose_transform(*from, as_matrix(*source.motion, source.frame), source.weight);
+    }
+  }
+  return local_matrix(t);
 }
 
 // Which way the knee bends: the side of the chain the bind pose puts it on.
@@ -135,7 +175,7 @@ float bend_side(const SkeletonNode &upper, const SkeletonNode &mid, const Skelet
 // track (one bone), or two bones bend to reach it, in the plane that keeps
 // the chain's hinge (its Z axis) where the bind pose has it.
 void visit_chain(const SkeletonNode &node, const Mat4 &parent, Context &context) {
-  const Mat4 chain = local_matrix(animated_transform(node, context)) * parent;
+  const Mat4 chain = animated_transform(node, context) * parent;
   if (node.children.empty() || node.children[0].children.empty()) {
     visit_children(node, 0, chain, context);
     return;
@@ -204,13 +244,38 @@ void visit_chain(const SkeletonNode &node, const Mat4 &parent, Context &context)
 
 void visit(const SkeletonNode &node, const Mat4 &parent, Context &context) {
   if ((node.flags & node_effect_point) != 0) {
-    return; // hit and effect points (0x0ad737) draw nothing
+    context.pose[static_cast<std::size_t>(context.part)].contacts.push_back(
+        pose_contact(node, parent, *context.source));
+    return; // contact nodes draw nothing (0x0ad737)
   }
   if (node.type == SkeletonNodeType::ik_start) {
     visit_chain(node, parent, context);
     return;
   }
-  const Mat4 world = local_matrix(animated_transform(node, context)) * parent;
+  Mat4 world = animated_transform(node, context) * parent;
+  if (context.part > 0 && node.track >= 0) {
+    const auto side = static_cast<std::size_t>(context.part - 1);
+    const auto &aim = context.input.arm_aim[side];
+    const auto &source = context.input.firing_poses[side];
+    if (aim.weight > 0 && source.motion != nullptr) {
+      Transform firing = node_transform(node, source.sample(node.track));
+      if ((node.flags & node_forearm) != 0) {
+        firing.rotation.x += context.input.forearm_turn;
+      }
+      Mat4 raised = local_matrix(firing) * parent;
+      if ((node.flags & node_forearm) != 0) {
+        const Mat4 &root = context.input.root;
+        raised =
+            aim_pose_transform(raised, aim.target, {root.at(1, 0), root.at(1, 1), root.at(1, 2)});
+      } else if ((node.flags & 0xc0) != 0) {
+        const Vec3 delta = aim.target - transform_point({}, raised);
+        const float pitch = std::atan2(delta.y, std::sqrt(delta.x * delta.x + delta.z * delta.z));
+        firing.rotation.x += std::clamp(pitch, -aim.pitch_limit, aim.pitch_limit);
+        raised = local_matrix(firing) * parent;
+      }
+      world = blend_pose_transform(world, raised, aim.weight);
+    }
+  }
   store(context, node, world);
   if (node.type == SkeletonNodeType::arms) {
     for (std::size_t side = 0; side < 2; ++side) {
@@ -295,17 +360,6 @@ Mat4 rotation_z(const float angle) {
   return m;
 }
 
-TrackSample MotionSource::sample(const int track) const {
-  if (motion == nullptr) {
-    return {};
-  }
-  const TrackSample current = motion->sample(track, frame);
-  if (previous == nullptr || weight >= 1.0F) {
-    return current;
-  }
-  return blend(previous->sample(track, previous_frame), current, std::max(weight, 0.0F));
-}
-
 SkeletonNode parse_skeleton_node(const json::JsonValue &value) {
   return parse_node(value, 0);
 }
@@ -324,6 +378,9 @@ RobotSkeletons parse_robot_skeletons(const json::JsonValue &document) {
 void build_pose(const SkeletonNode &root, const PoseInput &input, Pose &pose) {
   for (PosePart &part : pose) {
     part.set.fill(false);
+    part.contacts.clear();
+    part.mount.reset();
+    part.movement_mounts.fill(std::nullopt);
   }
   Context context{input, pose, 0, &input.legs, {}};
   visit(root, input.root, context);

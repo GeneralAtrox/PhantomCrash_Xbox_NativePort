@@ -13,6 +13,7 @@ struct ReplaySubject {
   CockpitInput cockpit;
   std::string name;
   bool alive{};
+  bool in_play{}; // inside the arena and not waiting in a scripted entrance
 };
 struct ReplayFrame {
   double seconds{};

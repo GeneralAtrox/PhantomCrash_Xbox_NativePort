@@ -36,12 +36,15 @@ struct DrawConstants {
   float flash;
   std::array<float, 2> uv_offset;
   float optical;
-  float pad;
+  float local_light;
   std::array<float, 4> optical_sphere;
   std::array<float, 4> optical_shape;
   std::array<float, 4> uv_transform{1, 1, 0, 0};
+  std::array<float, 4> rainbow{};        // phase, scroll, enabled, unused
+  std::array<float, 4> material_light{}; // ambient RGB, specular power
+  std::array<float, 4> material_modes{}; // specular, texture add, texture alpha, original
 };
-static_assert(sizeof(DrawConstants) == 176);
+static_assert(sizeof(DrawConstants) == 224);
 
 template <typename T>
 void upload(ID3D11DeviceContext *context, ID3D11Buffer *buffer, const T &data) {
@@ -74,7 +77,20 @@ void WorldRenderer::set_frame_constants(const WorldFrame &frame, const Mat4 &vie
   upload(context_.Get(), frame_constants_.Get(), constants);
 }
 
+// Original second-pass surface layers share vertices/planes with the base
+// mesh (dirt on pavement, choco's helipad): blended, yet writing depth.
+bool WorldRenderer::surface_layer(const Draw &draw) {
+  const ModelMaterial &material =
+      draw.model->data.materials[static_cast<std::size_t>(draw.draw->material)];
+  return !draw.sky_node && !draw.item->optical && !draw.item->additive && draw.alpha == 1.0F &&
+         draw.draw->pass == 1 && material.alpha == AlphaMode::blend && material.original_material &&
+         material.blend_depth_write;
+}
+
 void WorldRenderer::render(const WorldFrame &frame) {
+  if (post_process_.dynamic_lighting && dynamic_lights_ && !dynamic_failed_) {
+    dynamic_lights_->bind(context_.Get());
+  }
   const D3D11_VIEWPORT viewport{
       0.0F, 0.0F, static_cast<float>(frame.width), static_cast<float>(frame.height), 0.0F, 1.0F};
   context_->RSSetViewports(1, &viewport);
@@ -100,13 +116,19 @@ void WorldRenderer::render(const WorldFrame &frame) {
   std::vector<Draw> sky;
   std::vector<Draw> opaque;
   std::vector<Draw> casting; // opaque batches of shadow casters, drawn after the volumes
+  std::vector<Draw> layers;  // ground markings, which the shadows fall on
   std::vector<Draw> translucent;
+  std::vector<Draw> ground_shadows;
   std::vector<Draw> optical;
   for (const Draw &entry : draws) {
     if (entry.sky_node) {
       sky.push_back(entry);
+    } else if (entry.item->ground_shadow) {
+      ground_shadows.push_back(entry);
     } else if (entry.item->optical) {
       optical.push_back(entry);
+    } else if (surface_layer(entry)) {
+      layers.push_back(entry);
     } else if (entry.alpha < 1.0F || entry.blend) {
       translucent.push_back(entry);
     } else {
@@ -114,6 +136,7 @@ void WorldRenderer::render(const WorldFrame &frame) {
     }
   }
   std::ranges::stable_sort(sky, {}, [](const Draw &d) { return d.draw->pass; });
+  std::ranges::stable_sort(layers, std::ranges::greater{}, &Draw::distance);
   std::ranges::stable_sort(translucent, std::ranges::greater{}, &Draw::distance);
 
   // The sky: around the camera, depth-tested only against itself.
@@ -137,7 +160,13 @@ void WorldRenderer::render(const WorldFrame &frame) {
   for (const Draw &draw : casting) {
     draw_one(draw, false, frame.lighting);
   }
-  if (shadowed) {
+  // Layer 7 follows the robots, so scenery shadows may fall on them too.
+  const bool static_shadowed = render_static_volumes(frame);
+  // The stage's own markings go down before the shadow is laid over them.
+  for (const Draw &draw : layers) {
+    draw_one(draw, false, frame.lighting);
+  }
+  if (shadowed || static_shadowed) {
     cover_shadows(frame.lighting);
   }
   render_optical(optical, frame.lighting);
@@ -153,6 +182,11 @@ void WorldRenderer::render(const WorldFrame &frame) {
         }
       }
     }
+    draw_one(draw, false, frame.lighting);
+  }
+  // Transparent corners must neither mask floor overlays nor overwrite their
+  // depth. The completed ground receives the shadow, not its rectangular quad.
+  for (const Draw &draw : ground_shadows) {
     draw_one(draw, false, frame.lighting);
   }
   render_sprites(frame);
@@ -183,6 +217,9 @@ void WorldRenderer::item_draws(const WorldItem &item, const int index, const Vec
     }
     const auto node_index = static_cast<std::size_t>(draw.node);
     const ModelNode &node = model.data.nodes[node_index];
+    if (std::ranges::find(item.shadow_nodes, node.name) != item.shadow_nodes.end()) {
+      continue;
+    }
     Mat4 world = animated ? item.node_worlds[node_index] : stretch * node.world * item.world;
     auto uv_offset = item.uv_offset;
     const bool sky = std::ranges::find(item.sky_nodes, node.name) != item.sky_nodes.end();
@@ -271,9 +308,23 @@ void WorldRenderer::draw_one(const Draw &draw, const bool sky, const StageLighti
   constants.has_base = views[0] != nullptr ? 1.0F : 0.0F;
   constants.has_normal = views[1] != nullptr ? 1.0F : 0.0F;
   constants.alpha_test = material.alpha == AlphaMode::mask ? 1.0F : 0.0F;
-  constants.fogged = !sky && lighting.fog ? 1.0F : 0.0F;
+  constants.fogged = !sky && lighting.fog && draw.item->fogged ? 1.0F : 0.0F;
   constants.item_alpha = draw.alpha;
   constants.flash = draw.flash;
+  constants.local_light = post_process_.dynamic_lighting && !dynamic_failed_ && !sky && !overlay &&
+                                  draw.item->local_light && !draw.monitor &&
+                                  !draw.item->ground_shadow && !draw.item->rainbow &&
+                                  !draw.item->additive && !material.additive
+                              ? 1.0F
+                              : 0.0F;
+  constants.material_light = {material.ambient_colour.x, material.ambient_colour.y,
+                              material.ambient_colour.z, material.specular_power};
+  constants.material_modes = {material.specular ? 1.0F : 0.0F, material.texture_add ? 1.0F : 0.0F,
+                              material.texture_alpha ? 1.0F : 0.0F,
+                              material.original_material ? 1.0F : 0.0F};
+  if (const auto &rainbow = draw.item->rainbow) {
+    constants.rainbow = {(*rainbow)[0], (*rainbow)[1], 1.0F, 0.0F};
+  }
   if (draw.monitor) {
     constants.uv_transform = monitor_uv(draw);
     views[0] = capturing_monitor_ ? nullptr : monitor_view_.Get();
@@ -284,6 +335,7 @@ void WorldRenderer::draw_one(const Draw &draw, const bool sky, const StageLighti
     constants.unlit = 1.0F;
     constants.has_base = views[0] ? 1.0F : 0.0F;
     constants.has_normal = 0.0F;
+    constants.material_modes = {0, 0, 1, 0};
   }
   if (const auto &optical = draw.item->optical) {
     constants.optical = 1.0F;
@@ -295,14 +347,23 @@ void WorldRenderer::draw_one(const Draw &draw, const bool sky, const StageLighti
 
   context_->PSSetShaderResources(0, 2, views);
   context_->PSSetSamplers(0, 2, samplers);
-  const bool both_sides = material.double_sided || draw.item->double_sided;
-  context_->RSSetState(both_sides ? cull_none_.Get() : cull_back_.Get());
+  const bool both_sides = material.double_sided || draw.item->double_sided ||
+                          std::ranges::find(draw.item->two_sided_materials, draw.draw->material) !=
+                              draw.item->two_sided_materials.end();
+  // Surface layers keep depth testing and writing, but win ties with the base
+  // instead of alternating as the eye moves; ground shadows sit above both.
+  const bool layer = !sky && !overlay && !depth_prepass && surface_layer(draw);
+  context_->RSSetState(draw.item->ground_shadow ? decal_cull_none_.Get()
+                       : layer ? (both_sides ? layer_cull_none_.Get() : layer_cull_back_.Get())
+                               : (both_sides ? cull_none_.Get() : cull_back_.Get()));
   const bool faded = draw.alpha < 1.0F;
   const bool see_through = material.alpha == AlphaMode::blend || faded || overlay;
   ID3D11BlendState *blend = material.additive || draw.item->additive ? additive_.Get()
                             : see_through                            ? alpha_.Get()
                                                                      : opaque_.Get();
-  const bool reads_depth = !sky && !depth_prepass && (blended(material) || faded);
+  const bool reads_depth = !sky && !depth_prepass &&
+                           ((blended(material) && !material.blend_depth_write) ||
+                            draw.item->additive || faded || draw.item->ground_shadow);
   ID3D11DepthStencilState *depth = overlay                   ? depth_off_.Get()
                                    : reads_depth             ? depth_read_.Get()
                                    : draw.item->casts_shadow ? clear_stencil_.Get()

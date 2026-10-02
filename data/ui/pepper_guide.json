@@ -20,10 +20,11 @@
  "buttons": { "up": "up", "down": "down" },
  "sounds": { "move": "cursor", "select": "confirm", "back": "cancel" },
  "layers": [
-  { "id": "background", "image": "textures/scroll/club_beginner_tex/0.png", "rect": [0, 0, 640, 480], "layer": 1 },
+  { "id": "background", "image": "textures/scroll/club_beginner_tex/0.png", "rect": [0, 0, 640, 480], "layer": 1 , "extend_edges": "both", "edge_bands": [[0, 72], [376, 480]],
+ "edge_bands_left": [[0, 72], [414, 480]]},
   { "id": "window", "image": "textures/scroll/club_beginner_tex/0.png", "rect": [640, 0, 960, 240], "position": [38, 86], "size": [352, 240], "layer": 2 },
-  { "id": "music_strip", "image": "textures/scroll/club_beginner_tex/0.png", "rect": [0, 480, 640, 664], "position": [0, 296], "layer": 257 },
-  { "id": "top_band", "image": "textures/scroll/club_beginner_tex/0.png", "rect": [0, 664, 640, 736], "position": [0, 0], "layer": 262 }
+  { "id": "music_strip", "image": "textures/scroll/club_beginner_tex/0.png", "rect": [0, 480, 640, 664], "position": [0, 296], "layer": 257 , "extend_edges": "both"},
+  { "id": "top_band", "image": "textures/scroll/club_beginner_tex/0.png", "rect": [0, 664, 640, 736], "position": [0, 0], "layer": 262 , "extend_edges": "both"}
  ],
  "topic_layers": [
   { "id": "back_button", "image": "textures/scroll/scr_common_tex/0.png", "rect": [256, 184, 272, 200], "position": [230, 286], "layer": 257 },

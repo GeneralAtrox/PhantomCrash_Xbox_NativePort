@@ -29,6 +29,10 @@ ScreenPass parse_screen(const json::JsonValue &value) {
     const auto argb = json::numbers<4>(*tint, "tint_argb");
     screen.tint = {argb[1] / byte_max, argb[2] / byte_max, argb[3] / byte_max};
   }
+  if (const json::JsonValue *levels = value.find("levels")) {
+    screen.levels_min = vec3_or(*levels, "min", screen.levels_min);
+    screen.levels_max = vec3_or(*levels, "max", screen.levels_max);
+  }
   if (const json::JsonValue *blur = value.find("depth_of_field")) {
     screen.depth_of_field = blur->boolean_or("enabled", true);
     screen.focus = float_or(*blur, "focus", screen.focus);
@@ -38,6 +42,13 @@ ScreenPass parse_screen(const json::JsonValue &value) {
     screen.depth_near = float_or(*blur, "depth_near", screen.depth_near);
     screen.depth_far = float_or(*blur, "depth_far", screen.depth_far);
     screen.blur_texels = float_or(*blur, "blur_texels", screen.blur_texels);
+    screen.day_focus_range = float_or(*blur, "day_focus_range", screen.day_focus_range);
+  }
+  if (const auto *wave = value.find("distortion")) {
+    screen.distortion = wave->boolean_or("enabled", false);
+    screen.wave_amplitude = float_or(*wave, "amplitude", screen.wave_amplitude);
+    screen.wave_phase_step = float_or(*wave, "phase_step", screen.wave_phase_step);
+    screen.wave_update_hz = float_or(*wave, "update_hz", screen.wave_update_hz);
   }
   return screen;
 }
@@ -76,6 +87,16 @@ std::map<std::string, StageDefinition> parse_stages(const json::JsonValue &docum
       stage.model = value.string_or("model", "");
       stage.collision = value.string_or("collision", "");
       stage.enemy_path = value.string_or("enemy_path", "");
+      if (const auto *textures = value.find("two_sided_textures")) {
+        for (const auto &texture : textures->array()) {
+          stage.two_sided_textures.push_back(texture.string());
+        }
+      }
+      if (const auto *nodes = value.find("shadow_nodes")) {
+        for (const auto &node : nodes->array()) {
+          stage.shadow_nodes.push_back(node.string());
+        }
+      }
       if (const auto *monitor = document.find("monitor")) {
         stage.monitor = parse_battle_monitor(*monitor);
       }

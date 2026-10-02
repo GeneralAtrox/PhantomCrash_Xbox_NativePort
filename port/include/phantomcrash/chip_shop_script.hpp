@@ -1,4 +1,5 @@
 #pragma once
+#include "phantomcrash/level_control.hpp"
 
 #include "phantomcrash/battle_hud_style.hpp"
 #include "phantomcrash/glyph_font.hpp"
@@ -101,6 +102,7 @@ struct ChipLevelWindow {
   NumberStyle new_level;
   NumberStyle price;
   std::uint32_t poor_colour{0xff0000};
+  std::vector<Sprite> confirm_hint;
   std::vector<Sprite> cancel_hint;
 };
 
@@ -121,6 +123,7 @@ struct ChipDialog {
 // scene 15, states 2 and 5). Both modes share the screen; each has its own
 // menu entry, options, notices and extra sprites.
 struct ChipShopScript : TownBasics {
+  LevelControlStyle level_control;
   ChipShopMode mode{ChipShopMode::buy};
   Buttons left{};
   Buttons right{};

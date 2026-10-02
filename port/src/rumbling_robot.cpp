@@ -52,7 +52,11 @@ int raised_level(const int level, const QuestSave &quest) {
 
 RumblingRobot rumbling_robot(const RumblingTables &tables, const QuestSave &quest,
                              const int entrant, const std::string &prefix,
-                             const MovementTuning &movement) {
+                             const MovementTuning &movement, const int level_offset) {
+  const auto level = [&](int base) {
+    return std::clamp(raised_level(base, quest) + std::clamp(level_offset, -99, 99),
+                      -part_level_max, part_level_max);
+  };
   RumblingRobot robot;
   robot.entrant = entrant;
   robot.movement = movement;
@@ -74,15 +78,15 @@ RumblingRobot rumbling_robot(const RumblingTables &tables, const QuestSave &ques
   RobotLoadout &loadout = robot.loadout;
   if (const auto &chip = record->part(PartSlot::chip)) {
     loadout.chip = chip->id;
-    loadout.chip_level = raised_level(chip->level, quest);
+    loadout.chip_level = level(chip->level);
   }
   if (const auto &body = record->part(PartSlot::body)) {
     loadout.body = robot.look.body = body->id;
-    loadout.body_level = raised_level(body->level, quest);
+    loadout.body_level = level(body->level);
   }
   if (const auto &legs = record->part(PartSlot::legs)) {
     loadout.legs = robot.look.legs = legs->id;
-    loadout.legs_level = raised_level(legs->level, quest);
+    loadout.legs_level = level(legs->level);
   }
   robot.look.colour = record->paint;
   robot.look.emblem = record->emblem;
@@ -91,7 +95,7 @@ RumblingRobot rumbling_robot(const RumblingTables &tables, const QuestSave &ques
     if (!part) {
       continue;
     }
-    const PartRef ref{mount.table, part->id, raised_level(part->level, quest)};
+    const PartRef ref{mount.table, part->id, level(part->level)};
     auto tuning =
         record_weapon(tables.drive, tables.templates, tables.parts, ref, prefix + "_" + mount.name);
     if (!tuning) {
@@ -107,7 +111,9 @@ RumblingRobot rumbling_robot(const RumblingTables &tables, const QuestSave &ques
                               loadout.legs_level);
   add_module_bonuses(robot.combat, tables.garage, record->modules);
   if (const ChipRecord *chip = tables.parts.chip(loadout.chip)) {
-    robot.lock_seconds = chip_stats(*chip, loadout.chip_level).lock_frames / part_frames_per_second;
+    const ChipStats stats = chip_stats(*chip, loadout.chip_level);
+    robot.lock_seconds = stats.lock_frames / part_frames_per_second;
+    robot.sight = sight_boxes(tables.hud, stats);
   }
   robot.movement =
       loaded_movement(tables.parts, loadout, load_stats(tables.parts, loadout), movement);

@@ -1,4 +1,5 @@
 #include "desktop_audio.hpp"
+#include "phantomcrash/json_fields.hpp"
 
 #include <algorithm>
 #include <cstring>
@@ -79,6 +80,19 @@ AudioMixer::AudioMixer(const DataRoots &roots, const json::JsonValue &music,
                              static_cast<float>(value.number_or("volume", 1.0))};
     }
   }
+  if (const auto file = roots.find_asset("tables/sound_effects.json")) {
+    const auto bank = json::read_file(*file);
+    std::size_t voices = 0;
+    for (const auto &[name, value] : json::required(bank, "effects").object()) {
+      const auto count =
+          static_cast<std::size_t>(std::clamp(value.number_or("voices", 1), 1.0, 255.0));
+      effect_limits_[name] = count;
+      voices += count;
+    }
+    if (voices > 0) {
+      mixer_ = EffectMixer(voices);
+    }
+  }
   device_ = SDL_OpenAudioDevice(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, nullptr);
   if (device_ == 0) {
     SDL_Log("No audio device for music and effects: %s", SDL_GetError());
@@ -88,6 +102,13 @@ AudioMixer::AudioMixer(const DataRoots &roots, const json::JsonValue &music,
 }
 
 AudioMixer::~AudioMixer() {
+  for (std::size_t i = 0; i < audio_bus_count; ++i) {
+    if (i == static_cast<std::size_t>(AudioBus::movies)) {
+      continue;
+    }
+    SDL_Log("Audio coverage: bus=%s submitted=%zu", std::string(audio_bus_names[i]).c_str(),
+            cue_counts_[i]);
+  }
   stop_music();
   SDL_DestroyAudioStream(effects_stream_);
   if (device_ != 0) {
@@ -123,7 +144,8 @@ bool AudioMixer::open_music(const Track &track) {
     return false;
   }
   music_track_volume_ = track.volume * music_volume_;
-  SDL_SetAudioStreamGain(music_, music_track_volume_ * music_gain_);
+  SDL_SetAudioStreamGain(music_,
+                         music_track_volume_ * music_gain_ * audio_options_.gain(AudioBus::music));
   music_loop_ = track.loop;
   music_bytes_per_second_ = SDL_AUDIO_FRAMESIZE(spec) * spec.freq;
   music_spec_ = spec;
@@ -154,6 +176,9 @@ void AudioMixer::play_music(const std::string &track, const float volume, const 
     stop_music();
     return;
   }
+  ++cue_counts_[static_cast<std::size_t>(AudioBus::music)];
+  SDL_Log("Music playback: track=%s loop=%d rate=%d channels=%d", track.c_str(), music_loop_,
+          music_spec_.freq, music_spec_.channels);
   update();
 }
 
@@ -169,6 +194,7 @@ void AudioMixer::update() {
       if (!music_loop_) {
         SDL_FlushAudioStream(music_);
         if (SDL_GetAudioStreamQueued(music_) == 0) {
+          SDL_Log("Music finished: track=%s", track_.c_str());
           stop_music();
         }
         return;
@@ -215,7 +241,8 @@ void AudioMixer::keep_heard(const std::uint8_t *bytes, const std::size_t size) {
 }
 
 bool AudioMixer::music_heard(std::vector<float> &samples, int &rate) const {
-  if (music_ == nullptr || music_track_volume_ * music_gain_ <= 0.0F) {
+  if (music_ == nullptr ||
+      music_track_volume_ * music_gain_ * audio_options_.gain(AudioBus::music) <= 0.0F) {
     return false;
   }
   // What is heard now is the last frame queued less those still waiting.
@@ -235,7 +262,8 @@ void AudioMixer::set_volumes(const float music, const float effects) {
   if (music != music_gain_) {
     music_gain_ = music;
     if (music_ != nullptr) {
-      SDL_SetAudioStreamGain(music_, music_track_volume_ * music_gain_);
+      SDL_SetAudioStreamGain(music_, music_track_volume_ * music_gain_ *
+                                         audio_options_.gain(AudioBus::music));
     }
   }
   if (effects != effect_gain_) {

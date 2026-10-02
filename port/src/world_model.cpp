@@ -124,9 +124,33 @@ private:
       entry.alpha_cutoff = source->alpha_cutoff;
       entry.double_sided = source->double_sided != 0;
       entry.unlit = source->unlit != 0;
-      const auto flags =
-          static_cast<unsigned>(game_extra(extras(data_, source->extras), "flags", 0.0));
+      const auto metadata = extras(data_, source->extras);
+      const double source_flags = game_extra(metadata, "flags", -1.0);
+      const auto flags = source_flags >= 0 ? static_cast<unsigned>(source_flags) : 0U;
       entry.additive = (flags & batch_additive) != 0;
+      // 0x0b3240 retains ZWRITEENABLE for ordinary model draws, including
+      // alpha-blended second-pass batches. Additive effects do not write it.
+      // Keep standard glTF transparency for models without original metadata.
+      entry.blend_depth_write = source_flags >= 0 && !entry.additive;
+      entry.original_material = source_flags >= 0;
+      entry.specular = (flags & 0x40U) != 0;
+      entry.specular_power = static_cast<float>(game_extra(metadata, "power", 0.0));
+      if (const auto *game = metadata.find("phantomcrash"); game && game->is_object()) {
+        // The extractor's historical name is diffuse, but 0x0b3240 writes
+        // this RGB into D3DMATERIAL8.Ambient, leaving vertex diffuse intact.
+        const std::string packed = game->string_or("diffuse", "#ffffffff");
+        if (packed.size() == 9 && packed[0] == '#') {
+          const auto argb = std::stoul(packed.substr(1), nullptr, 16);
+          entry.ambient_colour = {static_cast<float>((argb >> 16) & 255) / 255.0F,
+                                  static_cast<float>((argb >> 8) & 255) / 255.0F,
+                                  static_cast<float>(argb & 255) / 255.0F};
+        }
+        if (const auto *stages = game->find("stage_flags"); stages && !stages->array().empty()) {
+          const auto stage = static_cast<unsigned>(stages->array()[0].number());
+          entry.texture_add = (stage & 1U) != 0;
+          entry.texture_alpha = (stage & 0x40U) != 0;
+        }
+      }
     }
     model_.materials.push_back(entry);
     return materials_[source] = static_cast<int>(model_.materials.size() - 1);

@@ -43,7 +43,12 @@ DealerScreen::DealerScreen(TextureCache &textures, const GlyphFont &font, Dealer
 }
 
 void DealerScreen::tick(const InputFrame &input, const double tick_seconds) {
-  logic_.update(tick_seconds, input);
+  const auto before = logic_.purchase().view();
+  logic_.update(tick_seconds, purchase_.pointer_input(input, logic_.script().confirm_buttons));
+  if (before != logic_.purchase().view()) {
+    SDL_Log("Shop purchase: view=%d->%d action=%d mouse=%d", int(before),
+            int(logic_.purchase().view()), logic_.purchase().action(), input.clicked);
+  }
   tick_frame(tick_seconds, logic_.faded_in());
   purchase_.update(logic_.purchase(), tick_seconds);
   remembered_ = logic_.cursor();
@@ -72,7 +77,7 @@ std::vector<std::string> DealerScreen::take_sounds() {
 // 0x39585: the panorama scrolling left at half brightness and wrapping,
 // the top and bottom, the line and the band sliding in; welcome as the
 // menu opens, farewell as it closes.
-void DealerScreen::draw_backdrop(DrawList &list) const {
+void DealerScreen::draw_backdrop(DrawList &list, const Viewport &viewport) const {
   const DealerScript &script = logic_.script();
   const auto &panorama = logic_.look().panorama;
   float total = 0.0F;
@@ -81,11 +86,15 @@ void DealerScreen::draw_backdrop(DrawList &list) const {
   }
   const auto offset =
       static_cast<float>(std::fmod(logic_.seconds() * script.scroll_speed, double{total}));
-  for (float start = -offset; start < canvas_width; start += total) {
+  const float left = viewport.visible_left(), right = viewport.visible_right();
+  // A periodic strip across the actual viewport, including negative canvas x.
+  // Textures stay cached; only the sampling position advances with time.
+  const float first = -offset + std::floor((left + offset) / total) * total;
+  for (float start = first; start < right; start += total) {
     float x = start;
     for (Sprite part : panorama) {
       const float width = width_of(part);
-      if (x + width > 0.0F && x < canvas_width) {
+      if (x + width > left && x < right) {
         part.position = {x, part.position[1]};
         part.colour = script.panorama_colour;
         list.sprite(part);
@@ -202,7 +211,7 @@ void DealerScreen::draw_profile(DrawList &list) const {
 void DealerScreen::draw(const Viewport &viewport) {
   draw_town(viewport, logic_.seconds(), logic_.black_alpha(), [this, &viewport](DrawList &list) {
     const DealerScript &script = logic_.script();
-    draw_backdrop(list);
+    draw_backdrop(list, viewport);
     preview_.draw(list, viewport, textures_.renderer());
     draw_logo(list);
     draw_menu(list);

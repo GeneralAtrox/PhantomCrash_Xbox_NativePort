@@ -108,13 +108,23 @@ the robot's movement:
   robot, by the model's speed in the table at 0x232558 (walk, dash; model
   0: 1/3, 0.533; 0 for motions without root motion), which makes it the
   walk and dash motions' playback rate (robot +0x68, +0x70; flags +0x64,
-  +0x6c). The jump height is +0x2c × the jump factor, 2.5..100 (+0x74,
-  legs 0: 19.14); take-off is √(2 × 2.5 × 9.8 / 30² × height) a tick.
-  +0x3c × the speed factor (0.1..90) goes to +0x78 and +0x7c, the latter
-  the aim's pitch rate; +0x9c and +0xac (0.1..30) to +0x80 and +0x84.
+  +0x6c). The jump height h is +0x2c × the jump factor, 2.5..100 (+0x74,
+  legs 0: 19.14). With g = 2.5 × 9.8 / 30² a tick, take-off (+0x2560,
+  0x08ea5b) adds 0.4 × √(2 g h) + g to the rise, and the lift budget
+  (+0x2564) is g × 0.84 h over that speed. While the jump stays held
+  (0x0905af) the rise eases a tenth of the way to the take-off speed a
+  tick and the budget, spent at g a tick, cancels gravity (0x07d117), so
+  the robot climbs 0.84 h and its throw the rest; letting go (+0x2558)
+  ends the lift. A re-press latches descent once the lift spent is more
+  than the rise left. +0x3c × the speed factor (0.1..90, legs 0: 2.35)
+  goes to +0x78 and +0x7c, the turn in degrees a tick: 0x08e257 turns
+  by +0x7c on the ground, in a dash and in a dodge, 0x0905af by +0x78 in
+  the air. +0x9c and +0xac × the speed factor (0.1..30, legs 0: 0.55 and
+  0.3) go to +0x80 and +0x84, the push a dodge (0x08d98c) gives on the
+  ground and in the air, in units a tick.
 
 The training player (Dog I, body 0, legs 0 and its four weapons) weighs
-965.1 against a frame of 675: a speed factor of 0.836, so its walk plays
+950.1 against a frame of 675: a speed factor of 0.843, so its walk plays
 at 0.69 and its dash at 0.86.
 
 Robot gravity is right at 24.5 units/s²: 0x07d117 steps 9.8 × 2.5 at the
@@ -146,6 +156,16 @@ chosen by loadout +0x6c:
 - 0: yellow 0xffffff00, or green 0xff00e100 when loadout +0x70 is 3
 - 1: 0xff8080ff
 - 2: 0xffff8080
+
+In RUMBLING, these fields describe roster status, not the port's combat
+allegiance. 0x045270 puts member/leader/champion (0/1/2) in the roster
+triple's third word; 0x0456b7 copies it to loadout +0x6c. Its +0x70 comes
+from the draw pool (0x045a68): 1 unbeaten, 2 beaten, 3 reserve. Thus regular
+entrants are yellow, leaders blue, champions red and reserve entrants green.
+The port's `Combatant::marker_colour` selects that editable HUD palette
+independently of `team`, so the live free-for-all's unique combat IDs cannot
+turn names white or assign them another rank's colour. The same colour tints
+the name, armour frame and bar; replacement NPCs receive their own status.
 
 Each part is placed relative to P:
 - **Frame.** Sprite 0x560 at P + (−72, −18).
@@ -193,7 +213,11 @@ So the training drones have no pilot and no label.
   - +0xa, +0xe arm weapons (slots 0 and 1, 0x039d5e)
   - +0x12, +0x16 shoulder weapons
   - +0x1a chip, with its level byte at +0x1c
-  - +0x5c the AI index (−1 none)
+  - +0x58 signed AI ability parameter; +0x5a behaviour-profile selector
+    (0x080778 passes these to 0x057820; see `ORIGINAL_ROBOT_AI.md`)
+  - +0x5c player/controller ownership selector, not an AI index: −1 is
+    NPC-controlled, −2 is an inactive slot, and nonnegative values select
+    player ownership (0x080778, 0x0825df, 0x046f81)
 - **The player's robot.** A new save gives the player no robot. 0x0b9774
   clears all ten garage records (save + 0x25f0, 0x36 each) to −1.
   0x0b9668 sets the ridden slot (save + 0x9c8, low 5 bits) to −1 and
@@ -262,8 +286,9 @@ The converter writes `tables/chatter.json` (`chatter.py`).
     falls below a quarter (0x0751be, 0x199fd4).
   - Hits (0x047ed9): 0x16 to a robot that shoots the supply carrier down
     (case 2), 0x19 or 0x1a to a robot whose melee (kind 6) or beam (kind 5)
-    shot hits a robot (case 5), and 0x1f for a breakable stage object shot
-    (case 4, not ported).
+    shot hits a robot (case 5), and 0x1f to a robot whose shot starts a
+    stage object's destruction (case 4), unless the object is of type 5, 6
+    or 8.
   - 0x17 to a player's robot as a missile lock on it completes (0x051045).
   - 0x1b to a robot that lives through a blast that hurt it (shot state 3,
     0x09c9c2).
@@ -299,7 +324,34 @@ ignores the buttons (they fire weapons) and gives way to lesson messages.
   (start radius, full radius, growth, damage), the ammunition and a beam's
   recharge, the knockback (×30 to units a second), the knockdown chance and
   the stun (a weapon without stun does not make its target flinch; one
-  with it flinches for the port's `stagger_seconds`).
+  with it flinches for its stun, at least the hit motion). `weapon_reach`
+  (`port/src/weapon_reach.cpp`) sets its reach and locks as below.
+- **Reach and locks.** 0x09d42f works out the reach the computer fires a
+  weapon within (weapon +0x74, the nearest at +0x78):
+  - a straight or homing round (0x09dd85): the distance it flies in its
+    life, from its start speed, speeding up by its acceleration to its top
+    speed; without acceleration it keeps its start speed (start × life);
+  - a lobbed round on a shoulder: 2v²·sinθ·cosθ / g with v its start speed
+    a frame and g the world's gravity a battle tick (9.8 / 30² × 2.5), about
+    half the true range, plus its blast radius and 5 (0x19b544); the
+    nearest is the same less them, at least 0. A round fired downward
+    reaches 10;
+  - a beam (kind 5): its top speed, the beam's length;
+  - a melee weapon (kind 6): 15.
+  An arm weapon locks a robot within 75 units (0x19b55c) inside the inner
+  reticle (0x4f6a0); a shoulder weapon within 125 (0x19f8c8) inside the
+  outer one (0x5262d) and holds it while the robot stays within 125 and 90
+  degrees of the aim (0x19f870, 0x51045); a melee weapon within 25, or 20
+  on a computer's robot, and holds it within 90 degrees (0x51e37). A box
+  holds a robot whose screen point lies within its half sizes of the
+  tracked reticle (robot +0x108, +0x10c; 0x0525b0); the nearest locks
+  first. The port tests the player's boxes as drawn; a robot without a
+  drawn reticle takes its chip's boxes around its sight, the point 64
+  units ahead of its aim (0x04e6b8); the AI fires within the reach
+  once locked, and a round without a life (a beam) ends at its reach.
+  A beam's tip runs out at its acceleration a frame (0x09b9fe adds it to
+  the shot's length +0x84 every frame up to the top speed); the port holds
+  it as one ray on the muzzle (docs/WEAPON_AUDIT.md, Beam).
 - **Damage rules.** `Battle::hit_damage` (`port/src/battle_damage.cpp`)
   applies the rules above: invulnerability, dodges, hits from behind,
   beam resistance, criticals and knockdowns (`Combatant::lost`, drawn as
@@ -315,10 +367,15 @@ ignores the buttons (they fire weapons) and gives way to lesson messages.
   weigh the robot and scale its movement as above. With the leg motions'
   strides (`stride_tuning`) the walk and dash rates set both the motions'
   playback (`walk_motion_rate`, `dash_motion_rate`) and the speeds. Without
-  root motion, the speed factor scales the port's speeds. The turn rates
-  follow the speed factor, and the jump's take-off speed and lift its
-  square root, so it rises about the jump factor times as high: the
-  original's absolute turn, aim and jump values are not used yet.
+  root motion, the speed factor scales the port's speeds. The turns
+  (`turn_degrees_per_second`, `dash_turn_degrees_per_second` and
+  `air_turn_degrees_per_second`) are the legs' turn under the load, 30
+  ticks a second, and `jump_height` is the legs' jump under the load;
+  `RobotMover` takes off and lifts as above (`jump_takeoff`). Legs without
+  those curves scale the training file's values by the factors. The
+  dodge's push is extracted (`dodge`, `air_dodge`) but the port's dodge
+  still uses `movement.dodge_speed` and `dodge_seconds`, and the aim's
+  pitch rate is a port value.
 - **Chatter.** See below.
 - **Armour.** `robot_armour` sums the body's and legs' armour curves, each
   raised to the player's or the computer's floor. The training ground gives

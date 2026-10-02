@@ -38,7 +38,7 @@ LoadGame::LoadGame(LoadGameScript script, std::vector<SaveSlot> slots, MessageBo
   int latest = -1;
   for (int index = 0; index < static_cast<int>(slots_.size()); ++index) {
     const auto &quest = slots_[static_cast<std::size_t>(index)].quest;
-    if (quest &&
+    if (slots_[index].selectable && quest &&
         (latest < 0 || quest->saved > slots_[static_cast<std::size_t>(latest)].quest->saved)) {
       latest = index;
     }
@@ -48,7 +48,8 @@ LoadGame::LoadGame(LoadGameScript script, std::vector<SaveSlot> slots, MessageBo
     box_.open(MessageBox::Kind::notice, script_.unreadable);
     sound(box_.style().open_sound);
   } else if (latest < 0 && script_.saving) {
-    slot_ = 0;
+    const auto first = std::ranges::find(slots_, true, &SaveSlot::selectable);
+    slot_ = first == slots_.end() ? 0 : static_cast<int>(first - slots_.begin());
   } else if (latest < 0) {
     phase_ = Phase::no_records;
     box_.open(MessageBox::Kind::notice, script_.no_records);
@@ -117,7 +118,17 @@ void LoadGame::move(const double tick_seconds, const InputFrame &input) {
   if (phase_ == Phase::slots) {
     const int step =
         slot_repeat_.step(tick_seconds, input, script_.slot_back, script_.slot_forward, fresh);
-    const int moved = move_cursor(slot_, step, fresh, static_cast<int>(slots_.size()));
+    std::vector<int> choices;
+    for (int index = 0; index < static_cast<int>(slots_.size()); ++index) {
+      if (slots_[index].selectable) {
+        choices.push_back(index);
+      }
+    }
+    const auto current = std::ranges::find(choices, slot_);
+    const int at = current == choices.end() ? 0 : static_cast<int>(current - choices.begin());
+    const int moved = choices.empty()
+                          ? slot_
+                          : choices[move_cursor(at, step, fresh, static_cast<int>(choices.size()))];
     if (moved != slot_) {
       slot_ = moved;
       sound(script_.slot_sound);
@@ -136,6 +147,9 @@ void LoadGame::move(const double tick_seconds, const InputFrame &input) {
 void LoadGame::confirm() {
   if (phase_ == Phase::exit) {
     fade_.leave(script_.exit_to);
+    return;
+  }
+  if (!slots_[static_cast<std::size_t>(slot_)].selectable) {
     return;
   }
   const bool used = slots_[static_cast<std::size_t>(slot_)].quest.has_value();

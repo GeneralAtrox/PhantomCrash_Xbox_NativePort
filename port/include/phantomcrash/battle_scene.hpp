@@ -75,10 +75,17 @@ struct SceneTuning {
   bool exit{true};              // walking back into a gate leaves the battle (0x08224d)
   bool computer_entrance{true}; // computer robots walk out of their gates too (0x082552)
   bool computer_exit{true};     // ... and leave by walking back into one (0x08224d)
+  bool rider_entrance{true};    // VS: each piloted robot walks out in state 1 (0x080778)
   // Battle modes 0 and 2, not the lessons' mode 4: the entrances raise
   // chatter, the player's plays the music cue, and computer robots wait
   // for the other robots' scenes (0x09199e).
   bool regular_battle{};
+  // The story's ranker contests (mission types 0x16 and 0x17, 0x082c54),
+  // set by the match: no robot leaves by walking into a gate, it only signs
+  // off (0x08224d); the ranker enters at ranker_gate (save +0x6120,
+  // 0x0825df) and waits all of entry_delay before it walks out (0x088ffa).
+  bool ranker{};
+  int ranker_gate{-1};
   float ready_frame{90.0F};        // READY shows from here ... (0x19ef0c)
   float go_frame{30.0F};           // ... and GO! from here to the end (0x17ccfc)
   float stand_frame{180.0F};       // the walk ends and the robot stands (0x19f8d8)
@@ -86,7 +93,6 @@ struct SceneTuning {
   float close_frame{30.0F};        // ... and the exit shuts it behind the robot (0x17ccfc)
   float play_in_frame{12.0F};      // the entrance's music cue: 6 battle ticks (0x19f898)
   float entry_delay{120.0F};       // a computer robot waits this long at most for a busy door
-  float computer_speed{3.0F};      // a computer robot's entrance plays this fast (0x17cce0)
   float blend_frames{20.0F};       // the camera eases into the chase view (0x199f7c)
   float letterbox_frames{30.0F};   // the bars slide over this long (0x049080)
   float gate_radius{5.97F};        // a gate holds robots this close across ... (0x19f878)
@@ -106,6 +112,12 @@ struct SceneTuning {
 
 [[nodiscard]] SceneTuning parse_scene_tuning(const json::JsonValue &value);
 
+// Where a robot that walks out of `gate` in `state` stands once its walk
+// is done (at stand_frame), on the gate's floor; the gate itself without
+// the scene or its walk.
+[[nodiscard]] Vec3 walked_out(const BattleSceneTables &tables, const SceneTuning &tuning,
+                              const Gate &gate, int state = scene_state::computer);
+
 // What the entrance shows in the middle of the screen.
 enum class SceneCue { none, ready, go };
 
@@ -113,9 +125,9 @@ enum class SceneCue { none, ready, go };
 // entrance walks robot 0 out of its gate while the camera follows one of
 // four shots, under letterbox bars, then READY and GO!; the exit starts
 // when it walks back into a gate, turns it to the gate and walks it in, and
-// ends the battle. Computer robots walk out of their gates quicker, and the
-// battle's first boss takes the camera for its own shot while the others
-// fight on. A computer robot that walks back into a gate leaves too, and
+// ends the battle. Computer robots, including bosses, use the same walk and
+// full timing without taking over the player's camera. A computer robot
+// that walks back into a gate leaves too, and
 // once its door has shut it is out of the battle (a drone comes back as a
 // shot-down one does). Robots are shielded while they walk in or out.
 // Entrances open the gates' doors.
@@ -129,6 +141,12 @@ public:
   // Puts computer robot `index` at its gate to walk out (0x082552); it
   // takes up the enemy path when it is out. False without a gate.
   bool start_robot_entrance(Battle &battle, int index);
+  // Puts piloted robot `index` (a VS rider) at gate `gate` to walk out in
+  // state 1 (0x080778, 0x082552) with the computer robots' walk; its
+  // controls wait until it stands, and it takes up no path. False without
+  // the gate or the walk.
+  bool start_rider_entrance(Battle &battle, int index, int gate);
+  [[nodiscard]] int robot_gate(int index) const;
   // Before Battle::tick: walks the robots through their scenes.
   void prepare(Battle &battle, float seconds);
   // After Battle::tick: the gates, which start the exit, respawned drones,
@@ -153,6 +171,16 @@ public:
   [[nodiscard]] bool scripted() const noexcept {
     return active() || cinematic();
   }
+  // The scene on screen now: a boss's entrance, the player's entrance or
+  // exit (robot -1), or else a VS rider's walk out of its gate; its state
+  // and how far it has run in 60 Hz frames of its track's.
+  struct Playback {
+    int state{};
+    int robot{-1};
+    float frame{};
+    float total{};
+  };
+  [[nodiscard]] std::optional<Playback> playback() const;
   // The exit has ended: the battle is over.
   [[nodiscard]] bool finished() const noexcept {
     return finished_;
@@ -184,6 +212,7 @@ private:
     Gate origin;
     int gate_flag{}; // robot +0x10, as the player's gate_flag_
     float heading{}; // the exit's, toward the gate
+    bool rider{};    // a piloted VS robot (start_rider_entrance)
   };
 
   [[nodiscard]] const SceneTrack *track(int state) const;
@@ -205,6 +234,7 @@ private:
                  float seconds) const;
   void open_door(Battle &battle, int gate, float before, float left) const;
   // battle_scene_robots.cpp
+  [[nodiscard]] int next_robot_gate(const Battle &battle, int count);
   void walk_robot(Battle &battle, RobotEntrance &entry, float seconds, float step);
   [[nodiscard]] bool waits_for_others(const Battle &battle, const RobotEntrance &entry) const;
   void start_walking(Battle &battle, RobotEntrance &entry);
@@ -224,6 +254,8 @@ private:
   float exit_heading_{};
   int gate_flag_{}; // 0x08224d's robot +0x10: 0 in a gate, 1 out of it, 2 back in
   std::vector<RobotEntrance> robots_;
+  std::vector<int> remaining_gates_; // shuffled NPC round, consumed from the back
+  int last_robot_gate_{-1};
   int cinematic_{-1};  // the robot whose boss scene holds the battle
   bool boss_played_{}; // global +0xef328: a battle's first boss only
   float letterbox_{};

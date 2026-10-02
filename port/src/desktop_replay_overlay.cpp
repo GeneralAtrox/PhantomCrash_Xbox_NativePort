@@ -42,7 +42,11 @@ void draw_replay_overlay(SDL_Renderer *renderer, const ReplayOverlay &overlay, c
       SDL_SetTextureAlphaMod(q.texture, q.colour.a);
       SDL_SetTextureBlendMode(q.texture, q.blend);
       const SDL_FPoint pivot{q.pivot.x * scale, q.pivot.y * scale};
-      SDL_RenderTextureRotated(renderer, q.texture, &q.source, &target, q.angle, &pivot, q.flip);
+      if (q.source.w == 0) {
+        draw_texture_edge(renderer, q.texture, q.source, target);
+      } else {
+        SDL_RenderTextureRotated(renderer, q.texture, &q.source, &target, q.angle, &pivot, q.flip);
+      }
     } else {
       SDL_SetRenderDrawColor(renderer, q.colour.r, q.colour.g, q.colour.b, q.colour.a);
       SDL_SetRenderDrawBlendMode(renderer, q.blend);

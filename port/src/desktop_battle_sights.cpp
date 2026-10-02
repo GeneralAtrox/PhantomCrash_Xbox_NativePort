@@ -15,8 +15,6 @@ constexpr float quarter_turn = 90.0F;
 constexpr float half_turn = 180.0F;
 constexpr float degrees_per_radian = 180.0F / pi;
 constexpr std::uint32_t white = 0xffffff;
-// Square, wide and tall reticles.
-constexpr int reticle_shapes = 3;
 
 // The pulsing warning colour: red 0xc8 with green on the 2D renderer's wave.
 std::uint32_t pulse_colour(const std::uint32_t red, const double clock) {
@@ -91,6 +89,7 @@ void BattleSights::draw(const Viewport &viewport, const Battle &battle, const Ma
   const float frames = std::max(elapsed, 0.0F) * hud_frames_per_second;
   const CanvasPoint sight = sight_point(view, battle);
   track(view, battle, sight, frames);
+  boxes_ = boxes_on(viewport);
   pieces_ = 1.0F;
   draw_markers(view, battle);
   pieces_ = split_pieces_;
@@ -136,8 +135,8 @@ void BattleSights::track(const View &view, const Battle &battle, const CanvasPoi
   std::vector<std::pair<float, CanvasPoint>> candidates;
   for (const Combatant &robot : battle.robots()) {
     const float distance = length(robot.mover.position() - player.mover.position());
-    if (robot.team == player.team || !robot.alive || robot.camouflaged ||
-        distance > style_.control.track_range || !view.on_screen(robot.centre(height))) {
+    if (distance > style_.control.track_range || !view.on_screen(robot.centre(height)) ||
+        !battle.target_visible(player, robot)) {
       continue;
     }
     if (const auto at = view.project(robot.centre(height))) {
@@ -160,6 +159,23 @@ void BattleSights::track(const View &view, const Battle &battle, const CanvasPoi
   tracker_.update(target, speed, frames,
                   {half[0] * scale[0] / ndc[0], half[1] * scale[1] / ndc[1]});
   reticle_ = {sight.x + tracker_.offset()[0] * ndc[0], sight.y + tracker_.offset()[1] * ndc[1]};
+}
+
+// The reticle's canvas centre and box half sizes in the screen's
+// normalised device coordinates.
+LockBoxes BattleSights::boxes_on(const Viewport &viewport) const {
+  const auto width = static_cast<float>(std::max(viewport.pixel_width, 1));
+  const auto height = static_cast<float>(std::max(viewport.pixel_height, 1));
+  const auto scale = offset_scale();
+  const auto ndc_half = [&](const std::array<float, 2> half) {
+    return std::array<float, 2>{2.0F * half[0] * scale[0] * viewport.scale / width,
+                                2.0F * half[1] * scale[1] * viewport.scale / height};
+  };
+  const float x = viewport.to_pixel_x(reticle_.x) - viewport.origin_x;
+  const float y = viewport.to_pixel_y(reticle_.y) - viewport.origin_y;
+  return {{2.0F * x / width - 1.0F, 1.0F - 2.0F * y / height},
+          ndc_half(inner_half()),
+          ndc_half(outer_half())};
 }
 
 void BattleSights::corners(const Viewport &viewport, const HudPiece &piece,
@@ -255,7 +271,9 @@ void BattleSights::draw_locks(const View &view, const Battle &battle) {
     const bool arm = key >= 2;
     int target = player.lock_candidates[slot];
     if (weapon == nullptr || (arm && weapon->kind != WeaponKind::melee) || target < 0 ||
-        !battle.robots()[static_cast<std::size_t>(target)].alive) {
+        target >= static_cast<int>(battle.robots().size()) ||
+        !view.on_screen(battle.robots()[static_cast<std::size_t>(target)].centre(height)) ||
+        !battle.target_visible(player, battle.robots()[static_cast<std::size_t>(target)])) {
       target = -1;
     }
     const auto at =
@@ -301,7 +319,8 @@ void BattleSights::draw_markers(const View &view, const Battle &battle) const {
     if (!p) {
       continue;
     }
-    const std::uint32_t colour = style_.team_colour(robot.team);
+    const std::uint32_t colour =
+        style_.team_colour(robot.marker_colour >= 0 ? robot.marker_colour : robot.team);
     put(view.viewport, markers.frame, p->x + markers.frame_offset[0],
         p->y + markers.frame_offset[1], false, 0.0F, false, colour);
     const float armour =

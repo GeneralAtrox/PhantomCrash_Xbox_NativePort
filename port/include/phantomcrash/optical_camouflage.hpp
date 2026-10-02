@@ -15,12 +15,12 @@ namespace phantomcrash {
 // `rise` (0x074e80 stores it per robot in the table at 0xa94640), so the
 // robot vanishes from the bottom up; turning off lowers it again.
 struct OpticalCamouflage {
-  float rise{10.0F};     // the centre's climb over the fade
-  float radius{5.0F};    // c8.w: the robot is seen within this distance
-  float edge{1.0F};      // 1 / c9.y: the width of the seen part's soft edge
-  float reach{4.0F};     // c9.x - c8.w: the push fades out this far past the radius
-  float push{1.0F};      // the push along the normal near the sphere
-  float least{0.25F};    // c4.y: the smallest push, however far away
+  float rise{10.0F};  // the centre's climb over the fade
+  float radius{5.0F}; // c8.w: the robot is seen within this distance
+  float edge{1.0F};   // 1 / c9.y: the width of the seen part's soft edge
+  float reach{4.0F};  // c9.x - c8.w: the push fades out this far past the radius
+  float push{1.0F};   // the push along the normal near the sphere
+  float least{0.25F}; // c4.y: the smallest push, however far away
 };
 
 // One robot's sphere, as the renderer takes it.

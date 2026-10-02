@@ -39,6 +39,7 @@ TEST_CASE("replay round trip preserves submitted world, HUD, monitor and sound s
   item.optical = OpticalSphere{};
   item.casts_shadow = true;
   item.double_sided = true;
+  item.fogged = false;
   frame.player.items = {item};
   frame.player.overlay = {item};
   frame.hidden_player = {item};
@@ -52,6 +53,8 @@ TEST_CASE("replay round trip preserves submitted world, HUD, monitor and sound s
   sprite.uv = {.2F, .3F, .8F, .9F};
   sprite.colour = {.4F, .5F, .6F, .7F};
   sprite.additive = true;
+  sprite.particle_kind = 2;
+  sprite.cluster_centre = {13, 14, 15};
   frame.player.sprites = {sprite};
   frame.monitor = frame.player;
   ReplaySubject subject;
@@ -74,6 +77,12 @@ TEST_CASE("replay round trip preserves submitted world, HUD, monitor and sound s
   frame.overlay = {quad};
   frame.music = "battle.wav";
   frame.sounds = {{SoundCue::Action::play, "laser", {.4F, -.2F}, true, 1234}};
+  frame.sounds[0].position = Vec3{2, 4, 6};
+  SoundCue listener;
+  listener.action = SoundCue::Action::listener;
+  listener.listener.eye = {10, 20, 30};
+  listener.falloff.rolloff = .2F;
+  frame.sounds.push_back(listener);
   tape.append(frame);
   const auto out = tape.read(0);
   CHECK(out.player.width == 1920);
@@ -108,11 +117,14 @@ TEST_CASE("replay round trip preserves submitted world, HUD, monitor and sound s
   CHECK(copy.optical.has_value());
   CHECK(copy.casts_shadow);
   CHECK(copy.double_sided);
+  CHECK(!copy.fogged);
   CHECK(out.player.overlay[0].model == 9);
   CHECK(out.hidden_player[0].robot == 3);
   CHECK(out.player.sprites[0].texture == 13);
   CHECK(out.player.sprites[0].uv == sprite.uv);
   CHECK(out.player.sprites[0].colour == sprite.colour);
+  CHECK(out.player.sprites[0].particle_kind == 2);
+  CHECK(out.player.sprites[0].cluster_centre.z == 15);
   CHECK(out.monitor->items[0].model == 9);
   CHECK(out.subjects[0].name == "Pilot");
   CHECK(out.subjects[0].camera.yaw == .8F);
@@ -131,6 +143,11 @@ TEST_CASE("replay round trip preserves submitted world, HUD, monitor and sound s
   CHECK(out.sounds[0].name == "laser");
   CHECK(out.sounds[0].key == 1234);
   CHECK(out.sounds[0].mix.pan == -.2F);
+  REQUIRE(out.sounds[0].position.has_value());
+  CHECK(out.sounds[0].position->z == 6);
+  CHECK(out.sounds[1].action == SoundCue::Action::listener);
+  CHECK(out.sounds[1].listener.eye.y == 20);
+  CHECK(out.sounds[1].falloff.rolloff == .2F);
 }
 
 TEST_CASE("replay lookup follows recorded time regardless of presentation cadence") {

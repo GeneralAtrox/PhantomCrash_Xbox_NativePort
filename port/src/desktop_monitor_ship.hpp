@@ -11,6 +11,7 @@ public:
   MonitorShip(WorldRenderer &world, const DataRoots &roots, int stage);
   void tick(float seconds);
   void add_items(std::vector<WorldItem> &items) const;
+  void add_lights(std::vector<WorldLight> &lights) const;
 
 private:
   struct Part {
@@ -23,6 +24,7 @@ private:
     Vec3 pivot;
   };
   int model_{-1};
+  std::vector<WorldLight> lights_;
   std::vector<Part> parts_;
   std::vector<std::array<Vec3, 4>> route_;
   std::vector<int> open_segments_, close_segments_;

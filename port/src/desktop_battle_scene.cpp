@@ -53,14 +53,14 @@ void BattleScenePresenter::draw(const Viewport &viewport) const {
   if (const float bars = scene_.letterbox(); bars > 0.0F) {
     // 0x049080 slides the bars in from `slide` units further out.
     const float out = style_.slide * (1.0F - bars);
-    const float top = std::max(viewport.to_pixel_y(style_.inner_top - out), 0.0F);
+    const float top = std::max(viewport.to_pixel_y(style_.inner_top - out), viewport.origin_y);
     const float bottom = viewport.to_pixel_y(style_.inner_bottom + out);
     const auto width = static_cast<float>(viewport.pixel_width);
-    const auto height = static_cast<float>(viewport.pixel_height);
+    const auto bottom_edge = viewport.origin_y + static_cast<float>(viewport.pixel_height);
     SDL_Renderer *renderer = textures_.renderer();
     set_colour(renderer, style_.colour);
-    const SDL_FRect upper{0.0F, 0.0F, width, top};
-    const SDL_FRect lower{0.0F, bottom, width, std::max(height - bottom, 0.0F)};
+    const SDL_FRect upper{viewport.origin_x, viewport.origin_y, width, top - viewport.origin_y};
+    const SDL_FRect lower{viewport.origin_x, bottom, width, std::max(bottom_edge - bottom, 0.0F)};
     record_quad(textures_, nullptr, {}, upper);
     record_quad(textures_, nullptr, {}, lower);
     SDL_RenderFillRect(renderer, &upper);
@@ -81,7 +81,7 @@ void BattleScenePresenter::draw(const Viewport &viewport) const {
 std::unique_ptr<BattleScenePresenter>
 load_battle_scene(TextureCache &textures, const GlyphFont &font, const DataRoots &roots,
                   const SceneTuning &tuning, const std::uint32_t seed) {
-  if (!tuning.entrance && !tuning.exit && !tuning.computer_entrance) {
+  if (!tuning.entrance && !tuning.exit && !tuning.computer_entrance && !tuning.rider_entrance) {
     return nullptr;
   }
   const auto file = roots.find_asset(tuning.tables);
@@ -121,7 +121,9 @@ int load_stage_doors(WorldRenderer *world, const DataRoots &roots, const SceneTu
     if (doors.empty()) {
       return -1;
     }
-    battle.set_doors(StageDoors(std::move(doors), tuning.doors));
+    if (!battle.cooperative() || !battle.doors()) {
+      battle.set_doors(StageDoors(std::move(doors), tuning.doors));
+    }
   } catch (const std::exception &error) {
     SDL_Log("%s: %s", tuning.tables.c_str(), error.what());
     return -1;

@@ -27,9 +27,25 @@ const Sprite *picture(const std::vector<Sprite> &pictures, const int index) {
 AssembleScreen::AssembleScreen(TextureCache &textures, const GlyphFont &font, Assemble logic,
                                const MessageBoxStyle &box, const std::string &from,
                                const FrameStyle &frame, const std::vector<MusicCredit> &credits,
-                               QuestSave quest)
+                               QuestSave quest, PreviewWorld world,
+                               const RobotPreviewScript &preview)
     : TownScreen(textures, font, logic.script(), from, frame, credits, std::move(quest)),
-      logic_(std::move(logic)), notice_(box, logic_.script().message_text_at) {}
+      logic_(std::move(logic)), notice_(box, logic_.script().message_text_at),
+      preview_(world, preview, "assemble") {
+  show_robot();
+}
+
+// The hangar's Scoobee as fitted so far: standing, or its parts one by one
+// (0x08371b); rebuilt only when the fitting changes.
+void AssembleScreen::show_robot() {
+  const Garage &garage = logic_.quest().garage;
+  const int hangar = logic_.hangar();
+  if (hangar < 0 || hangar >= static_cast<int>(garage.hangars.size())) {
+    preview_.hide();
+    return;
+  }
+  preview_.show(preview_robot(garage, garage.hangars[static_cast<std::size_t>(hangar)]));
+}
 
 void AssembleScreen::tick(const InputFrame &input, const double tick_seconds) {
   logic_.update(tick_seconds, input);
@@ -40,6 +56,8 @@ void AssembleScreen::tick(const InputFrame &input, const double tick_seconds) {
   if (quest().riding != now.riding || quest().garage != now.garage) {
     set_quest(now);
   }
+  show_robot();
+  preview_.tick(tick_seconds);
 }
 
 std::vector<std::string> AssembleScreen::take_sounds() {
@@ -167,10 +185,11 @@ void AssembleScreen::draw_sides(DrawList &list) const {
 }
 
 void AssembleScreen::draw(const Viewport &viewport) {
-  draw_town(viewport, logic_.seconds(), logic_.black_alpha(), [this](DrawList &list) {
+  draw_town(viewport, logic_.seconds(), logic_.black_alpha(), [this, &viewport](DrawList &list) {
     const AssembleScript &script = logic_.script();
     draw_grid(list);
     draw_panel(list);
+    preview_.draw(list, viewport, textures_.renderer());
     if (logic_.view() == AssembleView::sides && logic_.cell().sides) {
       draw_sides(list);
     }

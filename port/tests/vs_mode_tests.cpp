@@ -254,3 +254,17 @@ TEST_CASE("cancel from a port that has not entered leaves the VS mode") {
   CHECK(logic.next() == "main_menu");
   CHECK(vs_lesson(VsBattle{}, 3).screens == 3);
 }
+
+TEST_CASE("the battle's SELECT SV opens the Scoobee select with the same players") {
+  Fixture fixture;
+  fixture.ports = 2;
+  fixture.session.joined = {true, true, false, false};
+  fixture.session.chosen = {0, 1, 0, 0};
+  fixture.session.wins = {1, 0, 0, 0};
+  fixture.session.resume = VsPhase::select;
+  VsMode logic = fixture.open({true});
+  CHECK(logic.phase() == VsPhase::select);
+  CHECK(logic.player(1).joined);
+  CHECK(fixture.session.resume == VsPhase::area);
+  CHECK(fixture.session.wins[0] == 1); // the tallies stay
+}

@@ -148,12 +148,13 @@ void draw_sprite(TextureCache &textures, const Sprite &sprite, const Viewport &v
   };
   for (const auto &quad : place_sprite(sprite, seconds)) {
     const auto pixels = viewport.to_pixels(quad.x, quad.y, quad.width, quad.height);
-    const SDL_FRect target{pixels.x, pixels.y, pixels.width, pixels.height};
+    SDL_FRect target{pixels.x, pixels.y, pixels.width, pixels.height};
     const float inset_x = inset(pixels.width, rect.w);
     const float inset_y = inset(pixels.height, rect.h);
-    const SDL_FRect source{rect.x + inset_x, rect.y + inset_y, rect.w - 2.0F * inset_x,
-                           rect.h - 2.0F * inset_y};
+    SDL_FRect source{rect.x + inset_x, rect.y + inset_y, rect.w - 2.0F * inset_x,
+                     rect.h - 2.0F * inset_y};
     if (sprite.angle == 0.0F && !sprite.flip_x) {
+      draw_sprite_edges(textures, texture, sprite, viewport, source, target);
       record_quad(textures, texture, source, target);
       SDL_RenderTexture(textures.renderer(), texture, &source, &target);
       continue;

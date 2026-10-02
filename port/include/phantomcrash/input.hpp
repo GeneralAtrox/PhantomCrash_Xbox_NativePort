@@ -55,6 +55,8 @@ struct PortInput {
   bool connected{};
   Buttons held{};
   Buttons pressed{};
+  std::array<float, 2> left_stick{};
+  std::array<float, 2> right_stick{};
 };
 
 // One logic tick's view of the controllers.
@@ -78,9 +80,14 @@ struct InputFrame {
   std::optional<std::array<float, 2>> pointer;
   bool pointer_moved{};
   bool clicked{};
-  bool mouse_right_held{}; // cursor-visible camera dragging (replay Free view)
+  bool right_clicked{};    // right button down, consumed once (menu B action)
+  bool mouse_right_held{}; // right button while the cursor is visible
   // Each port on its own; `held` and `pressed` above take them all together.
   std::array<PortInput, controller_ports> ports{};
+  bool mouse_left_held{};
+  bool mouse_double_clicked{};
+  float mouse_wheel{};              // positive: scroll up; consumed once per logic tick
+  std::optional<int> dialog_choice; // a visible YES/NO button clicked by the desktop
 
   [[nodiscard]] bool any_pressed(Buttons mask) const {
     return (pressed & mask) != 0;

@@ -20,6 +20,7 @@ class DrawList;
 // own (RobotPreview, 0x03cb50).
 class ModuleShopScreen final : public TownScreen {
 public:
+  [[nodiscard]] std::optional<MenuPresence> menu_presence() const override;
   ModuleShopScreen(TextureCache &textures, const GlyphFont &font, ModuleShop logic,
                    const MessageBoxStyle &box, const std::string &from, const FrameStyle &frame,
                    const std::vector<MusicCredit> &credits, QuestSave quest, PreviewWorld world,

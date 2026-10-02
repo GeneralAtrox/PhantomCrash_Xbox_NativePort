@@ -145,6 +145,13 @@ std::vector<MusicCredit> parse_music_credits(const json::JsonValue &document) {
       credit.jacket_small = credit_jacket(entry, "jacket_small");
       credit.artist_name = credit_jacket(entry, "artist_name");
       credit.artist_link = credit_jacket(entry, "artist_link");
+      if (const auto *profile = entry.find("artist_profile")) {
+        credit.artist_profile =
+            ArtistProfile{required(*profile, "text").string(),
+                          numbers<2>(required(*profile, "position"), "artist profile position"),
+                          parse_colour(required(*profile, "colour").string()),
+                          static_cast<int>(required(*profile, "layer").number())};
+      }
       credits.push_back(std::move(credit));
     }
   }

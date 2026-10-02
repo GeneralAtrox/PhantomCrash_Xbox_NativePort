@@ -11,7 +11,7 @@ namespace phantomcrash {
 
 // The particle effects (effect_system.hpp) drawn as the world's sprites
 // over the effect atlas, as 0x0625e4 hands them to 0x0bf4cf: a particle's
-// size is its scale times its size, halved; a streak runs to where its
+// full width is its scale times its size, halved; a streak runs to where its
 // motion takes it in a frame (a fifth of that for streak_short).
 class DesktopEffects final {
 public:
@@ -24,15 +24,15 @@ public:
   [[nodiscard]] EffectSystem &system() noexcept {
     return system_;
   }
-  void tick(float seconds) {
-    system_.tick(seconds);
-  }
+  void tick(float seconds);
   // Appends every live particle, between its last two frames.
   void add_sprites(std::vector<WorldSprite> &sprites) const;
 
 private:
   EffectSystem system_;
   int atlas_;
+  float log_seconds_{};
+  bool logged_active_{};
 };
 
 } // namespace phantomcrash

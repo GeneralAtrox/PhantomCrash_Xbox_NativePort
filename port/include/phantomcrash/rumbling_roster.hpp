@@ -47,7 +47,7 @@ using RosterRandom = std::function<float()>;
 // 0x06cf5a: draws each area's roster anew when it is not for today's
 // contest; true when any was.
 bool refresh_rosters(const RegulationCheck &check, const ContestTables &contests, QuestSave &quest,
-                     const RosterRandom &random);
+                     const RosterRandom &random, bool fill_vacancies = false);
 
 // An opponent as WIRE HEADS DATA shows it (0x013f5a).
 struct RosterCard {

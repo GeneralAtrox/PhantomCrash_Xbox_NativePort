@@ -21,6 +21,7 @@ class DrawList;
 // Scoobees near the chosen card stand on their cards.
 class HangarMenuScreen final : public TownScreen {
 public:
+  [[nodiscard]] std::optional<MenuPresence> menu_presence() const override;
   HangarMenuScreen(TextureCache &textures, const GlyphFont &font, HangarMenu logic,
                    const MessageBoxStyle &box, const std::string &from, const FrameStyle &frame,
                    const std::vector<MusicCredit> &credits, QuestSave quest, int &remembered,

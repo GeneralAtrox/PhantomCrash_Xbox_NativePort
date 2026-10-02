@@ -7,6 +7,7 @@ endif()
 
 # Platform-independent core: data loading, input model, timing, canvas maths.
 add_library(phantomcrash_core
+  src/result_presentation.cpp
   src/match_result.cpp
   src/location_menu.cpp
   src/location_menu_script.cpp
@@ -24,25 +25,42 @@ add_library(phantomcrash_core
   src/location_frame.cpp
   src/music_spectrum.cpp
   src/battle.cpp
+  src/battle_pose.cpp
+  src/robot_combat.cpp
+  src/weapon_mounts.cpp
+  src/pose_transform.cpp
   src/battle_damage.cpp
+  src/battle_death.cpp
+  src/battle_wrecks.cpp
+  src/robot_wrecks.cpp
   src/entry_shield.cpp
   src/effect_mixer.cpp
   src/world_sound.cpp
   src/frame_stats.cpp
   src/battle_sounds.cpp
+  src/battle_sounds_pilot.cpp
   src/battle_chatter.cpp
   src/battle_scene.cpp
   src/battle_scene_robots.cpp
   src/battle_scene_tables.cpp
   src/robot_load.cpp
+  src/robot_ai.cpp
+  src/robot_ai_data.cpp
+  src/battle_ai_pickups.cpp
+  src/battle_ai_navigation.cpp
+  src/battle_ai_weapons.cpp
+  src/battle_ai_reactions.cpp
   src/battle_ai.cpp
   src/battle_fire.cpp
+  src/battle_targeting.cpp
   src/battle_roster.cpp
   src/battle_weapon_tuning.cpp
+  src/battle_beams.cpp
   src/battle_weapons.cpp
   src/battle_weapon_targets.cpp
   src/fence_impacts.cpp
   src/stage_collision.cpp
+    src/stage_play_area.cpp
   src/stage_doors.cpp
   src/stage_objects.cpp
   src/battle_objects.cpp
@@ -60,6 +78,7 @@ add_library(phantomcrash_core
   src/effect_pictures.cpp
   src/effect_flashes.cpp
   src/effect_particles.cpp
+  src/effect_secondary.cpp
   src/effect_system.cpp
   src/shadow_volume.cpp
   src/supply_drop.cpp
@@ -81,6 +100,8 @@ add_library(phantomcrash_core
   src/rumbling_map.cpp
   src/rumbling_robot.cpp
   src/rumbling_world.cpp
+  src/rumbling_world_coop.cpp
+  src/rumbling_world_result.cpp
   src/rumbling_roster.cpp
   src/rumbling_battle.cpp
   src/vs_scoobee.cpp
@@ -93,6 +114,10 @@ add_library(phantomcrash_core
   src/vs_mode_input.cpp
   src/vs_mode_area.cpp
   src/vs_battle.cpp
+  src/vs_rules.cpp
+  src/finale.cpp
+  src/finale_data.cpp
+  src/movie_subtitles.cpp
   src/town_screen.cpp
   src/records.cpp
   src/records_script.cpp
@@ -100,16 +125,21 @@ add_library(phantomcrash_core
   src/battle_music_script.cpp
   src/shop_dialog.cpp
   src/sonic_amp.cpp
+  src/sonic_amp_pointer.cpp
   src/sonic_amp_script.cpp
   src/garage.cpp
   src/garage_tables.cpp
   src/dealer_script.cpp
   src/dealer.cpp
+  src/dealer_pointer.cpp
   src/sv_purchase.cpp
+  src/sv_purchase_pointer.cpp
   src/used_sv_script.cpp
   src/used_sv.cpp
+  src/used_sv_pointer.cpp
   src/chip_shop_script.cpp
   src/chip_shop.cpp
+  src/chip_shop_pointer.cpp
   src/chip_uplift.cpp
   src/part_stats.cpp
   src/shop_goods.cpp
@@ -118,8 +148,10 @@ add_library(phantomcrash_core
   src/shop_list_style.cpp
   src/tune_shop_script.cpp
   src/tune_shop.cpp
+  src/tune_shop_pointer.cpp
   src/hangar_menu_script.cpp
   src/hangar_menu.cpp
+  src/hangar_menu_pointer.cpp
   src/assemble_script.cpp
   src/assemble_fitting.cpp
   src/assemble.cpp
@@ -128,9 +160,12 @@ add_library(phantomcrash_core
   src/test_drive.cpp
   src/robot_totals.cpp
   src/module_shop.cpp
+  src/module_shop_pointer.cpp
   src/music_library.cpp
+  src/music_program.cpp
   src/enemy_path.cpp
   src/menu_cursor.cpp
+  src/level_control.cpp
   src/menu_screen.cpp
   src/message_box.cpp
   src/motion.cpp
@@ -147,15 +182,26 @@ add_library(phantomcrash_core
   src/robot.cpp
   src/robot_library.cpp
   src/robot_mover.cpp
+  src/robot_air.cpp
+  src/robot_strike.cpp
+  src/robot_dodge.cpp
+  src/robot_dash_turn.cpp
+  src/robot_twist.cpp
+  src/movement_mounts.cpp
+  src/pose_contacts.cpp
   src/robot_parts.cpp
+  src/weapon_reach.cpp
   src/screen_adjust.cpp
+  src/post_process.cpp
   src/settings.cpp
   src/host_controls.cpp
   src/quest_json.cpp
   src/skeleton.cpp
+  src/motion_source.cpp
   src/sound_config.cpp
   src/sprite_layer.cpp
   src/story_event_script.cpp
+  src/story_progression.cpp
   src/training_battle.cpp
   src/training_ground.cpp
   src/tutorial.cpp
@@ -241,16 +287,22 @@ if(BUILD_TESTING)
     tests/rumbling_roster_tests.cpp
     tests/keep_sv_tests.cpp
     tests/vs_mode_tests.cpp
+    tests/vs_rules_tests.cpp
+    tests/finale_tests.cpp
     tests/stock_module_tests.cpp
     tests/module_shop_tests.cpp
     tests/system_menu_tests.cpp
     tests/battle_hud_style_tests.cpp
     tests/robot_tests.cpp
+    tests/robot_combat_tests.cpp
     tests/robot_parts_tests.cpp
+    tests/weapon_reach_tests.cpp
     tests/tutorial_tests.cpp
+    tests/post_process_tests.cpp
     tests/world_tests.cpp
     tests/shadow_volume_tests.cpp
     tests/effect_tests.cpp
+    tests/effect_cluster_tests.cpp
   )
   target_link_libraries(phantomcrash_core_tests PRIVATE phantomcrash_core)
   # The shipped data/ documents are part of the source tree and tested too.
@@ -292,19 +344,25 @@ if(PHANTOMCRASH_BUILD_DESKTOP)
     src/desktop_battle_chatter.cpp
     src/desktop_battle_scene.cpp
     src/desktop_battle_view.cpp
+    src/desktop_battle_wrecks.cpp
     src/desktop_location_menu.cpp
+    src/desktop_location_pointer.cpp
+    src/desktop_texture_hit.cpp
     src/desktop_draw_list.cpp
     src/desktop_event_text.cpp
     src/desktop_frame.cpp
     src/desktop_frame_counter.cpp
     src/desktop_frame_rate_dialog.cpp
     src/desktop_front_end.cpp
+    src/desktop_menu_buttons.cpp
     src/desktop_host.cpp
     src/desktop_input.cpp
     src/desktop_input_bindings.cpp
+    src/desktop_audio_menu.cpp
     src/desktop_controls_dialog.cpp
     src/desktop_intro.cpp
     src/desktop_main.cpp
+    src/desktop_scene_dump.cpp
     src/desktop_name_entry.cpp
     src/desktop_option.cpp
     src/desktop_option_screens.cpp
@@ -313,27 +371,50 @@ if(PHANTOMCRASH_BUILD_DESKTOP)
     src/desktop_town_map.cpp
     src/desktop_options.cpp
     src/desktop_screens.cpp
+    src/desktop_screens_dump.cpp
+    src/desktop_screens_coop.cpp
+    src/desktop_screens_coop_battle.cpp
+    src/desktop_screens_coop_save.cpp
+    src/desktop_coop.cpp
+    src/desktop_coop_draw.cpp
+    src/desktop_coop_cursors.cpp
+    src/desktop_coop_matches.cpp
+    src/desktop_training_coop.cpp
+    src/desktop_training_backdrop.cpp
+    src/desktop_training_build.cpp
+    src/desktop_training_dump.cpp
     src/desktop_screens_rumbling.cpp
     src/desktop_screens_music.cpp
+    src/desktop_screens_finale.cpp
+    src/desktop_screens_schedule.cpp
     src/desktop_screens_menus.cpp
     src/desktop_screens_battle.cpp
     src/desktop_settings_menu.cpp
+    src/desktop_copy_button.cpp
+    src/desktop_window_title.cpp
     src/desktop_talk.cpp
     src/desktop_text.cpp
     src/desktop_textures.cpp
+    src/desktop_ui_edges.cpp
     src/desktop_robot.cpp
     src/desktop_training.cpp
+    src/desktop_training_pause.cpp
     src/desktop_training_result.cpp
     src/desktop_training_replay.cpp
     src/desktop_replay.cpp
     src/desktop_replay_archive.cpp
+    src/desktop_result_backdrop.cpp
+    src/desktop_result_trophy.cpp
     src/desktop_replay_overlay.cpp
     src/desktop_match_result.cpp
     src/desktop_screens_result.cpp
+    src/desktop_screens_story.cpp
     src/desktop_training_sound.cpp
     src/desktop_training_camera.cpp
     src/desktop_training_live.cpp
     src/desktop_training_split.cpp
+    src/desktop_training_finale.cpp
+    src/desktop_training_vs.cpp
     src/desktop_monitor_ship.cpp
     src/desktop_stage_objects.cpp
     src/desktop_game_screens.cpp
@@ -369,28 +450,52 @@ if(PHANTOMCRASH_BUILD_DESKTOP)
     src/desktop_supply.cpp
     src/desktop_effects.cpp
     src/desktop_shots.cpp
+    src/desktop_movement_effects.cpp
+    src/desktop_mount_effects.cpp
+    src/desktop_foot_effects.cpp
+    src/desktop_shot_residue.cpp
     src/desktop_training_robots.cpp
     src/desktop_world_gpu.cpp
     src/desktop_world_passes.cpp
     src/desktop_world_monitor.cpp
+    src/desktop_dynamic_lights.cpp
+    src/desktop_light_sources.cpp
+    src/desktop_world_lights.cpp
+    src/desktop_visuals_dialog.cpp
+    src/desktop_coop_dialog.cpp
+    src/desktop_coop_rewards.cpp
     src/desktop_world_shadows.cpp
     src/desktop_world_screen.cpp
+    src/desktop_smaa.cpp
     src/desktop_world_sprites.cpp
     src/desktop_world_renderer.cpp
     src/desktop_world_shaders.cpp
     src/movie_audio_output.cpp
     src/movie_player.cpp
   )
+  set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+    "${CMAKE_CURRENT_SOURCE_DIR}/third_party/smaa/SMAA.hlsl")
+  file(READ "${CMAKE_CURRENT_SOURCE_DIR}/third_party/smaa/SMAA.hlsl" SMAA_SOURCE)
+  # Keep each literal below MSVC's per-token limit without editing upstream HLSL.
+  string(REPLACE "\n" "\n)smaa\"\nR\"smaa(" SMAA_SOURCE "${SMAA_SOURCE}")
+  configure_file(src/desktop_smaa_shaders.hpp.in generated/desktop_smaa_shaders.hpp @ONLY)
+  target_include_directories(phantomcrash_port PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
   target_link_libraries(phantomcrash_port PRIVATE
     phantomcrash_core phantomcrash_media SDL3::SDL3 SDL3_image::SDL3_image ZLIB::ZLIB)
   if(WIN32)
-    target_link_libraries(phantomcrash_port PRIVATE comctl32 d3d11 dxgi d3dcompiler)
+    target_link_libraries(phantomcrash_port PRIVATE comctl32 d3d11 dxgi d3dcompiler gdiplus)
   endif()
   if(MSVC)
     target_compile_options(phantomcrash_port PRIVATE /W4 /permissive-)
   endif()
 
   if(BUILD_TESTING)
+    add_executable(phantomcrash_coop_tests tests/core_tests.cpp tests/coop_settings_tests.cpp
+      src/desktop_coop_matches.cpp src/desktop_coop_rewards.cpp)
+    target_link_libraries(phantomcrash_coop_tests PRIVATE phantomcrash_core SDL3::SDL3)
+    target_compile_definitions(phantomcrash_coop_tests PRIVATE
+      PHANTOMCRASH_SOURCE_ROOT="${PROJECT_SOURCE_DIR}")
+    add_test(NAME phantomcrash_coop_tests COMMAND phantomcrash_coop_tests)
     add_executable(phantomcrash_input_tests tests/core_tests.cpp tests/desktop_input_tests.cpp
       tests/desktop_replay_archive_tests.cpp src/desktop_replay_archive.cpp
       src/desktop_input.cpp src/desktop_input_bindings.cpp)

@@ -18,7 +18,7 @@ enum class RosterSource { member, leader, champion, extra };
 
 // An opponent's robot as the live rumble last left it (rumbling_world.hpp).
 struct LiveRobot {
-  bool placed{};                  // has been out: the rest is its state
+  bool placed{};                   // has been out: the rest is its state
   std::array<float, 3> position{}; // on the area's stage
   float heading{};
   float armour{};

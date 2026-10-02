@@ -115,6 +115,7 @@ public:
   }
 
 private:
+  InputFrame pointer_input(InputFrame input);
   void open(SonicAmpView view);
   void menu_input(double tick_seconds, const InputFrame &input);
   void browse_input(double tick_seconds, const InputFrame &input);

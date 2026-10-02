@@ -10,6 +10,10 @@ class FrameCounter final {
 public:
   void record(double frame_seconds);
   void draw(SDL_Renderer *renderer) const;
+  // The last half-second's rate, for the window title.
+  [[nodiscard]] double rate() const {
+    return rate_;
+  }
 
 private:
   double elapsed_{};

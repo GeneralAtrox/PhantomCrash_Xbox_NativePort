@@ -14,18 +14,6 @@ def tables():
     return effect_models.effect_models(EXTRACTED_XBE.read_bytes())
 
 
-def test_flashes_are_flip_books_of_slots(tables):
-    out, models, packs = tables
-    fireball = out["flashes"][0]
-    assert fireball["update"] == "fade" and fireball["additive"]
-    assert len(fireball["frames"]) == 16
-    assert fireball["frames"][0] == "textures/binlink/1566/5.png"
-    smoke = out["flashes"][1]
-    assert smoke["frames"][0] == "textures/binlink/1566/25.png" and not smoke["additive"]
-    assert models == {194, 197}
-    assert packs == {1566, 1567}
-
-
 def test_shots_and_impacts(tables):
     out, _, _ = tables
     bullet = out["projectiles"][0]

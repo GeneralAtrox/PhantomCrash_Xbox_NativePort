@@ -46,7 +46,7 @@ namespace effect_flags {
 inline constexpr std::uint32_t replaceable = 0x4;       // may be taken over when all are busy
 inline constexpr std::uint32_t inherit_velocity = 0x8;  // starts trailing the emitter's motion
 inline constexpr std::uint32_t exact_spread = 0x10;     // leaves at the spread angle exactly
-inline constexpr std::uint32_t radial_push = 0x20;      // pushed out from the direction
+inline constexpr std::uint32_t radial_push = 0x20;      // spawn offset away from the direction
 inline constexpr std::uint32_t random_direction = 0x40; // starts on a sphere of `push`
 inline constexpr std::uint32_t spin = 0x80;             // turns while it flies
 inline constexpr std::uint32_t streak = 0x100;          // drawn from it to where it goes
@@ -192,6 +192,46 @@ struct EffectDecals {
   std::vector<std::string> textures;
   float scale{0.25F};
   int count{100};
+  float depth_offset{0.01F}; // native separation from the receiving surface
+  float scorch_scale{1.0F};  // fraction of the blast radius
+};
+
+// 0x0702d8 / 0x0704a5: 33 positions, updated on alternate 30 Hz frames.
+struct MissileTrailLook {
+  std::string texture;
+  int points{33};
+  int capacity{50};
+  float sample_hz{15.0F};
+  float fade_seconds{1.0F};
+  float head_width{0.1F};
+  float tail_width{1.5F};
+};
+
+struct ParticleMotion {
+  int fragment_copies{8}; // 0x060b7c: copies numbered 2 through 9
+  float fragment_step{0.1F};
+  float fragment_jitter{0.1F};
+  float debris_restitution{};     // 0x062115: debris settles without bouncing
+  float debris_friction{};        // optional native tangential retention, zero in the base data
+  float debris_rest_speed{0.02F}; // per effect frame
+  float debris_clearance{0.05F};
+  // 0x062115 settles debris on flat ground at the clearance; true settles
+  // it on the stage's own surfaces instead (a port option).
+  bool debris_stage_contacts{};
+  // 0x060107 starts an emitter at its definition's offset and 0x05fda8 then
+  // moves it to where it was asked (0x064c4b sets only the position), so
+  // its first frame's motion runs from the offset and births that inherit
+  // the motion spread along it. False starts it still at the spawn point.
+  bool start_at_offset{true};
+};
+
+// A held beam (0x09b9fe): the model's unit quad stretched from the muzzle
+// to the tip, `width` across. It brightens over `fade_frames` held and dims
+// over as many once let go.
+struct BeamLook {
+  std::optional<EffectPicture> model;
+  float width{0.25F};
+  float fade_frames{8.0F};
 };
 
 struct EffectBank {
@@ -203,8 +243,11 @@ struct EffectBank {
   std::vector<EffectFlash> flashes;
   std::vector<ShotLook> shots;
   std::optional<EffectPicture> exhaust;
+  BeamLook beam;
   std::vector<ShotImpact> impacts;
   EffectDecals decals;
+  MissileTrailLook missile_trail;
+  ParticleMotion particle_motion;
   FenceLook fence;
   std::vector<int> wreck_groups; // started where a robot is destroyed (0x07675e)
 };

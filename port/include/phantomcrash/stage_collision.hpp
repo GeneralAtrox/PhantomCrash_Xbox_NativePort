@@ -63,10 +63,18 @@ public:
 
   // The highest ground under `at` that is no more than `step` above it:
   // floor triangles and walls flat enough to stand on. no_ground if none.
-  [[nodiscard]] float ground_height(Vec3 at, float step) const;
+  // With a radius, returns the foot position supporting that sphere on a slope.
+  // `surface`, if given, receives the supporting triangle's surface (-1: none).
+  [[nodiscard]] float ground_height(Vec3 at, float step, float radius = 0.0F,
+                                    int *surface = nullptr) const;
+  // A point over stage ground, inside the force-field outline and below
+  // its ceiling. Without a force field, uses the ground footprint.
+  [[nodiscard]] bool in_play_area(Vec3 at) const;
   // Pushes a sphere out of the walls; returns stage_contact flags. Faces
   // push only from their front; edges and corners from either side.
-  unsigned push_sphere(Vec3 &centre, float radius) const;
+  // If supplied, retains the first fence contact across successive pushes.
+  unsigned push_sphere(Vec3 &centre, float radius,
+                       std::optional<StageHit> *fence_hit = nullptr) const;
   // Where the segment first meets a wall or the floor.
   [[nodiscard]] std::optional<Vec3> segment_hit(Vec3 from, Vec3 to) const;
   [[nodiscard]] std::optional<StageHit> segment_contact(Vec3 from, Vec3 to) const;

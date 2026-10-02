@@ -146,6 +146,7 @@ TEST_CASE("a glTF model loads mirrored back into the game's left-handed space") 
   CHECK(model.draws.size() == 1 && model.draws[0].pass == 1);
   const ModelMaterial &material = model.materials.at(0);
   CHECK(material.additive && material.double_sided && material.alpha == AlphaMode::blend);
+  CHECK(!material.blend_depth_write);
   CHECK(near(material.base_colour[1], 0.5F));
 }
 
@@ -153,4 +154,43 @@ TEST_CASE("a model that cannot be read throws") {
   const auto path = write_temp("phantomcrash_world_bad.gltf", "{\"asset\": ");
   CHECK_THROWS(load_model(path, "models/bad.gltf"));
   std::filesystem::remove(path);
+}
+
+TEST_CASE("original blended model batches retain depth writes in their second pass") {
+  std::string source = triangle_gltf;
+  const std::string flags = "\"flags\": 512";
+  source.replace(source.find(flags), flags.size(), "\"flags\": 10");
+  const auto path = write_temp("phantomcrash_world_blend_test.gltf", source.c_str());
+  ModelData model;
+  try {
+    model = load_model(path, "models/test.gltf");
+  } catch (...) {
+    std::filesystem::remove(path);
+    throw;
+  }
+  std::filesystem::remove(path);
+  const ModelMaterial &material = model.materials.at(0);
+  CHECK(material.alpha == AlphaMode::blend);
+  CHECK(!material.additive);
+  CHECK(material.blend_depth_write);
+  CHECK(model.draws.at(0).pass == 1);
+}
+
+TEST_CASE("ordinary glTF transparency does not inherit original model depth writes") {
+  std::string source = triangle_gltf;
+  const std::string flags = "\"flags\": 512";
+  source.replace(source.find(flags), flags.size(), "\"custom\": 10");
+  const auto path = write_temp("phantomcrash_world_generic_blend_test.gltf", source.c_str());
+  ModelData model;
+  try {
+    model = load_model(path, "models/test.gltf");
+  } catch (...) {
+    std::filesystem::remove(path);
+    throw;
+  }
+  std::filesystem::remove(path);
+  const ModelMaterial &material = model.materials.at(0);
+  CHECK(material.alpha == AlphaMode::blend);
+  CHECK(!material.additive);
+  CHECK(!material.blend_depth_write);
 }

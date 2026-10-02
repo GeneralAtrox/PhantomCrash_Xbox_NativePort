@@ -14,8 +14,10 @@ struct DrawItem {
 } // namespace
 
 FrontEndScreen::FrontEndScreen(TextureCache &textures, TitleScript title, MainMenuScript menu,
+                               const json::JsonValue &button_style,
                                const std::string &returning_from)
-    : textures_(textures), front_end_(std::move(title), std::move(menu)) {
+    : textures_(textures), front_end_(std::move(title), std::move(menu)),
+      buttons_(textures.renderer(), button_style) {
   if (!returning_from.empty()) {
     front_end_.open_menu_from(returning_from);
   }
@@ -44,6 +46,9 @@ void FrontEndScreen::draw(const Viewport &viewport) {
   if (const Menu *menu = front_end_.menu()) {
     for (std::size_t index = 0; index < menu->items.size(); ++index) {
       const auto &item = menu->items[index];
+      if (!item.label.empty()) {
+        continue;
+      }
       const bool greyed = !front_end_.available(item);
       items.push_back({&item.normal, greyed ? item.unavailable_colour : 0xffffffU});
       if (static_cast<int>(index) == front_end_.cursor()) {
@@ -58,6 +63,16 @@ void FrontEndScreen::draw(const Viewport &viewport) {
   std::ranges::stable_sort(items, {}, [](const DrawItem &item) { return item.sprite->layer; });
   for (const auto &item : items) {
     draw_sprite(textures_, *item.sprite, viewport, front_end_.seconds(), 1.0F, item.colour);
+  }
+  if (const Menu *menu = front_end_.menu()) {
+    for (std::size_t i = 0; i < menu->items.size(); ++i) {
+      const auto &item = menu->items[i];
+      if (item.label.empty()) {
+        continue;
+      }
+      buttons_.draw(item.label, item.normal.position, viewport,
+                    static_cast<int>(i) == front_end_.cursor(), front_end_.available(item));
+    }
   }
 
   if (const float black = front_end_.black_alpha(); black > 0.0F) {

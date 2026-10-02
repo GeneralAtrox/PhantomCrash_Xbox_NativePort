@@ -66,8 +66,32 @@ void LoadGameScreen::draw(const Viewport &viewport) {
   if (phase != LoadGame::Phase::no_records) {
     for (std::size_t index = 0; index < script.slots.size(); ++index) {
       const SaveSlotStyle &slot = script.slots[index];
-      const auto &quest = menu_.slots()[index].quest;
-      list.sprite(slot.plate);
+      const auto &record = menu_.slots()[index];
+      const auto &quest = record.quest;
+      const auto card_sprite = [&](Sprite sprite) {
+        if (!record.selectable) {
+          sprite.colour = 0x606060;
+        }
+        list.sprite(sprite);
+      };
+      card_sprite(slot.plate);
+      if (!record.owner.empty()) {
+        const auto label = [&](const std::string &text, const float y) {
+          auto glyphs = layout_run(font_, glyph_run(font_, text), 0, 0);
+          for (auto &glyph : glyphs) {
+            glyph.x = slot.plate.position[0] + glyph.x * 0.55F;
+            glyph.y = y + glyph.y * 0.55F;
+            glyph.width *= 0.55F;
+            glyph.height *= 0.55F;
+          }
+          const std::array<float, 4> clip{slot.plate.position[0], y, slot.plate.position[0] + 128,
+                                          y + 18};
+          list.text(script.details.text_layer, std::move(glyphs),
+                    record.selectable ? 0xffff80 : 0x909090, clip);
+        };
+        label(record.owner, slot.plate.position[1] - 18);
+        label(quest ? quest->player_name : "Empty", slot.plate.position[1] + 154);
+      }
       if (static_cast<int>(index) == menu_.slot() && phase != LoadGame::Phase::exit) {
         // The lit plate pulses while the cursor is on the slots and holds
         // still behind a notice.
@@ -78,16 +102,16 @@ void LoadGameScreen::draw(const Viewport &viewport) {
         list.sprite(lit);
       }
       if (!quest) {
-        list.sprite(slot.empty);
+        card_sprite(slot.empty);
         continue;
       }
       if (const auto time = parse_saved_time(quest->saved)) {
         for (const auto &sprite : saved_time_sprites(script, slot, *time)) {
-          list.sprite(sprite);
+          card_sprite(sprite);
         }
       }
       if (quest->cleared) {
-        list.sprite(slot.clear);
+        card_sprite(slot.clear);
       }
     }
     list.sprite(script.exit.normal);

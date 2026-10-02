@@ -51,6 +51,7 @@ std::map<std::string, WeaponTuning> parse_weapon_tunings(const json::JsonValue &
     w.name = name;
     w.label = entry.string_or("label", name);
     w.kind = weapon_kind(entry.string_or("kind", "gun"));
+    w.aim_mode = static_cast<int>(entry.number_or("aim_mode", w.aim_mode));
     w.damage = number(entry, "damage", w.damage);
     w.cooldown = number(entry, "cooldown", w.cooldown);
     w.rounds = std::max(static_cast<int>(entry.number_or("rounds", w.rounds)), 1);
@@ -61,7 +62,6 @@ std::map<std::string, WeaponTuning> parse_weapon_tunings(const json::JsonValue &
     w.range = number(entry, "range", w.range);
     w.life_seconds = number(entry, "life_seconds", 0.0F);
     w.lock_range = number(entry, "lock_range", w.lock_range);
-    w.lock_degrees = number(entry, "lock_degrees", w.lock_degrees);
     w.turn_degrees_per_second = number(entry, "turn_degrees_per_second", 0.0F);
     w.gravity = number(entry, "gravity", 0.0F);
     w.launch_degrees = number(entry, "launch_degrees", 0.0F);

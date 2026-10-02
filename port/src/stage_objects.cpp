@@ -18,12 +18,13 @@ Mat4 rotation_z(float angle) {
 
 StageObject parse_object(const json::JsonValue &value) {
   StageObject object;
+  object.kind = static_cast<int>(value.number_or("kind", -1));
   object.mesh = static_cast<int>(json::required(value, "mesh").number());
   object.wreck_mesh = static_cast<int>(value.number_or("wreck_mesh", -1));
   object.break_effect = static_cast<int>(value.number_or("break_effect", -1));
   object.wreck_break_effect = static_cast<int>(value.number_or("wreck_break_effect", -1));
   object.break_sound = value.string_or("break_sound", "");
-  object.wreck_solid = value.boolean_or("wreck_solid", false);
+  object.wreck_solid = value.boolean_or("wreck_solid", true);
   object.wreck_hit_delay = static_cast<float>(value.number_or("wreck_hit_delay", 0));
   const auto p = json::numbers<3>(json::required(value, "position"), "position");
   const auto r = json::numbers<3>(json::required(value, "rotation"), "rotation");
@@ -54,6 +55,23 @@ StageObject parse_object(const json::JsonValue &value) {
   object.centre = (low + high) * 0.5F;
   object.radius = length(high - low) * 0.5F;
   object.collision = StageCollision(std::move(triangles), {});
+  if (const auto *wreck = value.find("wreck_collision")) {
+    std::vector<CollisionTriangle> wreck_triangles;
+    for (const auto &entry : wreck->array()) {
+      const auto points = json::numbers<9>(entry, "wreck collision triangle");
+      CollisionTriangle triangle;
+      for (std::size_t corner = 0; corner < 3; ++corner) {
+        triangle.points[corner] = transform_point(
+            {points[corner * 3], points[corner * 3 + 1], points[corner * 3 + 2]}, object.world);
+      }
+      triangle.normal = normalize(
+          cross(triangle.points[1] - triangle.points[0], triangle.points[2] - triangle.points[0]));
+      wreck_triangles.push_back(triangle);
+    }
+    if (!wreck_triangles.empty()) {
+      object.wreck_collision = StageCollision(std::move(wreck_triangles), {});
+    }
+  }
   return object;
 }
 } // namespace
@@ -80,6 +98,26 @@ void StageObjects::tick(const float seconds) {
   }
 }
 
+unsigned StageObjects::push_sphere(Vec3 &centre, const float radius) const {
+  unsigned contact = 0;
+  for (const auto &object : objects_) {
+    if (object.solid()) {
+      contact |= object.collision.push_sphere(centre, radius);
+    }
+  }
+  return contact;
+}
+
+float StageObjects::ground_height(const Vec3 at, const float step, const float radius) const {
+  float height = no_ground;
+  for (const auto &object : objects_) {
+    if (object.solid()) {
+      height = std::max(height, object.collision.ground_height(at, step, radius));
+    }
+  }
+  return height;
+}
+
 std::optional<ObjectBreak> StageObjects::hit(const std::size_t index) {
   if (index >= objects_.size()) {
     return std::nullopt;
@@ -90,11 +128,16 @@ std::optional<ObjectBreak> StageObjects::hit(const std::size_t index) {
     return std::nullopt;
   }
   object.removed = object.destroyed || object.wreck_mesh < 0;
+  if (!object.destroyed && object.wreck_collision) {
+    // Keep wrecks solid, but only where their remaining geometry is visible.
+    object.collision = std::move(*object.wreck_collision);
+    object.wreck_collision.reset();
+  }
   object.destroyed = true;
   object.cooldown = object.wreck_hit_delay;
   if (!object.break_sound.empty()) {
     sounds_.emplace_back(object.break_sound, object.position);
   }
-  return ObjectBreak{effect, object.position};
+  return ObjectBreak{effect, object.position, object.kind};
 }
 } // namespace phantomcrash

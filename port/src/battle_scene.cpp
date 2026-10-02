@@ -38,6 +38,19 @@ bool entering(const int state) {
 
 } // namespace
 
+Vec3 walked_out(const BattleSceneTables &tables, const SceneTuning &tuning, const Gate &gate,
+                const int state) {
+  const auto found = tables.states.find(state);
+  if (found == tables.states.end() || !found->second.walk) {
+    return gate.position;
+  }
+  const SceneTrack &scene = found->second;
+  const float end = scene.frames - std::min(tuning.stand_frame, scene.frames);
+  Vec3 moved = turned(sample(*scene.walk, end) - sample(*scene.walk, 0.0F), gate.heading);
+  moved.y = 0.0F; // 0x090f8a keeps the walk's x and z
+  return gate.position + moved;
+}
+
 BattleScene::BattleScene(BattleSceneTables tables, SceneTuning tuning, const std::uint32_t seed)
     : tables_(std::move(tables)), tuning_(std::move(tuning)), random_(seed) {}
 
@@ -53,21 +66,26 @@ bool BattleScene::start_entrance(Battle &battle) {
   }
   gate_ = std::max(tuning_.gate, 0) % static_cast<int>(list->size());
   origin_ = (*list)[static_cast<std::size_t>(gate_)];
-  battle.place(0, origin_.position, origin_.heading);
-  battle.raise_shield(0); // 0x082552: protected as soon as the robot is placed.
+  battle.place(battle.player_index(), origin_.position, origin_.heading);
+  battle.raise_shield(battle.player_index()); // 0x082552: protected as soon as the robot is placed.
   state_ = state;
   left_ = scene->frames;
   gate_flag_ = 0;
   letterbox_ = 1.0F; // 0x088ffa sets the bars straight in (global +0xef320 1)
   letterbox_way_ = 0.0F;
   if (tuning_.regular_battle) {
-    lines_.emplace_back(0, chatter_event::entrance);
+    lines_.emplace_back(battle.player_index(), chatter_event::entrance);
   }
   finished_ = false;
   return true;
 }
 
 void BattleScene::prepare(Battle &battle, const float seconds) {
+  for (const int index : tuning_.computer_entrance ? battle.take_arrivals() : std::vector<int>{}) {
+    if (battle.robots()[static_cast<std::size_t>(index)].alive) {
+      static_cast<void>(start_robot_entrance(battle, index));
+    }
+  }
   const float step = seconds * scene_frames_per_second;
   if (letterbox_way_ != 0.0F && tuning_.letterbox_frames > 0.0F) {
     letterbox_ =
@@ -92,9 +110,9 @@ void BattleScene::prepare(Battle &battle, const float seconds) {
 void BattleScene::walk_entrance(Battle &battle, const float seconds, const float step) {
   // 0x08928c refreshes protection throughout entry, including a held camera scene.
   // Once control returns, the configured shield duration counts down normally.
-  battle.raise_shield(0);
+  battle.raise_shield(battle.player_index());
   if (cinematic()) {
-    hold_still(battle, 0);
+    hold_still(battle, battle.player_index());
     return;
   }
   const float before = left_;
@@ -112,13 +130,13 @@ void BattleScene::walk_entrance(Battle &battle, const float seconds, const float
   open_door(battle, gate_, before, left_);
   if (left_ <= 0.0F) {
     // 0x0897a2: the robot stands and the battle starts; the bars slide out.
-    battle.release(0);
+    battle.release(battle.player_index());
     state_ = scene_state::none;
     left_ = 0.0F;
     letterbox_way_ = -1.0F;
     return;
   }
-  walk_step(battle, 0, state_, origin_, before, left_, seconds);
+  walk_step(battle, battle.player_index(), state_, origin_, before, left_, seconds);
 }
 
 void BattleScene::walk_step(Battle &battle, const int index, const int state, const Gate &origin,
@@ -161,12 +179,12 @@ void BattleScene::walk_exit(Battle &battle, const float seconds, const float ste
   }
   if (left_ <= 0.0F) {
     // 0x08a496: the scene ends the battle.
-    battle.release(0);
+    battle.release(battle.player_index());
     left_ = 0.0F;
     finished_ = true;
     return;
   }
-  exit_step(battle, 0, exit_heading_, origin_.position, seconds, step);
+  exit_step(battle, battle.player_index(), exit_heading_, origin_.position, seconds, step);
 }
 
 void BattleScene::exit_step(Battle &battle, const int index, const float heading, const Vec3 gate,
@@ -221,7 +239,11 @@ void BattleScene::observe(Battle &battle) {
     gate_flag_ = 1; // out of every gate: walking back into one leaves
   } else if (gate_flag_ == 1 && gate >= 0) {
     gate_flag_ = 2;
-    start_exit(battle, gate);
+    if (tuning_.ranker) {
+      sign_off(battle, battle.player_index());
+    } else {
+      start_exit(battle, gate);
+    }
   }
 }
 
@@ -263,7 +285,7 @@ float BattleScene::heading_to(const Combatant &robot, const Vec3 gate) const {
 }
 
 void BattleScene::start_exit(Battle &battle, const int gate) {
-  sign_off(battle, 0);
+  sign_off(battle, battle.player_index());
   const SceneTrack *scene = track(scene_state::exit);
   if (scene == nullptr) {
     return;
@@ -273,7 +295,7 @@ void BattleScene::start_exit(Battle &battle, const int gate) {
   exit_heading_ = heading_to(battle.player(), origin_.position);
   state_ = scene_state::exit;
   left_ = scene->frames;
-  battle.raise_shield(0, scene->frames / scene_frames_per_second); // 0x08224d
+  battle.raise_shield(battle.player_index(), scene->frames / scene_frames_per_second); // 0x08224d
   letterbox_way_ = 1.0F;
 }
 

@@ -33,6 +33,17 @@ struct TrainingRobot {
   int legs_level{};
   int pilot{-1}; // a pilot record (0x1c9920); its tag labels the marker
   bool boss{};   // a boss (loadout +0x70 1): a drone enters with the boss's scene
+  // Fitted modules (tables/garage.json "modules", loadout +0x22): their
+  // critical and knockdown resistance add to the chip's (0x075d4a).
+  std::vector<int> modules;
+};
+
+// A VS player's robot (vs_battle.hpp): its look is the script's
+// robots[name] and controller port `port` drives it.
+struct TrainingRider {
+  std::string name;
+  int port{};
+  TrainingRobot robot;
 };
 
 // The battle buttons (the lessons' own texts name them: triggers fire the
@@ -43,6 +54,7 @@ struct BattleButtons {
   Buttons camouflage{button::x};
   Buttons jump{button::a};
   Buttons dash{button::left_thumb};
+  Buttons down_boost{button::left_thumb}; // extra native shortcut; jump can be pressed again too
   Buttons reset_twist{button::right_thumb};
   Buttons dodge_left{button::white};
   Buttons dodge_right{button::black};
@@ -82,6 +94,12 @@ struct TrainingBattle {
   float player_heading{};
   TrainingRobot drone;
   int drones{4};
+  // VS: the players' robots, the first the player's; empty elsewhere. They
+  // start out of the gates and fight each other without drones.
+  std::vector<TrainingRider> riders;
+  // Units out of its gate a rider starts; below 0, where the gate's
+  // state 1 walk stands (walked_out, 0x082552).
+  float rider_gate_step{-1.0F};
   // Walk and dash at the pace the leg motions stride (the original moves
   // robots by root motion); false keeps the "movement" speeds.
   bool stride_speeds{true};
@@ -104,8 +122,14 @@ using LessonMessages = std::map<int, std::array<std::vector<EventCommand>, 2>>;
 
 // The player's stick and buttons as robot controls. `step` (may be null)
 // limits the walk and the turn direction as the basic lesson does.
+// BUTTON CONFIG's CONTROL TYPE picks the sticks (0x0774ad): Standard
+// walks and strafes on the left stick and turns on the right; Preferred
+// walks and turns on the left and twists the upper body on the right.
+// Both aim up and down on the right. BEGINNER MODE (`beginner`) makes
+// Preferred's right stick a quick turn instead (RobotControl::quick_turn).
 [[nodiscard]] RobotControl battle_control(const InputFrame &input, const BattleButtons &buttons,
-                                          const LessonStep *step);
+                                          const LessonStep *step, bool standard = true,
+                                          bool beginner = false);
 [[nodiscard]] FireControl battle_fire(const InputFrame &input, const BattleButtons &buttons);
 
 // What `player` did over the tick of `seconds` that started at

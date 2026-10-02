@@ -26,6 +26,13 @@ DesktopSupply::DesktopSupply(WorldRenderer &world, const SupplyLook &look, const
   }
   mesh_nodes_ = converter_mesh_nodes(*data);
   glow_texture_ = world.texture(look_.glow_texture);
+  for (std::size_t parity = 0; parity < look_.models.size(); ++parity) {
+    const int model = world.model(look_.models[parity].model);
+    if (const ModelData *other = world.model_data(model)) {
+      pickup_models_[parity] = model;
+      pickup_nodes_[parity] = converter_mesh_nodes(*other);
+    }
+  }
 }
 
 int DesktopSupply::effect_of(const SupplyDrop &drop, const int type) const {
@@ -51,12 +58,28 @@ void DesktopSupply::add_mesh(const int mesh, const Mat4 &world,
   }
 }
 
-void DesktopSupply::add_items(const SupplyDrop &drop, std::vector<WorldItem> &items,
-                              const bool split_screen) {
-  if (!ready() || !drop.active()) {
+void DesktopSupply::add_pickup_mesh(const std::size_t parity, const int mesh, const Mat4 &world,
+                                    std::vector<WorldItem> &items) const {
+  const auto &nodes = pickup_nodes_[parity];
+  if (pickup_models_[parity] < 0 || mesh < 0 || mesh >= static_cast<int>(nodes.size())) {
+    add_mesh(parts_.first_pickup + (mesh - look_.models[parity].first_pickup), world, items);
     return;
   }
-  const SupplyCarrier &carrier = drop.carrier();
+  for (const int node : nodes[static_cast<std::size_t>(mesh)]) {
+    WorldItem item;
+    item.model = pickup_models_[parity];
+    item.node = node;
+    item.world = world;
+    items.push_back(std::move(item));
+  }
+}
+
+// The carrier: its body, the night shell's random colour, the hatch's doors
+// and the spinning part, or the wreck alone (0x0699d5).
+void DesktopSupply::add_carrier(const SupplyCarrier &carrier, std::vector<WorldItem> &items) {
+  if (!ready()) {
+    return;
+  }
   const Mat4 frame = rotation_y(carrier.heading) * translation(carrier.position);
   if (carrier.wrecked) {
     add_mesh(parts_.wreck, frame, items); // 0x0699d5 state 4: the wreck alone
@@ -83,15 +106,26 @@ void DesktopSupply::add_items(const SupplyDrop &drop, std::vector<WorldItem> &it
     }
     add_mesh(parts_.spinner, rotation_y(carrier.spin) * frame, items);
   }
+}
+
+void DesktopSupply::add_items(const SupplyDrop &drop, std::vector<WorldItem> &items,
+                              const bool split_screen) {
+  if (!ready() || !drop.active()) {
+    return;
+  }
+  add_carrier(drop.carrier(), items);
   const float scale = look_.pickup_scale;
   for (const SupplyPickup &pickup : drop.pickups()) {
-    const bool carried = pickup.state == SupplyState::carried && !carrier.parked;
-    if (!carried && pickup.state != SupplyState::falling && pickup.state != SupplyState::landed) {
+    // Cargo remains hidden inside the carrier until the hatch releases it.
+    if (pickup.state != SupplyState::falling && pickup.state != SupplyState::landed) {
       continue;
     }
+    // 0x069d52 takes the crate from the day or the night model at random
+    // every frame.
     const std::size_t first = items.size();
-    add_mesh(parts_.first_pickup + pickup.kind,
-             scaling(Vec3{scale, scale, scale}) * translation(pickup.position), items);
+    const auto parity = static_cast<std::size_t>(random_() & 1U);
+    add_pickup_mesh(parity, look_.models[parity].first_pickup + pickup.kind,
+                    scaling(Vec3{scale, scale, scale}) * translation(pickup.position), items);
     if (!split_screen) {
       continue;
     }
@@ -108,10 +142,8 @@ void DesktopSupply::add_sprites(const SupplyDrop &drop, const Vec3 eye,
   if (!ready() || !drop.active() || glow_texture_ < 0) {
     return;
   }
-  const bool parked = drop.carrier().parked;
   for (const SupplyPickup &pickup : drop.pickups()) {
-    const bool carried = pickup.state == SupplyState::carried && !parked;
-    if (!carried && pickup.state != SupplyState::falling && pickup.state != SupplyState::landed) {
+    if (pickup.state != SupplyState::falling && pickup.state != SupplyState::landed) {
       continue;
     }
     // 0x066223: turned to the camera and brought glow_pull toward it.
@@ -182,7 +214,9 @@ std::unique_ptr<DesktopSupply> load_supply(WorldRenderer *world, const DataRoots
     return nullptr;
   }
   const SupplyLook look = settings.look;
-  battle.set_supply(std::move(settings));
+  if (!battle.cooperative() || !battle.supply()) {
+    battle.set_supply(std::move(settings));
+  }
   if (world == nullptr || !world->available()) {
     return nullptr;
   }
@@ -197,14 +231,15 @@ std::unique_ptr<DesktopSupply> load_supply(WorldRenderer *world, const DataRoots
 void collect_supply(const Battle &battle, const SupplyLook &look, std::int64_t &money,
                     std::vector<WorldSound> &sounds) {
   for (const BattleEvent &event : battle.events()) {
-    if (event.robot != 0) {
+    if (event.robot != battle.player_index()) {
       continue;
     }
     if (event.kind == BattleEventKind::supply) {
       money += static_cast<std::int64_t>(event.amount);
       // 0x066e50, for player robots, at the robot.
-      sounds.push_back({look.take_sound, battle.player().aim_origin()});
-    } else if (event.kind == BattleEventKind::carrier_down) {
+      sounds.push_back({look.take_sound, battle.player().aim_origin(), AudioBus::pickups});
+    } else if (event.kind == BattleEventKind::carrier_down ||
+               event.kind == BattleEventKind::wreck_destroyed) {
       money += static_cast<std::int64_t>(event.amount);
     }
   }

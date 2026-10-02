@@ -52,6 +52,8 @@ private:
   bool open_{};
 };
 
+enum class VsPhase { entry, select, area };
+
 // What the VS mode keeps between its screen and the battle: who entered
 // and with which Scoobee, their wins and losses, and the stage chosen.
 struct VsSession {
@@ -62,6 +64,9 @@ struct VsSession {
   std::array<std::optional<RobotRecord>, controller_ports> robots;
   int stage{-1};
   int area_cursor{};
+  // Where the battle's menu returns: the area select, or (SELECT SV) the
+  // Scoobee select.
+  VsPhase resume{VsPhase::area};
 };
 
 // How the VS mode is entered: from the main menu afresh, or back from its
@@ -69,8 +74,6 @@ struct VsSession {
 struct VsModeEntry {
   bool from_battle{};
 };
-
-enum class VsPhase { entry, select, area };
 
 // What the phase is doing: its opening, taking the players' input, asking
 // Are you ready? (and closing on NO), the abandon question, the panels

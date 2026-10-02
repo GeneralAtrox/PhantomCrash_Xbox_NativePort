@@ -125,8 +125,12 @@ void SvPurchase::say(const std::string &message, const PurchaseView after) {
   show(PurchaseView::message);
 }
 
-PurchaseResult SvPurchase::update(const double tick_seconds, const InputFrame &input,
+PurchaseResult SvPurchase::update(const double tick_seconds, const InputFrame &raw_input,
                                   QuestSave &quest) {
+  const InputFrame input = pointer_input(raw_input);
+  if (input.dialog_choice) {
+    choice_ = *input.dialog_choice;
+  }
   view_seconds_ += tick_seconds;
   const float step = static_cast<float>(tick_seconds / script_.hangars.scroll_seconds);
   scroll_ = std::min(1.0F, scroll_ + step);

@@ -153,6 +153,7 @@ public:
   [[nodiscard]] std::string help() const;
 
 private:
+  InputFrame pointer_input(InputFrame input);
   void show(PurchaseView view);
   void say(const std::string &message, PurchaseView after);
   [[nodiscard]] bool fits(const QuestSave &quest, int hangar) const;

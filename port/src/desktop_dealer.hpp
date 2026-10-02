@@ -18,6 +18,7 @@ class DrawList;
 // money and garage it changes go back into the quest as they change.
 class DealerScreen final : public TownScreen {
 public:
+  [[nodiscard]] std::optional<MenuPresence> menu_presence() const override;
   DealerScreen(TextureCache &textures, const GlyphFont &font, Dealer logic,
                const MessageBoxStyle &box, const std::string &from, const FrameStyle &frame,
                const std::vector<MusicCredit> &credits, QuestSave quest, int &remembered,
@@ -40,7 +41,7 @@ public:
   }
 
 private:
-  void draw_backdrop(DrawList &list) const;
+  void draw_backdrop(DrawList &list, const Viewport &viewport) const;
   void draw_logo(DrawList &list) const;
   void draw_menu(DrawList &list) const;
   void draw_offer(DrawList &list) const;

@@ -3,10 +3,11 @@
 // post passes. Outside battles that is 0x0b6f00, the frame multiplied by the
 // texture factor 0x25b490 (white); in battles it is the depth of field
 // 0x0b5fb0: the frame softened twice by blur.xpu (the average of four taps)
-// into two half-size targets, then dof.xpu mixing the soft copy in by the
+// into 320x240 and 160x120 targets, then dof.xpu mixing the soft copy in by the
 // depth's top byte and multiplying by the same colour, the stage preset's
 // tint. (0x0b6660, a shimmer over the blur, is never switched on.)
 #include "desktop_world_renderer.hpp"
+#include "desktop_world_screen_shaders.hpp"
 
 #include <algorithm>
 #include <cstring>
@@ -16,94 +17,8 @@
 namespace phantomcrash {
 namespace {
 
-constexpr char source[] = R"hlsl(
-cbuffer Screen : register(b0) {
-  float2 tap;      // the blur's taps, in uv, out from the pixel on both axes
-  float threshold; // the depth byte where the blur starts
-  float ramp;
-  float3 tint;
-  float blur_on;
-  float depth_a;   // the port's projection: distance = depth_b / (depth - depth_a)
-  float depth_b;
-  float original_scale; // the original's: depth = scale * (1 - near / distance)
-  float original_near;
-};
-
-Texture2D picture : register(t0);
-Texture2D blurred : register(t1);
-#ifdef MULTISAMPLED
-Texture2DMS<float> depth : register(t2);
-#else
-Texture2D<float> depth : register(t2);
-#endif
-SamplerState smooth : register(s0);
-
-struct Screen {
-  float4 position : SV_Position;
-  float2 uv : TEXCOORD0;
-};
-
-Screen vs_screen(uint id : SV_VertexID) {
-  Screen o;
-  float2 at = float2((id << 1) & 2, id & 2);
-  o.position = float4(at * float2(2.0, -2.0) + float2(-1.0, 1.0), 0.0, 1.0);
-  o.uv = at;
-  return o;
-}
-
-// The coverage pass's triangle lies at the far plane: it passes the depth
-// test only where something was drawn.
-Screen vs_far(uint id : SV_VertexID) {
-  Screen o = vs_screen(id);
-  o.position.z = 1.0;
-  return o;
-}
-
-float4 ps_cover(Screen i) : SV_Target {
-  return float4(0.0, 0.0, 0.0, 1.0);
-}
-
-float4 ps_blur(Screen i) : SV_Target {
-  float4 sum = picture.Sample(smooth, i.uv + float2(-tap.x, -tap.y));
-  sum += picture.Sample(smooth, i.uv + float2(tap.x, -tap.y));
-  sum += picture.Sample(smooth, i.uv + float2(-tap.x, tap.y));
-  sum += picture.Sample(smooth, i.uv + float2(tap.x, tap.y));
-  return sum * 0.25;
-}
-
-float4 ps_screen(Screen i) : SV_Target {
-  int2 pixel = int2(i.position.xy);
-  float3 colour = picture.Load(int3(pixel, 0)).rgb;
-  if (blur_on > 0.5) {
-#ifdef MULTISAMPLED
-    float d = depth.Load(pixel, 0);
-#else
-    float d = depth.Load(int3(pixel, 0));
-#endif
-    float distance = depth_b / min(d - depth_a, -1e-7);
-    float original = saturate(original_scale * (1.0 - original_near / distance));
-    // The top byte of the original's 24-bit depth, read as a colour's alpha.
-    float top = min(floor(original * 256.0), 255.0) / 255.0;
-    float amount = saturate((top - threshold) * ramp);
-    colour = lerp(colour, blurred.Sample(smooth, i.uv).rgb, amount);
-  }
-  return float4(colour * tint, 1.0);
-}
-)hlsl";
-
-// Byte-for-byte cbuffer Screen.
-struct ScreenConstants {
-  std::array<float, 2> tap;
-  float threshold;
-  float ramp;
-  Vec3 tint;
-  float blur_on;
-  float depth_a;
-  float depth_b;
-  float original_scale;
-  float original_near;
-};
-static_assert(sizeof(ScreenConstants) == 48);
+using screen_shader::ScreenConstants;
+using screen_shader::source;
 
 // The frame the original's blur taps are measured in (0x25b6a8).
 constexpr float original_height = 480.0F;
@@ -155,14 +70,12 @@ void WorldRenderer::create_screen_states() {
 }
 
 void WorldRenderer::ensure_blur_targets() {
-  const int width = std::max(width_ / 2, 1);
-  const int height = std::max(height_ / 2, 1);
-  if (blur_[0] && width == blur_width_ && height == blur_height_) {
+  const auto sizes = screen_blur_sizes(width_, height_);
+  if (blur_[0] && sizes[0][0] == blur_width_[0] && sizes[1][0] == blur_width_[1]) {
     return;
   }
   D3D11_TEXTURE2D_DESC desc{};
-  desc.Width = static_cast<UINT>(width);
-  desc.Height = static_cast<UINT>(height);
+
   desc.MipLevels = 1;
   desc.ArraySize = 1;
   desc.Format = format_;
@@ -170,6 +83,10 @@ void WorldRenderer::ensure_blur_targets() {
   desc.Usage = D3D11_USAGE_DEFAULT;
   desc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
   for (std::size_t i = 0; i < blur_.size(); ++i) {
+    desc.Width = static_cast<UINT>(sizes[i][0]);
+    desc.Height = static_cast<UINT>(sizes[i][1]);
+    blur_width_[i] = sizes[i][0];
+    blur_height_[i] = sizes[i][1];
     blur_[i].Reset();
     blur_targets_[i].Reset();
     blur_views_[i].Reset();
@@ -180,8 +97,6 @@ void WorldRenderer::ensure_blur_targets() {
       throw std::runtime_error("Unable to create the screen pass's blur targets");
     }
   }
-  blur_width_ = width;
-  blur_height_ = height;
 }
 
 void WorldRenderer::render_coverage() {
@@ -203,18 +118,35 @@ void WorldRenderer::render_coverage() {
 }
 
 void WorldRenderer::render_screen(const WorldFrame &frame) {
-  const ScreenPass &pass = frame.lighting.screen;
+  const ScreenPass pass = selected_screen(frame.lighting.screen, post_process_);
   if (!pass.active() || !scene_view_ || !depth_read_view_) {
     return;
   }
   const bool blur = pass.depth_of_field;
-  if (blur) {
-    try {
+  try {
+    if (blur) {
       ensure_blur_targets();
-    } catch (const std::exception &error) {
-      SDL_Log("%s", error.what());
-      return;
     }
+    if (pass.distortion) {
+      if (!wave_) {
+        D3D11_TEXTURE2D_DESC desc{};
+        desc.Width = 1;
+        desc.Height = 64;
+        desc.MipLevels = desc.ArraySize = desc.SampleDesc.Count = 1;
+        desc.Format = DXGI_FORMAT_R8_SNORM;
+        desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+        if (FAILED(device_->CreateTexture2D(&desc, nullptr, &wave_)) ||
+            FAILED(device_->CreateShaderResourceView(wave_.Get(), nullptr, &wave_view_))) {
+          wave_.Reset();
+          throw std::runtime_error("Unable to create the Shinjuku offset map");
+        }
+      }
+      const auto rows = screen_wave_rows(pass);
+      context_->UpdateSubresource(wave_.Get(), 0, nullptr, rows.data(), 1, 0);
+    }
+  } catch (const std::exception &error) {
+    SDL_Log("%s", error.what());
+    return;
   }
   if (samples_ > 1) {
     context_->ResolveSubresource(scene_.Get(), 0, colour_.Get(), 0, format_);
@@ -227,6 +159,8 @@ void WorldRenderer::render_screen(const WorldFrame &frame) {
   constants.threshold = pass.focus * pass.focus_scale + pass.focus_base;
   constants.ramp = pass.ramp;
   constants.tint = pass.tint;
+  constants.levels_min = pass.levels_min;
+  constants.levels_max = pass.levels_max;
   constants.blur_on = blur ? 1.0F : 0.0F;
   constants.depth_a = frame.projection.at(2, 2);
   constants.depth_b = frame.projection.at(3, 2);
@@ -235,6 +169,13 @@ void WorldRenderer::render_screen(const WorldFrame &frame) {
   // One of the original's texels, the same size on both axes of any window.
   const float tap_v = pass.blur_texels / original_height;
   const float tap_u = tap_v * static_cast<float>(height_) / static_cast<float>(width_);
+  constants.wave_on = pass.distortion ? 1.0F : 0.0F;
+  constants.softness = pass.softness;
+  constants.soft_v = 0.5F / original_height;
+  constants.soft_u = constants.soft_v * static_cast<float>(height_) / static_cast<float>(width_);
+  constants.wave_scale = {(1.0F + pass.day_strength) / original_height *
+                              static_cast<float>(height_) / static_cast<float>(width_),
+                          3.0F * pass.day_strength / original_height};
 
   ID3D11SamplerState *sampler = scene_sampler_.Get();
   ID3D11Buffer *buffer = screen_constants_.Get();
@@ -253,16 +194,17 @@ void WorldRenderer::render_screen(const WorldFrame &frame) {
       context_->Unmap(buffer, 0);
     }
   };
-  ID3D11ShaderResourceView *none[3] = {};
+  ID3D11ShaderResourceView *none[4] = {};
   if (blur) {
     // The frame into the first half, then the first half (whose texels are
     // twice the size) into the second.
-    const D3D11_VIEWPORT half{
-        0.0F, 0.0F, static_cast<float>(blur_width_), static_cast<float>(blur_height_), 0.0F, 1.0F};
-    context_->RSSetViewports(1, &half);
     context_->PSSetShader(blur_pixel_.Get(), nullptr, 0);
     ID3D11ShaderResourceView *sources[] = {scene_view_.Get(), blur_views_[0].Get()};
     for (std::size_t i = 0; i < blur_.size(); ++i) {
+      const D3D11_VIEWPORT viewport{
+          0.0F, 0.0F, static_cast<float>(blur_width_[i]), static_cast<float>(blur_height_[i]),
+          0.0F, 1.0F};
+      context_->RSSetViewports(1, &viewport);
       ID3D11RenderTargetView *target = blur_targets_[i].Get();
       context_->OMSetRenderTargets(1, &target, nullptr);
       context_->PSSetShaderResources(0, 1, &sources[i]);
@@ -280,12 +222,13 @@ void WorldRenderer::render_screen(const WorldFrame &frame) {
   context_->OMSetRenderTargets(1, &target, nullptr);
   context_->PSSetShader((samples_ > 1 ? screen_pixel_ms_ : screen_pixel_).Get(), nullptr, 0);
   ID3D11ShaderResourceView *reads[] = {
-      scene_view_.Get(), blur ? blur_views_[1].Get() : scene_view_.Get(), depth_read_view_.Get()};
-  context_->PSSetShaderResources(0, 3, reads);
+      scene_view_.Get(), blur ? blur_views_[1].Get() : scene_view_.Get(), depth_read_view_.Get(),
+      pass.distortion ? wave_view_.Get() : nullptr};
+  context_->PSSetShaderResources(0, 4, reads);
   context_->Draw(3, 0);
 
   // Back to the world's bindings for the cockpit.
-  context_->PSSetShaderResources(0, 3, none);
+  context_->PSSetShaderResources(0, 4, none);
   context_->OMSetRenderTargets(1, &target, depth_view_.Get());
   ID3D11Buffer *world_constants[] = {frame_constants_.Get(), draw_constants_.Get()};
   context_->PSSetConstantBuffers(0, 2, world_constants);

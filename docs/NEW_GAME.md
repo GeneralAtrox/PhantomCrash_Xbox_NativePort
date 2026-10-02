@@ -113,7 +113,7 @@ records of 36 bytes:
 |---|---|
 | +0, +4, +8 | scene id, from scene, to scene |
 | +0xc, +0xd | the range of events (table indices) that must have played |
-| +0xe–+0x13 | further conditions (day, garage, …; not ported) |
+| +0xe–+0x13 | flag lifetime, predicate, contest, area, contest class and day/night variant; see Story progression below |
 | +0x14 | enabled |
 | +0x16 | background, into `0x1d0dd0`: {back, front} sprites × 6; the back is the 640 × 480 picture, the front its lower strip at y 296, layer 0x101 |
 | +0x17 | cast: up to 6 talk-character indices, -1 ending |
@@ -168,13 +168,10 @@ and `TalkScene` (core) play a script; `TalkScreen` draws it. NEW GAME now
 runs movie → event 48 → NAME ENTRY → event 49 → Pepper's guide, and the
 quest save records the events played.
 
-Event conditions (`0xd1861`): besides the event index range (+0xc/+0xd,
-ported as `requires_seen`) a record may set a test function (+0xf, 0–0x4a,
-table `0x40e888`, argument +0x11), the chapter (+0x10, 0–0x37) and three
-more bytes (+0x11 0–3, +0x12 0–0x1b, +0x13 0–1); a byte outside its range
-means "no condition". None of these checks are ported, so an event that
-sets one does not play (`unported_conditions`): event 152 on the first
-Club Wired → town map, for instance, waits for its test 22.
+Event conditions (`0xd1861`) now use saved class/area-ranker wins, the
+selected contest and arena variant, and owned music. The earlier interpretation
+of these fields as chapter/garage checks was incorrect; see Story progression
+below for the recovered fields, predicate IDs and transition handling.
 
 ## The town frame and the radio
 
@@ -230,11 +227,10 @@ The top bit of the money word (cfg+0x9d0) marks a cleared game: scene 37
 (the staff roll, `staff.sfd`) sets it (`0x6df71`), a new save clears it
 (`0xb94e0` → `0x6df99`) and `0x6dfc1` reads it. The port keeps it as
 `cleared` in the quest save. Pepper's guide uses it (above). The contest
-schedule (`0x6ce91`, contest 49 → 52) and `0x2e3f8` also read it; neither
-is ported yet. The port's staff roll (`data/story/staff_roll.json`, played
-by the intro step machine) sets it as it starts; the final contest that
-leads to it is not ported, so `--start staff_roll` or a save sets it for
-now.
+schedule (`0x6ce91`, contest 49 → 52) also reads it and is implemented.
+The port's staff roll (`data/story/staff_roll.json`, played by the intro step
+machine) sets it as it starts. A first First Ranker victory leads to it
+through the finale and the ending movie (`docs/FINAL_BATTLE.md`).
 
 ## Club Wired (scene 8)
 
@@ -293,3 +289,59 @@ a tutorial placeholder. See `data/ui/pepper_guide.json`.
 The 3D renderer (Direct3D 11 on SDL's device, glTF models) started with the
 training ground; the mech models, motions and effects follow, for the
 garage (39), the hangar and battles.
+
+## Story progression (2026-09-30)
+
+`story/progression.json` maps the shipped predicate IDs to editable conditions.
+`StoryConditionContext` supplies the saved clear flags, calendar, contest rules
+and the current match. All predicates referenced by the 110 shipped events
+are supported; 74 events require this context. Unknown modded predicates remain
+blocked instead of silently passing. The existing `seen_events`, `won_contests`
+and `cleared` save fields remain the permanent storage, including older saves.
+
+Focused XBE inspection corrected the earlier interpretations of `0xd1861`:
+
+| Record byte | Meaning |
+|---|---|
+| +0xe | -1 is transient; other shipped flags persist |
+| +0xf | predicate index in `0x40e888`; 75 or negative skips it |
+| +0x10 | selected contest ID, `0x6cf1c` (not a story chapter) |
+| +0x11 | selected area, from stage index / 2 (`0x6daa3`) |
+| +0x12 | contest class, table `0x24b388 + 0x6c * contest`, offset +4 |
+| +0x13 | day/night variant, stage index modulo 2 |
+
+`0x96e43` counts cleared class-leader contests from `0x253368`;
+`0x96ea1` counts the area's ranker from `0x2533c8`. These tables are already
+represented by `world/rumbling.json`'s area rankers. Predicates 51–74 check
+one through eight class wins (area order 0, 2, 1). Predicates 19–28 count
+class and area ranker wins together (`0xd143b`), with thresholds 1, then
+3 through 27. Predicate 31 checks 78 owned music tracks (`0x2a178`).
+Predicates 9–11 check today's unbeaten area-ranker contest; 12/13 distinguish
+new ranker victory from a still-unbeaten loss; 29 checks First Ranker class;
+30 detects a new class-leader clear. Repeating an already-cleared contest
+does not produce a new-win flag.
+
+The transition coordinator `0xa1c4a` marks an event seen when selected,
+rechecks the interrupted transition after it, and clears transient flags
+when the chain completes (`0xd1477`). The native runner now follows that
+ordering. It retains the selected rental/gate/contest across pre-match talk,
+and retains an already-settled receipt and replay across pre-result talk.
+The original source transition is preserved across multiple conversations.
+Normal RUMBLING and its battle are now mapped to scenes 3 and 6.
+
+A first First Ranker victory skips RESULT, as the original does: the match
+is settled as usual, then `clear_exit` (`final_battle`) opens the finale's
+epilogue (scene 10, robot states 8-18 on Umihotaru by day), which leads to
+the ending movie (scene 11) and the staff roll, which sets `cleared`. See
+`docs/FINAL_BATTLE.md`. `clear_exit` is editable. Already-cleared games
+continue their ordinary loop.
+
+Verification: Release build and bounded runtime log checks, no new tests.
+With no leader clears, Club Wired's event 152 stayed locked. With nine
+clears it played and returned to the town map; loading the same state with
+152 already seen suppressed it. Normal rental entry played event 51 and
+resumed battle with the pending entry. Leaving that match settled one receipt,
+then played event 90 on RESULT Exit before sleep. The temporary changes to
+the existing agent-owned review preferences were restored byte-for-byte.
+The final victory/credits path and every individual conversation have not
+been exercised through a full gameplay run.

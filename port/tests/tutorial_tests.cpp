@@ -34,7 +34,7 @@ InputFrame practice_input(const LessonStep &step, const int tick, const BattleBu
     break;
   case LessonGoal::turn_right:
   case LessonGoal::turn_left:
-    input.left_stick = {step.goal == LessonGoal::turn_right ? 1.0F : -1.0F, 0.0F};
+    input.right_stick = {step.goal == LessonGoal::turn_right ? 1.0F : -1.0F, 0.0F};
     break;
   case LessonGoal::dash:
     input.left_stick = {0.0F, 1.0F};

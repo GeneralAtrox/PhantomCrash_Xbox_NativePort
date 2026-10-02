@@ -49,6 +49,14 @@ struct OptionScript : MenuBasics, MenuTickers {
 [[nodiscard]] OptionScript parse_option(const json::JsonValue &document,
                                         const std::string &name = "option.json");
 
+// The original artist biography, including glyph/colour markup and line breaks.
+struct ArtistProfile {
+  std::string text;
+  std::array<float, 2> position{};
+  std::uint32_t colour{0xffffff};
+  int layer{};
+};
+
 // A track's credit from the converted tables/music.json.
 struct MusicCredit {
   std::string file; // e.g. "sound/5GARAGE.WAV"
@@ -61,6 +69,7 @@ struct MusicCredit {
   // The artist's name and web address, as images (Sonic Amp's preview).
   std::optional<Sprite> artist_name;
   std::optional<Sprite> artist_link;
+  std::optional<ArtistProfile> artist_profile;
 };
 
 [[nodiscard]] std::vector<MusicCredit> parse_music_credits(const json::JsonValue &document);

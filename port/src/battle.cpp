@@ -1,4 +1,5 @@
 #include "phantomcrash/battle.hpp"
+#include "phantomcrash/robot_combat.hpp"
 #include "phantomcrash/battle_chatter.hpp"
 
 #include <algorithm>
@@ -42,14 +43,19 @@ BattleSettings parse_battle_settings(const json::JsonValue &value) {
   }
   s.robot_radius = number(value, "robot_radius", s.robot_radius);
   s.robot_height = number(value, "robot_height", s.robot_height);
+  s.sight_fov_degrees = number(value, "sight_fov_degrees", s.sight_fov_degrees);
   s.arena_wall_height = number(value, "arena_wall_height", s.arena_wall_height);
+  s.fence_contact_seconds = number(value, "fence_contact_seconds", s.fence_contact_seconds);
   s.drone_respawn_seconds = number(value, "drone_respawn_seconds", s.drone_respawn_seconds);
+  s.death_fallback_seconds = number(value, "death_fallback_seconds", s.death_fallback_seconds);
   s.drone_walk = number(value, "drone_walk", s.drone_walk);
   s.drone_reach = number(value, "drone_reach", s.drone_reach);
   s.camouflage_seconds = number(value, "camouflage_seconds", s.camouflage_seconds);
   s.camouflage_recharge_seconds =
       number(value, "camouflage_recharge_seconds", s.camouflage_recharge_seconds);
   s.camouflage_fade_seconds = number(value, "camouflage_fade_seconds", s.camouflage_fade_seconds);
+  s.camouflage_break_seconds =
+      number(value, "camouflage_break_seconds", s.camouflage_break_seconds);
   s.ammo_refill_seconds = number(value, "ammo_refill_seconds", s.ammo_refill_seconds);
   s.idle_chatter_seconds = number(value, "idle_chatter_seconds", s.idle_chatter_seconds);
   if (const json::JsonValue *shield = value.find("entry_shield")) {
@@ -57,6 +63,15 @@ BattleSettings parse_battle_settings(const json::JsonValue &value) {
   }
   if (const json::JsonValue *ai = value.find("ai")) {
     s.ai = parse_drone_ai(*ai);
+  }
+  if (const auto *wrecks = value.find("robot_wrecks")) {
+    s.robot_wrecks = parse_robot_wreck_settings(*wrecks);
+  }
+  if (const auto *rewards = value.find("object_reward_ny")) {
+    s.object_reward_ny.clear();
+    for (const json::JsonValue &reward : rewards->array()) {
+      s.object_reward_ny.push_back(static_cast<int>(reward.number()));
+    }
   }
   return s;
 }
@@ -91,7 +106,7 @@ int Battle::add_robot(const std::string &name, const int team, const Vec3 positi
   robot.piloted = robots_.empty(); // the player's robot comes first (player())
   robot.hp = robot.max_hp = hp;
   robot.radius = settings_.robot_radius;
-  robot.mover.set_floor(stage_.ground_height(position, ground_snap));
+  robot.mover.set_floor(stage_.ground_height(position, ground_snap, robot.radius));
   robot.mover.place(position, heading);
   robots_.push_back(std::move(robot));
   const int index = static_cast<int>(robots_.size()) - 1;
@@ -115,8 +130,10 @@ void Battle::set_drones_active(const bool active) {
 }
 
 void Battle::place(const int index, const Vec3 position, const float heading) {
-  RobotMover &mover = robots_.at(static_cast<std::size_t>(index)).mover;
-  mover.set_floor(stage_.ground_height(position, ground_snap));
+  Combatant &robot = robots_.at(static_cast<std::size_t>(index));
+  RobotMover &mover = robot.mover;
+  robot.last_ground.reset();
+  mover.set_floor(stage_.ground_height(position, ground_snap, robot.radius));
   mover.place(position, heading);
 }
 
@@ -153,20 +170,24 @@ Vec3 Battle::aim(const Combatant &robot) const {
 
 Vec3 Battle::muzzle(const Combatant &robot, const WeaponSlot slot) const {
   const auto index = static_cast<std::size_t>(slot);
+  if (robot.pose) {
+    if (const auto matrix = robot.pose->muzzle(index)) {
+      return transform_point({}, *matrix);
+    }
+  }
   const float heading = robot.mover.aim_heading();
   return robot.mover.position() + Vec3{0.0F, muzzle_height[index], 0.0F} +
          heading_right(heading) * muzzle_side[index] + heading_forward(heading) * 1.5F;
 }
 
-RobotControl Battle::drone_control(Combatant &drone) {
+RobotControl Battle::drone_control(Combatant &drone, const float seconds) {
   RobotControl control;
-  if (drone.frozen) {
+  if (drone.frozen || drone.mover.mode() == MoveMode::scripted) {
+    drone.ai.fire.fill(false);
     return control;
   }
-  if (settings_.ai.fight) {
-    if (const int target = ai_target(drone); target >= 0) {
-      return ai_control(drone, target);
-    }
+  if (settings_.ai.fight && settings_.ai.original) {
+    return ai_control(drone, seconds);
   }
   if (!drone.path.active()) {
     return control;
@@ -187,14 +208,22 @@ RobotControl Battle::drone_control(Combatant &drone) {
 // Two spheres against the stage (0x07c7c0): one resting on the ground,
 // which can stand the robot on what it touches, and one under the top of
 // the robot, which only pushes it aside or stops a jump.
-void Battle::collide(Combatant &robot) {
+void Battle::collide(const int index, const float seconds) {
+  Combatant &robot = robots_[static_cast<std::size_t>(index)];
+  std::optional<StageHit> fence_hit;
   // The doors stop robots walking in the arena; a scripted walk goes
   // through them (0x08928c sets its position outright).
   StageDoors *doors = robot.mover.mode() != MoveMode::scripted ? this->doors() : nullptr;
   const auto push = [&](Vec3 &centre, const float radius) {
-    unsigned contact = stage_.push_sphere(centre, radius);
+    unsigned contact = stage_.push_sphere(centre, radius, &fence_hit);
     if (doors != nullptr) {
       contact |= doors->push_sphere(centre, radius);
+    }
+    if (objects_ && robot.mover.mode() != MoveMode::scripted) {
+      contact |= objects_->push_sphere(centre, radius);
+    }
+    if (robot.mover.mode() != MoveMode::scripted) {
+      contact |= wrecks_.push_sphere(centre, radius);
     }
     return contact;
   };
@@ -216,6 +245,17 @@ void Battle::collide(Combatant &robot) {
     robot.mover.bump_head();
   }
   robot.stage_contact = foot_contact | head_contact;
+  // Tangency can flicker between neighbouring triangles. Losing contact must
+  // not bypass the pulse interval by resetting its cooldown to zero.
+  robot.fence_contact_left = std::max(0.0F, robot.fence_contact_left - seconds);
+  if (fence_hit && robot.mover.mode() != MoveMode::scripted &&
+      settings_.fence_contact_seconds > 0.0F && robot.fence_contact_left <= 0.0F) {
+    BattleEvent event{index, BattleEventKind::fence_contact};
+    event.at = fence_hit->position;
+    event.surface = fence_hit;
+    events_.push_back(event);
+    robot.fence_contact_left = settings_.fence_contact_seconds;
+  }
 }
 
 void Battle::separate() {
@@ -242,6 +282,7 @@ void Battle::separate() {
 
 void Battle::tick(const RobotControl &player, const FireControl &fire, const float seconds) {
   events_.clear();
+  wrecks_.tick(seconds);
   if (objects_) {
     objects_->tick(seconds);
   }
@@ -250,29 +291,59 @@ void Battle::tick(const RobotControl &player, const FireControl &fire, const flo
   }
   for (std::size_t index = 0; index < robots_.size(); ++index) {
     Combatant &robot = robots_[index];
+    robot.firing.fill(false);
+    robot.pose_updated = false;
     robot.hit_flash = std::max(0.0F, robot.hit_flash - seconds);
     if (!robot.alive) {
-      if (robot.drone && robot.auto_respawn && (robot.respawn_left -= seconds) <= 0.0F) {
+      tick_death(static_cast<int>(index), seconds);
+      robot.respawn_left -= seconds;
+      if (!robot.dying && robot.drone && robot.auto_respawn && robot.respawn_left <= 0.0F) {
         respawn(robot);
       }
       continue;
     }
-    robot.mover.set_floor(stage_.ground_height(robot.mover.position(), ground_snap));
-    const RobotControl control = index == 0 ? player : drone_control(robot);
+    const float stage_floor = this->stage_floor(robot);
+    float floor = stage_floor;
+    if (objects_ && robot.mover.mode() != MoveMode::scripted) {
+      floor = std::max(floor,
+                       objects_->ground_height(robot.mover.position(), ground_snap, robot.radius));
+    }
+    if (robot.mover.mode() != MoveMode::scripted) {
+      floor =
+          std::max(floor, wrecks_.ground_height(robot.mover.position(), ground_snap, robot.radius));
+    }
+    if (floor > stage_floor) {
+      robot.floor_surface = -1; // on a prop or a wreck
+    }
+    robot.mover.set_floor(floor);
+    const bool own_controls = cooperative_ || versus_;
+    const RobotControl control =
+        robot.piloted ? (own_controls ? controls_[static_cast<int>(index)].first : player)
+                      : drone_control(robot, seconds);
+    const RobotAssembly *assembly = robot.pose ? &robot.pose->assembly() : nullptr;
+    robot.mover.set_timings(assembly ? &assembly->timings : nullptr,
+                            assembly ? assembly->leg_type : -1);
     robot.mover.tick(control, seconds);
     recover(robot, seconds);
   }
   separate();
-  for (Combatant &robot : robots_) {
-    if (robot.alive) {
-      collide(robot);
+  for (std::size_t index = 0; index < robots_.size(); ++index) {
+    if (robots_[index].alive) {
+      collide(static_cast<int>(index), seconds);
     }
   }
 
-  if (!robots_.empty() && robots_.front().alive) {
-    Combatant &self = robots_.front();
-    if (fire.camouflage) {
+  for (std::size_t index = 0; index < robots_.size(); ++index) {
+    Combatant &self = robots_[index];
+    if (!self.piloted || !self.alive) {
+      continue;
+    }
+    const auto &own = controls_[static_cast<int>(index)];
+    const FireControl &own_fire = cooperative_ || versus_ ? own.second : fire;
+    const RobotControl &own_control = cooperative_ || versus_ ? own.first : player;
+    if (own_fire.camouflage) {
       self.camouflaged = !self.camouflaged && self.camouflage > 0.1F;
+      self.camouflage_broken = false;
       if (self.camouflaged) {
         chatter(self, chatter_event::camouflage); // 0x074fa4
       }
@@ -287,8 +358,8 @@ void Battle::tick(const RobotControl &player, const FireControl &fire, const flo
       chatter(self, chatter_event::camouflage_low);
     }
     self.camouflaged = self.camouflaged && self.camouflage > 0.0F;
-    fire_weapons(0, fire, seconds);
-    watch_idle(self, player, fire, seconds);
+    fire_weapons(static_cast<int>(index), own_fire, seconds);
+    watch_idle(self, own_control, own_fire, seconds);
   }
   if (settings_.ai.fight) {
     fire_drones(seconds);
@@ -298,10 +369,18 @@ void Battle::tick(const RobotControl &player, const FireControl &fire, const flo
       watch_ammo(robot);
     }
   }
-  const float sweep = seconds / std::max(settings_.camouflage_fade_seconds, 1e-3F);
+  for (std::size_t index = 0; index < robots_.size(); ++index) {
+    if (robots_[index].alive && !robots_[index].pose_updated) {
+      pose_robot(static_cast<int>(index), seconds);
+    }
+  }
   for (Combatant &robot : robots_) {
+    const float fade = robot.camouflage_broken ? settings_.camouflage_break_seconds
+                                               : settings_.camouflage_fade_seconds;
+    const float sweep = seconds / std::max(fade, 1e-3F);
     const float target = robot.camouflaged ? 1.0F : 0.0F;
     robot.camouflage_sweep += std::clamp(target - robot.camouflage_sweep, -sweep, sweep);
+    robot.camouflage_broken = robot.camouflage_broken && robot.camouflage_sweep > 0.0F;
   }
   tick_supply(seconds);
   std::vector<WeaponHit> hits;

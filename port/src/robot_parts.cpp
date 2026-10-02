@@ -2,6 +2,7 @@
 
 #include "phantomcrash/battle_weapons.hpp"
 #include "phantomcrash/json_fields.hpp"
+#include "phantomcrash/weapon_reach.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -81,6 +82,7 @@ WeaponRecord weapon_record(const json::JsonValue &value) {
   out.name = value.string_or("name", "");
   out.kind = integer(value, "kind");
   out.flight = optional_int(value, "flight");
+  out.aim_mode = optional_int(value, "aim_mode", -1);
   out.maker = optional_int(value, "family");
   out.model = optional_int(value, "model", -1);
   out.fire_sound = optional_int(value, "fire_sound");
@@ -134,6 +136,8 @@ ArmourRecord armour_record(const json::JsonValue &value) {
   out.speed = optional_curve(value, "speed");
   out.jump = optional_curve(value, "jump");
   out.turn = optional_curve(value, "turn");
+  out.dodge = optional_curve(value, "dodge");
+  out.air_dodge = optional_curve(value, "air_dodge");
   return out;
 }
 
@@ -282,6 +286,7 @@ void apply_weapon_stats(WeaponTuning &weapon, const WeaponStats &stats) {
   weapon.model = stats.model;
   weapon.fire_sound = stats.fire_sound;
   weapon.flight = stats.flight;
+  weapon.aim_mode = stats.aim_mode;
   weapon.look = stats.look;
   weapon.surface_hit = stats.surface_hit;
   weapon.robot_hit = stats.robot_hit;
@@ -303,6 +308,17 @@ void apply_weapon_stats(WeaponTuning &weapon, const WeaponStats &stats) {
   }
   weapon.start_speed = stats.start_speed * fps;
   weapon.acceleration = stats.acceleration * fps * fps;
+  const bool shoulder = weapon.part && weapon.part->table == WeaponTable::shoulder;
+  const WeaponReach reach = weapon_reach(stats, shoulder);
+  weapon.range = reach.range;
+  weapon.min_range = reach.min_range;
+  weapon.lock_range = reach.lock_range;
+  weapon.hold_degrees = reach.hold_degrees;
+  if (stats.hud_kind == hud_kind::beam) {
+    // 0x09b9fe: the tip runs out at the acceleration a frame, to the top speed's length.
+    weapon.speed = stats.acceleration * fps;
+    weapon.start_speed = weapon.acceleration = 0.0F;
+  }
   weapon.launch_degrees = stats.flight == weapon_flight_lobbed ? stats.launch_degrees : 0.0F;
   weapon.blast_radius = stats.blast_radius;
   weapon.blast_start_radius = stats.blast_start_radius;
@@ -311,10 +327,9 @@ void apply_weapon_stats(WeaponTuning &weapon, const WeaponStats &stats) {
   weapon.recharge_seconds = stats.recharge_frames / fps;
   weapon.knockback = stats.knockback * battle_ticks_per_second;
   weapon.knockdown_percent = stats.knockdown;
-  // Only a weapon with stun makes its target flinch (0x07675e, 0x08dcd1).
-  if (stats.stun <= 0.0F) {
-    weapon.stagger_seconds = 0.0F;
-  }
+  // Only a weapon with stun makes its target flinch (0x07675e, 0x08dcd1);
+  // the flinch lasts at least its hit motion (MovementTuning::hit_seconds).
+  weapon.stagger_seconds = stats.stun > 0.0F ? stats.stun / fps : 0.0F;
 }
 
 ChipStats chip_stats(const ChipRecord &chip, const int level) {
@@ -332,6 +347,7 @@ WeaponStats weapon_stats(const WeaponRecord &record, const int level) {
   WeaponStats out;
   out.hud_kind = record.kind;
   out.flight = record.flight;
+  out.aim_mode = record.aim_mode;
   out.model = record.model;
   out.fire_sound = record.fire_sound;
   out.look = record.look;

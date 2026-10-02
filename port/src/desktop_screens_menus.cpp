@@ -60,6 +60,9 @@ std::unique_ptr<Screen> ScreenRunner::make_save_load(const std::string &name,
   const MenuEntry entry = entered(name, base, from);
   LoadGameScript script = base;
   script.exit_to = entry.exit_to;
+  if (cooperative()) {
+    return make_coop_save_load(std::move(script), entry);
+  }
   std::vector<SaveSlot> slots(script.slots.size());
   const bool none = std::ranges::none_of(
       save_slots_, [](const std::optional<QuestSave> &slot) { return slot.has_value(); });

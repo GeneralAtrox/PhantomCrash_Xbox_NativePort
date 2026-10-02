@@ -162,10 +162,10 @@ def _team(image: _Image, index: int) -> dict:
 
 
 def _entrant(image: _Image, index: int) -> dict:
-    pilot, robot, word_4, level = struct.unpack_from(
+    pilot, robot, ai_profile, level = struct.unpack_from(
         "<4h", image.data, image.offset(ENTRANTS + index * ENTRANT_SIZE, ENTRANT_SIZE)
     )
-    return {"pilot": pilot, "robot": robot, "word_4": word_4, "level": level}
+    return {"pilot": pilot, "robot": robot, "ai_profile": ai_profile, "level": level}
 
 
 def _day(image: _Image, day: int) -> dict:

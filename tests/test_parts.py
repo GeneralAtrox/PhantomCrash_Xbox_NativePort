@@ -79,4 +79,8 @@ def test_part_tables_read_the_combat_stats_and_weights():
     legs = tables["legs"][0]
     assert parts.level_value(legs["knockback_resistance"], 0) == pytest.approx(70.0)
     assert parts.level_value(legs["capacity"], 0) == pytest.approx(1060.0)
+    assert parts.level_value(legs["turn"], 0) == pytest.approx(2.35)
+    assert parts.level_value(legs["jump"], 0) == pytest.approx(19.14)
+    assert parts.level_value(legs["dodge"], 0) == pytest.approx(0.55)
+    assert parts.level_value(legs["air_dodge"], 0) == pytest.approx(0.3)
     assert parts.level_value(tables["arm_weapons"][0]["weight"], 0) == pytest.approx(40.0)

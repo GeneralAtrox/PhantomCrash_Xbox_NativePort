@@ -1,0 +1,19 @@
+{
+  "notes": "Port pause overlay. Reuses the highlighted EXIT sprite from match_result.json. Escape is the host Back binding. START/Back opens or resumes; A explicitly leaves for results (training returns to its originating screen).",
+  "pause_buttons": ["start", "back"],
+  "resume_buttons": ["start", "back", "b"],
+  "exit_button": "a",
+  "dim_alpha": 0.55,
+  "exit_position": [276, 274],
+  "text": {
+    "at": [136, 180],
+    "line_step": 24,
+    "colour": "#ffffff",
+    "layer": 300,
+    "lines": [
+      "PAUSED",
+      "ESC / START / B: Resume",
+      "A / Click EXIT: Leave match"
+    ]
+  }
+}

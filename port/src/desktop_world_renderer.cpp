@@ -1,13 +1,26 @@
 #include "desktop_world_renderer.hpp"
+#include "desktop_smaa.hpp"
 
+#include <algorithm>
 #include <stdexcept>
 
 namespace phantomcrash {
 namespace {
 
 constexpr UINT wanted_samples = 4;
+// Native D24 separation for authored surface layers, not a world-space lift.
+// Two depth units handle rounding; the slope term handles coplanar triangles
+// with different tessellation. Bound it to 32 units at grazing angles.
+constexpr int layer_depth_bias = -2;
+constexpr float layer_slope_bias = -1.0F;
+constexpr float layer_bias_clamp = -32.0F / 16777215.0F;
+// Flat ground shadows lie on the base and its layers alike, so they take
+// twice the layers' separation and win over both.
+constexpr int decal_depth_bias = 2 * layer_depth_bias;
+constexpr float decal_slope_bias = 2.0F * layer_slope_bias;
+constexpr float decal_bias_clamp = 2.0F * layer_bias_clamp;
 constexpr UINT frame_constant_bytes = 144; // desktop_world_shaders.cpp, cbuffer Frame
-constexpr UINT draw_constant_bytes = 176;  // cbuffer Draw
+constexpr UINT draw_constant_bytes = 224;  // cbuffer Draw
 
 Com<ID3D11Buffer> constant_buffer(ID3D11Device *device, const UINT bytes) {
   D3D11_BUFFER_DESC desc{};
@@ -89,6 +102,17 @@ void WorldRenderer::create_states() {
   bool ok = SUCCEEDED(device_->CreateRasterizerState(&raster, &cull_back_));
   raster.CullMode = D3D11_CULL_NONE;
   ok = ok && SUCCEEDED(device_->CreateRasterizerState(&raster, &cull_none_));
+  raster.DepthBias = layer_depth_bias;
+  raster.SlopeScaledDepthBias = layer_slope_bias;
+  raster.DepthBiasClamp = layer_bias_clamp;
+  ok = ok && SUCCEEDED(device_->CreateRasterizerState(&raster, &layer_cull_none_));
+  raster.CullMode = D3D11_CULL_BACK;
+  ok = ok && SUCCEEDED(device_->CreateRasterizerState(&raster, &layer_cull_back_));
+  raster.CullMode = D3D11_CULL_NONE;
+  raster.DepthBias = decal_depth_bias;
+  raster.SlopeScaledDepthBias = decal_slope_bias;
+  raster.DepthBiasClamp = decal_bias_clamp;
+  ok = ok && SUCCEEDED(device_->CreateRasterizerState(&raster, &decal_cull_none_));
 
   // Opaque draws leave the target's alpha at the clear's 1: an opaque
   // material ignores its texture's alpha (robot paints keep 0 in some tiles).
@@ -143,6 +167,18 @@ int WorldRenderer::model(const std::string &asset_path) {
   try {
     models_.push_back(std::make_unique<GpuModel>(resources_->upload(asset_path)));
     id = static_cast<int>(models_.size() - 1);
+    const ModelData &data = models_.back()->data;
+    const auto layers = std::ranges::count_if(data.draws, [&](const ModelDraw &draw) {
+      const auto &material = data.materials[static_cast<std::size_t>(draw.material)];
+      return draw.pass == 1 && material.alpha == AlphaMode::blend && material.original_material &&
+             material.blend_depth_write;
+    });
+    if (layers > 0) {
+      SDL_Log("Surface layers: %s has %lld original depth-writing overlay batches; "
+              "D24 bias=%d slope=%.1f clamp=%.9f",
+              asset_path.c_str(), static_cast<long long>(layers), layer_depth_bias,
+              layer_slope_bias, layer_bias_clamp);
+    }
   } catch (const std::exception &error) {
     SDL_Log("%s", error.what());
   }
@@ -262,6 +298,7 @@ void WorldRenderer::draw(const WorldFrame &frame, const WorldFrame *monitor) {
   SDL_FlushRenderer(renderer_);
   Com<ID3DDeviceContextState> previous;
   context_->SwapDeviceContextState(state_.Get(), &previous);
+  render_lights(frame);
   if (monitor != nullptr) {
     render_monitor(*monitor);
   }
@@ -270,6 +307,21 @@ void WorldRenderer::draw(const WorldFrame &frame, const WorldFrame *monitor) {
     context_->ResolveSubresource(output_texture_, 0, colour_.Get(), 0, format_);
   } else {
     context_->CopyResource(output_texture_, colour_.Get());
+  }
+  if (post_process_.smaa && !smaa_failed_) {
+    try {
+      if (!smaa_) {
+        smaa_ = std::make_unique<SmaaPass>(device_.Get());
+      }
+      // The already-resolved output includes post effects and cockpit geometry,
+      // but not SDL's HUD. Avoid sampling the texture being written.
+      context_->OMSetRenderTargets(0, nullptr, nullptr);
+      context_->CopyResource(scene_.Get(), output_texture_);
+      smaa_->apply(context_.Get(), scene_view_.Get(), output_texture_, format_);
+    } catch (const std::exception &error) {
+      smaa_failed_ = true;
+      SDL_Log("SMAA disabled after failure: %s", error.what());
+    }
   }
   context_->SwapDeviceContextState(previous.Get(), nullptr);
   const SDL_FRect whole{0.0F, 0.0F, static_cast<float>(frame.width),

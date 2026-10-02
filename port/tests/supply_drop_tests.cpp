@@ -128,13 +128,15 @@ TEST_CASE("a shot brings the carrier down, and it crashes and sets out again") {
 
 TEST_CASE("the supply settings and routes parse") {
   const SupplySettings settings = parse_supply_settings(json::parse(R"({
-    "speed": 0.05, "lifetime_ticks": 600,
+    "speed": 0.05, "lifetime_ticks": 600, "look": {"burst_effect": 65},
     "kinds": [{"effect": "money", "amount": 1}, {"effect": "money", "amount": 2},
               {"effect": "money", "amount": 3}, {"effect": "money", "amount": 4},
               {"effect": "repair", "amount": 0.2}, {"effect": "repair", "amount": 0.3},
               {"effect": "repair", "amount": 0.4}, {"effect": "ammo", "amount": 0.5},
               {"effect": "ammo", "amount": 0.6}, {"effect": "ammo", "amount": 0.7}]})"));
   CHECK(near(settings.speed, 0.05F) && near(settings.lifetime_ticks, 600.0F));
+  CHECK(settings.look.burst_effect == 65);
+  CHECK(SupplySettings{}.look.burst_effect == 0x40);
   CHECK(settings.kinds[9].effect == SupplyEffect::ammo && near(settings.kinds[9].amount, 0.7F));
   const auto routes = parse_supply_routes(
       json::parse(R"({"supply_routes": {"6": [{"segments": [[[0,0,0],[1,0,0],[2,0,0],[3,0,0]]],

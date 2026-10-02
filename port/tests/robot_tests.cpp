@@ -168,6 +168,9 @@ TEST_CASE("the catalogue assembles a robot's models, motions and paint") {
 TEST_CASE("drawn nodes skin rigidly to consecutive bone slots") {
   ModelData model;
   model.nodes.resize(2);
+  model.draws.resize(2);
+  model.draws[0].node = 0;
+  model.draws[1].node = 1;
   model.nodes[0].local = translation({1, 0, 0});
   model.nodes[1].local = translation({0, 1, 0});
   model.nodes[1].world = translation({5, 5, 5});
@@ -179,4 +182,27 @@ TEST_CASE("drawn nodes skin rigidly to consecutive bone slots") {
   CHECK(worlds.size() == 2);
   CHECK(near(origin(worlds[0]), {1.0F, 0.0F, 10.0F}));
   CHECK(near(origin(worlds[1]), {5.0F, 5.0F, 5.0F})); // slot 5 is not posed
+}
+
+TEST_CASE("a change that interrupts a blend carries the blended pose on") {
+  const auto bank = parse_motion_bank(json::parse(R"({"track_count": 1, "motions": [
+    {"frames": 1, "tracks": [{"flags": 227, "translation": [{"kind": "constant", "values": [0]},
+      {"kind": "constant", "values": [0]}, {"kind": "constant", "values": [0]}]}]},
+    {"frames": 1, "tracks": [{"flags": 227, "translation": [{"kind": "constant", "values": [10]},
+      {"kind": "constant", "values": [0]}, {"kind": "constant", "values": [0]}]}]},
+    {"frames": 1, "tracks": [{"flags": 227, "translation": [{"kind": "constant", "values": [20]},
+      {"kind": "constant", "values": [0]}, {"kind": "constant", "values": [0]}]}]}]})"));
+  // Motion 0 was halfway into motion 1 when motion 2 began: 2 blends from
+  // that half-and-half pose (5), not from motion 1 alone (10).
+  MotionSource source;
+  source.motion = bank.motion(2);
+  source.previous[0] = {bank.motion(0), 0.0F, 1.0F};
+  source.previous[1] = {bank.motion(1), 0.0F, 0.5F};
+  source.previous_count = 2;
+  source.weight = 0.0F;
+  CHECK(near(*source.sample(0).translation, {5.0F, 0.0F, 0.0F}));
+  source.weight = 0.5F;
+  CHECK(near(*source.sample(0).translation, {12.5F, 0.0F, 0.0F}));
+  source.weight = 1.0F;
+  CHECK(near(*source.sample(0).translation, {20.0F, 0.0F, 0.0F}));
 }

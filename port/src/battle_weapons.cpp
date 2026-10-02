@@ -15,8 +15,6 @@ constexpr float fuse_arming_seconds = 0.2F;
 constexpr float proximity_fuse_share = 0.4F;
 // Missiles home only after this long in flight (port value).
 constexpr float homing_delay_seconds = 0.2F;
-// Missiles leave upward and forward (the lesson at 0x26); port value.
-constexpr float missile_climb = 0.6F;
 // The steepest a lobbed round leaves.
 constexpr float max_launch_degrees = 85.0F;
 // Impact flashes (port values).
@@ -25,6 +23,8 @@ constexpr float impact_seconds = 0.2F;
 constexpr float blast_flash_seconds = 0.6F;
 constexpr float strike_radius = 1.5F;
 constexpr float strike_seconds = 0.25F;
+// 0x09c9c2: a blade touches a robot within its radius times this (0x19cbe8).
+constexpr float melee_contact_scale = 1.2F;
 
 // Turns unit vector `from` toward `to` by at most `angle` radians.
 Vec3 turn_toward(const Vec3 from, const Vec3 to, const float angle) {
@@ -142,7 +142,7 @@ Vec3 Armory::launch_velocity(const WeaponTuning &weapon, const Vec3 muzzle, cons
   switch (weapon.kind) {
   case WeaponKind::missile: {
     const float start = weapon.start_speed > 0.0F ? weapon.start_speed : weapon.speed * 0.5F;
-    return normalize(direction + Vec3{0.0F, missile_climb, 0.0F}) * start;
+    return direction * start;
   }
   case WeaponKind::grenade: {
     // A record's lobbed round leaves at a fixed angle above the aim
@@ -156,6 +156,7 @@ Vec3 Armory::launch_velocity(const WeaponTuning &weapon, const Vec3 muzzle, cons
     return lob_velocity(muzzle, landing, weapon.speed, weapon.gravity);
   }
   case WeaponKind::gun:
+    return direction * (weapon.start_speed > 0.0F ? weapon.start_speed : weapon.speed);
   case WeaponKind::melee:
     break;
   }
@@ -170,13 +171,14 @@ void Armory::fire(const WeaponTuning &weapon, const int owner, const int team, c
   }
   const bool valid = target >= 0 && target < static_cast<int>(targets.size());
   const Target *locked = valid ? &targets[static_cast<std::size_t>(target)] : nullptr;
-  // Guns and grenades turn toward the lock; missiles leave along the aim.
+  // Start toward the lock before homing takes over; otherwise use the aim.
   Vec3 direction = aim;
-  if (locked != nullptr && weapon.kind != WeaponKind::missile) {
+  if (locked != nullptr) {
     direction = normalize(locked->centre - muzzle);
   }
   for (int round = 0; round < std::max(rounds, 1); ++round) {
     Projectile shot;
+    shot.id = next_projectile_id_++;
     shot.weapon = &weapon;
     shot.owner = owner;
     shot.team = team;
@@ -194,21 +196,26 @@ bool starts_impact(const WeaponTuning &weapon, const bool on_robot) noexcept {
          hit == shot_hit::pierce;
 }
 
-bool Armory::strike(const WeaponTuning &weapon, const int owner, const Vec3 origin,
-                    const int target, const std::vector<Target> &targets,
-                    std::vector<WeaponHit> &hits) {
-  if (target < 0 || target >= static_cast<int>(targets.size())) {
-    return false;
+bool Armory::strike(const WeaponTuning &weapon, const int owner, const int team, const Vec3 blade,
+                    const std::vector<Target> &targets, std::vector<WeaponHit> &hits) {
+  for (std::size_t index = 0; index < targets.size(); ++index) {
+    const Target &victim = targets[index];
+    if (static_cast<int>(index) == owner || !victim.alive || !victim.on_robot ||
+        victim.team == team ||
+        length(victim.centre - blade) >= victim.radius * melee_contact_scale) {
+      continue;
+    }
+    const int target = static_cast<int>(index);
+    const Vec3 from = owner >= 0 && owner < static_cast<int>(targets.size())
+                          ? targets[static_cast<std::size_t>(owner)].centre
+                          : blade;
+    hits.push_back({target, owner, weapon.damage, weapon.stagger_seconds, blade, &weapon,
+                    push_direction(from, victim.centre), true});
+    explosions_.push_back({blade, strike_radius, 0.0F, strike_seconds});
+    landings_.push_back({&weapon, owner, blade, true});
+    return true;
   }
-  const Target &victim = targets[static_cast<std::size_t>(target)];
-  if (!victim.alive || length(victim.centre - origin) > weapon.range + victim.radius) {
-    return false;
-  }
-  hits.push_back({target, owner, weapon.damage, weapon.stagger_seconds, victim.centre, &weapon,
-                  push_direction(origin, victim.centre), true});
-  explosions_.push_back({victim.centre, strike_radius, 0.0F, strike_seconds});
-  landings_.push_back({&weapon, owner, victim.centre, true});
-  return true;
+  return false;
 }
 
 void Armory::detonate(const Projectile &shot, const Vec3 at, const std::vector<Target> &targets,
@@ -265,6 +272,7 @@ void Armory::tick(const float seconds, const std::vector<Target> &targets,
   }
   std::erase_if(explosions_, [](const Explosion &flash) { return flash.age >= flash.life; });
   spread_blasts(seconds, targets, hits);
+  tick_beams(seconds, targets, stage, hits, doors);
 
   std::vector<Projectile> flying;
   flying.reserve(projectiles_.size());
@@ -282,11 +290,21 @@ void Armory::tick(const float seconds, const std::vector<Target> &targets,
         heading = turn_toward(heading, wanted, radians(weapon.turn_degrees_per_second) * seconds);
       }
       shot.velocity = heading * speed;
+    } else if (weapon.acceleration > 0.0F) {
+      // A straight round speeding up to its top speed (0x09dd85).
+      const float speed =
+          std::min(weapon.speed, length(shot.velocity) + weapon.acceleration * seconds);
+      shot.velocity = normalize(shot.velocity) * speed;
     }
     shot.velocity.y -= weapon.gravity * seconds;
     const Vec3 from = shot.position;
-    shot.position = shot.position + shot.velocity * seconds;
-    shot.travelled += length(shot.velocity) * seconds;
+    // A round without a life (a beam) goes no farther than its range.
+    float step = length(shot.velocity) * seconds;
+    if (weapon.life_seconds <= 0.0F) {
+      step = std::min(step, std::max(weapon.range - shot.travelled, 0.0F));
+    }
+    shot.position = shot.position + normalize(shot.velocity) * step;
+    shot.travelled += step;
 
     // Limit the search by walls/doors, then select the nearest target surface.
     // A vehicle in front of a robot must intercept the shot first.
@@ -325,10 +343,14 @@ void Armory::tick(const float seconds, const std::vector<Target> &targets,
                           &weapon, flight_direction(shot.velocity), true});
         }
       }
+      const std::size_t before = hits.size();
       detonate(shot, *impact, targets, hits, on_robot, victim < 0 ? surface : std::nullopt);
+      for (std::size_t index = before; victim >= 0 && index < hits.size(); ++index) {
+        hits[index].direct = hits[index].direct || hits[index].victim == victim;
+      }
     }
     const bool expired = weapon.life_seconds > 0.0F ? shot.age >= weapon.life_seconds
-                                                    : shot.travelled > weapon.range * 1.5F;
+                                                    : shot.travelled >= weapon.range;
     if (!spent && expired) {
       if (weapon.blast_radius > 0.0F) {
         detonate(shot, shot.position, targets, hits); // blast weapons go off at the end
@@ -345,6 +367,7 @@ void Armory::tick(const float seconds, const std::vector<Target> &targets,
 void Armory::clear() {
   projectiles_.clear();
   blasts_.clear();
+  beams_.clear();
   explosions_.clear();
   landings_.clear();
 }

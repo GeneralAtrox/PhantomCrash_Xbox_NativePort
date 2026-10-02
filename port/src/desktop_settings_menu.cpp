@@ -1,7 +1,11 @@
 #include "desktop_settings_menu.hpp"
+#include "desktop_audio_menu.hpp"
+#include "desktop_visuals_dialog.hpp"
+#include "desktop_coop_dialog.hpp"
 
 #include "desktop_frame_rate_dialog.hpp"
 #include "desktop_controls_dialog.hpp"
+#include "desktop_copy_button.hpp"
 
 #include <algorithm>
 #include <stdexcept>
@@ -17,12 +21,10 @@ namespace phantomcrash {
 
 #ifdef _WIN32
 struct SettingsMenu::Impl {
-  static constexpr UINT fullscreen_command = 0x7200;
-  static constexpr UINT vsync_command = 0x7201;
-  static constexpr UINT frame_cap_command = 0x7202;
-  static constexpr UINT frame_counter_command = 0x7203;
+  static constexpr UINT visuals_command = 0x7200;
   static constexpr UINT pause_unfocused_command = 0x7204;
   static constexpr UINT controls_command = 0x7205;
+  static constexpr UINT coop_command = 0x7206;
   static constexpr UINT first_level_command = 0x7300;
   static constexpr UINT last_level_command = 0x73ff;
 
@@ -30,45 +32,52 @@ struct SettingsMenu::Impl {
   bool interacted{};
   bool visible{};
   std::optional<int> level;
+  bool copy_requested{};
   HWND window{};
-  HMENU bar{}, menu{}, levels{};
+  HMENU bar{}, menu{}, levels{}, audio{};
+  std::unique_ptr<VisualsDialog> visuals;
+  std::unique_ptr<CoopDialog> coop;
+  std::unique_ptr<CopyButton> copy;
 
   void check(UINT command, bool on) const {
     CheckMenuItem(menu, command, MF_BYCOMMAND | (on ? MF_CHECKED : MF_UNCHECKED));
   }
   void refresh() const {
-    check(fullscreen_command, settings.fullscreen);
-    check(vsync_command, settings.frame_rate.vsync);
-    check(frame_counter_command, settings.frame_counter);
+    if (audio) {
+      refresh_audio_menu(audio, settings.audio);
+    }
     check(pause_unfocused_command, settings.pause_unfocused);
-    const std::wstring label =
-        settings.frame_rate.cap_enabled
-            ? L"Frame &Rate Cap: " + std::to_wstring(settings.frame_rate.cap) + L" FPS..."
-            : std::wstring(L"Frame &Rate Cap: Off...");
-    ModifyMenuW(menu, frame_cap_command, MF_BYCOMMAND | MF_STRING, frame_cap_command,
-                label.c_str());
+    if (coop) {
+      coop->refresh();
+    }
+    if (visuals) {
+      visuals->refresh();
+    }
   }
   bool command(UINT id) {
+    if (audio_menu_command(id, settings.audio)) {
+      refresh();
+      interacted = true;
+      return true;
+    }
     if (id >= first_level_command && id <= last_level_command) {
       level = static_cast<int>(id - first_level_command);
       interacted = true;
       return true;
     }
     switch (id) {
-    case fullscreen_command:
-      settings.fullscreen = !settings.fullscreen;
+    case CopyButton::command:
+      copy->hide_tip();
+      copy_requested = true;
       break;
-    case vsync_command:
-      settings.frame_rate.vsync = !settings.frame_rate.vsync;
+    case coop_command:
+      coop->show();
       break;
-    case frame_counter_command:
-      settings.frame_counter = !settings.frame_counter;
+    case visuals_command:
+      visuals->show();
       break;
     case pause_unfocused_command:
       settings.pause_unfocused = !settings.pause_unfocused;
-      break;
-    case frame_cap_command:
-      edit_frame_rate_cap(window, settings.frame_rate);
       break;
     case controls_command:
       edit_host_controls(window, settings.host_controls);
@@ -100,6 +109,18 @@ struct SettingsMenu::Impl {
   static LRESULT CALLBACK message(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam,
                                   UINT_PTR id, DWORD_PTR data) {
     auto &self = *reinterpret_cast<Impl *>(data);
+    // Windows uses VK_RETURN for both Enter keys; bit 24 distinguishes the
+    // keypad key. Handle both here before native Alt-menu processing eats it.
+    if (message == WM_SYSKEYDOWN && wparam == VK_RETURN && (lparam & (1LL << 29)) &&
+        !(lparam & (1LL << 30))) {
+      self.settings.fullscreen = !self.settings.fullscreen;
+      self.refresh();
+      self.interacted = true;
+      return 0;
+    }
+    if (LRESULT result = 0; self.copy && self.copy->message(message, wparam, lparam, result)) {
+      return result;
+    }
     if (message == WM_EXITMENULOOP) {
       self.interacted = true;
     }
@@ -114,6 +135,9 @@ struct SettingsMenu::Impl {
     return DefSubclassProc(hwnd, message, wparam, lparam);
   }
   ~Impl() {
+    visuals.reset();
+    coop.reset();
+    copy.reset();
     if (window) {
       RemoveWindowSubclass(window, &Impl::message, 1);
       SetMenu(window, nullptr);
@@ -141,17 +165,18 @@ SettingsMenu::SettingsMenu(void *native_window, const Settings &initial)
     }
     throw std::runtime_error("Unable to create the Settings menu");
   }
-  if (!AppendMenuW(state.menu, MF_STRING, Impl::fullscreen_command, L"&Fullscreen\tF11") ||
-      !AppendMenuW(state.menu, MF_SEPARATOR, 0, nullptr) ||
-      !AppendMenuW(state.menu, MF_STRING, Impl::vsync_command, L"&VSync") ||
-      !AppendMenuW(state.menu, MF_STRING, Impl::frame_cap_command, L"Frame &Rate Cap...") ||
-      !AppendMenuW(state.menu, MF_STRING, Impl::frame_counter_command, L"Frame Rate &Counter") ||
-      !AppendMenuW(state.menu, MF_SEPARATOR, 0, nullptr) ||
-      !AppendMenuW(state.menu, MF_STRING, Impl::controls_command, L"&Keyboard / Controller Controls...") ||
+  state.visuals = std::make_unique<VisualsDialog>(hwnd, state.settings);
+  state.coop = std::make_unique<CoopDialog>(hwnd, state.settings);
+  if (!AppendMenuW(state.menu, MF_STRING, Impl::coop_command, L"&Co-op...") ||
+      !AppendMenuW(state.menu, MF_STRING, Impl::visuals_command, L"&Visuals...") ||
+      !AppendMenuW(state.menu, MF_STRING, Impl::controls_command,
+                   L"&Keyboard / Controller Controls...") ||
       !AppendMenuW(state.menu, MF_STRING, Impl::pause_unfocused_command,
                    L"&Pause When Unfocused")) {
     throw std::runtime_error("Unable to fill the Settings menu");
   }
+  state.audio = static_cast<HMENU>(create_audio_menu(state.menu, state.settings.audio));
+  state.copy = std::make_unique<CopyButton>(hwnd, state.bar);
   HMENU tools = CreatePopupMenu();
   state.levels = CreatePopupMenu();
   if (!tools || !state.levels ||
@@ -186,7 +211,13 @@ void SettingsMenu::set_visible(const bool visible) {
 }
 
 bool SettingsMenu::take_interaction() {
-  return std::exchange(impl_->interacted, false);
+  const bool preview = impl_->visuals && impl_->visuals->take_interaction();
+  const bool coop = impl_->coop && impl_->coop->take_interaction();
+  return std::exchange(impl_->interacted, false) || preview || coop;
+}
+
+bool SettingsMenu::visuals_open() const {
+  return impl_->visuals && impl_->visuals->open();
 }
 
 void SettingsMenu::set_levels(const std::vector<std::string> &labels) {
@@ -220,6 +251,10 @@ void SettingsMenu::set_levels(const std::vector<std::string> &labels) {
 std::optional<int> SettingsMenu::take_level() {
   return std::exchange(impl_->level, std::nullopt);
 }
+
+bool SettingsMenu::take_copy() {
+  return std::exchange(impl_->copy_requested, false);
+}
 #else
 struct SettingsMenu::Impl {
   Settings settings;
@@ -236,12 +271,18 @@ void SettingsMenu::set_fullscreen(const bool enabled) {
   impl_->settings.fullscreen = enabled;
 }
 void SettingsMenu::set_visible(bool) {}
+bool SettingsMenu::visuals_open() const {
+  return false;
+}
 bool SettingsMenu::take_interaction() {
   return false;
 }
 void SettingsMenu::set_levels(const std::vector<std::string> &) {}
 std::optional<int> SettingsMenu::take_level() {
   return std::nullopt;
+}
+bool SettingsMenu::take_copy() {
+  return false;
 }
 #endif
 

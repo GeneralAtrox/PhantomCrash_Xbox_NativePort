@@ -88,10 +88,20 @@ EffectHandle EffectSystem::start(const int group, const Vec3 position, const Vec
       emitter.flags = spec.flags;
       emitter.instance = instance;
       // The original starts at the definition's offset and is then moved,
-      // so its first frame's motion runs from there; the port starts still.
-      emitter.position = emitter.previous = position;
+      // so its first frame's motion runs from there (ParticleMotion).
+      emitter.position = position;
+      emitter.previous = bank_->particle_motion.start_at_offset ? d.offset : position;
       emitter.target = target;
       emitter.orientation = orientation;
+      if ((spec.flags & effect_flags::random_offset) != 0) {
+        // 0x06039a chooses one shared anchor, then 0x06123e scatters
+        // individual particles around it. This is not the pull target.
+        constexpr float minimum_reach = 0.2F;
+        const float pitch = random(0.0F, pi);
+        const float roll = random(-pi, pi);
+        const float reach = d.push * random(minimum_reach, 1.0F);
+        emitter.spawn_offset = turned({reach, 0, 0}, rotation_z(roll) * rotation_y(pitch));
+      }
       emitter.rate = d.rate;
       if (!d.no_gravity) {
         const Mat4 turn = rotation_x(d.gravity_angles.x) * rotation_y(d.gravity_angles.y) *
@@ -113,6 +123,27 @@ void EffectSystem::move(const EffectHandle handle, const Vec3 position) {
   }
 }
 
+void EffectSystem::set_direction(const EffectHandle handle, const Vec3 direction) {
+  const Mat4 orientation = heading_along(direction);
+  for (EffectEmitter &emitter : emitters_) {
+    if (emitter.instance == handle) {
+      emitter.orientation = orientation;
+    }
+  }
+}
+
+void EffectSystem::set_segment(const EffectHandle handle, const Vec3 segment) {
+  const bool spans = length(segment) > 0.0F;
+  for (EffectEmitter &emitter : emitters_) {
+    if (emitter.instance == handle) {
+      emitter.segment = segment;
+      if (spans) {
+        emitter.orientation = heading_along(segment);
+      }
+    }
+  }
+}
+
 void EffectSystem::set_target(const EffectHandle handle, const Vec3 target) {
   for (EffectEmitter &emitter : emitters_) {
     if (emitter.instance == handle) {
@@ -129,9 +160,10 @@ void EffectSystem::set_rate(const EffectHandle handle, const float per_second) {
   }
 }
 
-void EffectSystem::stop(const EffectHandle handle) {
+void EffectSystem::stop(const EffectHandle handle, const bool include_pending) {
   for (EffectEmitter &emitter : emitters_) {
-    if (emitter.instance == handle && emitter.spawned) {
+    if (handle != 0 && emitter.instance == handle && (emitter.spawned || include_pending)) {
+      emitter.spawned = true;
       emitter.stopped = true;
       emitter.emitting = false;
     }

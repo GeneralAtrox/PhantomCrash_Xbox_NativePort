@@ -1,14 +1,52 @@
 # The training ground, the tutorial battle and the 3D renderer
 
+## Pausing a battle
+
+Escape (host Back) and controller Start pause the current battle. Escape,
+Start or B resumes it; A or clicking the highlighted EXIT button deliberately
+leaves. A match then opens its normal results/receipt screen; training returns
+to its originating screen. Opening or closing pause consumes that input.
+
+The match, other live arenas, mission/play clocks, audio and replay recording
+are frozen while paused. Mouse aiming releases its cursor for the EXIT button.
+The pause overlay is excluded from the replay. The old `battle.buttons.exit`
+binding now opens pause too, preserving custom bindings without instant exits.
+
+`data/ui/battle_pause.json` controls the pause bindings, shade and text placement.
+The EXIT artwork is reused from `ui/match_result.json`. This dimmed overlay is
+a port presentation: inspection of the extracted game, quest, versus, common
+and replay UI atlases did not identify the original pause overlay; its original
+composition has not been established. It is not claimed as reference matching.
+
 ## Arena monitors
 
 Gate TVs and the advertising ship show a live chase view of a random living
-combatant, including the player and AI. The port switches every eight simulation
-seconds, avoids immediate repeats when another fighter is available, and switches
-immediately if its subject dies. With no living fighters, the screens go black.
+combatant in the play area, including the player and AI. Scripted entrance/exit
+robots are excluded. The port switches every eight simulation seconds, avoids
+immediate repeats when another fighter is available, and switches immediately if
+its subject dies, enters a scripted sequence or leaves the play area. With no
+eligible fighters, the screens go black.
 `data/world/stages.json` controls `monitor.switch_seconds`, the camera and aspect,
 and each stage's `monitor_nodes`. These name the gate quads independently of the
 sky geometry that shares their original placeholder texture.
+
+The port's `Battle::respawn` marks a robot alive at an enemy-path entry and
+emits `respawned`; `BattleScene::observe` then starts its entrance, placing it
+at an elevator gate and holding it until it can walk out. Alive alone therefore
+does not mean ready for a TV camera. The extracted Shinjuku path's three entry
+points are outside the play area. Live roster scattering can also select path
+points beyond the force field, so the TV filter checks position independently
+of scripted state. This confirms the port's flow, not an emulator capture.
+
+`StageCollision::in_play_area` requires stage ground below the robot and uses
+the converted surface-8 force-field outline and ceiling. Projected fence spans
+are merged before the ray-crossing test, handling duplicate panels, leaning
+fences and concave outlines. The footprint applies even where fence geometry
+starts above ground. Stages without force fields use their ground footprint.
+Airborne and shielded combatants remain eligible while inside these bounds.
+
+The spectator camera centres its selected fighter, ignores weapon elevation,
+and shortens against solid props (including wrecks), stage geometry and doors.
 
 The feed renders the same battle snapshot, including robots, scenery, projectiles
 and effects, without HUD or cockpit. It uses native viewport resolution and is
@@ -22,6 +60,11 @@ and followed by `0x06a38d`. `tables/arena_monitor.json` contains the route, spee
 hinged panel groups and night rotors. The screen meshes are slots 1218/1222 by day
 and 1233/1237 by night; `0x06aa07` replaces their atlas UVs for the framebuffer.
 The native ship follows those curves and displays the shared battle feed.
+Its hull and TV draws bypass arena distance fog: `0x06a5ac` uses
+`0x0afef7`/`0x0aff4a` to set flag `0x02000000`, which `0x0b3240` reads
+to disable fog in layers 2/8. Applying normal stage fog at the ship's altitude
+hid both its textures and the live TV picture. The per-item fog choice is also
+recorded in replays.
 Random subject cycling and continuous battle coverage replace the original
 player-only view and ship advertisements as a requested port improvement.
 
@@ -91,6 +134,13 @@ with Direct3D 11 on the device of SDL's renderer. SDL stays in charge of the
   2. Opaque and alpha-tested draws, except shadow casters.
   3. Shadow volumes, then the casters, then the shadow cover (below).
   4. Alpha-blended and additive draws, sorted back to front by distance.
+     Ordinary converted model materials retain depth writes even when
+     their texture uses alpha blending (0x0b3240). Additive draws, faded
+     items and generic glTF BLEND materials without original batch flags
+     read depth without writing it. A second-pass batch does not itself
+     disable depth writes: 0x0d3529 changes its sort key, not its object flags.
+     Original depth-writing alpha batches in pass 1 use bounded raster depth
+     separation from the base surface; see Layered ground depth below.
      Items drawn see-through (a camouflaged robot) join this pass; each
      first writes its own depth with colour writes off, so only its nearest
      surface blends and its inner faces stay hidden.
@@ -102,15 +152,61 @@ with Direct3D 11 on the device of SDL's renderer. SDL stays in charge of the
   `desktop_robot.cpp`): the body and legs share the leg skeleton, each arm
   has its own, and the shoulder weapons ride the upper body's node (flag
   0x4). Items also carry an alpha and a white hit flash.
-- The HLSL is compiled at run time with `D3DCompile`. Lighting is an
-  approximation: vertex colour × material colour × texture ×
-  (ambient + sun · N·L), with normal maps on bump batches and linear fog.
-  The original's fixed-function and bump shader setup is not reproduced
-  exactly.
+- HLSL is compiled at run time with `D3DCompile`. Extracted material RGB
+  at batch +0x28 supplies ambient colour, as in 0x0b3240; vertex colour
+  supplies diffuse. The renderer consumes specular enable/power, first-stage
+  ADD/MODULATE and texture-alpha selection. Bump batches use tangent-space
+  normal maps. Normal transforms handle nonuniform/mirrored scales.
+  Per-pixel Blinn highlights use the stage sun colour; this is a native
+  approximation, not a reproduction of every Xbox lighting program or
+  texture combiner. Linear fog and the independent rainbow path remain.
 - Models load with cgltf (`world_model.cpp`) and are mirrored back into the
   game's left-handed space (see the glTF mapping below).
 - Textures resolve through the data roots, so a PNG in `mods/` replaces one
   texture.
+
+The Shinjuku gate check covers resource 186 meshes 120–122 (original
+slots 151–153), their TV housings, roofs and supports, and resource 198
+door leaves 25–26. Each static gate has three batches: 12 opaque triangles,
+132 alpha-tested support triangles and 731 blended bump-mapped triangles.
+Their original index spans are present in the export and submitted by the
+renderer. The support cutouts remain alpha-tested; treating the blended
+gate batch as depth-read-only was a render-state mismatch, not evidence
+of missing geometry. Front views of all three gates were checked in the
+native renderer after restoring those depth writes. This does not establish
+an exact visual match to an equivalent emulator camera/frame.
+
+### Layered ground depth
+
+Shinjuku's dirt is authored as pass-1 alpha geometry over the road and pavement.
+Some edges are coplanar with the base mesh; other sampled faces differ by only
+about 0.000125 game units. D24 quantization and interpolation of differently
+tessellated faces can therefore alternate which surface wins as the camera moves.
+Sorting the blended batches does not separate them from opaque ground depth.
+
+The native rasterizer now gives original, depth-writing alpha batches in pass 1
+a bias of -2 D24 units plus a -1 slope term, clamped to -32 D24 units. This is a
+native coplanar-surface treatment, not a recovered Xbox render-state value.
+Depth testing, depth writes, culling, mesh positions and collision are preserved.
+Sky, cockpit, depth prepasses, faded items, optical camouflage and additive draws
+do not use it; generic glTF transparency without source metadata is also excluded.
+The clamp prevents an arbitrarily large offset on edge-on triangles. Model-load
+logs report eligible batch counts and the bias parameters.
+
+2026-09-30: Release builds and bounded game captures were used to inspect the
+Shinjuku pavement, rubble and bus/fallen-streetlight area. No automated tests were
+added. The broad dark patch in the earlier report was not reproduced in the
+current unbiased build; the bounded bias addresses the remaining near-coplanar
+surface risk, rather than claiming that patch alone proved its cause.
+
+A fresh geometry check found a pass-1 triangle centroid in `mesh116_node0`
+only 0.0001250869 units from an overlapping base triangle, at approximately
+(13.2642, -0.8427, 56.6233). This samples horizontal triangle centroids; it is
+not a complete intersection inventory. Runtime logs confirm 91 eligible
+Shinjuku batches use the bounded bias. Fresh ordinary gameplay captures did
+not reproduce the reported patch. Targeted capture attempts were inconclusive
+because the temporary spawn did not place the camera above the intended floor;
+they do not establish that temporal flicker is eliminated.
 
 ### Shadows
 
@@ -131,6 +227,26 @@ The original gives robots two kinds of shadow (0x082e60). The look is in
     (`models/binlink/184.gltf`, `leg_types` `shadow_mesh` in the robot
     catalogue), placed with the robot and coloured 0x60ffffff (view layer 8).
   - Its quads face down, so they are drawn double-sided.
+  - The port draws these decals after the world's surface layers, with depth
+    testing but no depth writes. The generic original-material depth policy
+    previously let their transparent rectangular borders mask dirt overlays,
+    exposing a sharp patch of the underlying pavement around NPCs.
+  - Surface layers (second-pass, depth-writing ground markings such as the
+    training ground's helipad, choco mesh 3 / texture 6) are drawn right
+    after the robots and before the stencil shadow is laid down, so the
+    piloted robot's volume shadow darkens them instead of being painted
+    over. The flat shadows take twice the layers' depth bias
+    (`decal_cull_none_`) so they sit above a marking rather than flicker
+    with it.
+
+Fence and post atlases are selected by `two_sided_textures` in
+`data/world/stages.json`, for all six city variants and both training stages.
+The stage loader resolves those asset paths to material indices, and the
+renderer disables culling for those materials in gameplay, monitors and
+replays. Some authored fence sections include reverse-facing geometry and
+others do not; the override keeps the latter visible from outside as well.
+Texture alpha cut-outs, original material metadata and collision stay intact.
+The `two-sided fence/post materials` load log reports the resolved count.
 
 The port builds each part model's volume once (`shadow_volume.cpp`).
 
@@ -144,12 +260,23 @@ The port builds each part model's volume once (`shadow_volume.cpp`).
   (two-sided stencil) and depth clamp instead, which needs closed volumes
   and does not care where the camera is.
 
-Not ported: layer 7's static volumes (VS 0x152), which only draw a marker
-cube on the training ground.
+Layer 7's authored static volumes (VS 0x152) are now exported with city
+geometry and named in each stage's `shadow_nodes`. Every drawing node of a selected
+volume mesh is tagged, including multi-node Shinjuku volumes; transform-only
+parents remain in the glTF hierarchy. The training
+model's existing mesh 0 follows the same path. The colour pass excludes these
+nodes; a dedicated vertex shader submits their existing sides/caps without
+extrusion after robot colour and before the shared shadow cover. Scenery
+shadows can consequently fall on robots. Startup logs identify configured
+nodes missing from the loaded model.
 
-City conversion excludes layer 7 from the colour model. Rendering those
-volumes as ordinary meshes produced the large grey surfaces over streets
-and buildings. Object slots are resolved relative to the model resource's
+The static pass uses the native renderer's depth-fail stencil/depth-clamp
+method as well; original depth-pass counting and camera-inside correction
+remain different. Closed-volume behavior and visual appearance have not
+been executed or captured for this change: no build or tests were run.
+
+Rendering these volumes as ordinary meshes previously produced large grey
+surfaces over streets and buildings. Object slots are resolved relative to the model resource's
 `first_mesh_slot`, not the smallest slot in the stage object list: Shinjuku
 day's resource starts at slot 31 but its object list starts at 91. Its sky
 slots 143 and 144 therefore select meshes 112 and 113. The stage table in
@@ -168,13 +295,21 @@ runtime loads `tables/stage_objects.json` and draws each intact or wreck
 mesh from `<stage>_objects.gltf` at the record's transform. Its twelve
 collision triangles come from `0x22e658[stage]`, template stride `0x1b0`.
 Projectiles test these surfaces before targets behind them; blasts use
-distance to the surfaces. Live battles retain destroyed props on reentry.
+distance to the surfaces. Robots collide with the same surfaces and can stand
+on their tops, both intact and wrecked. Live battles retain destroyed props on reentry.
+The converter also exports `wreck_collision` from the wreck mesh's actual
+triangles. Destruction replaces the intact collision with these surfaces for
+movement, shots and targeting. This preserves solid debris without retaining
+the invisible full-height box of the intact stack. Older extractions without
+this field retain their original collision. `Scenery collision:` logs report
+available wreck geometry; `Scenery destroyed:` logs identify each transition.
 
 The hit-handler table at `0x22e8e0` selects destruction, without an HP
 threshold: types 0/1/7 select their wreck and effect 14/13/13 respectively;
 types 2/3/4 vanish with effect 15 and type 5 with effect 58. Type 0 wrecks
 remain solid; type 1 wrecks can be shot away with effect 15 after six
-seconds; type 7 wrecks remain visible without shot collision. Type 8 stays
+seconds; type 7 wrecks also retain movement and shot collision in the port,
+as requested, rather than disabling shot collision. Type 8 stays
 intact. The extracted table exposes effects, collision, wreck meshes,
 cooldown and break sound as editable data. These handler interpretations
 come from `0x07271e`, `0x072902`, `0x072afa` and `0x07354e`; the prop shot
@@ -189,6 +324,11 @@ names in this description are researcher-assigned.
 
 ### The screen pass
 
+Rechecked in [the post-processing investigation](POST_PROCESSING.md): the
+original's second blur target is **160x120**, its focus varies with the day,
+and daytime Shinjuku adds distortion. These are now implemented, with three
+saved, default-off toggles under Settings → Post-processing.
+
 Once a frame, just before the cockpit's view layer 0xb, 0x0b7900 draws the
 scene back over itself through one of three passes. Each one multiplies
 the frame by the colour at 0x25b490:
@@ -199,15 +339,16 @@ the frame by the colour at 0x25b490:
   (0x046aa5) sets it and battle teardown (0x047aab) and the scene reset
   0x05741b clear it, so it runs in every battle.
   - `blur.xpu` (program 9, the average of four taps) softens the frame
-    twice: into a 320x240 target, then into a second one. The taps sit on
+    twice: into a 320x240 target, then into a 160x120 target. The taps sit on
     the corners one texel out (quads 0x25b6a8, 0x25b768).
   - `dof.xpu` (program 8) mixes the soft copy in by
     `saturate((depth - threshold) * 32)`. The depth is the top byte of
     the 24-bit depth, read as the alpha of an ARGB texture. The result is
     multiplied by the colour.
-  - The threshold is `focus * 0.0005 + 0.95`. 0x0b2690 sets the focus from
-    the table at 0x203820 (80 on every stage), less up to 10 from bits 20-29
-    of the player's camera word +0x9cc. That makes the threshold 0.985 to 0.99.
+  - The threshold is `focus * 0.0005 + 0.95`. Battle setup passes the
+    table value at 0x203820 (80 on every stage), less up to 10 according to
+    the stored day's ten-day cycle, to 0x0b2690. The day is bits 20-29 of
+    the saved-player word +0x9cc. That makes the threshold 0.985 to 0.99.
   - Under the battle projection (0x0b7cc0: near 0.1, far 10000) the blur
     starts about 8.5 units out. It steps up at 12.8 and 25.6 units, and
     reaches its most, a third of the soft copy at focus 80, past 25.6.
@@ -231,7 +372,8 @@ set, and `vision_eff` (0x16) is a material program set by the batch draw
 
 The port (`desktop_world_screen.cpp`) draws the pass after the sprites,
 from `stages.json` `screen`:
-- It resolves the frame and blurs it twice into half-size targets.
+- It resolves the native-resolution frame, then blurs it into 240- and
+  120-pixel-high targets (320x240 then 160x120 at 4:3; wider for widescreen).
 - The taps are one 640x480 texel (`blur_texels`) out on both axes at any
   window size.
 - It turns the port's depth back into distance, then into the original's
@@ -239,8 +381,10 @@ from `stages.json` `screen`:
 - It writes the mix times the tint into the multisampled target, under the
   cockpit.
 
-Not ported: the focus's per-battle lowering (the meaning of the camera word
-+0x9cc is unknown), and stage 0's wave, since stage 0 is not a port stage.
+The day-dependent focus and stage 0 wave are implemented; stage 0 is daytime
+Shinjuku. The wave follows a fixed 30 Hz reference clock, independent of the
+desktop presentation rate. See POST_PROCESSING.md for tuning and validation
+limits. Turning off all three settings bypasses the screen pass.
 
 ### Sprites and particle effects
 
@@ -314,11 +458,11 @@ confirmed.
 
 | Button | Action |
 |---|---|
-| Left stick | Walk; sideways alone turns on the spot |
+| Left stick / WASD | Walk forward/backward and strafe left/right |
 | Left stick click | Dash |
-| A | Jump; holding it lifts higher for a moment |
+| A / Space | Jump; hold briefly for lift. Release and press again in the air for fast descent |
 | White / black | Dodge left / right |
-| Right stick | Twist and pitch the upper body |
+| Right stick / mouse | Turn the robot and aim vertically; the torso-twist lessons retain upper-body twist |
 | Right stick click | Straighten the upper body |
 | Right trigger, left trigger, B, Y | Right arm, left arm, right shoulder, left shoulder weapons |
 | X | Optic Camouflage (FreePlay and the optic lesson) |
@@ -326,6 +470,11 @@ confirmed.
 
 The buttons are in `training.json` (`battle.buttons`); the keyboard reaches
 them through the usual `desktop_input.cpp` mapping.
+
+Player strafing is independent of yaw. It uses the robot's loaded walk speed
+and acceleration, normalizes diagonal movement, and works in the air and
+alongside a forward dash. The AI retains its steering/forward control path.
+This is the requested port control scheme, not the original left-stick steering.
 
 ### Robots, drones and weapons
 
@@ -339,6 +488,23 @@ them through the usual `desktop_input.cpp` mapping.
   stay planted and each leg part keeps its own pace (the default legs
   stride at about 20 units a second walking and 32 dashing). Legs without
   root motion (the hovering drones) use the `movement` speeds.
+- Letting go of a dash plays the brake motion (27, timing 0/15/44/59: lead-in,
+  hold, settle) to its last frame before the robot stands, as 0x08ff1e only
+  marks the stop (+0x12c = 3). The stick, pushed again, may cut it short after
+  `movement.brake_cut_seconds` (0.35); the port once cut it there regardless,
+  which snapped the legs to the stand pose mid-hold.
+- A dash that turns leans into it on the legs `movement.dash_turn_legs`
+  lists (the leg types whose movement-sound family 0x0823cb puts at 3 to 6,
+  or type 4; never type 20), as 0x08f5d8 picks motions 3/4 (dash) and 6/7
+  (dash back). The side stick eases toward its new value by
+  1/`dash_turn_ease_ticks` (16) of the gap each 30 Hz tick; past
+  `dash_turn_stick` (0.3) the lean clip plays, with its frame carried over
+  so the stride does not restart.
+- A robot pushed where the stage has no ground (a wall shove into a
+  building's footprint) returns to its last footing instead of falling to
+  the no-ground height, -1000. Worker-1 sat at -1000 in a Shinjuku Rumbling
+  dump for this reason. This is a port addition; the original's walls keep
+  robots out of those footprints.
 - The legs are posed by IK: a one-bone chain to the motion's knee target,
   then a two-bone chain to its foot target.
 - Drones start at the path's entry segments (kind 0, at the arena's
@@ -349,16 +515,32 @@ them through the usual `desktop_input.cpp` mapping.
   home; a record's lobbed round leaves at its launch angle above the aim
   (toward the lock when locked) and falls at 49 units/s² (0x097c30). A trigger
   pull fires the weapon's rounds, the extras scattered within its spread.
-  Projectiles expire after their lifetime. A record's blast weapon hurts
+  Projectiles expire after their lifetime; a straight round leaves at its
+  start speed and speeds up to its top speed. A beam's rounds run out from
+  the muzzle at its acceleration a frame and end at its length, the top
+  speed (0x09b9fe). A record's blast weapon hurts
   the body it hits, then its blast grows from its start radius to its full
   one, hurting every enemy inside it each tick. A homing missile's rounds
   leave one every 10 frames. Hits follow the damage rules (0x0988e1):
   triple damage from behind, dodges, criticals that can knock off a weapon,
-  stun and knockback ([PART_RECORDS.md](PART_RECORDS.md)). Each weapon picks
-  the enemy nearest its aim inside its cone and range, seeking from the aim
-  origin; a camouflaged robot cannot be picked. Guns and the drill use it
-  at once. Missiles and grenades lock only once it has been held for the AI
+  stun and knockback ([PART_RECORDS.md](PART_RECORDS.md)). The player's arm
+  weapons pick the nearest enemy in range inside the chip's inner reticle
+  box, and the shoulder weapons inside its outer box, around where the
+  reticle has tracked to (0x05262d). Other weapons and robots pick the
+  enemy nearest their aim inside a cone and range, seeking from the aim
+  origin; a camouflaged robot cannot be picked. Guns use it at once. A
+  melee weapon starts a strike: the robot steps in and the armed blade hits
+  the first robot it comes within 1.2 radii of (0x09c9c2,
+  [WEAPON_AUDIT.md](WEAPON_AUDIT.md)). Missiles and grenades lock only once it has been held for the AI
   chip's lock time, and fire unguided before that.
+  The native acquisition path checks the full 3D aim cone, including pitch,
+  and shares obstruction checks with the tracking reticle: stage geometry,
+  closed doors, solid props and wrecks block the target's centre. Player
+  acquisition also requires that centre to be inside the active camera's
+  clip volume with a clear camera sightline. Scripted entrants are excluded.
+  Losing visibility clears the candidate and its accumulated lock time;
+  subsequent volley rounds use the current lock, not the previous target.
+  `Targeting:` logs report player candidate transitions by weapon slot.
 - Parts: the player's AI chip and weapons name original records in
   `tables/parts.json`, which the robot converter reads from the executable
   (`parts.py`). The chip (0x1b7fc8, copied to robot +0x4504 by 0x092c6c)
@@ -371,9 +553,15 @@ them through the usual `desktop_input.cpp` mapping.
   The robots' armour is their body and legs records' (0x076114), each raised
   to its floor. Values grow with the part's level along a curve (0x092160,
   0x0924fd, 0x092311).
-  The new-game robot was not found, so the port chooses Dog I with
-  Pistol/HM15, A22c7 Drill Arm, M-24L/1 Aspide and G24 Slingshot, all at
-  level 0.
+  A new game's save has no robot: the garage is empty and nothing is
+  ridden. The tutorial (0x97457) copies robot preset 0x411 PRACHOLY
+  (`tables/garage.json` robots) into the player's loadout, and the
+  training player is that robot: Dog I (chip 14) with Pistol/HM15,
+  Penetrate Cone, M-24L/1 Aspide and G24 Slingshot, all at level 0, paint
+  23, and its module OCGIIIA: 0x974f8 copies the whole 0x3c-byte preset
+  into team loadout 0, and 0x075d4a adds the critical and knockdown
+  resistance of the modules at loadout +0x22 to the chip's. A robot from
+  the garage fits its hangar's modules the same way.
 - Ammunition: each round spends one, but a machine gun spends one a pull
   (0x09b4ed); melee weapons need none. A refill
   counts the shown amount up over 120 frames (0x09b986). Weapons refill
@@ -392,9 +580,11 @@ them through the usual `desktop_input.cpp` mapping.
   degrees plus 22.5 times the smoothed stick, and its reset eases back over
   8 ticks (0x07d330).
 
-The weapons' lock cones, reach and stagger, and the other movement, camera
-and HUD values, are port values until the robot stats and the battle camera
-are decoded; all of them are in `training.json`.
+A record weapon's reach, lock range and stagger are the original's (see
+PART_RECORDS.md, "Reach and locks"). A robot without the player's drawn
+reticle locks in its chip's boxes around its sight (`sight_fov_degrees`
+for robots without a camera). The other movement, camera and HUD values
+still come from `training.json`.
 
 ### The HUD
 
@@ -422,7 +612,7 @@ from `data/ui/battle_panels.json`, using `game_quest_tex` (slot 465, sprites
 | 0x4faad / 0x51499 | The inner and outer reticles and the centre diamond (1387). The half size comes from the shape tables 0x203c48 and 0x203c78 (square, wide, tall), interpolated by the fire control's value / 999 (0x4db69). Each corner piece is the top-left one, mirrored and turned for the others. |
 | 0x4f6a0 | The reticle's tracking: it follows the nearest enemy inside the inner box at (0.02 + 0.08 × robot +0x4514 / 999) NDC per frame. The port checks acquisition against the sight-centred chip box and bounds the tracked offset by its half width/height, preventing the moving reticle from dragging the acquisition area beyond the chip's limits. |
 | 0x51045 / 0x51499 | Shoulder lock boxes (1390 right, 1389 left, colour 0xcc00b496). Each opens at the outer reticle's corners and closes on the robot as the lock time (robot +0x4520) runs out, keeping (time left / lock time) of its spread each frame (0x5239b). |
-| 0x51e37 / 0x5218b | The melee lock box (1391) for a kind 6 arm weapon, within 20 units (25 for other robots). |
+| 0x51e37 / 0x5218b | The melee lock box (1391) for a kind 6 arm weapon, within 25 units, 20 for a computer's robot (robot +8 of -1). |
 | 0x4de50 | The markers: a team-coloured frame (1376) whose tail points at the robot, and its armour bar (1386) scaled by armour / maximum. The robot must be on screen, uncamouflaged and within 75 units. |
 | 0x4aaed | DURABILITY (1399, fill 1398 over 128) and O.C TIME (1401, fill 1400 over 72), with low-value colours and the colour flash 0x4dc2f. |
 | 0x4ad3b | The four weapon panels from the records at 0x204340 (left) and 0x2046b0 (right). Each has a frame (1430/1431), the icon for the weapon's kind, an ammunition count or charge percentage with a bar, and WEAPON LOST. It also draws DAY-, TIME, MONEY and SHOOTDOWN with their numbers, and the DAMAGED / HIT / BINGO! messages rising at 48,388. Below half armour it shows SYS DURABILITY DOWN 50% / 75%, and MISSILE ALERT while a missile homes on the robot. |
@@ -445,22 +635,22 @@ clock as HH:MM:SS.
 Where the port departs from the original:
 - **Loadout.** The player's chip and weapons are the port's choice. The
   robots have no option parts, so their armour, fight stats and weight are
-  their parts' alone. The load scales the port's turn rates and jump
-  rather than setting the original's own values.
+  their parts' alone. The turns and the jump height are the legs' own
+  under the load, and so are the dodge's pushes.
 - **Hits.** A stunned robot plays the hit reaction for the push's
   direction for the weapon's `stagger_seconds`, at least the motion's 29
   frames.
 - **Chatter.** The player's robot speaks from its chip's line table
   (Dog I: the report voice). Every event the original raises is raised
-  (the list is in [PART_RECORDS.md](PART_RECORDS.md)) except 31, a
-  breakable stage object shot, since the port has no breakable objects.
+  (the list is in [PART_RECORDS.md](PART_RECORDS.md)); 31, a shot breaking
+  a stage object, only on the city stages, which have them.
   The drones have no pilot and say nothing. The drones never fire, so the
   lines about being hit are rarely heard.
 - **Name tags.** The markers draw a pilot's tag, but the training robots have
   no pilot (`pilot` in `training.json` gives one).
-- **Supply drops.** Only FreePlay has them. The computer robots do not go
-  for the pickups (0x0678f8 is not ported), and the carrier has no engine
-  sound yet.
+- **Supply drops.** Only FreePlay has them. The computer robots go for the
+  pickups (0x05949b, 0x0678f8, `battle_ai_pickups.cpp`); the carrier has no
+  engine sound yet.
 - **Goal bar.** The lesson goal bar in the top left is the port's own; the
   original leaves the goals to Pepper's messages.
 - **Widescreen.** With `"layout": "widescreen"`, the left and right panels
@@ -543,8 +733,8 @@ routes in `tables/battle_scenes.json`:
   effect, so the burst throws its 111 sparks in one frame and stops. The
   sparks home on the robot as it moves. At most three bursts run at once
   (`look.take_*`).
-- Not ported: the original swaps the crate between the 207 and 208 meshes
-  at random every frame.
+- **Crate.** Like the original, the crate swaps between the 207 and 208
+  meshes at random every frame (0x069d52).
 - **Shooting.** The carrier (radius 3) and falling or landed pickups
   (radius 1) take shots (0x067603). A shot pickup bursts. A carrier shot
   down pays its shooter 1000 (0x047ed9) and immediately starts explosion
@@ -584,12 +774,15 @@ from its robot's camera and its own HUD, in coordinates local to that screen:
   digits above it.
 - **Left out.** With more than one screen, the ammunition and charge bars,
   the DAY, TIME, MONEY and SHOOTDOWN labels and the DAMAGED / HIT / BINGO!
-  messages are not drawn (0x4aaed, 0x4ad3b).
+  messages are not drawn: the original draws them only when the screen
+  count is 1 (0x4aaed, 0x4ad3b), and the port does the same.
 - **Sights.** 0x4faad, 0x503b9, 0x51499 and 0x5218b draw their pieces at half
   size. Their offsets are fractions of the screen, so they shrink with it.
   The markers (0x4de50) keep their size.
 
-The split screen is VS mode's (`vs_battle`, one screen for each player).
+The split screen is VS mode's (`vs_battle`, one screen for each player,
+each following that player's robot; the rules are in
+`data/world/vs_battle.json` and `vs_rules.hpp`).
 Tools > Level Select opens `training_split2` and `training_split4` to test
 the layouts: FreePlay with two or four screens, following the player's
 robot and then the drones.
@@ -621,30 +814,31 @@ robot index % 4 (0x0825df). The lessons start in their own states (0x18,
   9PLAYIN, starts 6 battle ticks (12 frames) before the end; the
   tutorial's mode 4 has none.
 - **Computer robots** (state 1: 0x082552, 0x088ffa, 0x08928c, 0x0897a2).
-  Computer robots start at gate robot index % 4 with a delay of 120
+  The original assigns gates by robot index, with a delay of 120
   frames (+0x277c). While the gate's door is busy they wait, until the
   delay runs out. In regular battles they also wait for the player's
   scene and for a boss entering (0x09199e, which answers no in mode 4).
-  Their entrance plays three times as fast (0x17cce0) and ends when it
-  reaches 180 frames left; the robot then takes up the enemy path. In the
-  port a drone that respawns enters again.
-- **Boss** (state 5, 0x082cff: a rival whose loadout +0x70 is 1). The
-  battle's first boss (global +0xef328) plays its entrance at full speed.
-  The bars slide in and the camera takes state 5's shot, placed at the
-  boss's gate, with no easing (0x07e456). Track 6, 13BossStart, plays.
-  When it stands (0x0897a2) the bars slide out. The other robots fight on
-  through the scene: 0x091dc4 sets their tasks' flags 0x24, but in the
-  running game they keep moving and shooting, so the port does not hold
-  them (it only keeps the player's controls and the HUD waiting, and other
-  computer robots at their gates). A drone with `"boss": true` in
-  `training.json` gets this entrance.
+  The port now uses the player's full 540-frame entrance at the same
+  cadence: the same walk track, door cue and final standing phase. Live
+  RUMBLING arrivals remain queued until the scene consumes them before
+  the next battle tick; clearing transient combat events cannot skip entry.
+  Combatants already fighting when the player joins are left in place.
+  NPC doors use a shuffled rotation shared by all entrants: every available
+  door is used once per round, and a new round cannot start at the previous
+  round's final door (unless the stage has only one door). Replacement robot
+  slots no longer determine the door.
+  At handoff, AI joins the nearest portion of its entry path and proceeds
+  forward instead of returning to point zero inside the gate.
+- **Boss**. Boss entrants now use the same NPC entrance, retaining their
+  boss chatter but leaving the player's camera, controls and music alone.
+  The original state-5 camera track remains in the extracted tables.
 - **Entry shield** (robot +0x27d4). A computer robot is shielded for 300
   frames from its entrance (0x082552), renewed while it waits at its gate
   (0x089032, 0x0892d1). The player's shield is raised immediately on
   placement and refreshed throughout its entrance (0x08928c writes 300
   frames at 0x0892d1), then counts down for five seconds after control
-  returns. The player's shield visual stays hidden throughout the elevator
-  entrance and appears when control returns; damage protection remains active
+  returns. All robots refresh protection throughout entry. Their shield visual stays
+  hidden during scripted movement and appears when control returns; damage protection remains active
   throughout, including while the visual is hidden. Arena monitors use the same
   visibility rule. The player's exit is protected for its scene (0x08224d).
   No hit hurts a shielded robot. Its glow (+0xac, 0x082e60) rises 0.015 a
@@ -718,8 +912,17 @@ their door ([BATTLE_SOUNDS.md](BATTLE_SOUNDS.md)). A stage in
 `data/world/stages.json` names its number in the original's tables
 (`scene_stage`) and its doors' model (`door_model`): the night training
 ground, stage 7, has the same gates and doors drawn from
-choco_night_effmodel. Not ported: the story missions' gates and waits
-(mission types 0x16 and 0x17).
+choco_night_effmodel.
+
+**Ranker contests.** The story's Area Ranker and First Ranker contests
+(classes 22 and 23, which 0x082c54 calls mission types 0x16 and 0x17) change
+three rules. No robot leaves by walking back into a gate: 0x08224d only plays
+the sign-off line. The ranker comes out of the gate the RUMBLING screen showed
+it waiting at (save +0x6120, 0x0825df), and 0x088ffa makes it wait its whole
+timer rather than only for a busy door. The match sets `SceneTuning::ranker`
+and `ranker_gate` from the entry. The original also gives the ranker the
+boss's camera scene, with the area's music (0x082cff, 0x09e6b1). The port
+keeps computer arrivals off the player's camera, as it does for every boss.
 
 ### Performance
 
@@ -824,6 +1027,11 @@ type's (`{f32, f32 radius}` at 0x22f420, read at 0x080e41 and clamped to
 The port (`stage_collision.cpp`) grids the triangles over x and z. It keeps
 the original's flags and ground rule, pushes spheres out of faces from
 their front only, and tests shots as segments.
+Robot ground queries include the lower sphere's slope clearance:
+`radius * (1 / normal.y - 1)`. This matches the sphere push-out height, so
+standing on a ramp does not falsely exceed the ground-snap distance and
+restart the falling/landing animation. Point queries used by scenery and
+play-area checks continue to return the actual surface height.
 
 ### The stage's environment
 
@@ -970,16 +1178,45 @@ The local transform is S·Rx·Ry·Rz·T with row vectors.
 
 ## Next steps
 
-1. The robot stats: the turn rates, the jump, the per-robot aim rate
-   (+0x7c, which 0x07d330 multiplies by the stick for the pitch), now known
-   as the legs' curves under the load (0x07c34e,
-   [PART_RECORDS.md](PART_RECORDS.md)) but not yet read in their units.
-2. VS mode, which will use the split screen; the computer robots seeking
-   supply pickups (0x0678f8); breakable stage objects (chatter event 31).
-3. Robot-contact fence effects (shot impacts now use the extracted
-   refraction meshes; see [EFFECTS.md](EFFECTS.md)); specular; the presets'
-   gamma levels.
-4. The Standard and Preferred control types' movement differences (the
-   robot's flag 0x2740 bit 0 in 0x07d330, 0x08b70b and 0x08c18a).
-5. The other stages in `stages.json`, from the stage table, with their
-   collision and environment presets.
+1. Robot stats. The turns, the twist, the jump and the dodge pushes are the
+   legs' own under the load ([PART_RECORDS.md](PART_RECORDS.md)). With the
+   Preferred controls, 0x07d330 turns the twist (robot +0xf8) by robot +0x7c
+   times the 2 frames a tick and the right stick. The aim pitch follows the
+   camera's look, 3 degrees a tick (0x19f8f8), clamped to 0.4 rad by
+   0x0aa499. A dodge adds the legs' +0x9c or +0xac push, 2 frames a tick
+   (0x08d98c) to its speed along the ground. The dodge motion's frames
+   time the rest (0x08ef79, `robot_dodge.cpp`): the robot goes on as it
+   moved until the loop start, slides keeping 0.99 of the push a tick until
+   the loop end, then slows until the last frame, on the ground to the
+   slide times 0.05 for each frame left plus one, in the air keeping 0.9 of
+   its speed a tick. It then stands, or falls on in the air.
+2. VS mode's start. 0x080778 starts each piloted robot at its gate in state 1
+   (0x082552), which walks it out. The port now plays that walk for every
+   rider (`BattleScene::start_rider_entrance`), shielded, its controls
+   waiting until it stands. Each screen keeps its chase camera rather than
+   the player's entrance shots, and there is no READY/GO; whether the
+   original shows either in VS is not yet checked.
+3. The haze. The presets' levels are applied and fog now uses the
+   original's clip-space depth; the rest of the original's softness is not
+   in the presets ([POST_PROCESSING.md](POST_PROCESSING.md), "Fog distance").
+4. The control types. The sticks follow CONTROL TYPE (0x027d5a sets robot
+   +0x2740 bit 0 for Standard; 0x0774ad reads the sticks): Standard strafes
+   on the left stick's x and turns on the right's; Preferred turns on the
+   left and twists on the right. Standard also dodges on a double flick of
+   the left stick (0x0774ad's states +0x2538, each step within 5 ticks,
+   +0x253c, set +0x2f6c bit 0x10 or 0x20 as the dodge buttons do), and in
+   the air (+0x2534) its left stick's x turns, the right's when pushed past
+   0.001. The original sets bit 0x10, the white button's, for a flick to
+   positive x; the port dodges to the side flicked, as an assumption about
+   the pad's x sign. 0x08b70b, 0x08c18a and 0x091f8f pick Pepper's lesson
+   scripts for the type (0x243168 or 0x243220), not motions; those are
+   ported. BEGINNER MODE (BUTTON CONFIG's byte at config +0x6024, copied
+   per pad to +0x10fd4 by 0x027ca1 and to robot +0x273c at 0x0817c3; the
+   tutorial keeps it off, 0x0817a8) gives Preferred a quick turn in place
+   of the twist (0x07d330): the right stick past 0.5 queues a quarter turn
+   (+0x2748) taken at up to 0.8 of the twist rate a tick; the left stick
+   drops it and the opposite push starts an 8-tick cooldown (+0x2744).
+   That is ported (`quick_turn_*` in the movement tuning), as is BEGINNER
+   MODE's other effect: the next and previous view buttons do nothing
+   (0x07d452 skips 0x2f6c bits 0x1000 and 0x2000, which cycle the fixed
+   views 2-5); first person and behind still work.

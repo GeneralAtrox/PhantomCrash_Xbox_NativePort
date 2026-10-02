@@ -27,13 +27,16 @@ struct EntryShield {
 // sphere's centre, scaled by 3.2 leg radii, turned by the robot's heading
 // plus an angle that grows 0.02 a frame, in colour 0x64ffffff times the
 // glow, with draw mode 9 (added to what is behind it). The original's
-// barrier program (Media/Shaders/barrier.xvu) lays systemdata/muteki01.tga
-// over it; the extraction gives the sphere texture coordinates instead.
+// rainbow.xvu / rainbow.xpu supply animated vertex RGB and scrolling planar
+// UVs; muteki01.tga supplies the wave alpha, not the rainbow colours.
 struct EntryShieldLook {
   std::string model{"models/binlink/197_30.gltf"};
   float scale{3.2F};           // times the leg radius
   float spin_per_second{1.2F}; // 0.02 a frame
-  std::array<float, 4> colour{1.0F, 1.0F, 1.0F, 100.0F / 255.0F};
+  std::array<float, 4> colour{1.0F, 1.0F, 1.0F, 1.0F};
+  float update_hz{30.0F};   // fixed simulation clock shared by every rendered view
+  float phase_step{-0.03F}; // 0x0c43ae
+  float scroll_step{-0.01F};
 };
 
 // data/world/training.json "entry_shield"; missing values keep the

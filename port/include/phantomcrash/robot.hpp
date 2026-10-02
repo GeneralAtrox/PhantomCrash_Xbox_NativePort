@@ -71,6 +71,7 @@ struct RobotParts {
   std::array<int, 2> shoulders{-1, -1}; // left, right
   int colour{};
   int emblem{-1};
+  bool operator==(const RobotParts &) const = default;
 };
 
 // {"body": 0, "legs": 0, "arms": [0, 6], "shoulders": [2, -1], "colour": 23,
@@ -83,6 +84,7 @@ inline constexpr float max_robot_radius = 2.0F;
 // Everything needed to draw and animate one robot, as asset paths.
 struct RobotAssembly {
   int leg_type{-1};
+  int body_type{-1};
   std::vector<MotionTiming> timings;
   float radius{};      // the leg type's collision radius, clamped; 0 if unknown
   int shadow_mesh{-1}; // the leg type's flat shadow (RobotCatalogue::LegType)
@@ -92,6 +94,7 @@ struct RobotAssembly {
   std::array<std::string, 2> shoulder_models;
   std::string paint; // texture every part draws with
   std::string leg_motions;
+  std::string body_motions;
   std::array<std::string, 2> arm_motions;
   const SkeletonNode *skeleton{};
   std::array<const SkeletonNode *, 2> arm_skeletons{};
@@ -108,8 +111,8 @@ struct RobotAssembly {
                                            const RobotParts &parts);
 
 // Each drawn node of a part model is skinned rigidly to one bone slot: the
-// body's nodes take the slots from 0, the legs' continue after them (the
-// merge at 0x0a8f5a). Writes, per node, its local matrix times its bone; a
+// body's drawing nodes take slots from 0, the legs continue after them;
+// hierarchy-only nodes consume no slot (0x0a8f5a). Writes local * bone; a
 // node without a posed bone keeps its model placement under `fallback`.
 void skin_nodes(const ModelData &model, const PosePart &bones, int first_slot, const Mat4 &fallback,
                 std::vector<Mat4> &node_worlds);

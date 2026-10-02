@@ -26,6 +26,7 @@ struct TitleScript {
 
 struct MenuItem {
   std::string id;
+  std::string label; // Code-drawn button label; empty retains a mod's sprite artwork.
   Sprite normal;
   Sprite selected; // drawn over `normal` while the cursor is on the item
   std::string submenu;

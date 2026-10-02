@@ -1,5 +1,8 @@
 #include "desktop_intro.hpp"
 
+#include "desktop_draw_list.hpp"
+
+#include <algorithm>
 #include <utility>
 
 namespace phantomcrash {
@@ -11,6 +14,16 @@ IntroScreen::IntroScreen(TextureCache &textures, const DataRoots &roots, IntroSc
       current_(std::make_unique<MoviePlayer>(renderer_)),
       preloaded_(std::make_unique<MoviePlayer>(renderer_)) {
   enter_step();
+}
+
+void IntroScreen::set_movie_gain(const float gain) {
+  current_->set_volume(gain);
+  preloaded_->set_volume(gain);
+}
+
+void IntroScreen::show_subtitles(const GlyphFont &font, MovieSubtitles subtitles) {
+  font_ = &font;
+  subtitles_ = std::move(subtitles);
 }
 
 void IntroScreen::open_movie(MoviePlayer &player, const std::string &file) {
@@ -115,6 +128,36 @@ void IntroScreen::draw_image(const IntroStep &step, const Viewport &viewport) {
   }
 }
 
+// The line the movie has reached, centred (0x01c4fa: 320 less half the
+// run's width, 0x0be443).
+void IntroScreen::draw_subtitle(const Viewport &viewport) {
+  if (font_ == nullptr || !subtitles_ || !current_->is_open()) {
+    return;
+  }
+  const Subtitle *line = subtitle_at(*subtitles_, current_->playback_seconds());
+  if (line == nullptr) {
+    return;
+  }
+  const std::vector<int> run = glyph_run(*font_, line->text);
+  const auto [x, y] = subtitles_->position;
+  DrawList list(textures_, *font_, viewport, 0.0);
+  list.text(subtitles_->layer, layout_run(*font_, run, x - run_width(*font_, run) * 0.5F, y),
+            subtitles_->colour);
+  list.flush();
+}
+
+std::optional<SceneProgress> IntroScreen::scene_progress() const {
+  const IntroStep *step = sequence_.step();
+  if (!current_ || !current_->is_open() || step == nullptr ||
+      step->type != IntroStep::Type::movie || current_->frame_seconds() <= 0.0) {
+    return std::nullopt;
+  }
+  const double frame = current_->frame_seconds();
+  const int total = static_cast<int>(current_->duration_seconds() / frame + 0.5);
+  const int shown = std::min(static_cast<int>(current_->playback_seconds() / frame), total);
+  return SceneProgress{"Movie " + sequence_.movie_file().value_or(step->id), shown, total};
+}
+
 void IntroScreen::draw(const Viewport &viewport) {
   SDL_SetRenderDrawColor(renderer_, 0, 0, 0, 255);
   SDL_RenderClear(renderer_);
@@ -124,6 +167,7 @@ void IntroScreen::draw(const Viewport &viewport) {
   }
   if (step->type == IntroStep::Type::movie) {
     current_->draw(viewport);
+    draw_subtitle(viewport);
   } else {
     draw_image(*step, viewport);
   }

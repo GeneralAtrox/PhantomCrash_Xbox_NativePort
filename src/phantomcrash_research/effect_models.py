@@ -42,6 +42,9 @@ IMPACTS = 0x253408
 IMPACT_COUNT = 13
 IMPACT_SIZE = 12
 EXHAUST_SLOT = 0x3F3  # the missile flame, drawn by 0x09831e behind a look with a trail
+BEAM_SLOT = 0x3A5  # 0x09b9fe: a unit quad stretched from the muzzle to the beam's tip
+BEAM_WIDTH = 0.25  # 0x09b9fe scales the quad by (length, 0.25, 1)
+BEAM_FADE_FRAMES = 8  # 0x17beec: the beam brightens 0x20 a frame held until fully white
 DECAL_SLOTS = (0xDB, 0x104)  # 0x065ade: bullet hole kinds 0 and 1
 DECAL_SCALE = 0.25  # 0x065f28 passes it to 0x0663d2
 DECAL_COUNT = 100  # the ring 0x0663d2 writes
@@ -144,7 +147,7 @@ def effect_models(executable: bytes) -> tuple[dict, set[int], set[int]]:
     tables = game_tables.load(executable)
     image = game_tables._Image(executable)
     model_slots: list[int] = list(range(FENCE_FIRST_SLOT, FENCE_FIRST_SLOT + FENCE_FRAMES))
-    texture_slots: list[int] = list(DECAL_SLOTS)
+    texture_slots: list[int] = [*DECAL_SLOTS, 0x16D]  # missile smoke, 0x071a04
     flashes = []
     for index in range(FLASH_COUNT):
         flash, textures = _flash(tables, image, index)
@@ -156,10 +159,16 @@ def effect_models(executable: bytes) -> tuple[dict, set[int], set[int]]:
         looks.append(look)
         model_slots += models
         texture_slots += textures
+    model_slots.append(BEAM_SLOT)
     out = {
         "flashes": flashes,
         "projectiles": looks,
         "exhaust": model_slot(tables, EXHAUST_SLOT),
+        "beam": {**model_slot(tables, BEAM_SLOT), "width": BEAM_WIDTH, "fade_frames": BEAM_FADE_FRAMES},
+        "missile_trail": {
+            "texture": texture_slot(tables, 0x16D), "points": 33, "capacity": 50,
+            "sample_hz": 15, "fade_seconds": 1.0, "head_width": 0.1, "tail_width": 1.5,
+        },
         "impacts": [_impact(image, index) for index in range(IMPACT_COUNT)],
         "wreck_groups": list(WRECK_GROUPS),
         "fence": {
@@ -177,6 +186,8 @@ def effect_models(executable: bytes) -> tuple[dict, set[int], set[int]]:
             "textures": [texture_slot(tables, s) for s in DECAL_SLOTS],
             "scale": DECAL_SCALE,
             "count": DECAL_COUNT,
+            "depth_offset": 0.01,
+            "scorch_scale": 1.0,
         },
     }
     return out, model_resources(tables, model_slots), texture_resources(tables, texture_slots)

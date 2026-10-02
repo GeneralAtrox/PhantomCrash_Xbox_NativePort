@@ -13,6 +13,9 @@ public:
                std::shared_ptr<ReplayArchive> archive, const json::JsonValue &data);
   void tick(const InputFrame &input, double seconds) override;
   void draw(const Viewport &viewport) override;
+  [[nodiscard]] bool mouse_menu_back() const override {
+    return false; // Right-drag controls the replay camera.
+  }
   bool done() const override {
     return done_;
   }
@@ -30,6 +33,8 @@ public:
 private:
   void select_view(int mode);
   void select_subject(int direction);
+  bool can_watch(int subject) const;
+  void reset_camera();
   void camera(const InputFrame &input, double seconds);
   void controls(const Viewport &viewport);
   TextureCache &textures_;
@@ -40,17 +45,20 @@ private:
   std::size_t index_{};
   int mode_{7}, subject_{};
   std::vector<std::string> names_;
-  std::string help_, play_label_, pause_label_, stop_label_, time_unit_;
+  std::string help_, camera_help_, play_label_, pause_label_, stop_label_, time_unit_;
   std::unique_ptr<CameraViews> views_;
   ChaseCamera chase_;
   std::unique_ptr<DesktopCockpit> cockpit_;
   CameraShot shot_;
   Vec3 free_eye_;
   float free_yaw_{}, free_pitch_{}, free_speed_{}, turn_speed_{}, drag_scale_{};
+  float orbit_yaw_{}, orbit_pitch_{};
   double time_{}, controls_seconds_{3};
   std::optional<std::array<float, 2>> pointer_;
   std::vector<SoundCue> sounds_;
   std::map<std::uint64_t, SoundCue> loops_;
   bool paused_{}, done_{}, snap_{true}, show_controls_{true};
+  bool dragging_{};
+  bool orbit_active_{};
 };
 } // namespace phantomcrash

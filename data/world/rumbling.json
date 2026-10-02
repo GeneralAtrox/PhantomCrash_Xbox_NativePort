@@ -158,12 +158,7 @@
   ],
   "ai": {
    "fight": true,
-   "engage_range": 150,
-   "keep_distance": 40,
-   "distance_slack": 10,
-   "walk": 0.8,
-   "turn_gain": 2.0,
-   "face_degrees": 40
+   "trace": false
   }
  }
 }

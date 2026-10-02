@@ -16,6 +16,7 @@ constexpr float grid_cell = 8.0F;   // port grid, world units
 constexpr int push_passes = 3;      // corners need a second push
 constexpr int box_wall_surface = 9; // a plain wall
 constexpr float parallel = 1e-7F;
+constexpr float contact_epsilon = 1e-4F; // retain tangency after floating-point push-out
 
 struct Closest {
   Vec3 point;
@@ -250,14 +251,23 @@ std::vector<std::uint32_t> StageCollision::candidates(const float x0, const floa
   return found;
 }
 
-float StageCollision::ground_height(const Vec3 at, const float step) const {
+float StageCollision::ground_height(const Vec3 at, const float step, const float radius,
+                                    int *surface) const {
   float best = no_ground;
+  int best_surface = -1;
   const auto consider = [&](const CollisionTriangle &t) {
-    if (t.normal.y <= ground_normal_y) {
+    if (t.normal.y <= ground_normal_y || (surface_flags(t.surface) & stage_contact::fence) != 0) {
       return;
     }
-    if (const auto h = height_at(t, at.x, at.z); h && *h <= at.y + step && *h > best) {
-      best = *h;
+    if (const auto h = height_at(t, at.x, at.z)) {
+      // A sphere's centre must be radius / normal.y above a sloped plane.
+      // Comparing its feet with the unadjusted plane falsely reports a fall
+      // after collision has already lifted it onto the ramp.
+      const float support = *h + radius * (1.0F / t.normal.y - 1.0F);
+      if (support <= at.y + step && support > best) {
+        best = support;
+        best_surface = t.surface;
+      }
     }
   };
   for (const std::uint32_t index : candidates(at.x, at.z, at.x, at.z, true)) {
@@ -266,10 +276,14 @@ float StageCollision::ground_height(const Vec3 at, const float step) const {
   for (const std::uint32_t index : candidates(at.x, at.z, at.x, at.z, false)) {
     consider(triangles_walls_[index]);
   }
+  if (surface != nullptr) {
+    *surface = best_surface;
+  }
   return best;
 }
 
-unsigned StageCollision::push_sphere(Vec3 &centre, const float radius) const {
+unsigned StageCollision::push_sphere(Vec3 &centre, const float radius,
+                                     std::optional<StageHit> *fence_hit) const {
   unsigned flags = 0;
   const std::vector<std::uint32_t> near =
       candidates(centre.x - radius, centre.z - radius, centre.x + radius, centre.z + radius, false);
@@ -277,19 +291,31 @@ unsigned StageCollision::push_sphere(Vec3 &centre, const float radius) const {
     bool pushed = false;
     for (const std::uint32_t index : near) {
       const CollisionTriangle &t = triangles_walls_[index];
+      const unsigned material = surface_flags(t.surface);
+      const bool fence = (material & stage_contact::fence) != 0;
       const Closest nearest = closest_point(centre, t.points);
       const Vec3 away = centre - nearest.point;
       const float distance = length(away);
-      if (distance >= radius) {
-        continue;
-      }
       if (nearest.face && dot(away, t.normal) < 0.0F) {
         continue; // behind a face
       }
+      if (fence_hit != nullptr && !*fence_hit && distance <= radius + contact_epsilon && fence) {
+        *fence_hit = StageHit{nearest.point, t.normal, t.surface};
+      }
+      if (distance >= radius) {
+        continue;
+      }
       const Vec3 direction = distance > parallel ? away * (1.0F / distance) : t.normal;
-      centre = nearest.point + direction * radius;
-      flags |= stage_contact::touched | surface_flags(t.surface) |
-               (direction.y > ground_normal_y ? stage_contact::ground : stage_contact::wall);
+      if (fence) {
+        // Force fields are barriers, not ledges. A radial edge push could lift
+        // the foot sphere and repeatedly mark the robot as having landed.
+        centre = centre + t.normal * (radius - dot(away, t.normal));
+      } else {
+        centre = nearest.point + direction * radius;
+      }
+      flags |=
+          stage_contact::touched | material |
+          (!fence && direction.y > ground_normal_y ? stage_contact::ground : stage_contact::wall);
       pushed = true;
     }
     if (!pushed) {
