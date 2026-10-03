@@ -7,7 +7,7 @@ std::string_view port_name() {
 }
 
 std::string_view port_version() {
-  return "0.1.0";
+  return PHANTOMCRASH_VERSION; // vcpkg.json's version-string, set by CMake
 }
 
 } // namespace phantomcrash

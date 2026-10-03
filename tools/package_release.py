@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
 from pathlib import Path
 import subprocess
 import zipfile
+
+import vc_runtime
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -18,13 +21,46 @@ LIBRARIES = {
     "ffmpeg": "ffmpeg-ffmpeg-n9.0.tar.gz",
     "sdl3": "libsdl-org-SDL-release-3.4.14.tar.gz",
     "sdl3-image": "libsdl-org-SDL_image-release-3.4.4.tar.gz",
+    "libdeflate": "ebiggers-libdeflate-v1.25.tar.gz",
     "libpng": "pnggroup-libpng-v1.6.58.tar.gz",
     "zlib": "madler-zlib-v1.3.2.tar.gz",
 }
 DLLS = (
     "SDL3.dll", "SDL3_image.dll", "avcodec-63.dll", "avformat-63.dll",
     "avutil-61.dll", "swresample-7.dll", "swscale-10.dll", "libpng16.dll", "z.dll",
+    "deflate.dll",
 )
+PROGRAMS = ("phantomcrash_port.exe", "phantomcrash_extract.exe")
+RUNTIME_NOTICE = """\
+{names}
+are Microsoft Visual C++ {version} runtime files from the Visual Studio
+Redist folder, shipped beside the programs so that no separate runtime
+install is needed. They are Microsoft's Distributable Code under the Visual
+Studio license terms and are not covered by this project's license.
+A system-wide copy is available from
+https://aka.ms/vs/17/release/vc_redist.x64.exe
+"""
+# The extractor installs the game data from the player's disc image; the game
+# runs it too when an update needs the assets converted again.
+INSTALL_SCRIPT = "\r\n".join((
+    "@echo off",
+    "rem Installs the game data from your Phantom Crash (Europe) disc image.",
+    "rem Drop the .iso onto this file, or run it and drag the .iso into the window.",
+    "rem Without a disc image it brings existing game data up to date.",
+    "setlocal",
+    'set "disc=%~1"',
+    'if not defined disc set /p "disc=Disc image (.iso), or Enter to update existing data: "',
+    'if defined disc set "disc=%disc:"=%"',
+    "if not defined disc (",
+    '  "%~dp0phantomcrash_extract.exe" install --root "%~dp0."',
+    ") else (",
+    '  "%~dp0phantomcrash_extract.exe" install --root "%~dp0." --disc "%disc%"',
+    ")",
+    'set "install_exit=%ERRORLEVEL%"',
+    "pause",
+    "exit /b %install_exit%",
+    "",
+))
 
 
 def git(*args: str) -> str:
@@ -39,23 +75,44 @@ def add(archive: zipfile.ZipFile, source: Path, name: str) -> None:
     archive.write(source, name)
 
 
+def visual_cpp_runtime(binaries: list[Path]) -> tuple[list[Path], str]:
+    """The runtime DLLs to ship and their license notice; refuses a Redist
+    older than the compiler that built the port, or any import a clean
+    Windows 10 would not resolve."""
+    crt = vc_runtime.find_crt_folder()
+    redist = vc_runtime.crt_version(crt)
+    toolset = vc_runtime.compiler_toolset(ROOT / "build/port")
+    if redist[:2] < toolset:
+        raise ValueError(f"Visual C++ Redist {redist} is older than the build's toolset {toolset}")
+    dlls = vc_runtime.runtime_dlls(binaries, crt)
+    shipped = {path.name for path in binaries + dlls}
+    if missing := vc_runtime.unresolved_imports(binaries + dlls, shipped, crt):
+        raise ValueError("Imports a clean Windows would not find: " + ", ".join(missing))
+    notice = RUNTIME_NOTICE.format(names=", ".join(path.name for path in dlls),
+                                   version=".".join(map(str, redist)))
+    return dlls, notice
+
+
 def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--output", type=Path, default=ROOT / "build/releases",
+                        help="folder for the archives (default: build/releases)")
+    output = parser.parse_args().output
     manifest = json.loads((ROOT / "vcpkg.json").read_text())
     version = manifest["version-string"]
     baseline = manifest["builtin-baseline"]
     if git("-C", str(VCPKG), "rev-parse", "HEAD") != baseline:
         raise ValueError("vcpkg checkout does not match the manifest baseline")
     stem = f"PhantomCrash-{version}-windows-x64"
-    output = ROOT / "build/releases"
+    runtime, runtime_notice = visual_cpp_runtime([BIN / name for name in PROGRAMS + DLLS])
     output.mkdir(parents=True, exist_ok=True)
     binary = output / f"{stem}.zip"
     sources = output / f"PhantomCrash-{version}-third-party-sources.zip"
     if binary.exists() or sources.exists():
         raise FileExistsError("Release archives already exist; choose a new version/output")
 
-    files = git("ls-files", "--cached", "--others", "--exclude-standard",
-                "data", "src/phantomcrash_research").splitlines()
-    files = sorted(set(p for p in files if p.startswith("data/") or p.endswith(".py")))
+    files = sorted(set(git("ls-files", "--cached", "--others", "--exclude-standard",
+                           "data").splitlines()))
     metadata = {
         "version": version,
         "commit": git("rev-parse", "HEAD"),
@@ -65,11 +122,14 @@ def main() -> None:
         "architecture": "x64",
     }
     with zipfile.ZipFile(binary, "x", zipfile.ZIP_DEFLATED, compresslevel=9) as z:
-        add(z, BIN / "phantomcrash_port.exe", f"{stem}/phantomcrash_port.exe")
+        for program in PROGRAMS:
+            add(z, BIN / program, f"{stem}/{program}")
         for dll in DLLS:
             add(z, BIN / dll, f"{stem}/{dll}")
-        for file in files + ["LICENSE", "tools/phantomcrash.py", "scripts/extract-game.ps1",
-                             "docs/REPLAY.md", "docs/MATCH_RESULT.md",
+        for dll in runtime:
+            add(z, dll, f"{stem}/{dll.name}")
+        z.writestr(f"{stem}/licenses/microsoft-visual-cpp-runtime.txt", runtime_notice)
+        for file in files + ["LICENSE", "docs/REPLAY.md", "docs/MATCH_RESULT.md",
                              "docs/ENTRY_SHIELD_RENDERING.md", "docs/CHEATS.md",
                              "docs/ORIGINAL_ROBOT_AI.md"]:
             add(z, ROOT / file, f"{stem}/{file}")
@@ -78,6 +138,7 @@ def main() -> None:
             add(z, INSTALLED / "share" / library / "copyright",
                 f"{stem}/licenses/{library}.txt")
         z.writestr(f"{stem}/build-info.json", json.dumps(metadata, indent=2) + "\n")
+        z.writestr(f"{stem}/Install Game Data.bat", INSTALL_SCRIPT)
         z.writestr(f"{stem}/Start Game.bat", (
             '@echo off\r\npushd "%~dp0"\r\n'
             'phantomcrash_port.exe --root "%~dp0." %*\r\n'
@@ -108,6 +169,8 @@ def main() -> None:
             "https://github.com/microsoft/vcpkg/tree/" + baseline + "\n"
             "FFmpeg configuration is included under ffmpeg-build.\n"
             "FFmpeg is built with the MSVC dynamic CRT, without GPL/nonfree features.\n"
+            "The Microsoft Visual C++ runtime DLLs in the binary ZIP are Microsoft's\n"
+            "redistributable files; their source is not available.\n"
         ))
 
     checksums = []

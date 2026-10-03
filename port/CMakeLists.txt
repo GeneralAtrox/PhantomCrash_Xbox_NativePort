@@ -19,6 +19,7 @@ add_library(phantomcrash_core
   src/glyph_font.cpp
   src/input.cpp
   src/intro_sequence.cpp
+  src/game_data.cpp
   src/json.cpp
   src/json_access.cpp
   src/jukebox.cpp
@@ -224,6 +225,13 @@ target_include_directories(phantomcrash_core
 
 target_compile_features(phantomcrash_core PUBLIC cxx_std_20)
 
+# The port's version is the manifest's, so the window title matches the release.
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/vcpkg.json")
+file(READ "${PROJECT_SOURCE_DIR}/vcpkg.json" PHANTOMCRASH_MANIFEST)
+string(JSON PHANTOMCRASH_VERSION GET "${PHANTOMCRASH_MANIFEST}" version-string)
+set_source_files_properties(src/version.cpp PROPERTIES
+  COMPILE_DEFINITIONS "PHANTOMCRASH_VERSION=\"${PHANTOMCRASH_VERSION}\"")
+
 if(MSVC)
   target_compile_options(phantomcrash_core PRIVATE /W4 /permissive-)
 else()
@@ -323,6 +331,7 @@ if(PHANTOMCRASH_BUILD_DESKTOP)
   find_package(SDL3 CONFIG REQUIRED)
   find_package(SDL3_image CONFIG REQUIRED)
   find_package(ZLIB REQUIRED)
+  find_package(libdeflate CONFIG REQUIRED)
   find_package(PkgConfig REQUIRED)
   pkg_check_modules(FFMPEG REQUIRED IMPORTED_TARGET
     libavcodec
@@ -338,6 +347,71 @@ if(PHANTOMCRASH_BUILD_DESKTOP)
   target_link_libraries(phantomcrash_media PUBLIC phantomcrash_core PkgConfig::FFMPEG)
   if(MSVC)
     target_compile_options(phantomcrash_media PRIVATE /W4 /permissive-)
+  endif()
+
+  # Disc extraction and asset conversion (the C++ form of the Python
+  # research tools), shared by the command-line extractor and the port.
+  add_library(phantomcrash_extractor STATIC
+    src/extract/audio.cpp
+    src/extract/battle_data.cpp
+    src/extract/battle_scenes.cpp
+    src/extract/binary.cpp
+    src/extract/binlink_packs.cpp
+    src/extract/convert.cpp
+    src/extract/convert_tables.cpp
+    src/extract/effect_bank.cpp
+    src/extract/effect_convert.cpp
+    src/extract/effect_pictures.cpp
+    src/extract/event_code.cpp
+    src/extract/events.cpp
+    src/extract/extract.cpp
+    src/extract/finale.cpp
+    src/extract/game_tables.cpp
+    src/extract/garage_tables.cpp
+    src/extract/gltf.cpp
+    src/extract/gltf_writer.cpp
+    src/extract/install.cpp
+    src/extract/model.cpp
+    src/extract/motion.cpp
+    src/extract/parts.cpp
+    src/extract/png_write.cpp
+    src/extract/py_json.cpp
+    src/extract/robot_convert.cpp
+    src/extract/robot_mounts.cpp
+    src/extract/robots.cpp
+    src/extract/sha256.cpp
+    src/extract/sha256_x86.cpp
+    src/extract/stage_convert.cpp
+    src/extract/stage_objects.cpp
+    src/extract/text.cpp
+    src/extract/town_tables.cpp
+    src/extract/xbe.cpp
+    src/extract/xbox_texture.cpp
+    src/extract/xdvdfs.cpp
+  )
+  target_include_directories(phantomcrash_extractor PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/extract)
+  target_link_libraries(phantomcrash_extractor PUBLIC phantomcrash_core ZLIB::ZLIB
+                        libdeflate::libdeflate_shared)
+  if(WIN32)
+    target_link_libraries(phantomcrash_extractor PUBLIC Normaliz)
+  endif()
+  if(MSVC)
+    target_compile_options(phantomcrash_extractor PRIVATE /W4 /permissive-)
+  endif()
+
+  add_executable(phantomcrash_extract src/extract/extract_main.cpp)
+  target_link_libraries(phantomcrash_extract PRIVATE phantomcrash_extractor)
+  if(MSVC)
+    target_compile_options(phantomcrash_extract PRIVATE /W4 /permissive-)
+  endif()
+  if(BUILD_TESTING)
+    add_executable(phantomcrash_extract_tests tests/core_tests.cpp tests/extract_tests.cpp)
+    target_link_libraries(phantomcrash_extract_tests PRIVATE phantomcrash_extractor)
+    target_include_directories(phantomcrash_extract_tests PRIVATE tests)
+    if(MSVC)
+      target_compile_options(phantomcrash_extract_tests PRIVATE /W4 /permissive-)
+    endif()
+    add_test(NAME phantomcrash_extract_tests COMMAND phantomcrash_extract_tests)
   endif()
 
   add_executable(phantomcrash_port WIN32
@@ -359,6 +433,7 @@ if(PHANTOMCRASH_BUILD_DESKTOP)
     src/desktop_frame_counter.cpp
     src/desktop_frame_rate_dialog.cpp
     src/desktop_front_end.cpp
+    src/desktop_game_data.cpp
     src/desktop_menu_buttons.cpp
     src/desktop_host.cpp
     src/desktop_input.cpp
@@ -491,6 +566,8 @@ if(PHANTOMCRASH_BUILD_DESKTOP)
   target_include_directories(phantomcrash_port PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
   target_link_libraries(phantomcrash_port PRIVATE
     phantomcrash_core phantomcrash_media SDL3::SDL3 SDL3_image::SDL3_image ZLIB::ZLIB)
+  # The port runs the extractor beside it to install or update the game data.
+  add_dependencies(phantomcrash_port phantomcrash_extract)
   if(WIN32)
     target_link_libraries(phantomcrash_port PRIVATE comctl32 d3d11 dxgi d3dcompiler gdiplus)
   endif()

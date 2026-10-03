@@ -40,13 +40,21 @@ and extracting your own game disc. The requirements below are for source builds.
 ## Extract the disc
 
 ```powershell
-.\scripts\extract-game.ps1
-# or
-python .\tools\phantomcrash.py extract
-python .\tools\phantomcrash.py list
-python .\tools\phantomcrash.py xbe
-python .\tools\phantomcrash.py convert
+.\scripts\extract-game.ps1      # phantomcrash_extract.exe install
+# or, step by step (build\port\port\Release\phantomcrash_extract.exe)
+phantomcrash_extract.exe extract
+phantomcrash_extract.exe list
+phantomcrash_extract.exe xbe
+phantomcrash_extract.exe convert
+phantomcrash_extract.exe status
 ```
+
+The C++ extractor writes the same files as the Python research tools
+(`python .\tools\phantomcrash.py`, which keeps the same commands); its PNGs
+are compressed differently but decode to the same pixels. `install` extracts
+and converts only what is missing or out of date (see
+[Windows release setup](docs/WINDOWS_RELEASE.md#updating-to-a-new-version)),
+and the port runs it on startup when the assets need converting again.
 
 The default disc is `..\Games\Phantom Crash (Europe).xiso.iso`; pass `--disc`
 for another image. Both trimmed `.xiso` images and full Redump-style images are
@@ -61,7 +69,7 @@ supported. Output goes to `artifacts\europe`:
 Extraction refuses a non-empty output directory so runs never mix.
 
 `convert` turns the extracted files into formats the port reads, in
-`artifacts\europe\assets` (about a minute; the script runs it after
+`artifacts\europe\assets` (a few seconds; the script runs it after
 extraction):
 
 - `textures\<folder>\<pack>\<n>.png`: every Xbox texture pack, unswizzled;

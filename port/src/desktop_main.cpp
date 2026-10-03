@@ -13,6 +13,7 @@
 
 #include "desktop_host.hpp"
 #include "desktop_frame_counter.hpp"
+#include "desktop_game_data.hpp"
 #include "desktop_input.hpp"
 #include "desktop_options.hpp"
 #include "desktop_scene_dump.hpp"
@@ -98,12 +99,15 @@ void apply_fullscreen(DesktopHost &host, SettingsMenu &menu) {
 
 int run(const Options &options) {
   const auto root = find_root(options);
+  const bool smoke = options.smoke_frames > 0;
+  const bool benchmark = options.benchmark_seconds > 0.0;
+  if (!prepare_game_data(root, !smoke && !benchmark)) {
+    return 0;
+  }
   const auto roots = DataRoots::standard(root);
   for (const char *document : documents) {
     static_cast<void>(roots.document(document));
   }
-  const bool smoke = options.smoke_frames > 0;
-  const bool benchmark = options.benchmark_seconds > 0.0;
   const auto preferences = options.settings.value_or(settings_path());
   const Settings saved = load_settings(preferences);
   Settings initial = saved;
