@@ -124,8 +124,10 @@ void RumblingWorld::build(const int index, const QuestSave &quest) {
     return;
   }
   const RumblingStage &stage = stages_[static_cast<std::size_t>(index)];
+  BattleSettings settings = settings_;
+  settings.ai.area = index;
   area.battle =
-      std::make_shared<Battle>(settings_, stage.path, static_cast<std::uint32_t>(random_()));
+      std::make_shared<Battle>(settings, stage.path, static_cast<std::uint32_t>(random_()));
   Battle &battle = *area.battle;
   battle.set_stage(stage.collision);
   if (stage.objects) {
@@ -156,11 +158,16 @@ void RumblingWorld::fit(const int index, const std::size_t place, const QuestSav
 RumblingRobot RumblingWorld::seat(Battle &battle, const int index, const std::size_t place,
                                   const QuestSave &quest) {
   const Area &area = areas_[static_cast<std::size_t>(index)];
-  const RosterMember &member = area.roster.members[place];
-  const int robot_index = static_cast<int>(place) + 1;
-  RumblingRobot robot = rumbling_robot(tables_, quest, member.entrant,
-                                       "live" + std::to_string(index) + "_" + std::to_string(place),
-                                       settings_.movement, area.enemy_level_offset);
+  return seat_member(battle, "live" + std::to_string(index) + "_" + std::to_string(place),
+                     area.roster.members[place], static_cast<int>(place) + 1,
+                     area.enemy_level_offset, quest);
+}
+
+RumblingRobot RumblingWorld::seat_member(Battle &battle, const std::string &name,
+                                         const RosterMember &member, const int robot_index,
+                                         const int level_offset, const QuestSave &quest) {
+  RumblingRobot robot =
+      rumbling_robot(tables_, quest, member.entrant, name, settings_.movement, level_offset);
   std::array<std::string, weapon_slots> weapons{};
   for (std::size_t slot = 0; slot < weapon_slots; ++slot) {
     if (robot.weapons[slot]) {

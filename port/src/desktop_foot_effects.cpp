@@ -50,12 +50,7 @@ void DesktopFootEffects::tick(const Battle &battle, EffectSystem &effects, const
           effects.move(contact.takeoff, point.position);
         }
       }
-      bool crossed = false;
-      if (point.motion == contact.previous.motion) {
-        for (std::size_t axis = 0; axis < 3; ++axis) {
-          crossed |= point.keys[axis] > contact.previous.keys[axis];
-        }
-      }
+      const bool crossed = contact_stepped(contact.previous, point);
       contact.previous = point;
       if (!(takeoff || landed || (crossed && mover.grounded()))) {
         continue;

@@ -366,6 +366,9 @@
  "details": {
   "box": {"id": "1054", "image": "textures/scroll/assemble_tex/0.png", "rect": [640, 0, 1016, 240], "position": [14, 188], "layer": 261},
   "box_alpha": 0.699999988079071,
+  "picture_note": "0x03cbc3 draws the CHIP face (0x0bb4f1), paint (0x0bb78a) or emblem (0x0bb7e8) of the part shown at (0x122, 0xf4), one layer above the stats.",
+  "picture_at": [290, 244],
+  "picture_layer": 263,
   "fade_seconds": 0.1333,
   "equipped": {"id": "974", "image": "textures/scroll/assemble_tex/0.png", "rect": [976, 456, 1056, 480], "position": [69.0, 132.0], "layer": 265, "colour": "#ffd300", "animation": "pulse"},
   "totals": {

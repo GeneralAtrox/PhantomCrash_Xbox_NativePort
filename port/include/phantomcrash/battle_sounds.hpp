@@ -2,6 +2,7 @@
 
 #include "phantomcrash/battle.hpp"
 #include "phantomcrash/json.hpp"
+#include "phantomcrash/skeleton.hpp"
 #include "phantomcrash/world_sound.hpp"
 
 #include <cstdint>
@@ -52,16 +53,16 @@ struct BattleSoundTable {
     std::string sound;
   };
   std::vector<SurfaceSound> landing_surfaces;
-  SoundPair down_boost;                    // 0x0905af, player bank 3 entry 20
-  SoundPair jump;                          // 0x08ea5b, 0x08d7fa
-  SoundPair boost_start;                   // 0x0945c1: a dash starts ...
-  SoundPair boost;                         // ... and this loops, following it, until it ends
-  SoundPair dodge;                         // 0x094a8d, motions 13 and 14
-  SoundPair air_dodge;                     // motions 15 and 16
-  SoundPair shot_down;                     // 0x07675e
-  SoundPair low_armour;                    // 0x093637: repeats while the armour is low
-  float footstep_seconds{0.5F};            // between steps at the walk's full speed (port value)
-  float low_armour_share{0.25F};           // below this share of the armour (0x199fd4)
+  SoundPair down_boost;          // 0x0905af, player bank 3 entry 20
+  SoundPair jump;                // 0x08ea5b, 0x08d7fa
+  SoundPair boost_start;         // 0x0945c1: a dash starts ...
+  SoundPair boost;               // ... and this loops, following it, until it ends
+  SoundPair dodge;               // 0x094a8d, motions 13 and 14
+  SoundPair air_dodge;           // motions 15 and 16
+  SoundPair shot_down;           // 0x07675e
+  SoundPair low_armour;          // 0x093637: repeats while the armour is low
+  float footstep_seconds{0.5F};  // without contact nodes: between steps at full walk (port value)
+  float low_armour_share{0.25F}; // below this share of the armour (0x199fd4)
   float low_armour_seconds{32.0F / 30.0F}; // 0x20 battle ticks between alarms
   float beam_restart_seconds{9.0F};        // 0x09b9fe refreshes a held beam's long clip
   std::vector<WeaponSoundRule> fire;       // 0x099c02
@@ -132,6 +133,8 @@ private:
     bool boosting{};
     bool down_boosting{};
     float step_left{};
+    std::vector<PoseContact> contacts; // the feet's keys last tick
+    bool stepped{};
     float alarm_left{};
     std::array<bool, weapon_slots> beams{};
     std::array<float, weapon_slots> beam_left{};
@@ -143,6 +146,9 @@ private:
 
   void play(const std::string &name, Vec3 at, AudioBus bus = AudioBus::robots);
   void observe_robot(std::size_t index, const Combatant &robot, float seconds);
+  // Whether the robot has contact nodes; sets watch.stepped when one
+  // crossed a key since the last tick.
+  static bool stepped(const Combatant &robot, Watch &watch);
   void observe_boost(std::size_t index, const Combatant &robot, Watch &watch);
   void observe_events(const Battle &battle);
   void observe_beams(const Battle &battle, float seconds);

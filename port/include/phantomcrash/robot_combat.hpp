@@ -45,6 +45,7 @@ public:
 private:
   void advance_auxiliary(const RobotMover &mover, const std::array<bool, 4> &firing, bool piloted,
                          float seconds);
+  void advance_wheels(const RobotMover &mover, float seconds);
   std::array<MovementMount, movement_slots> movement_mounts_;
   MovementGroups movement_groups_;
   RobotAssembly assembly_;
@@ -56,6 +57,7 @@ private:
   std::array<std::size_t, 4> barrel_{};
   std::array<float, 2> weights_{};
   std::array<float, 3> auxiliary_{}; // robot +0x2520, +0x2524, +0x2528
+  float wheel_turn_{};               // robot +0x2590, negated (the port's sense)
   std::array<Mat4, 2> shoulders_;
   Pose pose_{};
 };

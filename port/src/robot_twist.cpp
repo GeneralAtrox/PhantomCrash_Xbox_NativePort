@@ -7,7 +7,18 @@
 namespace phantomcrash {
 
 void RobotMover::tick_twist(const RobotControl &input, const float seconds) {
-  heading_ = wrap_angle(heading_ + input.mouse_aim[0]);
+  // The mouse (the port's) turns no faster than the stick: the legs' turn
+  // under the load (0x08e257), the dash's or the air's. What it asks for
+  // beyond that turns over the next ticks, up to half a turn behind.
+  constexpr float mouse_backlog = pi;
+  const float degrees_per_second = mode_ == MoveMode::dash ? tuning_.dash_turn_degrees_per_second
+                                   : grounded_             ? tuning_.turn_degrees_per_second
+                                                           : tuning_.air_turn_degrees_per_second;
+  const float mouse_limit = radians(degrees_per_second) * seconds;
+  mouse_yaw_ = std::clamp(mouse_yaw_ + input.mouse_aim[0], -mouse_backlog, mouse_backlog);
+  const float mouse_step = std::clamp(mouse_yaw_, -mouse_limit, mouse_limit);
+  mouse_yaw_ -= mouse_step;
+  heading_ = wrap_angle(heading_ + mouse_step);
   // The quick turn takes the right stick; the upper body stays put.
   RobotControl control = input;
   if (control.quick_turn) {

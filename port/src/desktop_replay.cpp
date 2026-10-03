@@ -84,7 +84,7 @@ void ReplayScreen::reset_camera() {
   }
   if (can_watch(subject_)) {
     const auto &subject = frame_.subjects[subject_].camera;
-    chase_.tick(subject.position, subject.yaw, subject.pitch, archive_->collision, 0, true);
+    chase_.tick(subject, archive_->collision, 0, true);
     shot_ = chase_.chase();
   } else {
     const auto &m = frame_.player.view;
@@ -239,7 +239,7 @@ void ReplayScreen::camera(const InputFrame &input, const double seconds) {
     shot_ = {free_eye_, free_eye_ + forward, archive_->chase.fov_degrees, 0};
   } else if (views_ && can_watch(subject_)) {
     const auto &subject = frame_.subjects[subject_].camera;
-    chase_.tick(subject.position, subject.yaw, subject.pitch, archive_->collision, dt, snap_);
+    chase_.tick(subject, archive_->collision, dt, snap_);
     views_->tick(
         subject, chase_.chase(), dt,
         [this](Vec3 from, Vec3 to) { return !archive_->collision.segment_hit(from, to); }, snap_);

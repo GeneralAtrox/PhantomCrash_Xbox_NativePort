@@ -34,45 +34,61 @@ const CameraShot chase{{0.0F, 5.0F, 10.0F}, {0.0F, 3.0F, -8.0F}, 55.0F, 0.0F};
 
 } // namespace
 
-TEST_CASE("the chase camera follows and turns behind robots beyond the training arena") {
+// A robot standing at `feet`, its torso 3 up.
+CameraSubject standing(const Vec3 feet, const float yaw = 0.0F) {
+  CameraSubject s = subject();
+  s.position = feet;
+  s.torso = feet + Vec3{0.0F, 3.0F, 0.0F};
+  s.yaw = yaw;
+  return s;
+}
+
+TEST_CASE("the behind view stands over the torso and eases after the robot") {
   ChaseCamera camera(ChaseCameraSettings{});
   const StageCollision stage;
   const Vec3 start{320.0F, 20.0F, -480.0F};
-  camera.tick(start, 0.0F, 0.0F, stage, tick, true);
-  const Vec3 initial_eye = camera.eye();
-  const Vec3 initial_target = camera.target();
-  CHECK(near(initial_eye, start + Vec3{0.0F, 5.0F, 10.0F}));
+  camera.tick(standing(start), stage, tick, true);
+  // 0x07edfa: the eye 6.15 behind the torso and 2 up; the look point 8
+  // ahead of the feet and 2 up.
+  CHECK(near(camera.eye(), start + Vec3{0.0F, 5.0F, 6.15F}));
+  CHECK(near(camera.target(), start + Vec3{0.0F, 2.0F, -8.0F}));
 
+  // The eye closes a third of its gap a tick.
   const Vec3 travel{30.0F, 4.0F, -20.0F};
-  camera.tick(start + travel, 0.0F, 0.0F, stage, tick);
-  CHECK(near(camera.eye() - initial_eye, travel));
-  CHECK(near(camera.target() - initial_target, travel));
+  const Vec3 before = camera.eye();
+  camera.tick(standing(start + travel), stage, tick);
+  CHECK(near(camera.eye(), before + travel * (1.0F / 3.0F)));
   const float turn = radians(90.0F);
-  for (int frame = 0; frame < 60; ++frame) {
-    camera.tick(start + travel, turn, 0.0F, stage, tick);
+  for (int frame = 0; frame < 90; ++frame) {
+    camera.tick(standing(start + travel, turn), stage, tick);
   }
   const Vec3 forward = heading_forward(turn);
-  CHECK(near(camera.eye(), start + travel + Vec3{0.0F, 5.0F, 0.0F} - forward * 10.0F));
-  CHECK(near(camera.target(), start + travel + Vec3{0.0F, 3.4F, 0.0F} + forward * 8.0F));
+  const Vec3 feet = start + travel;
+  CHECK(near(camera.eye(), feet + Vec3{0.0F, 5.0F, 0.0F} - forward * 6.15F));
+  CHECK(near(camera.target(), feet + Vec3{0.0F, 2.0F, 0.0F} + forward * 8.0F));
 }
 
-TEST_CASE("the chase camera clears actual stage walls and restores its distance in open space") {
+TEST_CASE("the behind view rises in the air and keeps off walls") {
   ChaseCamera camera(ChaseCameraSettings{});
   ArenaBounds bounds;
   bounds.half_size = 500.0F;
   const StageCollision stage = StageCollision::box(bounds, 30.0F);
-  camera.tick({200.0F, 0.0F, 497.0F}, 0.0F, 0.0F, stage, tick, true);
-  CHECK(camera.eye().x == 200.0F);
+  camera.tick(standing({200.0F, 0.0F, 497.0F}), stage, tick, true);
+  CHECK(std::abs(camera.eye().x - 200.0F) < 0.01F);
   CHECK(camera.eye().z < 500.0F);
   CHECK(camera.eye().z > 497.0F);
   CHECK(!stage.segment_hit(camera.anchor(), camera.eye()));
-  camera.tick({200.0F, 0.0F, 450.0F}, 0.0F, 0.0F, stage, tick);
-  CHECK(near(camera.eye(), {200.0F, 5.0F, 460.0F}));
+  for (int frame = 0; frame < 90; ++frame) {
+    camera.tick(standing({200.0F, 0.0F, 450.0F}), stage, tick);
+  }
+  CHECK(near(camera.eye(), {200.0F, 5.0F, 456.15F}));
 
-  const StageCollision training = StageCollision::box(ArenaBounds{}, 30.0F);
-  camera.tick({0.0F, 0.0F, 97.0F}, 0.0F, 0.0F, training, tick, true);
-  CHECK(camera.eye().z < 100.0F);
-  CHECK(!training.segment_hit(camera.anchor(), camera.eye()));
+  // Off the ground the eye rises the robot's top less half a leg radius.
+  CameraSubject jumping = standing({200.0F, 0.0F, 450.0F});
+  jumping.grounded = false;
+  camera.tick(jumping, stage, tick, true);
+  const ChaseCameraSettings defaults;
+  CHECK(std::abs(camera.eye().y - (5.0F + defaults.robot_top - 0.75F)) < 0.01F);
 }
 
 TEST_CASE("the D-pad walks the orbit views in the original's order") {

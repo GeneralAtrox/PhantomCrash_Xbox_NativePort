@@ -1,5 +1,6 @@
 #include "phantomcrash/robot_combat.hpp"
 #include <algorithm>
+#include <cmath>
 #include <utility>
 
 namespace phantomcrash {
@@ -58,6 +59,7 @@ void RobotCombat::reset() {
   weights_.fill(0);
   barrel_.fill(0);
   auxiliary_.fill(0);
+  wheel_turn_ = 0;
   for (auto &muzzles : muzzles_) {
     muzzles.clear();
   }
@@ -79,6 +81,9 @@ void RobotCombat::tick(const RobotMover &mover, const std::array<bool, 4> &firin
   } else if (mover.motion_loops() != animator_.looping()) {
     animator_.play(mover.motion(), mover.motion_loops());
   }
+  // Set after any change above, so the motion it froze keeps the old value.
+  const bool keep_sway = mover.mode() == MoveMode::stand || mover.mode() == MoveMode::walk;
+  animator_.set_keep_sway(keep_sway);
   animator_.set_speed(mover.motion_speed());
   animator_.tick(seconds);
   const bool destroyed = mover.mode() == MoveMode::destroyed;
@@ -88,6 +93,8 @@ void RobotCombat::tick(const RobotMover &mover, const std::array<bool, 4> &firin
     advance_auxiliary(mover, firing, piloted, seconds);
   }
   animator_.set_auxiliary_frames(auxiliary_);
+  advance_wheels(mover, seconds);
+  animator_.set_wheel_turn(wheel_turn_);
   std::array<ArmAim, 2> arms;
   for (std::size_t side = 0; side < 2; ++side) {
     // A strike lowers the aim so the arms play their strike motions.
@@ -100,12 +107,11 @@ void RobotCombat::tick(const RobotMover &mover, const std::array<bool, 4> &firin
     arms[side] = {weights_[side], targets[side], tuning_.joint_pitch_limit};
   }
   const Mat4 root = rotation_y(mover.heading()) * translation(mover.position());
-  animator_.pose(root, mover.twist(), mover.pitch(),
-                 mover.mode() == MoveMode::stand || mover.mode() == MoveMode::walk, pose_, arms,
-                 tuning_.arm_poses);
+  animator_.pose(root, mover.twist(), mover.pitch(), keep_sway, pose_, arms, tuning_.arm_poses);
   const Mat4 torso = pose_[0].mount.value_or(root);
   for (std::size_t side = 0; side < 2; ++side) {
-    shoulders_[side] = rotation_x(mover.pitch()) * torso;
+    shoulders_[side] =
+        translation(assembly_.shoulder_shifts[side]) * rotation_x(mover.pitch()) * torso;
     if (!destroyed && !lost[side + 2] && (aim_modes[side + 2] == 0 || aim_modes[side + 2] == 1)) {
       shoulders_[side] = aim_pose_transform(shoulders_[side], targets[side + 2],
                                             {torso.at(1, 0), torso.at(1, 1), torso.at(1, 2)});
@@ -134,6 +140,31 @@ void RobotCombat::tick(const RobotMover &mover, const std::array<bool, 4> &firin
       }
     }
   }
+}
+
+// 0x0889bf rolls the wheels each tick by the robot's ground speed (a tick's
+// travel over pi), backwards in the back-off motions; a robot standing or
+// turning on the spot rolls them by a fifth of the steering stick, and one
+// in the air by the forward stick.
+void RobotCombat::advance_wheels(const RobotMover &mover, const float seconds) {
+  constexpr float still_speed = 0.01F;   // 0x199f78
+  constexpr float steer_roll = 0.2F;     // per tick, of the steering stick
+  constexpr float max_roll = 3.1677728F; // radians a tick
+  float speed = mover.stick()[1];
+  if (mover.grounded()) {
+    const Vec3 velocity = mover.local_velocity();
+    speed = std::sqrt(velocity.x * velocity.x + velocity.z * velocity.z) / battle_tick_rate;
+    const int motion = mover.motion();
+    if (motion == robot_motion::walk_back || dash_family(motion) == 1) {
+      speed = -speed;
+    }
+    const bool turning = motion == robot_motion::turn_right || motion == robot_motion::turn_left;
+    if (speed < still_speed || turning) {
+      speed += std::abs(mover.stick()[0] * steer_roll);
+    }
+  }
+  const float roll = std::clamp(speed / pi, -max_roll, max_roll);
+  wheel_turn_ = std::remainder(wheel_turn_ + roll * seconds * battle_tick_rate, 2.0F * pi);
 }
 
 void RobotCombat::advance_auxiliary(const RobotMover &mover, const std::array<bool, 4> &firing,

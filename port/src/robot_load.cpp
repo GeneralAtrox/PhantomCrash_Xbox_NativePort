@@ -113,16 +113,16 @@ MovementTuning loaded_movement(const PartTables &tables, const RobotLoadout &loa
     base.dash_turn_degrees_per_second *= speed;
     base.air_turn_degrees_per_second *= speed;
   } else {
-    // 0x07c34e: the legs' turn times the speed factor, degrees a tick, for
-    // the ground, the dash and the air alike (0x08e257, 0x0905af).
+    // 0x07c34e: the legs' turn times the speed factor (robot +0x7c, +0x78),
+    // for the ground, the dash and the air alike. 0x08e257 and 0x0905af
+    // turn by it times the 60 Hz frames a tick, as 0x07d330 twists.
     const float turn =
         std::clamp(legs->turn.value(loadout.legs_level) * speed, turn_min, turn_max) *
-        battle_tick_rate;
+        frames_per_battle_tick * battle_tick_rate;
     base.turn_degrees_per_second = turn;
     base.dash_turn_degrees_per_second = turn;
     base.air_turn_degrees_per_second = turn;
-    // 0x07d330: the twist turns by the same times the frames a tick.
-    base.twist_degrees_per_second = turn * frames_per_battle_tick;
+    base.twist_degrees_per_second = turn;
   }
   if (legs == nullptr) {
     base.jump_height *= std::max(0.0F, load.jump_factor);
@@ -156,6 +156,17 @@ MovementTuning loaded_movement(const PartTables &tables, const RobotLoadout &loa
   const float back_share = base.walk_speed > 0.0F ? base.back_speed / base.walk_speed : 1.0F;
   const float dash_back_share =
       base.dash_speed > 0.0F ? base.dash_back_speed / base.dash_speed : 1.0F;
+  // 0x08e6b6 / 0x08f2da move a flagged model by its motion's root, whose
+  // stride the table holds a frame; without a stride of its own the robot
+  // takes the table's.
+  if (walk_motion > 0.0F && !base.walk_stride) {
+    base.walk_speed = walk_motion * part_frames_per_second;
+    base.back_speed = base.walk_speed * back_share;
+  }
+  if (dash_motion > 0.0F && !base.dash_stride) {
+    base.dash_speed = dash_motion * part_frames_per_second;
+    base.dash_back_speed = base.dash_speed * dash_back_share;
+  }
   base.walk_speed = walk_motion > 0.0F ? base.walk_speed * walk_rate : walk_units;
   base.back_speed = walk_motion > 0.0F ? base.back_speed * walk_rate : walk_units * back_share;
   base.dash_speed = dash_motion > 0.0F ? base.dash_speed * dash_rate : dash_units;

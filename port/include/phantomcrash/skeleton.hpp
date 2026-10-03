@@ -30,6 +30,7 @@ inline constexpr std::uint32_t node_turns_with_aim = 0x4;
 inline constexpr std::uint32_t node_pitches_with_aim = 0x100;
 inline constexpr std::uint32_t node_effect_point = 0x20000;
 inline constexpr std::uint32_t node_forearm = 0x30; // 0x10 one side, 0x20 the other
+inline constexpr std::uint32_t node_wheel = 0x200;  // rolls with the robot (0x0aa499)
 
 struct SkeletonNode {
   SkeletonNodeType type{SkeletonNodeType::plain};
@@ -56,8 +57,16 @@ struct MotionLayer {
   const Motion *motion{};
   float frame{};
   float weight{1.0F};
+  bool keep_sway{true}; // as PoseInput::keep_sway was while it played
 };
 inline constexpr std::size_t motion_layers = 4;
+
+// The root-motion track's translation in game space: what stays on the
+// body, and what moves onto the feet targets.
+struct RootSplit {
+  Vec3 body;
+  Vec3 sway;
+};
 
 struct MotionSource {
   const Motion *motion{};
@@ -72,7 +81,11 @@ struct MotionSource {
     return motion != nullptr && previous_count > 0 && weight < 1.0F;
   }
   [[nodiscard]] TrackSample sample(int track) const;
-  // `as_matrix(motion, frame)` of each frozen layer, blended oldest first
+  // Each layer split as its own keep_sway says (`keep_sway` for `motion`),
+  // then blended. `bind` stands in for a missing translation; `sampled` is
+  // used whole when nothing blends.
+  [[nodiscard]] RootSplit root_split(int track, Vec3 bind, Vec3 sampled, bool keep_sway) const;
+  // `as_matrix(layer)` of each frozen layer, blended oldest first
   // with `mix(from, to, weight)`; nothing when no layer has a motion.
   template <typename Matrix, typename AsMatrix, typename Mix>
   [[nodiscard]] std::optional<Matrix> blend_from(AsMatrix as_matrix, Mix mix) const {
@@ -80,7 +93,7 @@ struct MotionSource {
     for (std::size_t i = 0; i < previous_count && i < previous.size(); ++i) {
       const MotionLayer &layer = previous[i];
       if (layer.motion != nullptr) {
-        const Matrix next = as_matrix(*layer.motion, layer.frame);
+        const Matrix next = as_matrix(layer);
         out = out ? mix(*out, next, layer.weight) : next;
       }
     }
@@ -98,6 +111,9 @@ struct PoseContact {
 };
 [[nodiscard]] PoseContact pose_contact(const SkeletonNode &node, const Mat4 &parent,
                                        const MotionSource &source);
+// Whether the contact crossed a key since `before` in the same motion: a
+// step (0x0ad737 counts these in robot +0x210c).
+[[nodiscard]] bool contact_stepped(const PoseContact &before, const PoseContact &now);
 
 struct PosePart {
   std::vector<PoseContact> contacts;
@@ -126,6 +142,7 @@ struct PoseInput {
   float aim_yaw{};      // turns the nodes flagged 0x4 (the upper body)
   float aim_pitch{};    // pitches the nodes flagged 0x100, within +-0.4 rad
   float forearm_turn{}; // added about x to the forearms (node_forearm) otherwise
+  float wheel_turn{};   // added about x to the wheels (node_wheel) instead of both
   bool keep_sway{};     // idle and walking keep the body's sideways sway
 };
 

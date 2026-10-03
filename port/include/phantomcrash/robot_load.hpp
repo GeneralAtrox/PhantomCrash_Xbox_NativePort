@@ -62,9 +62,11 @@ struct LegsSpeeds {
 // model whose motions move it (0x232558) each becomes the motions'
 // playback rate (the value / 216 / the model's speed), which scales
 // `base`'s walk or dash speeds, taken as the motions' strides
-// (stride_tuning). Without root motion the speed factor scales `base`. The
+// (stride_tuning), or the table's own a frame without them. Without
+// root motion the robot moves at the value / 216 a frame. The
 // turns are the legs' turn times the speed factor (0.1..90 degrees a
-// tick) for the ground, the dash and the air, and the jump height is the
+// 60 Hz frame, two a tick) for the ground, the dash, the air and the
+// upper body's twist, and the jump height is the
 // legs' jump under the load, as above; legs without those curves (older
 // extractions) scale `base`'s by the speed and jump factors.
 [[nodiscard]] MovementTuning loaded_movement(const PartTables &tables, const RobotLoadout &loadout,

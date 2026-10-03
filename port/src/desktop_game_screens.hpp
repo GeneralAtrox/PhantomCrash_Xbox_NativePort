@@ -75,7 +75,14 @@ public:
     return contests_;
   }
   [[nodiscard]] RegulationCheck regulation_check() const noexcept {
-    return {rumbling_rules_, parts_, garage_, part_stats_};
+    return {rumbling_rules_, parts_, garage_, part_stats_, open_contests_};
+  }
+  [[nodiscard]] const SleepScript &sleep_script() const noexcept {
+    return sleep_;
+  }
+  // Tools > Cheats: RUMBLING lets the player into any contest held.
+  void set_open_contests(const bool open) noexcept {
+    open_contests_ = open;
   }
   // The live RUMBLING's robots an area (settings "rumble_robots"; 0 the
   // original's roster size).
@@ -156,6 +163,7 @@ private:
   const std::vector<StoryEvent> &events_;
   ContestTables contests_;
   SleepScript sleep_;
+  bool open_contests_{};
   ScheduleScript schedule_;
   RecordsScript records_;
   BattleMusicScript battle_music_;

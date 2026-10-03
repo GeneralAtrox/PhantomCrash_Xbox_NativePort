@@ -19,7 +19,7 @@ namespace phantomcrash {
 struct RobotShadowLook {
   bool volumes{true};               // players' robots cast volumes
   bool split_screen_volumes{false}; // ... in the split screen too
-  float volume_length{60.0F};       // port value: how far a volume reaches from the robot
+  float volume_length{50.0F};       // how far a volume reaches from the robot (0x0c2637 c4.x)
   std::string ground_model;         // the flat shadows (resource 184)
   std::array<float, 4> ground_colour{1.0F, 1.0F, 1.0F, 0x60 / 255.0F};
 };

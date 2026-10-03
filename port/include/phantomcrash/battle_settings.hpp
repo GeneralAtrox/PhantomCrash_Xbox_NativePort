@@ -12,6 +12,15 @@ namespace phantomcrash {
 // Original NPC decisions; training drones remain on their scripted patrol.
 struct DroneAi {
   bool fight{}, trace{};
+  int area{-1}; // the RUMBLING area the battle is in (quest +0x6104 / 2), or -1
+  // The attract demo and RESULT's backdrop (quest +0x618c 1): every opponent
+  // acts at showcase_ability (0x05f445) and chases any supply box (0x05949b).
+  bool showcase{};
+  // Port options, off by default (rumbling.json live.ai):
+  bool nearest_fallback_target{}; // 0x05b9c1's second pass keeps the nearest, not the last seen
+  bool jump_keeps_target{};       // the target is remembered through the jump at it
+  bool rivals_by_sight{};         // a computer rival is taken on sight, as a player's robot is
+  bool jump_any_floor{};          // the jump ignores area 1's floors (0x06e331) elsewhere
   std::shared_ptr<const OriginalAiData> original;
   float walk{0.8F}; // retained for existing callers; original routes use their own table
 };
@@ -24,6 +33,9 @@ struct BattleSettings {
   std::map<std::string, WeaponTuning> weapons;
   float robot_radius{2.0F}; // robots without a leg radius
   float robot_height{4.4F};
+  // A port addition: a hit turns the robot white this long; 0 is off, as
+  // the original's damage and robot drawing set no flash.
+  float hit_flash_seconds{};
   // The view a robot without a drawn reticle locks through, from its own
   // eyes (port value: the chase camera's; the original uses its camera).
   float sight_fov_degrees{55.0F};

@@ -119,8 +119,7 @@ std::unique_ptr<Screen> GameScreens::make_rumbling(const std::string &from,
   if (from == rumbling_.hangar_route) {
     resume = remembered;
   }
-  Rumbling logic(rumbling_, contests_, {rumbling_rules_, parts_, garage_, part_stats_}, quest,
-                 resume);
+  Rumbling logic(rumbling_, contests_, regulation_check(), quest, resume);
   return std::make_unique<RumblingScreen>(textures_, font_, std::move(logic), contests_,
                                           message_box_, from, frame_, credits_, quest, remembered);
 }

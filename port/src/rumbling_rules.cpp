@@ -135,6 +135,9 @@ bool meets_regulation(const RegulationCheck &check, const ContestClass &rules,
   if (quest.money < rules.fee || !riding_ready(quest)) {
     return false;
   }
+  if (check.open_contests) {
+    return true;
+  }
   const Garage &garage = quest.garage;
   const Hangar &hangar = garage.hangars[static_cast<std::size_t>(garage.riding)];
   if (rules.maker >= 0 && rules.maker < regulation_makers) {

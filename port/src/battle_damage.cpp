@@ -10,8 +10,6 @@
 namespace phantomcrash {
 namespace {
 
-// How long a robot flashes after a hit (port value).
-constexpr float hit_flash_seconds = 0.15F;
 // A dodge leaves the robot untouchable for 30 frames (0x0988e1).
 constexpr float dodge_invulnerable_seconds = 30.0F / part_frames_per_second;
 // A hit travelling within 45 degrees of the way its victim faces struck it
@@ -171,6 +169,9 @@ void Battle::apply_hits(const std::vector<WeaponHit> &hits) {
       armour_chatter(victim, damage);
     }
     victim.hp -= damage;
+    if (cheats_.never_die && victim.piloted) {
+      victim.hp = std::max(victim.hp, 1.0F);
+    }
     if (damage > 0.0F && victim.camouflaged) {
       // 0x07675e: damage breaks a running camouflage (0x075444, state 7).
       victim.camouflaged = false;
@@ -182,7 +183,7 @@ void Battle::apply_hits(const std::vector<WeaponHit> &hits) {
     if (!hit.directional && damage > 0.0F && victim.hp > 0.0F) {
       chatter(victim, chatter_event::blast); // 0x09c9c2: a blast it lived through
     }
-    victim.hit_flash = hit_flash_seconds;
+    victim.hit_flash = settings_.hit_flash_seconds;
     if (hit.stagger > 0.0F) {
       victim.mover.stagger(hit.stagger, hit.direction);
     }
@@ -247,6 +248,17 @@ float Battle::stage_floor(Combatant &robot) const {
   mover.set_floor(ground);
   mover.place(back, mover.heading());
   return ground;
+}
+
+Vec3 Battle::placed(Vec3 position, const float radius, RobotMover &mover) const {
+  // Enemy path points can lie a little under the street (ENPT heights of
+  // -4.0 over ground at -3), so a placed robot stands on the highest
+  // ground below its top (a port reading).
+  const float floor =
+      stage_.ground_height(position, std::max(settings_.robot_height, ground_snap), radius);
+  mover.set_floor(floor);
+  position.y = std::max(position.y, floor);
+  return position;
 }
 
 void Battle::withdraw(const int index) {

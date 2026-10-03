@@ -88,6 +88,9 @@ struct Garage {
   // The paints (+ 0xc3c, 57 flags) and emblems (+ 0xc75, 206) owned.
   std::vector<int> paints{0};
   std::vector<int> emblems{emblem_none};
+  // The entries the stock holds: the original's 255 unless Tools > Cheats
+  // raised it to hold every part (a port addition, cheats.hpp).
+  int stock_size{garage_stock_size};
 
   // The stock entries not in use (0x0baaab).
   [[nodiscard]] int free_stock() const;
@@ -102,7 +105,7 @@ struct Garage {
 [[nodiscard]] Garage new_game_garage(int owned);
 
 // Reads a garage, ignoring entries that do not fit: stock indices outside
-// [0, garage_stock_size), hangars past the tenth, fitted parts that name no
+// [0, stock_size), hangars past the tenth, fitted parts that name no
 // stock entry.
 [[nodiscard]] Garage garage_from_json(const json::JsonValue &value);
 [[nodiscard]] json::JsonValue garage_to_json(const Garage &garage);

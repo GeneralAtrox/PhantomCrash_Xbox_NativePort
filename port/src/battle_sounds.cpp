@@ -1,5 +1,7 @@
 #include "phantomcrash/battle_sounds.hpp"
 
+#include "phantomcrash/robot_combat.hpp"
+
 #include <algorithm>
 #include <stdexcept>
 
@@ -232,6 +234,20 @@ void BattleSounds::observe(const Battle &battle, const float seconds) {
   observe_carrier(battle);
 }
 
+bool BattleSounds::stepped(const Combatant &robot, Watch &watch) {
+  watch.stepped = false;
+  if (!robot.pose || robot.pose->pose()[0].contacts.empty()) {
+    watch.contacts.clear();
+    return false;
+  }
+  const auto &points = robot.pose->pose()[0].contacts;
+  for (std::size_t slot = 0; slot < points.size() && slot < watch.contacts.size(); ++slot) {
+    watch.stepped |= contact_stepped(watch.contacts[slot], points[slot]);
+  }
+  watch.contacts = points;
+  return true;
+}
+
 void BattleSounds::observe_robot(const std::size_t index, const Combatant &robot,
                                  const float seconds) {
   Watch &watch = watch_[index];
@@ -261,10 +277,16 @@ void BattleSounds::observe_robot(const std::size_t index, const Combatant &robot
   if (mover.dodged() != 0) {
     play((mover.grounded() ? table_.dodge : table_.air_dodge).pick(piloted), at);
   }
-  // The walk's steps: the port counts them by time, faster as the stick
-  // pushes the walk faster (the original steps on its motions' frames).
+  // The walk's steps: a foot's contact keys (0x0ad737 counts their
+  // crossings in +0x210c, 0x093637 then plays the step). A robot without
+  // contact nodes counts them by time instead, faster as the walk speeds up.
   const bool walking = mover.grounded() && (mode == MoveMode::walk || mode == MoveMode::turn);
-  if (walking) {
+  const bool keyed = stepped(robot, watch);
+  if (keyed) {
+    if (walking && watch.stepped) {
+      play(table_.footstep.pick(piloted), at);
+    }
+  } else if (walking) {
     const float full = std::max(mover.tuning().walk_motion_rate, 1e-3F);
     const float rate = mode == MoveMode::walk ? mover.motion_speed() / full : 1.0F;
     watch.step_left -= seconds * std::max(rate, 0.1F);

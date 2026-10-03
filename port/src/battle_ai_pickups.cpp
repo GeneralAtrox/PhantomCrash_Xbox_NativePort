@@ -38,9 +38,11 @@ void Battle::ai_pickup(Combatant &drone, const float seconds) {
         candidate = static_cast<int>(i);
       }
     }
-    // Original selects the nearest first, then rejects money for ability >=31.
-    if (candidate < 0 || (s.ability >= data.value("pickup_money_ability") &&
-                          pickups[candidate].kind <= data.value("pickup_money_last_kind"))) {
+    // Original selects the nearest first, then rejects money for ability >=31
+    // (except in a showcase, quest +0x618c 1).
+    if (candidate < 0 ||
+        (!settings_.ai.showcase && s.ability >= data.value("pickup_money_ability") &&
+         pickups[candidate].kind <= data.value("pickup_money_last_kind"))) {
       return;
     }
     s.pickup = candidate;

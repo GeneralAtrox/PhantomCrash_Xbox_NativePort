@@ -7,14 +7,12 @@
 namespace phantomcrash {
 namespace {
 
-// Port values: blast weapons without a record's blast damage arm after
-// this long and then go off when an enemy's body comes within this share
-// of the blast radius, so a missile fired point-blank does not circle its
-// target.
+// Port values for the fallback weapons only: one without a record's blast
+// damage arms after this long and then goes off when an enemy's body comes
+// within this share of the blast radius. Recorded weapons go off where
+// they touch, as the original's (0x098eda).
 constexpr float fuse_arming_seconds = 0.2F;
 constexpr float proximity_fuse_share = 0.4F;
-// Missiles home only after this long in flight (port value).
-constexpr float homing_delay_seconds = 0.2F;
 // The steepest a lobbed round leaves.
 constexpr float max_launch_degrees = 85.0F;
 // Impact flashes (port values).
@@ -283,8 +281,8 @@ void Armory::tick(const float seconds, const std::vector<Target> &targets,
       const float acceleration = weapon.acceleration > 0.0F ? weapon.acceleration : weapon.speed;
       const float speed = std::min(weapon.speed, length(shot.velocity) + acceleration * seconds);
       Vec3 heading = normalize(shot.velocity);
-      if (shot.target >= 0 && targets[static_cast<std::size_t>(shot.target)].alive &&
-          shot.age > homing_delay_seconds) {
+      // 0x097d42: a missile with a lock homes from its first tick (0x097f1a).
+      if (shot.target >= 0 && targets[static_cast<std::size_t>(shot.target)].alive) {
         const Vec3 wanted =
             normalize(targets[static_cast<std::size_t>(shot.target)].centre - shot.position);
         heading = turn_toward(heading, wanted, radians(weapon.turn_degrees_per_second) * seconds);

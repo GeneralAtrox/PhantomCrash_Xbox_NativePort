@@ -156,8 +156,8 @@ std::uint32_t Cockpit::colour(const CockpitGauge gauge, const CockpitInput &inpu
   if (gauge == CockpitGauge::armour) {
     const std::uint32_t base =
         value(gauge, input) >= style_.armour_low ? style_.armour_colour : style_.armour_low_colour;
-    return input.hit ? hud_flash(base, style_.armour_flash_colour, clock, style_.flash_frames)
-                     : base;
+    return input.filling ? hud_flash(base, style_.armour_flash_colour, clock, style_.flash_frames)
+                         : base;
   }
   if (gauge == CockpitGauge::camouflage) {
     if (input.camouflaged) {

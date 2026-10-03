@@ -118,6 +118,9 @@ struct AssembleDetails {
   double fade_seconds{};
   Sprite equipped;
   AssembleTotalsStyle totals;
+  // 0x03cbc3: the CHIP's face, paint or emblem picture of the part shown.
+  std::array<float, 2> picture_at{};
+  int picture_layer{};
 };
 
 // The hangar's ASSEMBLE (data/ui/assemble.json).

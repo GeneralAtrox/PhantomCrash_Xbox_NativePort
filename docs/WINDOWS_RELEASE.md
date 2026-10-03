@@ -36,17 +36,34 @@ opens the Class D rental shortcut; it uses and saves the current quest.
 
 ## Included changes
 
-This release adds match results with prize/rental/repair accounting and
-recorded match replay. Replay includes Fixed, Cockpit, Rear, Rightside,
-Left Side, Front View, Free view and the recorded local Player View.
-Use D-pad to change view, LB/RB to change robot, A to pause, and B to return
-to RESULT. The footer also accepts mouse clicks. Free view uses the sticks
-or WASD with right-mouse drag. See `docs/REPLAY.md` for all controls.
+0.2.0 adds:
 
-It also includes environment props and wrecks, fence impact effects, arena
-monitor cameras, animated clouds, dropship destruction/pickup handling,
-entry protection and targeting fixes. The invincibility shield's original
-rainbow appearance is still unfinished; see `docs/ENTRY_SHIELD_RENDERING.md`.
+- **Opponent AI closer to the original.** Computer opponents take a
+  computer rival only once they have locked it, turn on whoever just hurt
+  them (leaders, champions and rankers always do), jump at a target that
+  slips beside them and keep aiming after landing, and the attract demo's
+  and RESULT's opponents fight at full skill. A provoked ranker fights in
+  the common way for 8 s before choosing its own tactic again. Changes from
+  the original are opt-in under `ai` in `data/world/rumbling.json`; see
+  `docs/ORIGINAL_ROBOT_AI.md`.
+- **Attract demo.** Left idle for 30 s, the title plays a RUMBLING battle
+  for a minute, then the intro again; any button returns to the title.
+- **Battle and RESULT cameras.** RESULT's backdrop watches a robot through
+  the stage's fixed cameras, as the original does; the behind view follows
+  the original's chase camera.
+- **Cheats** (Tools > Cheats, all off by default): infinite money, armour
+  and ammo, open contests, fill the empty hangars with one robot of each
+  body model, add one of each part, CHIP and module, and go to any day.
+  See `docs/CHEATS.md`.
+- **Movement and animation.** Leg-record walk/dash speeds and turn rates,
+  wheels that roll, strafing for every leg type, dash-turn leans and
+  layered motion blends, and footsteps that follow the feet.
+- **Fixes.** Robots no longer start under the Shinjuku street, light
+  volume shadows have the original's length, and mixed-maker parts hang
+  from the body's mounts when the `same_maker` rule is modded off.
+
+The invincibility shield's original rainbow appearance is still unfinished;
+see `docs/ENTRY_SHIELD_RENDERING.md`.
 
 ## Licenses and library sources
 

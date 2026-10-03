@@ -262,6 +262,14 @@ void Battle::fire_weapons(const int index, const FireControl &fire, const float 
       robot.pose->advance_muzzle(slot);
     }
   }
+  if (cheats_.infinite_ammo && robot.piloted) {
+    for (Magazine &magazine : robot.magazines) {
+      magazine.ammo = magazine.max;
+      magazine.shown = static_cast<float>(magazine.max);
+      magazine.refill_left = 0.0F;
+      magazine.dry_seconds = 0.0F;
+    }
+  }
   // 0x09c337, 0x09c9c2: the armed blade, where the weapon's node is, tests
   // the robots each tick until it connects or the strike disarms it.
   if (robot.strike_slot >= 0) {

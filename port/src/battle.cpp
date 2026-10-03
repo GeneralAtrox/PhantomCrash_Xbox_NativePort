@@ -43,6 +43,7 @@ BattleSettings parse_battle_settings(const json::JsonValue &value) {
   }
   s.robot_radius = number(value, "robot_radius", s.robot_radius);
   s.robot_height = number(value, "robot_height", s.robot_height);
+  s.hit_flash_seconds = number(value, "hit_flash_seconds", s.hit_flash_seconds);
   s.sight_fov_degrees = number(value, "sight_fov_degrees", s.sight_fov_degrees);
   s.arena_wall_height = number(value, "arena_wall_height", s.arena_wall_height);
   s.fence_contact_seconds = number(value, "fence_contact_seconds", s.fence_contact_seconds);
@@ -106,8 +107,7 @@ int Battle::add_robot(const std::string &name, const int team, const Vec3 positi
   robot.piloted = robots_.empty(); // the player's robot comes first (player())
   robot.hp = robot.max_hp = hp;
   robot.radius = settings_.robot_radius;
-  robot.mover.set_floor(stage_.ground_height(position, ground_snap, robot.radius));
-  robot.mover.place(position, heading);
+  robot.mover.place(placed(position, robot.radius, robot.mover), heading);
   robots_.push_back(std::move(robot));
   const int index = static_cast<int>(robots_.size()) - 1;
   arm(index, weapons);
@@ -133,8 +133,7 @@ void Battle::place(const int index, const Vec3 position, const float heading) {
   Combatant &robot = robots_.at(static_cast<std::size_t>(index));
   RobotMover &mover = robot.mover;
   robot.last_ground.reset();
-  mover.set_floor(stage_.ground_height(position, ground_snap, robot.radius));
-  mover.place(position, heading);
+  mover.place(placed(position, robot.radius, mover), heading);
 }
 
 void Battle::script(const int index, const ScriptedStep &step) {
@@ -294,6 +293,7 @@ void Battle::tick(const RobotControl &player, const FireControl &fire, const flo
     robot.firing.fill(false);
     robot.pose_updated = false;
     robot.hit_flash = std::max(0.0F, robot.hit_flash - seconds);
+    robot.shown_armour.tick(robot.hp, robot.max_hp, seconds);
     if (!robot.alive) {
       tick_death(static_cast<int>(index), seconds);
       robot.respawn_left -= seconds;

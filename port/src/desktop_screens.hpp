@@ -8,6 +8,7 @@
 #include "phantomcrash/front_end.hpp"
 #include "phantomcrash/glyph_font.hpp"
 #include "phantomcrash/button_config.hpp"
+#include "phantomcrash/cheats.hpp"
 #include "phantomcrash/location_menu.hpp"
 #include "phantomcrash/town_map.hpp"
 #include "phantomcrash/event_player.hpp"
@@ -148,8 +149,22 @@ public:
     save_slots_ = std::move(slots);
     save_slots_unreadable_ = unreadable;
   }
+  // Tools > Cheats (desktop_screens_cheats.cpp): the switches, kept every
+  // tick, and a one-off change, made to the game as the next screen opens
+  // (at once on a place's menu or the town map, which opens again).
+  void set_cheats(const CheatOptions &cheats);
+  void cheat(const CheatRequest &request);
+  // Go to Day's entries: each calendar day and the rankers' contests on it.
+  [[nodiscard]] std::vector<std::string> cheat_days() const;
 
 private:
+  void apply_cheat_switches();
+  void apply_pending_cheats();
+  [[nodiscard]] const CheatTables &cheat_tables();
+  CheatOptions cheats_;
+  std::optional<CheatTables> cheat_tables_; // data/debug/cheats.json, read on first use
+  std::vector<CheatRequest> pending_cheats_;
+
   std::shared_ptr<CoopState> coop_;
   int coop_slot_{-1};
   std::string coop_location_{"garage"};
@@ -194,6 +209,8 @@ private:
   void adopt_backdrop(Screen *receipt);
   // The finale's epilogue and the ending movie (desktop_screens_finale.cpp).
   [[nodiscard]] std::unique_ptr<Screen> make_finale();
+  // The title's idle demo (desktop_screens_attract.cpp), or null.
+  [[nodiscard]] std::unique_ptr<Screen> make_attract_demo();
   [[nodiscard]] std::unique_ptr<Screen> make_ending();
   // The 3D renderer and robots, made the first time a screen needs them.
   [[nodiscard]] PreviewWorld world();
@@ -308,6 +325,7 @@ private:
   std::vector<std::string> trail_;                  // the screens shown last, oldest first
   std::map<std::string, std::string> menu_origins_; // menu -> screen entered from
   int intro_pass_{};
+  std::optional<int> attract_stage_; // the next demo's stage index (save +0x6104)
 };
 
 } // namespace phantomcrash

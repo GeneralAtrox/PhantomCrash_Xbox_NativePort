@@ -1,5 +1,6 @@
 #include "desktop_settings_menu.hpp"
 #include "desktop_audio_menu.hpp"
+#include "desktop_cheats_menu.hpp"
 #include "desktop_visuals_dialog.hpp"
 #include "desktop_coop_dialog.hpp"
 
@@ -32,9 +33,10 @@ struct SettingsMenu::Impl {
   bool interacted{};
   bool visible{};
   std::optional<int> level;
+  std::optional<CheatRequest> cheat;
   bool copy_requested{};
   HWND window{};
-  HMENU bar{}, menu{}, levels{}, audio{};
+  HMENU bar{}, menu{}, levels{}, audio{}, cheats{};
   std::unique_ptr<VisualsDialog> visuals;
   std::unique_ptr<CoopDialog> coop;
   std::unique_ptr<CopyButton> copy;
@@ -46,6 +48,9 @@ struct SettingsMenu::Impl {
     if (audio) {
       refresh_audio_menu(audio, settings.audio);
     }
+    if (cheats) {
+      refresh_cheats_menu(cheats, settings.cheats);
+    }
     check(pause_unfocused_command, settings.pause_unfocused);
     if (coop) {
       coop->refresh();
@@ -56,6 +61,11 @@ struct SettingsMenu::Impl {
   }
   bool command(UINT id) {
     if (audio_menu_command(id, settings.audio)) {
+      refresh();
+      interacted = true;
+      return true;
+    }
+    if (cheats_menu_command(id, settings.cheats, cheat)) {
       refresh();
       interacted = true;
       return true;
@@ -184,6 +194,7 @@ SettingsMenu::SettingsMenu(void *native_window, const Settings &initial)
       !AppendMenuW(state.bar, MF_POPUP, reinterpret_cast<UINT_PTR>(tools), L"&Tools")) {
     throw std::runtime_error("Unable to create the Tools menu");
   }
+  state.cheats = static_cast<HMENU>(create_cheats_menu(tools));
   state.refresh();
   if (!SetWindowSubclass(hwnd, &Impl::message, 1, reinterpret_cast<DWORD_PTR>(&state))) {
     throw std::runtime_error("Unable to connect the Settings menu");
@@ -255,6 +266,16 @@ std::optional<int> SettingsMenu::take_level() {
 bool SettingsMenu::take_copy() {
   return std::exchange(impl_->copy_requested, false);
 }
+
+void SettingsMenu::set_cheat_days(const std::vector<std::string> &labels) {
+  if (impl_->cheats != nullptr) {
+    phantomcrash::set_cheat_days(impl_->cheats, labels);
+  }
+}
+
+std::optional<CheatRequest> SettingsMenu::take_cheat() {
+  return std::exchange(impl_->cheat, std::nullopt);
+}
 #else
 struct SettingsMenu::Impl {
   Settings settings;
@@ -283,6 +304,10 @@ std::optional<int> SettingsMenu::take_level() {
 }
 bool SettingsMenu::take_copy() {
   return false;
+}
+void SettingsMenu::set_cheat_days(const std::vector<std::string> &) {}
+std::optional<CheatRequest> SettingsMenu::take_cheat() {
+  return std::nullopt;
 }
 #endif
 

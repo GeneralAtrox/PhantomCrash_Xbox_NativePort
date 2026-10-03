@@ -70,7 +70,8 @@ def main() -> None:
             add(z, BIN / dll, f"{stem}/{dll}")
         for file in files + ["LICENSE", "tools/phantomcrash.py", "scripts/extract-game.ps1",
                              "docs/REPLAY.md", "docs/MATCH_RESULT.md",
-                             "docs/ENTRY_SHIELD_RENDERING.md"]:
+                             "docs/ENTRY_SHIELD_RENDERING.md", "docs/CHEATS.md",
+                             "docs/ORIGINAL_ROBOT_AI.md"]:
             add(z, ROOT / file, f"{stem}/{file}")
         add(z, ROOT / "docs/WINDOWS_RELEASE.md", f"{stem}/README.md")
         for library in LIBRARIES:

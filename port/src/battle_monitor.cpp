@@ -49,8 +49,14 @@ void BattleMonitor::tick(const Battle &battle, const float seconds) {
   if (subject_ < 0) {
     return;
   }
-  const auto &mover = robots[static_cast<std::size_t>(subject_)].mover;
-  camera_.tick(mover.position(), mover.aim_heading(), 0.0F, battle.stage(), seconds, snap);
+  const Combatant &robot = robots[static_cast<std::size_t>(subject_)];
+  CameraSubject subject;
+  subject.position = robot.mover.position();
+  subject.yaw = robot.mover.aim_heading();
+  subject.height = robot.radius;
+  subject.torso = subject.position + Vec3{0.0F, robot.radius * 2.0F, 0.0F};
+  subject.grounded = robot.mover.grounded();
+  camera_.tick(subject, battle.stage(), seconds, snap);
   if (const auto *objects = battle.objects()) {
     for (const auto &object : objects->objects()) {
       if (!object.solid()) {

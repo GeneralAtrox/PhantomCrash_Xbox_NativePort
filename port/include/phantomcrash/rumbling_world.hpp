@@ -76,6 +76,12 @@ public:
   // result_robots of the roster's robots stand at full armour on the path.
   // The world does not run it or keep it. Null when the area has nobody out.
   [[nodiscard]] std::shared_ptr<Battle> stand_up(int area, const QuestSave &quest);
+  // The attract demo's battle (0x0134cd): contest `contest`'s roster drawn
+  // afresh (0x045270, 0x045a68) and stood up as stand_up does, on area
+  // `area`'s stage. `looks` gets each battle robot's look, robot 0's empty.
+  // Null when nobody fits the contest.
+  [[nodiscard]] std::shared_ptr<Battle>
+  stand_up_contest(int area, int contest, const QuestSave &quest, std::vector<RobotParts> &looks);
   [[nodiscard]] bool player_won() const;
   [[nodiscard]] std::int64_t coop_bounty(const QuestSave &quest, int entrant) const;
   void release_coop_robot(int area, int actor);
@@ -107,6 +113,10 @@ private:
   void fit(int area, std::size_t place, const QuestSave &quest);
   // Arms and names `battle`'s robot `place` + 1 as roster place `place`'s.
   RumblingRobot seat(Battle &battle, int area, std::size_t place, const QuestSave &quest);
+  RumblingRobot seat_member(Battle &battle, const std::string &name, const RosterMember &member,
+                            int robot_index, int level_offset, const QuestSave &quest);
+  std::shared_ptr<Battle> stand_up_roster(int area, const AreaRoster &roster, int level_offset,
+                                          const QuestSave &quest, std::vector<RobotParts> *looks);
   // Stands a new opponent somewhere on the area's path.
   void scatter(Battle &battle, int area, int index);
   void restore(Battle &battle, int index, const LiveRobot &live);

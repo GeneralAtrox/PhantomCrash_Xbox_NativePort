@@ -67,17 +67,11 @@ ReplaySubject TrainingScreen::replay_subject(const std::size_t index) const {
   subject.cockpit.gravity = robot.mover.tuning().gravity;
   const float dash = robot.mover.tuning().dash_speed;
   subject.cockpit.speed_ratio = dash > 0 ? std::hypot(velocity.x, velocity.z) / dash : 0;
-  subject.cockpit.armour = robot.max_hp > 0 ? robot.hp / robot.max_hp : 0;
-  subject.cockpit.hit = robot.hit_flash > 0;
+  subject.cockpit.armour = robot.max_hp > 0 ? robot.shown_armour.value() / robot.max_hp : 0;
+  subject.cockpit.filling = robot.shown_armour.filling();
   subject.cockpit.camouflage = robot.camouflage;
   subject.cockpit.camouflaged = robot.camouflaged;
-  subject.camera.position = robot.mover.position();
-  subject.camera.yaw = robot.mover.aim_heading();
-  subject.camera.pitch = robot.mover.pitch();
-  subject.camera.height = robot.radius;
-  subject.camera.torso =
-      view_ ? view_->torso(index).value_or(robot.aim_origin()) : robot.aim_origin();
-  subject.camera.legs_model = view_ ? view_->legs_model(index) : 0;
+  subject.camera = camera_subject(index);
   return subject;
 }
 void TrainingScreen::finish_recording() {

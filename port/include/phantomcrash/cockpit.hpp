@@ -85,8 +85,8 @@ struct CockpitInput {
   float vertical_speed{}; // units a second, up positive
   float gravity{};        // units a second squared
   float speed_ratio{};    // ground speed over the dash speed
-  float armour{};         // 0..1
-  bool hit{};             // being hit: the armour gauge flashes
+  float armour{};         // shown, 0..1 (robot +0x50)
+  bool filling{};         // the shown armour is filling: its gauge flashes
   float camouflage{};     // gauge, 0..1
   bool camouflaged{};
   float sway{};  // the aim's heading less the camera's yaw

@@ -13,9 +13,10 @@ namespace phantomcrash {
 
 struct MotionTiming; // robot.hpp
 
-// How a robot moves. The original works these out from the leg part's
-// stats and tuning levels; until that is recovered they are port values
-// (data/world/training.json "movement"), except where noted.
+// How a robot moves (data/world/training.json "movement"). A robot with
+// legs records takes its speeds from them (robot_load.hpp); the walk and
+// dash speeds here are then its motions' strides, or are replaced, and
+// stay port values only for a robot without legs records.
 struct MovementTuning {
   float walk_speed{7.5F}; // units per second at full stick
   float back_speed{5.5F};
@@ -26,6 +27,10 @@ struct MovementTuning {
   // robot's load sets them (robot_load.hpp) and the speeds above with them.
   float walk_motion_rate{1.0F};
   float dash_motion_rate{1.0F};
+  // Whether the walk and dash speeds above are their motions' strides
+  // (stride_tuning) rather than the defaults.
+  bool walk_stride{};
+  bool dash_stride{};
   // The turns on the ground, in a dash and in the air. The original turns
   // at one rate in all three (0x08e257 reads robot +0x7c, 0x0905af +0x78,
   // both the legs' turn under the load); robot_load sets them from the
@@ -269,6 +274,10 @@ public:
   [[nodiscard]] MoveMode mode() const noexcept {
     return mode_;
   }
+  // The last tick's steering and forward stick (RobotControl::move).
+  [[nodiscard]] const std::array<float, 2> &stick() const noexcept {
+    return stick_;
+  }
   [[nodiscard]] bool backward() const noexcept {
     return backward_;
   }
@@ -323,6 +332,7 @@ private:
   Vec3 position_{};
   float heading_{};
   float twist_{};
+  float mouse_yaw_{};   // radians the mouse asked to turn, still to turn
   float twist_stick_{}; // the stick's smoothed push, 0..1
   float twist_push_{};
   float twist_reset_from_{};
@@ -346,6 +356,7 @@ private:
   float lift_spent_{}; // and what it has used, seconds
   bool down_boosting_{};
   bool jump_was_held_{};
+  std::array<float, 2> stick_{};
   float stagger_left_{};
   float strike_armed_frames_{};
   float strike_last_frames_{};

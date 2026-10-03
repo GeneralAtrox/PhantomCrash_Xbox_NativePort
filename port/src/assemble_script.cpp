@@ -166,6 +166,8 @@ AssembleDetails parse_details(const json::JsonValue &value) {
   details.fade_seconds = required(value, "fade_seconds").number();
   details.equipped = member(value, "equipped", parse_sprite);
   details.totals = member(value, "totals", parse_totals);
+  details.picture_at = numbers<2>(required(value, "picture_at"), "picture_at");
+  details.picture_layer = integer_of(value, "picture_layer");
   if (details.fade_seconds <= 0.0) {
     throw std::runtime_error("details: fade_seconds must be above 0");
   }

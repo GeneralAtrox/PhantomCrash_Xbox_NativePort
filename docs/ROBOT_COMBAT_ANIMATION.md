@@ -166,6 +166,11 @@ These gaps have since been closed:
   holds up to four earlier motions, each with its frame and the blend weight
   it had when cut, and folds them oldest first before blending into the new
   clip (`MotionSource::blend_from`, both the track and the matrix paths).
+  Each frozen motion also keeps how its root motion was split. A dodge
+  (13/14) ends 2 units to the side with that offset on the feet. Standing
+  keeps its sway on the body, so blending the raw tracks had briefly put
+  the dodge's offset back on the body: the robot snapped back, then on to
+  its new place.
 - Shoulder modes 0/1 aim at separate sight points (above).
 - Dash-turn clips 3/4/6/7 (`0x08f5d8`) play on eligible legs while dashing
   and turning (`movement.dash_turn_*` in `training.json`, see
@@ -183,3 +188,15 @@ seconds, respectively, with both arm weights zero. A fresh idle action also
 restarted while retaining the same clip ID. Repeated hit reactions and the
 visual quality of rotation blending remain unverified by these logs. No new
 tests, captures, or temporary data overrides were created for this pass.
+
+Wheels: skeleton nodes flagged 0x200 roll about x by the robot's wheel angle
+(robot +0x2590) instead of the aim pitch or forearm turn (0x0aa499). 0x0889bf
+advances it each 30 Hz tick: on the ground by the planar speed over pi
+(negative in the walk-back and dash-back states), plus a fifth of the steering
+stick while turning or nearly still; in the air by the forward stick; clamped
+to 3.1677728 rad a tick. Leg types 3, 8, 9, 14, 15 and 20 have wheels.
+
+Strafing (0x08dede, Standard controls) has no leg-type gate: every leg type,
+wheels included, strafes at the stick times the robot's walk rate (+0x68),
+except in the jump (4), air (5) and death (10) states and states 6, 7
+and 9 (robot +0x128).

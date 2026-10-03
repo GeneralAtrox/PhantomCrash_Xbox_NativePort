@@ -132,6 +132,11 @@ public:
   // Kind, stage, clock, camera and robots (desktop_training_dump.cpp).
   [[nodiscard]] json::JsonValue scene_details() const override;
   [[nodiscard]] std::optional<SceneProgress> scene_progress() const override;
+  void set_cheats(const CheatOptions &cheats) override {
+    if (battle_) {
+      battle_->set_cheats({cheats.never_die, cheats.infinite_ammo});
+    }
+  }
   [[nodiscard]] MatchSummary match_summary() const;
   std::int64_t settle_coop(QuestSave &save);
   [[nodiscard]] bool coop_contest_won() const;
@@ -151,12 +156,15 @@ public:
                                                           const QuestSave &quest) const;
   // Turns this screen into the receipt's backdrop: `fresh`
   // (RumblingWorld::stand_up) runs on this stage, drawn without the HUD
-  // and unheard. False when it cannot.
-  bool start_backdrop(std::shared_ptr<Battle> fresh);
+  // and unheard. `looks` are its robots' (stand_up_contest), otherwise the
+  // live area's are. False when it cannot.
+  bool start_backdrop(std::shared_ptr<Battle> fresh, const std::vector<RobotParts> &looks = {});
   void tick_backdrop(float seconds) override;
   [[nodiscard]] std::vector<ReplaySubject> backdrop_subjects() const override;
   [[nodiscard]] const StageCollision &backdrop_collision() const override;
   [[nodiscard]] ChaseCameraSettings backdrop_chase() const override;
+  [[nodiscard]] CameraViewSettings backdrop_views() const override;
+  [[nodiscard]] std::vector<Vec3> backdrop_fixed_points() const override;
   [[nodiscard]] WorldFrame backdrop_frame(const ChaseCamera &camera, int width,
                                           int height) override;
 
@@ -225,7 +233,8 @@ private:
   // (desktop_training_camera.cpp).
   void tick_camera(const InputFrame &input, float seconds);
   void update_target_view();
-  [[nodiscard]] CameraSubject camera_subject() const;
+  // What the cameras follow of robot `index`.
+  [[nodiscard]] CameraSubject camera_subject(std::size_t index) const;
   // Whether the camera sits in the player's robot, and whether (and how
   // far slid out of view) the cockpit is up.
   [[nodiscard]] bool in_cockpit() const;

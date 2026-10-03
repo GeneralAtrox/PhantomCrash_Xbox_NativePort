@@ -95,6 +95,7 @@ void AssembleScreen::draw_details(DrawList &list, const ShopGoods &line) const {
   stats.right = cell.stats_right;
   const auto lines = part_stats(logic_.table(), logic_.parts(), logic_.garage(), line.goods);
   draw_part_stats(list, font_, stats, lines, line.goods, script.list.stats_top);
+  draw_picture(list, line.goods);
   draw_totals(list, line, t);
 }
 

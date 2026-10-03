@@ -93,10 +93,12 @@ bool Rumbling::can_choose(const RumblingAction action) const {
   const ContestClass *rules = contest_class();
   switch (action) {
   case RumblingAction::entry:
-    return rules != nullptr && rules->other != class_rentals_only && regulation_met_;
+    return rules != nullptr && (rules->other != class_rentals_only || check_.open_contests) &&
+           regulation_met_;
   case RumblingAction::rental: {
     const Contest *held = contests_.contest(contest(area_));
-    return held != nullptr && rental_allowed(check_.rules, held->contest_class);
+    return held != nullptr &&
+           (check_.open_contests || rental_allowed(check_.rules, held->contest_class));
   }
   default:
     return true;
@@ -114,7 +116,7 @@ Rumbling::AreaResult Rumbling::area_result() const {
     return AreaResult::closed;
   }
   const RankerContest ranker = ranker_contest(check_.rules, area_, held);
-  if (!ranker_open(check_.rules, ranker, area_, quest_.won_contests)) {
+  if (!check_.open_contests && !ranker_open(check_.rules, ranker, area_, quest_.won_contests)) {
     return ranker == RankerContest::area ? AreaResult::area_ranker : AreaResult::first_ranker;
   }
   return quest_.money < rules->fee ? AreaResult::poor : AreaResult::open;

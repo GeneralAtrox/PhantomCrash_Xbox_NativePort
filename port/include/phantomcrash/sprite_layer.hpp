@@ -62,6 +62,9 @@ struct Quad {
 // Throws std::runtime_error when a required value is missing or wrong.
 [[nodiscard]] Sprite parse_sprite(const json::JsonValue &value);
 [[nodiscard]] std::vector<Sprite> parse_sprites(const json::JsonValue &array);
+// extend_edges, edge_inset and edge_bands(_left/_right): how a 640x480
+// sprite's edge columns stretch out to a wider window.
+void parse_sprite_edges(const json::JsonValue &value, Sprite &sprite);
 // "#rrggbb".
 [[nodiscard]] std::uint32_t parse_colour(const std::string &text);
 

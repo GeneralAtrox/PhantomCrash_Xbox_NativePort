@@ -62,16 +62,6 @@ struct CameraViewSettings {
 // points (0x232ae0).
 [[nodiscard]] std::vector<Vec3> parse_fixed_cameras(const json::JsonValue &document, int stage);
 
-// The robot the camera follows.
-struct CameraSubject {
-  Vec3 position;    // its feet (robot +0xb0)
-  float yaw{};      // heading plus twist
-  float pitch{};    // the aim's
-  float height{};   // one leg radius (robot +0x14)
-  Vec3 torso;       // the torso node (camera +0xa0)
-  int legs_model{}; // picks the first-person eye
-};
-
 // The view buttons (robot +0x2f6c bits 0x400..0x2000, set by 0x0774ad).
 enum class ViewChange { first_person, behind, next, previous };
 
@@ -106,6 +96,9 @@ public:
   // Where the camera stands, blended while a change runs.
   [[nodiscard]] const CameraShot &shot() const noexcept {
     return shot_;
+  }
+  [[nodiscard]] const std::vector<Vec3> &fixed_points() const noexcept {
+    return fixed_points_;
   }
 
 private:

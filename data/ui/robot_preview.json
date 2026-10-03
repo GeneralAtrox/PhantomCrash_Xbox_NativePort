@@ -147,6 +147,10 @@
   "left_shoulder": {"offset": [0.8, 2.45, 0], "yaw": -0.3}
  },
  "body_leg_types": [0, 5, 11, 17, 18, 19, 20],
+ "maker_notes": "Port additions for robots of mixed makers (mods/data/ui/assemble.json same_maker false). arm_maker_types and shoulder_maker_types: each maker's first arm and shoulder type (Holy, Photon, Aeron, Tolomeo, Tolomeo R, Charga, Drones), grouped by the arm skeletons' maker-specific frames and the parts' families. Another maker's arm hangs from the body's maker's arm skeleton and plays the body's arm motions. shoulder_mounts: each maker's mean shoulder-weapon mount (the right side's mount node in the shoulder models, upper-body space); another maker's shoulder weapon moves by the body's maker's mount less its own. Drones have no shoulder weapons.",
+ "arm_maker_types": [0, 9, 18, 27, 29, 31, 33],
+ "shoulder_maker_types": [0, 10, 20, 31, 33, 35],
+ "shoulder_mounts": [[-0.98, 0.84, -0.8], [-0.85, 0.53, -1.0], [-1.06, 0.5, -0.1], [-0.84, 1.33, -0.8], [-0.88, 1.02, -0.85], [-1.1, 0.87, -0.8]],
  "lone_part": {
   "pop_in_frames": 15,
   "pop_in_pivot": [0, 4, 0],

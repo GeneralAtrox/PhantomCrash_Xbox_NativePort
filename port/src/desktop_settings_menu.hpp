@@ -1,5 +1,6 @@
 #pragma once
 
+#include "phantomcrash/cheats.hpp"
 #include "phantomcrash/settings.hpp"
 
 #include <memory>
@@ -12,7 +13,8 @@ namespace phantomcrash {
 // The window menu: Settings > Visuals opens live display/render controls;
 // audio, input controls and Pause When Unfocused remain in Settings.
 // Beside Settings, a copy icon copies the game context (desktop_scene_dump.hpp).
-// Tools: Level Select, which jumps straight to a screen for testing.
+// Tools: Level Select, which jumps straight to a screen for testing, and
+// Cheats (desktop_cheats_menu.hpp).
 // Commands arrive through the window procedure; the game loop reads
 // settings() and take_level() each frame. Windows only; elsewhere it holds
 // the settings.
@@ -38,6 +40,10 @@ public:
   [[nodiscard]] std::optional<int> take_level();
   // True once after the copy icon is clicked.
   [[nodiscard]] bool take_copy();
+  // Tools > Cheats > Go to Day's entries, one a calendar day.
+  void set_cheat_days(const std::vector<std::string> &labels);
+  // The one-off cheat picked since the last call, if any.
+  [[nodiscard]] std::optional<CheatRequest> take_cheat();
 
 private:
   struct Impl;

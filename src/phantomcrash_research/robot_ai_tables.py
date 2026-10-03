@@ -72,8 +72,10 @@ def recover_robot_ai(data: bytes) -> dict:
             "threat_angle_base": 15, "threat_angle_max": 60,
             "probability_scale": 255, "fire_probability_scale": 256,
             "cloak_detect_scale": 99, "cloak_detect_seconds": 1,
+            # 0x05de0f writes rate x 8 for the route and rate x 4 for the
+            # attack, but 0x05e494 and 0x05e660 rewrite rate x 8 as they start.
             "ranker_route_seconds": 8,
-            "ranker_engage_seconds": 4, "ranker_close_distance": unpack("<f", 0x19CBC0)[0],
+            "ranker_engage_seconds": 8, "ranker_close_distance": unpack("<f", 0x19CBC0)[0],
             "idle_route_chance": 128, "melee_submode_chance": 220,
             "ranker_full_health_chance": 40, "ranker_route_attack_chance": 10,
             "ranker_orbit_chance": 10, "ranker_first_rival_orbit_chance": 50,
@@ -81,6 +83,31 @@ def recover_robot_ai(data: bytes) -> dict:
             "ranker_defensive_seconds": 180, "ranker_blocked_seconds": 2,
             "ranker_no_random_cloak": 1, "cloak_minimum": 0.1,
             "withdraw_fire_share": 0.5, "search_seconds": 3, "trace_interval": 10,
+            # 0x04f6a0: the lock (+0x130) through which a computer rival is acquired.
+            "lock_range": unpack("<f", 0x19B55C)[0],
+            # 0x05949b / 0x059799: the jump at a target off the sight.
+            "jump_reaction_chance": 15, "jump_reaction_near": unpack("<f", 0x19B544)[0],
+            "jump_reaction_far": unpack("<f", 0x199F7C)[0],
+            # Immediate 0x3e860a92 in 0x05949b: 15 degrees.
+            "jump_reaction_angle": struct.unpack("<f", (0x3E860A92).to_bytes(4, "little"))[0],
+            "jump_reaction_aim_seconds": unpack("<f", 0x17CCE0)[0],
+            "jump_reaction_skipped_area": 1,
+            # 0x05d2bd / 0x05d4b7 / 0x05ec7d: retaliation. Memory is the game
+            # rate x 2 + ability x rate / 10 ticks.
+            "ranker_class": 2, "retaliation_ranker_chance": 10,
+            "retaliation_cloaked_floor": 10, "retaliation_seen_bonus": 127,
+            "retaliation_memory_seconds": 2, "retaliation_memory_per_ability": 0.1,
+            "retaliation_fetch_first_kind": 4, "retaliation_fetch_last_kind": 6,
+            # +0x132 = rate x 8: how long a provoked ranker waits to choose again.
+            "retaliation_ranker_hold_seconds": 8,
+            # 0x05f445: quest +0x618c 1 (attract demo, RESULT backdrop).
+            "showcase_ability": 99,
+            # 0x06e331's zone 1 (area 1's floors), where the jump is not made.
+            "high_ground_centre_x": unpack("<f", 0x1B5A60)[0],
+            "high_ground_centre_z": unpack("<f", 0x1B5A64)[0],
+            "high_ground_radius": unpack("<f", 0x1B5A5C)[0],
+            "high_ground_outside_floor": unpack("<f", 0x1B59E8)[0],
+            "high_ground_inside_floor": unpack("<f", 0x17BE84)[0],
         },
         "ranker_entrants": [0, 1, 10, 19],
         "ranker_weapon_masks": [0, 0, 12, 2, 1],

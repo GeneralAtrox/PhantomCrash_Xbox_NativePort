@@ -64,7 +64,7 @@ TEST_CASE("the title fades in, then START opens the menu with its sound") {
   CHECK(front_end.music() == "title");
 }
 
-TEST_CASE("the title fades out to the intro after 30 s") {
+TEST_CASE("the title fades out to the attract demo after 30 s") {
   auto front_end = shipped();
   run(front_end, 0.5 + 29.9);
   CHECK(!front_end.done());
@@ -73,7 +73,7 @@ TEST_CASE("the title fades out to the intro after 30 s") {
   CHECK(front_end.black_alpha() > 0.0F);
   run(front_end, 0.5);
   CHECK(front_end.done());
-  CHECK(front_end.next() == "intro");
+  CHECK(front_end.next() == "attract_demo");
 }
 
 TEST_CASE("the cursor wraps on a press and stops at the ends when held") {

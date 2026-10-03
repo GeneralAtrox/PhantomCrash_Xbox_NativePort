@@ -96,17 +96,24 @@ TEST_CASE("the load sets the leg motions' rates and the speeds with them") {
   const RobotLoadout loadout = test_loadout();
   const LoadStats load = load_stats(tables, loadout);
   MovementTuning strides;
-  strides.walk_speed = 20.0F;
-  strides.dash_speed = 32.0F;
+  strides.walk_speed = 18.0F;
+  strides.dash_speed = 30.0F;
+  strides.walk_stride = true;
+  strides.dash_stride = true;
   strides.turn_degrees_per_second = 100.0F;
   const MovementTuning moved = loaded_movement(tables, loadout, load, strides);
   // The dash: 118 x 0.8363 / 216 / 0.5333; the walk: half that value / 216 / 0.3333.
   const float dash_rate = 118.0F * load.speed_factor / 216.0F / 0.533333F;
   const float walk_rate = 59.0F * load.speed_factor / 216.0F * 3.0F;
   CHECK(close_to(moved.dash_motion_rate, dash_rate));
-  CHECK(close_to(moved.dash_speed, 32.0F * dash_rate));
+  CHECK(close_to(moved.dash_speed, 30.0F * dash_rate));
   CHECK(close_to(moved.walk_motion_rate, walk_rate));
-  CHECK(close_to(moved.walk_speed, 20.0F * walk_rate));
+  CHECK(close_to(moved.walk_speed, 18.0F * walk_rate));
+  // Without strides of their own the motions take the table's, a frame.
+  const MovementTuning tabled = loaded_movement(tables, loadout, load, MovementTuning{});
+  CHECK(close_to(tabled.walk_speed, 59.0F * load.speed_factor / 216.0F * 60.0F));
+  CHECK(close_to(tabled.dash_speed, 118.0F * load.speed_factor / 216.0F * 60.0F));
+  CHECK(close_to(tabled.walk_motion_rate, walk_rate));
   // These legs have no turn or jump curves: the speed and jump factors scale `strides`.
   CHECK(close_to(moved.turn_degrees_per_second, 100.0F * load.speed_factor));
   CHECK(close_to(moved.jump_height, strides.jump_height * load.jump_factor));
@@ -141,8 +148,9 @@ TEST_CASE("the legs' turn and jump set the robot's own under the load") {
   const RobotLoadout loadout = test_loadout();
   const LoadStats load = load_stats(tables, loadout);
   const MovementTuning moved = loaded_movement(tables, loadout, load, MovementTuning{});
-  // Degrees a battle tick on the ground, in a dash and in the air (0x08e257, 0x0905af).
-  const float turn = 2.35F * load.speed_factor * battle_tick_rate;
+  // Degrees a 60 Hz frame, two frames a battle tick, on the ground, in a
+  // dash and in the air (0x08e257, 0x0905af).
+  const float turn = 2.35F * load.speed_factor * 2.0F * battle_tick_rate;
   CHECK(close_to(moved.turn_degrees_per_second, turn));
   CHECK(close_to(moved.dash_turn_degrees_per_second, turn));
   CHECK(close_to(moved.air_turn_degrees_per_second, turn));

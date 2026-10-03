@@ -42,17 +42,18 @@ void TrainingScreen::update_target_view() {
   target_candidates_ = candidates;
 }
 
-CameraSubject TrainingScreen::camera_subject() const {
-  const Combatant &player = battle_->player();
+CameraSubject TrainingScreen::camera_subject(const std::size_t index) const {
+  const Combatant &robot = battle_->robots()[index];
   CameraSubject subject;
-  subject.position = player.mover.position();
-  subject.yaw = player.mover.aim_heading();
-  subject.pitch = player.mover.pitch();
-  subject.height = player.radius;
-  const std::optional<Vec3> torso = view_ ? view_->torso(player_index_) : std::nullopt;
+  subject.position = robot.mover.position();
+  subject.yaw = robot.mover.aim_heading();
+  subject.pitch = robot.mover.pitch();
+  subject.height = robot.radius;
+  const std::optional<Vec3> torso = view_ ? view_->torso(index) : std::nullopt;
   // Without a posed robot, the torso is taken as two leg radii up.
-  subject.torso = torso.value_or(subject.position + Vec3{0.0F, player.radius * 2.0F, 0.0F});
-  subject.legs_model = view_ ? view_->legs_model(player_index_) : 0;
+  subject.torso = torso.value_or(subject.position + Vec3{0.0F, robot.radius * 2.0F, 0.0F});
+  subject.legs_model = view_ ? view_->legs_model(index) : 0;
+  subject.grounded = robot.mover.grounded();
   return subject;
 }
 
@@ -73,8 +74,8 @@ CockpitInput TrainingScreen::cockpit_input() const {
   input.gravity = mover.tuning().gravity;
   const float dash = mover.tuning().dash_speed;
   input.speed_ratio = dash > 0.0F ? std::hypot(velocity.x, velocity.z) / dash : 0.0F;
-  input.armour = player.max_hp > 0.0F ? player.hp / player.max_hp : 0.0F;
-  input.hit = player.hit_flash > 0.0F;
+  input.armour = player.max_hp > 0.0F ? player.shown_armour.value() / player.max_hp : 0.0F;
+  input.filling = player.shown_armour.filling();
   input.camouflage = player.camouflage;
   input.camouflaged = player.camouflaged;
   input.sway = wrap_angle(mover.aim_heading() - views_.yaw());
@@ -103,9 +104,8 @@ void TrainingScreen::tick_camera(const InputFrame &input, const float seconds) {
       static_cast<void>(views_.change(ViewChange::previous));
     }
   }
-  const RobotMover &mover = battle_->player().mover;
-  camera_.tick(mover.position(), mover.aim_heading(), mover.pitch(), battle_->stage(), seconds,
-               snap_camera_);
+  const CameraSubject subject = camera_subject(static_cast<std::size_t>(player_index_));
+  camera_.tick(subject, battle_->stage(), seconds, snap_camera_);
   // The eye stays in front of a shut door (a port choice).
   const StageDoors *doors = battle_->doors();
   if (const auto hit =
@@ -117,7 +117,7 @@ void TrainingScreen::tick_camera(const InputFrame &input, const float seconds) {
     const StageDoors *shut = battle_->doors();
     return !battle_->stage().segment_hit(from, to) && !(shut && shut->segment_hit(from, to));
   };
-  views_.tick(camera_subject(), camera_.chase(), seconds, sees, snap_camera_);
+  views_.tick(subject, camera_.chase(), seconds, sees, snap_camera_);
   snap_camera_ = false;
   if (cockpit_) {
     cockpit_->tick(cockpit_input(), seconds);

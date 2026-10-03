@@ -152,6 +152,7 @@ int run(const Options &options) {
     }
     menu.set_levels(labels);
   }
+  menu.set_cheat_days(screens.cheat_days());
   PostProcessOptions persisted_post = saved.post_process;
   AudioOptions persisted_audio = saved.audio;
   FrameRateSettings persisted_rate = initial.frame_rate;
@@ -159,6 +160,7 @@ int run(const Options &options) {
   bool persisted_counter = initial.frame_counter;
   bool persisted_coop = initial.experimental_coop;
   CoopOptions persisted_coop_options = initial.coop;
+  CheatOptions persisted_cheats = initial.cheats;
   bool paused = false;
 
   using Clock = std::chrono::steady_clock;
@@ -197,11 +199,13 @@ int run(const Options &options) {
     coop->options = settings.coop;
     screens.set_post_process(settings.post_process);
     screens.set_audio_options(settings.audio);
+    screens.set_cheats(settings.cheats);
     if (!smoke &&
         (settings.post_process != persisted_post || settings.audio != persisted_audio ||
          settings.frame_rate != persisted_rate || settings.fullscreen != persisted_fullscreen ||
          settings.frame_counter != persisted_counter ||
-         settings.experimental_coop != persisted_coop || settings.coop != persisted_coop_options)) {
+         settings.experimental_coop != persisted_coop || settings.coop != persisted_coop_options ||
+         settings.cheats != persisted_cheats)) {
       // Save the preference at selection time without checkpointing the live match.
       Settings disk = load_settings(preferences);
       disk.post_process = settings.post_process;
@@ -210,6 +214,7 @@ int run(const Options &options) {
       disk.frame_counter = settings.frame_counter;
       disk.experimental_coop = settings.experimental_coop;
       disk.coop = settings.coop;
+      disk.cheats = settings.cheats;
       if (settings.fullscreen != persisted_fullscreen) {
         disk.fullscreen = settings.fullscreen;
       }
@@ -223,6 +228,7 @@ int run(const Options &options) {
       persisted_counter = settings.frame_counter;
       persisted_coop = settings.experimental_coop;
       persisted_coop_options = settings.coop;
+      persisted_cheats = settings.cheats;
     }
     apply_fullscreen(host, menu);
     FrameRateSettings rate = settings.frame_rate;
@@ -240,6 +246,9 @@ int run(const Options &options) {
     if (const auto level = menu.take_level();
         level && *level >= 0 && *level < static_cast<int>(levels.size())) {
       screens.jump(levels[static_cast<std::size_t>(*level)].screen);
+    }
+    if (const auto cheat = menu.take_cheat()) {
+      screens.cheat(*cheat);
     }
     dump_requested = (menu.take_copy() && !smoke) || dump_requested;
     const bool pause =

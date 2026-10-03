@@ -131,7 +131,7 @@ float wrap_angle(float angle) {
 void RobotMover::place(const Vec3 position, const float heading) {
   position_ = position;
   heading_ = wrap_angle(heading);
-  twist_ = 0.0F;
+  twist_ = mouse_yaw_ = 0.0F;
   twist_stick_ = 0.0F;
   twist_reset_left_ = 0.0F;
   quick_turn_left_ = quick_turn_cooldown_ = 0.0F;
@@ -261,6 +261,7 @@ void RobotMover::tick(const RobotControl &input, const float seconds) {
     position_.y = floor_;
   }
   jump_was_held_ = control.jump;
+  stick_ = control.move;
 }
 
 void RobotMover::land(const float height) {

@@ -47,6 +47,7 @@ private:
   int torso_slot_{-1};
   std::vector<Part> parts_;
   std::vector<Part> shoulders_;
+  std::array<Mat4, 2> shoulder_shifts_{}; // RobotAssembly::shoulder_shifts
 };
 
 } // namespace phantomcrash

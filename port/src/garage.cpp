@@ -103,11 +103,11 @@ bool Hangar::complete() const {
 }
 
 int Garage::free_stock() const {
-  return garage_stock_size - static_cast<int>(stock.size());
+  return stock_size - static_cast<int>(stock.size());
 }
 
 int Garage::add_stock(StockItem item) {
-  for (int index = 0; index < garage_stock_size; ++index) {
+  for (int index = 0; index < stock_size; ++index) {
     if (!stock.contains(index)) {
       stock.emplace(index, std::move(item));
       return index;
@@ -126,10 +126,11 @@ Garage new_game_garage(const int owned) {
 
 Garage garage_from_json(const JsonValue &value) {
   Garage garage;
+  garage.stock_size = std::max(integer_or(value, "stock_size", garage_stock_size), 0);
   if (const auto *stock = value.find("stock"); stock != nullptr && stock->is_array()) {
     for (const auto &entry : stock->array()) {
       const int index = integer_or(entry, "index", -1);
-      if (index >= 0 && index < garage_stock_size) {
+      if (index >= 0 && index < garage.stock_size) {
         garage.stock[index] = stock_from_json(entry);
       }
     }
@@ -177,13 +178,16 @@ JsonValue garage_to_json(const Garage &garage) {
         {"emblem", number(hangar.emblem)},
     }});
   }
-  return JsonValue{JsonValue::Object{
-      {"stock", JsonValue{std::move(stock)}},
-      {"hangars", JsonValue{std::move(hangars)}},
-      {"riding", number(garage.riding)},
-      {"paints", numbers(garage.paints)},
-      {"emblems", numbers(garage.emblems)},
-  }};
+  JsonValue::Object object;
+  object.emplace_back("stock", JsonValue{std::move(stock)});
+  object.emplace_back("hangars", JsonValue{std::move(hangars)});
+  object.emplace_back("riding", number(garage.riding));
+  object.emplace_back("paints", numbers(garage.paints));
+  object.emplace_back("emblems", numbers(garage.emblems));
+  if (garage.stock_size != garage_stock_size) {
+    object.emplace_back("stock_size", number(garage.stock_size));
+  }
+  return JsonValue{std::move(object)};
 }
 
 } // namespace phantomcrash

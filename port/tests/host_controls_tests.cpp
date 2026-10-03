@@ -46,11 +46,36 @@ TEST_CASE("mouse aim is a displacement and does not repeat after it is consumed"
   InputFrame input;
   input.mouse_aim = {0.2F, 0.1F};
   mover.tick(battle_control(input, BattleButtons{}, nullptr), 1.0F / 60.0F);
+  CHECK(std::abs(mover.pitch() - 0.1F) < 0.0001F);
+  for (int tick = 0; tick < 30; ++tick) {
+    mover.tick(RobotControl{}, 1.0F / 30.0F);
+  }
   CHECK(std::abs(mover.heading() - 0.2F) < 0.0001F);
   CHECK(std::abs(mover.pitch() - 0.1F) < 0.0001F);
-  mover.tick(RobotControl{}, 1.0F / 30.0F);
-  CHECK(std::abs(mover.heading() - 0.2F) < 0.0001F);
-  CHECK(std::abs(mover.pitch() - 0.1F) < 0.0001F);
+}
+
+TEST_CASE("the mouse turns no faster than the stick, at the legs' turn rate") {
+  MovementTuning tuning;
+  tuning.turn_degrees_per_second = 60.0F;
+  RobotMover stick(tuning);
+  RobotMover mouse(tuning);
+  stick.place({}, 0.0F);
+  mouse.place({}, 0.0F);
+  InputFrame input;
+  input.right_stick = {1, 0}; // Standard: the right stick turns
+  InputFrame moved;
+  moved.mouse_aim = {radians(90), 0};
+  for (int tick = 0; tick < 15; ++tick) {
+    stick.tick(battle_control(input, BattleButtons{}, nullptr, true), 1.0F / 30.0F);
+    mouse.tick(battle_control(tick == 0 ? moved : InputFrame{}, BattleButtons{}, nullptr, true),
+               1.0F / 30.0F);
+  }
+  CHECK(std::abs(stick.heading() - radians(30)) < 1e-3F);
+  CHECK(std::abs(mouse.heading() - radians(30)) < 1e-3F);
+  for (int tick = 0; tick < 45; ++tick) {
+    mouse.tick(RobotControl{}, 1.0F / 30.0F);
+  }
+  CHECK(std::abs(mouse.heading() - radians(90)) < 1e-3F); // the rest follows, and no more
 }
 
 TEST_CASE("left stick and AD strafe while right stick turns the whole robot") {
@@ -101,6 +126,10 @@ TEST_CASE("diagonal movement stays at walking speed and mouse turning rotates a 
     input.left_stick = {1, 0};
     input.mouse_aim = {radians(90), 0};
     mover.tick(battle_control(input, BattleButtons{}, nullptr), 1.0F / rate);
+    input.mouse_aim = {};
+    for (int frame = 0; frame < rate; ++frame) { // the turn rate spreads it
+      mover.tick(battle_control(input, BattleButtons{}, nullptr), 1.0F / rate);
+    }
     CHECK(std::abs(mover.velocity().x) < 1e-5F);
     CHECK(dot(mover.velocity(), heading_right(radians(90))) > 0);
     input.mouse_aim = {};

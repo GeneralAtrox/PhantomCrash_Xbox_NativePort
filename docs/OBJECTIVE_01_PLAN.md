@@ -26,6 +26,24 @@ Addresses are virtual addresses in that executable.
   scene may skip its fade-in when it knows the previous one shares its
   background (title and main menu do this).
 
+### Scenes 5, 7 and 23
+
+Researcher readings from a sweep of all 234 calls to `0x0a1bf7` (the
+operands pushed before each), the one transition with a computed target
+(`0x0a3963`, Pepper's guide: story events, 42, 8 or 41), the story events'
+target scenes (3, 6, 8, 15, 19, 20, 22, 24, 27, 30, 41, 159) and the
+soft-reset table `0x255fb0` (always 40):
+
+- **Scene 5 is REPLAY**, reached from the match result (scene 30,
+  continuation `0x0a2dc5`: result 0 to 5, result 1 to 24) and returning to
+  30. The port has it ([REPLAY.md](REPLAY.md)).
+- **Scene 7** (init `0x04a540`, task `0x04a59e` then `0x04a5ef`) starts the
+  demo battle task `0x04a6a0` on its own, as the attract demo does, and
+  exits to 40. Nothing transitions to it: a debug scene, not ported.
+- **Scene 23** (init `0x074500`, steps `0x074561`, `0x0745bf`) prints "ID
+  %08X" (`0x22f2ec`), sets `0x98ba3c` and exits to 40. Nothing transitions
+  to it either: an ID viewer for debugging, not ported.
+
 ### Boot flow
 
 ```
@@ -245,9 +263,11 @@ the menu background is a data edit or a file dropped into `mods/`.
   but without the loading gaps. Where the original holds or goes black while
   loading, the port preloads.
 - No 50/60 Hz or language prompt. No hard-disk cache copy.
-- The attract battle demo (scene 1) needs gameplay. Until it exists, the title
-  idle timeout loops back to the intro, as the original does after the demo.
-  This is a setting in `title.json`.
+- The attract battle demo (scene 1) is ported: after the title's idle
+  timeout a contest's robots fight on one of the RUMBLING stages for 60 s
+  under a blinking PRESS START BUTTON, then the intro loops; any button
+  returns to the title. See `data/ui/attract_demo.json` and *Attract demo*
+  in [MATCH_RESULT.md](MATCH_RESULT.md).
 - Main-menu items lead to placeholder screens that return to the menu.
 
 ## Work plan

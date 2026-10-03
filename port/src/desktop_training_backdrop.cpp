@@ -32,7 +32,8 @@ std::shared_ptr<Battle> TrainingScreen::stand_up_backdrop(RumblingWorld *world,
   return world != nullptr ? world->stand_up(area, quest) : nullptr;
 }
 
-bool TrainingScreen::start_backdrop(std::shared_ptr<Battle> fresh) {
+bool TrainingScreen::start_backdrop(std::shared_ptr<Battle> fresh,
+                                    const std::vector<RobotParts> &looks) {
   if (!fresh || backdrop_area() < 0) {
     return false;
   }
@@ -44,6 +45,8 @@ bool TrainingScreen::start_backdrop(std::shared_ptr<Battle> fresh) {
   battle_ = std::move(fresh);
   player_index_ = 0;
   battle_->select_player(player_index_);
+  battle_->take_out(player_index_); // nobody's: seated when this screen was the demo's
+
   battle_->set_drones_active(true);
   battle_->set_allowed_weapons(all_weapons);
   scene_.reset();
@@ -54,7 +57,15 @@ bool TrainingScreen::start_backdrop(std::shared_ptr<Battle> fresh) {
     effects_->system().set_stage(&battle_->stage());
   }
   view_->clear_wrecks();
-  if (coop_match_) {
+  if (!looks.empty()) {
+    for (std::size_t index = 1; index < looks.size() && index < view_->size(); ++index) {
+      try {
+        view_->replace(index, looks[index]);
+      } catch (const std::exception &) {
+        view_->replace(index, RobotParts{}); // as add_live_views
+      }
+    }
+  } else if (coop_match_) {
     // The co-op players' places go back to the contest's own robots.
     for (std::size_t index = 1; index < battle_->robots().size() && index < view_->size();
          ++index) {
@@ -110,6 +121,14 @@ const StageCollision &TrainingScreen::backdrop_collision() const {
 
 ChaseCameraSettings TrainingScreen::backdrop_chase() const {
   return script_.battle.camera;
+}
+
+CameraViewSettings TrainingScreen::backdrop_views() const {
+  return script_.battle.views;
+}
+
+std::vector<Vec3> TrainingScreen::backdrop_fixed_points() const {
+  return views_.fixed_points();
 }
 
 WorldFrame TrainingScreen::backdrop_frame(const ChaseCamera &camera, const int width,

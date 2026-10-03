@@ -43,9 +43,16 @@ struct RobotAiState {
   bool ranker_defensive{}, ranker_orbit{};
   unsigned forced_weapons{};
   bool ranker_engage{}, cloak_detection{}, threat{};
+  // A ranker turned on its attacker (0x05d2bd) fights as any robot does until
+  // ranker_left (+0x132) runs out and 0x05de0f chooses again.
+  bool ranker_provoked{};
   AiMode mode{AiMode::route};
   int pickup{-1};
   float pickup_left{};
+  // 0x059799: 1 jump pressed, 2 in the air, 3 aiming after landing.
+  int jump_phase{};
+  float jump_aim_left{};
+  std::vector<float> damage_seen; // the robot's damage_from at the last AI tick
   unsigned pickup_selections{};
   int target{-1}, submode{}, search{-1}, dodge_side{1};
   float accumulator{}, memory{}, state_left{}, guard{}, action_left{}, previous_hp{};

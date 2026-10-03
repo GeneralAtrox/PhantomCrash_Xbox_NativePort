@@ -23,6 +23,7 @@ BattleSettings damage_settings() {
       "breaker": {"kind": "gun", "damage": 40, "cooldown": 5, "speed": 300,
                   "knockdown_percent": 200},
       "pusher": {"kind": "gun", "damage": 1, "cooldown": 5, "speed": 300, "knockback": 30},
+      "clip": {"kind": "gun", "damage": 1, "cooldown": 0.05, "speed": 300, "ammo": 3},
       "salvo": {"kind": "missile", "damage": 10, "cooldown": 5, "speed": 60, "rounds": 4,
                 "turn_degrees_per_second": 360}
     }
@@ -159,4 +160,34 @@ TEST_CASE("a stunned robot reels the way the hit pushes it") {
   side.shoot();
   const int motion = side.victim().mover.motion();
   CHECK((motion == robot_motion::hit_left || motion == robot_motion::hit_right));
+}
+
+TEST_CASE("the never-die cheat leaves a piloted robot's armour at 1") {
+  Range range("handgun", pi);
+  Combatant &victim = range.battle.robot(range.target);
+  victim.piloted = true;
+  victim.hp = 10.0F;
+  range.battle.set_cheats({true, false});
+  FireControl fire;
+  fire.fire[0] = true;
+  range.battle.tick({}, fire, tick);
+  for (int i = 0; i < 60; ++i) {
+    range.battle.tick({}, {}, tick);
+  }
+  CHECK(range.victim().hp == 1.0F);
+  CHECK(range.victim().alive);
+}
+
+TEST_CASE("the infinite-ammo cheat keeps the player's weapons full") {
+  Range range("clip", pi);
+  range.battle.set_cheats({false, true});
+  FireControl fire;
+  fire.fire[0] = true;
+  for (int i = 0; i < 60; ++i) {
+    range.battle.tick({}, fire, tick);
+  }
+  const Magazine &magazine = range.battle.player().magazines[0];
+  CHECK(magazine.max == 3);
+  CHECK(magazine.ammo == 3);
+  CHECK(range.victim().hp < full - 3.0F); // more than one clip's worth hit
 }

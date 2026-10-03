@@ -332,3 +332,25 @@ TEST_CASE("the shipped talk tuning and tables parse") {
   CHECK((tuning.fast_forward_buttons & button::right_trigger) != 0);
   CHECK(tuning.type_sound == "talk_type");
 }
+
+TEST_CASE("talk backgrounds take their widescreen edges from the talk tuning") {
+  TalkTables talk;
+  talk.backgrounds.resize(2);
+  apply_talk_edges(json::parse(R"({"background_edges": {
+    "back": {"extend_edges": "both", "edge_inset": [1, 0], "edge_bands_right": [[0, 33]]},
+    "front": {"extend_edges": "left"}}})"),
+                   talk);
+  for (const TalkBackground &background : talk.backgrounds) {
+    CHECK(background.back.extend_left);
+    CHECK(background.back.extend_right);
+    CHECK(background.back.edge_inset[0] == 1.0F);
+    CHECK(background.back.edge_bands[0].empty());
+    CHECK(background.back.edge_bands[1].size() == 1);
+    CHECK(background.front.extend_left);
+    CHECK(!background.front.extend_right);
+  }
+  TalkTables plain;
+  plain.backgrounds.resize(1);
+  apply_talk_edges(json::parse(R"({})"), plain);
+  CHECK(!plain.backgrounds[0].back.extend_left);
+}

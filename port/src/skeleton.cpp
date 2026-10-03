@@ -125,18 +125,22 @@ Mat4 animated_transform(const SkeletonNode &node, Context &context) {
   const Vec3 sampled_rotation = t.rotation;
   if (node.flags == node_root_motion && node.track >= 0) {
     // The walk's forward (and, outside idle and walking, sideways) body
-    // motion moves onto the feet; the robot itself moves by the game.
-    context.sway.x = context.input.keep_sway ? 0.0F : -t.translation.x;
-    if (!context.input.keep_sway) {
-      t.translation.x = 0.0F;
-    }
-    context.sway.z = -t.translation.z;
-    t.translation.z = 0.0F;
+    // motion moves onto the feet; the robot itself moves by the game. Each
+    // frozen layer keeps the split it was posed with, so leaving a dodge
+    // does not put its sideways offset back on the body.
+    const Vec3 bind = node_transform(node, {}).translation;
+    const RootSplit root =
+        context.source->root_split(node.track, bind, t.translation, context.input.keep_sway);
+    t.translation = root.body;
+    context.sway.x = root.sway.x;
+    context.sway.z = root.sway.z;
   }
   if ((node.flags & node_turns_with_aim) != 0) {
     t.rotation.y += context.input.aim_yaw;
   }
-  if ((node.flags & node_pitches_with_aim) != 0) {
+  if ((node.flags & node_wheel) != 0) {
+    t.rotation.x += context.input.wheel_turn;
+  } else if ((node.flags & node_pitches_with_aim) != 0) {
     t.rotation.x += std::clamp(context.input.aim_pitch, -aim_pitch_limit, aim_pitch_limit);
   } else if ((node.flags & node_forearm) != 0) {
     // The body's type turns the forearms (0x0aa499: a Photon body's by -pi/2).
@@ -146,8 +150,8 @@ Mat4 animated_transform(const SkeletonNode &node, Context &context) {
   if (node.track >= 0 && source.blending()) {
     // 0x0ac757 converts both rotations to quaternions before interpolation.
     const Vec3 adjustment = t.rotation - sampled_rotation;
-    const auto as_matrix = [&](const Motion &motion, const float frame) {
-      Transform out = node_transform(node, motion.sample(node.track, frame));
+    const auto as_matrix = [&](const MotionLayer &layer) {
+      Transform out = node_transform(node, layer.motion->sample(node.track, layer.frame));
       out.rotation = out.rotation + adjustment;
       out.translation = t.translation;
       return local_matrix(out);
@@ -156,7 +160,8 @@ Mat4 animated_transform(const SkeletonNode &node, Context &context) {
       return blend_pose_transform(a, b, share);
     };
     if (const auto from = source.blend_from<Mat4>(as_matrix, mix)) {
-      return blend_pose_transform(*from, as_matrix(*source.motion, source.frame), source.weight);
+      const MotionLayer current{source.motion, source.frame};
+      return blend_pose_transform(*from, as_matrix(current), source.weight);
     }
   }
   return local_matrix(t);

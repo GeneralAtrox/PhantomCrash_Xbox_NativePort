@@ -206,3 +206,118 @@ TEST_CASE("a change that interrupts a blend carries the blended pose on") {
   source.weight = 1.0F;
   CHECK(near(*source.sample(0).translation, {20.0F, 0.0F, 0.0F}));
 }
+
+TEST_CASE("leaving a dodge does not put its sideways root offset back on the body") {
+  // The root-motion node (flags 2). A dodge ends 2 to the side, posed with
+  // that offset on the feet; standing keeps its own sway on the body.
+  const SkeletonNode root = parse_skeleton_node(json::parse(R"({"type": 0, "track": 0,
+    "flags": 2, "translation": [0, 0, 0], "rotation": [0, 0, 0], "bone": 0})"));
+  const auto bank = parse_motion_bank(json::parse(R"({"track_count": 1, "motions": [
+    {"frames": 1, "tracks": [{"flags": 227, "translation": [{"kind": "constant", "values": [2]},
+      {"kind": "constant", "values": [0]}, {"kind": "constant", "values": [0]}]}]},
+    {"frames": 1, "tracks": [{"flags": 227, "translation": [{"kind": "constant", "values": [0]},
+      {"kind": "constant", "values": [0]}, {"kind": "constant", "values": [0]}]}]}]})"));
+  PoseInput input;
+  input.keep_sway = true;
+  input.legs.motion = bank.motion(1);
+  input.legs.previous[0] = {bank.motion(0), 0.0F, 1.0F, false};
+  input.legs.previous_count = 1;
+  input.legs.weight = 0.5F;
+  Pose pose;
+  build_pose(root, input, pose);
+  CHECK(near(origin(pose[0].bones[0]), {0.0F, 0.0F, 0.0F}));
+}
+
+TEST_CASE("another maker's body grafts its body bones onto the legs' skeleton") {
+  const auto node = [](const std::uint32_t flags, const int bone, const int track,
+                       std::vector<SkeletonNode> children = {}) {
+    SkeletonNode out;
+    out.flags = flags;
+    out.bone = bone;
+    out.track = track;
+    out.children = std::move(children);
+    return out;
+  };
+  // Legs: a torso with one body bone, then the hip and a foot.
+  const SkeletonNode legs = node(
+      0x1, -1, 0,
+      {node(node_turns_with_aim, 0, 2, {node(0x100, 1, 3)}), node(0x1, 2, 4, {node(0x1, 3, 5)})});
+  // The body's maker: two body bones (one animated) and the arm mount.
+  SkeletonNode arms;
+  arms.type = SkeletonNodeType::arms;
+  const SkeletonNode body =
+      node(0x1, -1, 0,
+           {node(node_turns_with_aim, 0, 2, {node(0x40100, 1, 3), node(0x400, 2, -1), arms})});
+
+  const auto grafted = graft_body_section(legs, body);
+  REQUIRE(grafted != nullptr);
+  const SkeletonNode &torso = grafted->children[0];
+  CHECK(torso.track == 2); // the legs' own torso
+  REQUIRE(torso.children.size() == 3);
+  CHECK(torso.children[0].bone == 1);
+  CHECK(torso.children[0].track == -1); // not the legs' bank's track 3
+  CHECK(torso.children[1].bone == 2);
+  CHECK(torso.children[2].type == SkeletonNodeType::arms);
+  const SkeletonNode &hip = grafted->children[1];
+  CHECK(hip.bone == 3); // after the body's three bones
+  CHECK(hip.track == 4);
+  CHECK(hip.children[0].bone == 4);
+  CHECK(graft_body_section(legs, node(0x1, -1, 0)) == nullptr);
+}
+
+TEST_CASE("a wheel rolls about X by the wheel turn instead of the aim pitch") {
+  // Flag 0x200 marks a wheel (0x0aa499), even with 0x100 set beside it.
+  const SkeletonNode root = parse_skeleton_node(json::parse(R"({"type": 0, "track": -1,
+    "translation": [0, 0, 0], "rotation": [0, 0, 0], "bone": 0, "flags": 768})"));
+  PoseInput input;
+  input.aim_pitch = 0.3F;
+  input.wheel_turn = 1.5707963F;
+  Pose pose;
+  build_pose(root, input, pose);
+  CHECK(near(transform_point({0, 1, 0}, pose[0].bones[0]), {0.0F, 0.0F, 1.0F}));
+}
+
+TEST_CASE("another maker's weapons hang from the body's maker's mounts") {
+  const auto catalogue = parse_robot_catalogue(json::parse(R"({
+    "parts": {"body": [0, 1], "legs": [0, 1], "arm": [0, 1, 2, 3], "shoulder": [0, 1]},
+    "body_types": [{"model": 38, "motions": 1722}, {"model": 63, "motions": 1748}],
+    "leg_types": [{"model": 39, "motions": 1727, "arm_motions": [[10, 11], [12, 13]]},
+                  {"model": 64, "motions": 1753, "arm_motions": [[20, 21], [22, 23]]}],
+    "arm_types": [{"models": [9, 0], "class": 0}, {"models": [10, 1], "class": 1},
+                  {"models": [53, 44], "class": 1}, {"models": [54, 45], "class": 0}],
+    "shoulder_types": [{"models": [28, 18]}, {"models": [72, 62]}],
+    "body_leg_types": [0, 1], "arm_maker_types": [0, 2], "shoulder_maker_types": [0, 1],
+    "shoulder_mounts": [[-1, 1, -0.8], [-0.8, 0.5, -1]]})"));
+  SkeletonNode torso;
+  torso.flags = node_turns_with_aim;
+  torso.bone = 0;
+  SkeletonNode legs;
+  legs.children.push_back(torso);
+  RobotSkeletons skeletons;
+  skeletons.legs = {legs, legs};
+  for (auto &side : skeletons.arms) {
+    for (int type = 0; type < 4; ++type) {
+      SkeletonNode arm;
+      arm.track = type; // tells the skeletons apart
+      side.emplace_back(arm);
+    }
+  }
+  RobotParts parts;
+  parts.arms = {2, 3};
+  parts.shoulders = {1, 1};
+  RobotAssembly robot = assemble_robot(catalogue, skeletons, parts);
+  CHECK(robot.arm_skeletons[0]->track == 1); // the body's maker's class 1
+  CHECK(robot.arm_skeletons[1]->track == 0); // and class 0
+  CHECK(robot.arm_motions[0] == "motions/11.json");
+  CHECK(near(robot.shoulder_shifts[0], {-0.2F, 0.5F, 0.2F}));
+  CHECK(near(robot.shoulder_shifts[1], {0.2F, 0.5F, 0.2F}));
+  parts.legs = 1; // the other maker's legs: the body's own legs' arm motions
+  robot = assemble_robot(catalogue, skeletons, parts);
+  CHECK(robot.grafted != nullptr);
+  CHECK(robot.arm_motions[0] == "motions/11.json");
+  parts.body = 1; // the arms' own maker
+  robot = assemble_robot(catalogue, skeletons, parts);
+  CHECK(robot.arm_skeletons[0]->track == 2);
+  CHECK(robot.arm_motions[0] == "motions/21.json");
+  CHECK(near(robot.shoulder_shifts[0], {0.0F, 0.0F, 0.0F}));
+}

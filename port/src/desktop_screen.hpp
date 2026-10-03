@@ -154,6 +154,8 @@ public:
   }
   // The live RUMBLING's opponents as they now stand (rumbling_world.hpp).
   virtual void set_live_rosters(const std::array<AreaRoster, roster_areas> & /*rosters*/) {}
+  // Tools > Cheats' switches, every tick: a battle applies its own.
+  virtual void set_cheats(const CheatOptions & /*cheats*/) {}
 };
 
 } // namespace phantomcrash

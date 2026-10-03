@@ -6,6 +6,7 @@
 #include "phantomcrash/world_model.hpp"
 
 #include <array>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -58,6 +59,16 @@ struct RobotCatalogue {
   std::vector<ArmType> arm_types;
   std::vector<ShoulderType> shoulder_types;
   std::vector<int> emblems;
+  // The leg type each body type stands as (0x082d3d, robot_preview.json):
+  // its maker's first. Each maker's leg types follow its first in order.
+  std::vector<int> body_leg_types;
+  // Port additions for mixed makers (robot_preview.json): each maker's
+  // first arm type and first shoulder type, as body_leg_types, and where its
+  // shoulder weapons mount on its own body on average (the right side's;
+  // the left side mirrors x).
+  std::vector<int> arm_maker_types;
+  std::vector<int> shoulder_maker_types;
+  std::vector<Vec3> shoulder_mounts;
 };
 
 [[nodiscard]] RobotCatalogue parse_robot_catalogue(const json::JsonValue &document);
@@ -97,13 +108,32 @@ struct RobotAssembly {
   std::string body_motions;
   std::array<std::string, 2> arm_motions;
   const SkeletonNode *skeleton{};
+  // A port addition: with another maker's body on the legs, `skeleton` is
+  // this, the legs' skeleton with the body's maker's body section grafted
+  // on (graft_body_section).
+  std::shared_ptr<const SkeletonNode> grafted;
   std::array<const SkeletonNode *, 2> arm_skeletons{};
   float forearm_turn{}; // the body type's (RobotCatalogue::BodyType)
+  // A port addition: moves another maker's shoulder weapon, in the upper
+  // body's space, from its maker's mount to the body's maker's.
+  std::array<Vec3, 2> shoulder_shifts{};
 };
 
 [[nodiscard]] std::string robot_model_path(int resource);
 [[nodiscard]] std::string robot_texture_path(int resource);
 [[nodiscard]] std::string motion_bank_path(int resource);
+
+// Reads the mixed-maker tables of RobotCatalogue that `document` has and
+// `catalogue` still lacks.
+void read_maker_tables(const json::JsonValue &document, RobotCatalogue &catalogue);
+
+// The legs' skeleton up to its torso (the node that turns with the aim),
+// and below it the body bones and arm mounts of `body` (a skeleton made for
+// the body's own maker): the legs' bone slots move to follow the body's.
+// The grafted nodes keep their bind pose where they sampled a track of the
+// other maker's motion bank. Null without a torso in either.
+[[nodiscard]] std::shared_ptr<const SkeletonNode> graft_body_section(const SkeletonNode &legs,
+                                                                     const SkeletonNode &body);
 
 // Throws std::runtime_error when a part id or type is out of range.
 [[nodiscard]] RobotAssembly assemble_robot(const RobotCatalogue &catalogue,

@@ -51,7 +51,7 @@
     480
    ],
    "layer": 1,
-   "extend_edges": "both", "edge_bands": [[0, 72], [376, 480]],
+   "extend_edges": "both", "edge_bands_right": [[0, 41], [376, 480]],
  "edge_bands_left": [[0, 72], [414, 480]]
   },
   {

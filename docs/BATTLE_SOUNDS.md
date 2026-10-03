@@ -92,8 +92,16 @@ not trigger this sound. The extracted `sound/sfx/battle/16.wav` is 1.332 seconds
 both player and computer mappings select it. The desktop logs the file queued
 for each destruction as `Death sound:`.
 
-The original times steps to its walk motions' frames. The port counts
-them by time instead (`footstep_seconds`), faster as the walk speeds up.
+Steps follow the feet. `0x0ad737` walks the skeleton and, for a grounded
+robot whose motion time moved (motion 10 excepted), counts in robot
++0x210c every contact node whose scale-channel key cursor changed
+(`0x0adc1c`). `0x093637` then calls the robot's step callback (+0x44b8, set
+by `0x093470` from the table at `0x249848` by robot +0x34ac) once if the
+count is nonzero; `0x093cf0` plays the step in motions 0-3. The port plays
+the step when a walking robot's contact node crosses a key
+(`contact_stepped`, the same crossings that start the step dust). A robot
+without contact nodes counts steps by time instead (`footstep_seconds`, a
+port value), faster as the walk speeds up.
 
 ## Weapons
 
@@ -199,8 +207,8 @@ was stale. The current extraction contains 174 nonempty break-sound mappings
 among 222 object records. All 89 distinct explicit WAV/OGG references found
 in the checked-in data resolve across the runtime's asset roots. These
 counts establish configured-file coverage, not completeness against every
-original sound event. The original events listed above remain unmapped, and
-footstep timing remains time-based rather than keyed to animation frames.
+original sound event. The original events listed above remain unmapped.
+Footsteps follow the feet's contact keys (above).
 
 Each playing effect retains its category. Gain is applied when mixing, so
 changes affect existing loops/one-shots without restarting them; muted voices

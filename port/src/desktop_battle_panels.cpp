@@ -98,9 +98,10 @@ void BattlePanels::draw_gauges(const Viewport &viewport, const Battle &battle,
                                const double clock) const {
   const Combatant &player = viewer(battle);
   const HudGauge &durability = style_.durability;
-  const float armour = ratio(player.hp, player.max_hp);
+  // 0x04aaed draws the shown armour (+0x50) and flashes while it fills.
+  const float armour = ratio(player.shown_armour.value(), player.max_hp);
   std::uint32_t colour = armour >= durability.low ? durability.colour : durability.low_colour;
-  if (player.hit_flash > 0.0F) {
+  if (player.shown_armour.filling()) {
     colour = hud_flash(colour, durability.flash_colour, clock, style_.flash_frames);
   }
   put(viewport, durability.frame, durability.anchor);

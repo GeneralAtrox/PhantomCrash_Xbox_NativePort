@@ -51,6 +51,7 @@ std::unique_ptr<Screen> ScreenRunner::make_event(const std::string &name, const 
 }
 
 void ScreenRunner::show(const std::string &name, const bool events) {
+  apply_pending_cheats();
   if (screen_ && screen_->gameplay_paused()) {
     audio_.set_paused(false); // Tools > Level Select may replace a paused battle.
   }

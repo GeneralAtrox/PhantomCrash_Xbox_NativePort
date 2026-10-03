@@ -85,6 +85,14 @@ public:
   void set_auxiliary_frames(const std::array<float, 3> &frames) {
     auxiliary_frames_ = frames;
   }
+  // Whether the motion keeps its sideways sway on the body (PoseInput);
+  // a motion frozen by play() keeps the value it had.
+  void set_keep_sway(bool keep) noexcept {
+    keep_sway_ = keep;
+  }
+  void set_wheel_turn(float turn) noexcept {
+    wheel_turn_ = turn;
+  }
 
   [[nodiscard]] int motion() const noexcept {
     return motion_;
@@ -118,7 +126,10 @@ private:
     int motion{-1};
     float frame{};
     float weight{1.0F};
+    bool keep_sway{true};
   };
+  bool keep_sway_{true};
+  float wheel_turn_{};
   std::array<Layer, motion_layers> previous_{}; // what the motion blends from (MotionSource)
   std::size_t previous_count_{};
   float speed_{1.0F};

@@ -112,11 +112,11 @@ TEST_CASE("the training script names its lessons and battle") {
   const auto script = parse_training(json::parse(R"({"stage": "choco_day",
     "music": "tutorial_battle",
     "lessons": {"training_basic": {"title": "Basic Controls", "mode": 0}},
-    "battle": {"chase_camera": {"distance": 12},
+    "battle": {"chase_camera": {"behind": 12},
                "courses": {"0": [{"state": 24}, {"state": 34, "end": true}]}}})"));
   CHECK(script.return_to == "pepper_guide");
   CHECK(script.lessons.at("training_basic").mode == 0);
-  CHECK(near(script.battle.camera.distance, 12.0F));
+  CHECK(near(script.battle.camera.behind, 12.0F));
   CHECK(script.battle.courses.at(0).size() == 2);
   CHECK(script.battle.buttons.exit == button::back);
   CHECK_THROWS(parse_training(json::parse(R"({"stage": "x", "lessons": {},

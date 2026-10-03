@@ -97,12 +97,14 @@ void Battle::ai_move(Combatant &drone, const float seconds) {
   const auto &level = data.levels[static_cast<std::size_t>(s.ability)];
   const auto &motion = drone.mover.tuning();
   s.control = {};
-  const bool ranker =
+  const bool ranker_entrant =
       std::ranges::find(data.ranker_entrants, s.entrant) != data.ranker_entrants.end();
-  if (ranker) {
+  if (ranker_entrant) {
     if (s.entrant == static_cast<int>(data.value("ranker_no_random_cloak"))) {
       s.forced_weapons |= static_cast<unsigned>(data.ranker_weapon_masks[2]);
     }
+    // 0x05de0f counts +0x132 down and, when it runs out, chooses the route
+    // (0x05e494) or the attack (0x05e660) afresh; both start it at 8 s.
     s.ranker_left -= seconds;
     if (s.ranker_left <= 0) {
       const int band =
@@ -110,7 +112,7 @@ void Battle::ai_move(Combatant &drone, const float seconds) {
       s.forced_weapons |= static_cast<unsigned>(data.ranker_weapon_masks[band]);
       s.ranker_defensive |= band < 2 || static_cast<float>(s.ticks) / data.value("tick_hz") >
                                             data.value("ranker_defensive_seconds");
-      s.ranker_orbit = false;
+      s.ranker_orbit = s.ranker_provoked = false;
       s.ranker_engage =
           s.target >= 0 && (band < 4 || ai_chance(random_, data.value("ranker_full_health_chance"),
                                                   data.value("probability_scale")));
@@ -118,6 +120,8 @@ void Battle::ai_move(Combatant &drone, const float seconds) {
           data.value(s.ranker_engage ? "ranker_engage_seconds" : "ranker_route_seconds");
     }
   }
+  // Provoked, a ranker runs the common states until it chooses again.
+  const bool ranker = ranker_entrant && !s.ranker_provoked;
   if (ranker && !s.ranker_engage && s.visible &&
       ai_chance(random_, data.value("ranker_route_attack_chance"),
                 data.value("probability_scale"))) {

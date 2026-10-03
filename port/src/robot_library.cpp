@@ -10,6 +10,7 @@ RobotLibrary::RobotLibrary(const DataRoots &roots) : roots_(roots) {
   try {
     catalogue_ = parse_robot_catalogue(json::read_file(roots.asset("robots/catalogue.json")));
     skeletons_ = parse_robot_skeletons(json::read_file(roots.asset("robots/skeletons.json")));
+    read_maker_tables(roots.document("ui/robot_preview.json"), catalogue_);
     available_ = true;
   } catch (const std::exception &error) {
     errors_.push_back(std::string("Robots are unavailable: ") + error.what());
@@ -80,7 +81,7 @@ void RobotAnimator::play(const int motion, const bool loop, const float fade_fra
       std::shift_left(previous_.begin(), previous_.end(), 1); // the oldest gives way
       --previous_count_;
     }
-    previous_[previous_count_] = {motion_, frame_, previous_count_ == 0 ? 1.0F : fade_};
+    previous_[previous_count_] = {motion_, frame_, previous_count_ == 0 ? 1.0F : fade_, keep_sway_};
     ++previous_count_;
   }
   motion_ = motion;
@@ -123,7 +124,7 @@ MotionSource RobotAnimator::source(const MotionBank *bank) const {
   if (fade_ < 1.0F) {
     for (std::size_t i = 0; i < previous_count_; ++i) {
       const Layer &layer = previous_[i];
-      out.previous[i] = {bank->motion(layer.motion), layer.frame, layer.weight};
+      out.previous[i] = {bank->motion(layer.motion), layer.frame, layer.weight, layer.keep_sway};
     }
     out.previous_count = previous_count_;
     out.weight = fade_;
@@ -158,6 +159,7 @@ void RobotAnimator::pose(const Mat4 &root, const float aim_yaw, const float aim_
   input.aim_pitch = aim_pitch;
   input.forearm_turn = assembly_.forearm_turn;
   input.keep_sway = keep_sway;
+  input.wheel_turn = wheel_turn_;
   build_pose(*assembly_.skeleton, input, out);
 }
 
@@ -212,13 +214,15 @@ MovementTuning stride_tuning(RobotLibrary &library, const RobotAssembly &assembl
     return base;
   }
   const auto take = [&](const int motion, float &speed) {
-    if (const float stride = stride_speed(*bank, assembly, motion); stride > 0.0F) {
+    const float stride = stride_speed(*bank, assembly, motion);
+    if (stride > 0.0F) {
       speed = stride;
     }
+    return stride > 0.0F;
   };
-  take(robot_motion::walk, base.walk_speed);
+  base.walk_stride = take(robot_motion::walk, base.walk_speed);
   take(robot_motion::walk_back, base.back_speed);
-  take(robot_motion::dash, base.dash_speed);
+  base.dash_stride = take(robot_motion::dash, base.dash_speed);
   take(robot_motion::dash_back, base.dash_back_speed);
   return base;
 }

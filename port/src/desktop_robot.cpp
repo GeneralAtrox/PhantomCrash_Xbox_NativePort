@@ -44,6 +44,7 @@ RobotVisual::RobotVisual(WorldRenderer &world, const RobotAssembly &assembly) : 
   for (std::size_t side = 0; side < 2; ++side) {
     parts_.push_back({load(world, assembly.arm_models[side]), static_cast<int>(side) + 1, 0, {}});
     shoulders_.push_back({load(world, assembly.shoulder_models[side]), 0, 0, {}});
+    shoulder_shifts_[side] = translation(assembly.shoulder_shifts[side]);
   }
   for (const std::vector<Part> *parts : {&parts_, &shoulders_}) {
     for (const Part &part : *parts) {
@@ -90,7 +91,8 @@ void RobotVisual::add_items(const Pose &pose, const Mat4 &root, std::vector<Worl
     }
     WorldItem item;
     item.model = part.model;
-    item.world = shoulder_mounts ? (*shoulder_mounts)[side] : mount;
+    // A battle's mounts already carry the shift (RobotCombat).
+    item.world = shoulder_mounts ? (*shoulder_mounts)[side] : shoulder_shifts_[side] * mount;
     item.paint = paint_;
     items.push_back(std::move(item));
   }

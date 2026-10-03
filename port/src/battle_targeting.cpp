@@ -1,5 +1,6 @@
 #include "phantomcrash/battle.hpp"
 #include "phantomcrash/weapon_reach.hpp"
+#include "target_view.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -16,15 +17,6 @@ constexpr float sight_canvas_height = 480.0F;
 constexpr float sight_near_plane = 0.3F;
 constexpr float sight_far_plane = 6000.0F;
 
-bool in_target_view(const TargetView &view, const Vec3 point) {
-  const Mat4 &m = view.view_projection;
-  const Vec3 clip = transform_point(point, m);
-  const float w = point.x * m.at(0, 3) + point.y * m.at(1, 3) + point.z * m.at(2, 3) + m.at(3, 3);
-  // D3D's homogeneous clip volume, including near/far planes.
-  return w > 0.0F && clip.z >= 0.0F && clip.z <= w && std::abs(clip.x) <= w &&
-         std::abs(clip.y) <= w;
-}
-
 // 0x0525b0: whether `point` lands inside the box of half size `half`
 // around the reticle's centre.
 bool in_lock_box(const TargetView &view, const Vec3 point, const std::array<float, 2> centre,
@@ -37,6 +29,15 @@ bool in_lock_box(const TargetView &view, const Vec3 point, const std::array<floa
 }
 
 } // namespace
+
+bool in_target_view(const TargetView &view, const Vec3 point) {
+  const Mat4 &m = view.view_projection;
+  const Vec3 clip = transform_point(point, m);
+  const float w = point.x * m.at(0, 3) + point.y * m.at(1, 3) + point.z * m.at(2, 3) + m.at(3, 3);
+  // D3D's homogeneous clip volume, including near/far planes.
+  return w > 0.0F && clip.z >= 0.0F && clip.z <= w && std::abs(clip.x) <= w &&
+         std::abs(clip.y) <= w;
+}
 
 bool Battle::clear_target_sight(const Vec3 from, const Vec3 to) const {
   if (stage_.segment_hit(from, to) || wrecks_.segment_hit(from, to) ||
@@ -120,6 +121,35 @@ int Battle::find_lock(const Combatant &robot, const WeaponTuning &weapon, const 
     if (distance < nearest_distance &&
         in_lock_box(*view, centre, boxes.centre, outer ? boxes.outer_half : boxes.inner_half) &&
         target_visible(robot, other)) {
+      nearest_distance = distance;
+      nearest = static_cast<int>(index);
+    }
+  }
+  return nearest;
+}
+
+// 0x04f6a0: the robot a robot locks (+0x130) among its rivals nearest
+// first (0x04f152's list): within lock_range, not camouflaged, in its
+// view with nothing between them, and inside its sight's inner box.
+int Battle::ai_lock_target(const Combatant &drone) const {
+  const std::optional<TargetView> view = sight_view(drone);
+  if (!view || !view->boxes || !settings_.ai.original) {
+    return -1;
+  }
+  const Vec3 from = drone.aim_origin();
+  int nearest = -1;
+  float nearest_distance = settings_.ai.original->value("lock_range");
+  for (std::size_t index = 0; index < robots_.size(); ++index) {
+    const Combatant &other = robots_[index];
+    if (&other == &drone || !other.alive || other.team == drone.team || other.camouflaged ||
+        other.mover.mode() == MoveMode::scripted) {
+      continue;
+    }
+    const Vec3 centre = other.centre(settings_.robot_height);
+    const float distance = length(centre - from);
+    if (distance < nearest_distance && in_target_view(*view, centre) &&
+        in_lock_box(*view, centre, view->boxes->centre, view->boxes->inner_half) &&
+        clear_target_sight(from, centre)) {
       nearest_distance = distance;
       nearest = static_cast<int>(index);
     }

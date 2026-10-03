@@ -117,9 +117,10 @@ the robot's movement:
   the robot climbs 0.84 h and its throw the rest; letting go (+0x2558)
   ends the lift. A re-press latches descent once the lift spent is more
   than the rise left. +0x3c × the speed factor (0.1..90, legs 0: 2.35)
-  goes to +0x78 and +0x7c, the turn in degrees a tick: 0x08e257 turns
-  by +0x7c on the ground, in a dash and in a dodge, 0x0905af by +0x78 in
-  the air. +0x9c and +0xac × the speed factor (0.1..30, legs 0: 0.55 and
+  goes to +0x78 and +0x7c, the turn in degrees a 60 Hz frame: 0x08e257
+  turns by +0x7c on the ground, in a dash and in a dodge, 0x0905af by
+  +0x78 in the air, each times DAT_a69c94 / DAT_ac73b8 (60 / 30 in a
+  battle), so two frames' worth a tick. +0x9c and +0xac × the speed factor (0.1..30, legs 0: 0.55 and
   0.3) go to +0x80 and +0x84, the push a dodge (0x08d98c) gives on the
   ground and in the air, in units a tick.
 
@@ -366,8 +367,14 @@ ignores the buttons (they fire weapons) and gives way to lesson messages.
 - **Load.** `load_stats` and `loaded_movement` (`port/src/robot_load.cpp`)
   weigh the robot and scale its movement as above. With the leg motions'
   strides (`stride_tuning`) the walk and dash rates set both the motions'
-  playback (`walk_motion_rate`, `dash_motion_rate`) and the speeds. Without
-  root motion, the speed factor scales the port's speeds. The turns
+  playback (`walk_motion_rate`, `dash_motion_rate`) and the speeds. The
+  original moves a flagged model by its motion's root at that rate and
+  any other by the value / 216 a frame (`0x08e6b6` walk, `0x08f2da` dash),
+  so a flagged model whose motion has no stride the port can measure (the
+  RUMBLING opponents' motions are never measured) takes the table's own
+  stride, and the speed comes to the value / 216 either way. The
+  `movement` walk and dash speeds are left only for robots without legs
+  records. The turns
   (`turn_degrees_per_second`, `dash_turn_degrees_per_second` and
   `air_turn_degrees_per_second`) are the legs' turn under the load, 30
   ticks a second, and `jump_height` is the legs' jump under the load;

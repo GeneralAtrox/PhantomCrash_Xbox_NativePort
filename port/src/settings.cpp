@@ -190,6 +190,12 @@ Settings settings_from_json(const json::JsonValue &value) {
   settings.rumble_robots = std::clamp(
       static_cast<int>(std::lround(value.number_or("rumble_robots", settings.rumble_robots))), 0,
       max_rumble_robots);
+  if (const auto *cheats = value.find("cheats")) {
+    settings.cheats.infinite_money = cheats->boolean_or("infinite_money", false);
+    settings.cheats.never_die = cheats->boolean_or("never_die", false);
+    settings.cheats.infinite_ammo = cheats->boolean_or("infinite_ammo", false);
+    settings.cheats.open_contests = cheats->boolean_or("open_contests", false);
+  }
   if (const auto *game = value.find("game")) {
     settings.game = game_from_json(*game);
   }
@@ -262,6 +268,11 @@ json::JsonValue settings_to_json(const Settings &settings) {
       {"coop_profiles", JsonValue{std::move(profiles)}},
       {"host_controls", host_controls_to_json(settings.host_controls)},
       {"rumble_robots", JsonValue{static_cast<std::int64_t>(settings.rumble_robots)}},
+      {"cheats",
+       JsonValue{JsonValue::Object{{"infinite_money", JsonValue{settings.cheats.infinite_money}},
+                                   {"never_die", JsonValue{settings.cheats.never_die}},
+                                   {"infinite_ammo", JsonValue{settings.cheats.infinite_ammo}},
+                                   {"open_contests", JsonValue{settings.cheats.open_contests}}}}},
       {"game", game_to_json(settings.game)},
       {"quest", quest_to_json(settings.quest)},
       {"save_slots", JsonValue{std::move(slots)}},

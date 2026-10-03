@@ -67,7 +67,7 @@ TEST_CASE("battle monitor timing uses simulation seconds independently of draws"
 
 TEST_CASE("stage monitor settings bind named surfaces independently of sky") {
   const auto stages = parse_stages(json::parse(R"({
-    "monitor": {"switch_seconds": 5, "aspect": 1.5, "camera": {"distance": 20}},
+    "monitor": {"switch_seconds": 5, "aspect": 1.5, "camera": {"behind": 20}},
     "stages": {"arena": {"sky_nodes": ["sky"], "monitor_nodes": ["gate", "ship"]}}
   })"));
   const auto &stage = stages.at("arena");
@@ -75,7 +75,7 @@ TEST_CASE("stage monitor settings bind named surfaces independently of sky") {
   CHECK(stage.sky_nodes.size() == 1);
   CHECK(stage.monitor.switch_seconds == 5);
   CHECK(stage.monitor.aspect == 1.5F);
-  CHECK(stage.monitor.camera.distance == 20);
+  CHECK(stage.monitor.camera.behind == 20);
   CHECK_THROWS(parse_battle_monitor(json::parse(R"({"switch_seconds": 0})")));
 }
 

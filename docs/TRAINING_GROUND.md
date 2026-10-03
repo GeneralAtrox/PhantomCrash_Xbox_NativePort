@@ -38,6 +38,13 @@ points are outside the play area. Live roster scattering can also select path
 points beyond the force field, so the TV filter checks position independently
 of scripted state. This confirms the port's flow, not an emulator capture.
 
+Many Shinjuku path points are at a height of -4.0 over street ground at
+about -2.6 to -3.0. `Battle::place` and `add_robot` therefore stand a robot
+on the highest ground below its top (`robot_height` above the point), not
+only within the 0.5 ground snap; otherwise a robot scattered there starts
+under the street and falls out of the stage (a port reading; how the
+original lifts it is not traced).
+
 `StageCollision::in_play_area` requires stage ground below the robot and uses
 the converted surface-8 force-field outline and ceiling. Projected fence spans
 are merged before the ray-crossing test, handling duplicate panels, leaning
@@ -254,7 +261,10 @@ The port builds each part model's volume once (`shadow_volume.cpp`).
   by a quad to its neighbour or to its own other side. Blended and additive
   batches cast nothing.
 - The vertex shader moves the corners of faces turned away from the sun by
-  `volume_length` (a port value) along the light.
+  `volume_length` along the light. The original's volume shader (layer 3,
+  shader 6) takes c4 = (50, 0.5, 0, 1) and c5 = the light's direction
+  (`0x0c2637`); 50 is read as the length, though the shader's microcode
+  was not decoded.
 - The original counts with the depth-pass test and repeats a volume when
   the camera is inside it (0x0d2d60). The port counts with depth fail
   (two-sided stencil) and depth clamp instead, which needs closed volumes
@@ -665,7 +675,7 @@ The camera views (camera +0, the placement table at 0x23289c run by
 | View | Drawer | Camera |
 | --- | --- | --- |
 | 0 first person | 0x07e901 | In the cockpit: the eye a legs-model height above and ahead of the torso (0x2327f0, 0x232848), looking 24 units ahead. |
-| 1 behind | 0x07edfa | The chase camera, the start view (save +0x6048). |
+| 1 behind | 0x07edfa | The chase camera (`chase_camera`, below), the start view (save +0x6048). |
 | 2 right side | 0x07eb61 | (-5.5, 1.65, 0) from the feet in the camera's yaw frame. |
 | 3 left side | 0x07ec2f | (8, 5, 0), rising 2 per radian of aim pitch (0x2327c4). |
 | 4 front | 0x07ed12 | (0, 1.65, -8), looking back at the robot, rising with the pitch. |
@@ -676,6 +686,24 @@ Each view has its own field of view (camera +0x14 + view × 4); all six are
 20 ticks, and the other views cut. The yaw and pitch ease 0.3 a tick
 (0x07fc5e, 0x07fd72). The HUD's world pieces are drawn only in views 0 and
 1 (0x04eaa3).
+
+The behind view (0x07edfa, `training.json` `chase_camera`):
+- With R the camera's pitch then yaw, it looks at the feet + R (0, 2 + 2
+  |pitch|, -8) (0x2327c4) and wants its eye at the torso (camera +0xa0) +
+  R (0, 2 + 2 |pitch|, 6.15) (0x2327dc).
+- In the air (robot +0x252c clear) the wanted eye rises by robot +0x3240
+  less half the leg radius. +0x3240 is only ever read and its source is not
+  recovered; `robot_top` stands in for it with the battle's
+  `robot_height` (4.4).
+- A sight line from +0x3240 above the feet (one leg radius lower in the
+  air) to the wanted eye (0x053db4) that meets a wall puts the wanted eye
+  1.0 off the wall along its normal.
+- The eye closes a third of its gap a tick (0x0805a0(3.0)). Within the leg
+  radius plus 1.0 of the robot's lower sphere it rises 0.1 a tick
+  (0x17ac38). A sphere of radius 1.0 then sweeps it against the stage from
+  where it was (0x052c1f).
+- The port also keeps the eye in front of shut doors, props and wrecks
+  (stage objects in 0x06fd32 in the original).
 
 ### Cockpit
 

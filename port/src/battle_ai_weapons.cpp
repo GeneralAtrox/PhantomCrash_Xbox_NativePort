@@ -1,6 +1,7 @@
 // Original weapon request/timer policy (0x05b139 / 0x05b360).
 #include "phantomcrash/battle.hpp"
 #include "phantomcrash/battle_chatter.hpp"
+#include "target_view.hpp"
 #include <algorithm>
 
 namespace phantomcrash {
@@ -11,7 +12,17 @@ void Battle::ai_weapons(Combatant &drone, const float seconds) {
   const Combatant *target = s.target >= 0 && s.target < static_cast<int>(robots_.size())
                                 ? &robots_[static_cast<std::size_t>(s.target)]
                                 : nullptr;
-  const bool can_aim = s.pickup < 0 && target && s.visible && target->alive && target->shield <= 0;
+  // 0x05b360 serves a remembered target with nothing between them
+  // (0x05b992, 0x04f152's blocked byte) and, above ability 0, in the
+  // robot's view (the record's frustum byte); the sight angles of 0x05d11e
+  // do not apply.
+  bool can_aim = s.pickup < 0 && target && target->alive && target->shield <= 0;
+  if (can_aim) {
+    const Vec3 centre = target->centre(settings_.robot_height);
+    const std::optional<TargetView> view = sight_view(drone);
+    can_aim = clear_target_sight(drone.aim_origin(), centre) &&
+              (s.ability < 1 || (view && in_target_view(*view, centre)));
+  }
   const float distance =
       target ? length(target->centre(settings_.robot_height) - drone.aim_origin()) : 0;
   // The original gates new requests using the previous number of active
@@ -80,7 +91,7 @@ void Battle::ai_weapons(Combatant &drone, const float seconds) {
 
 FireControl Battle::ai_fire(const Combatant &drone) const {
   FireControl fire;
-  if (!settings_.ai.original || !drone.ai.visible) {
+  if (!settings_.ai.original || drone.ai.target < 0) {
     return fire;
   }
   for (std::size_t slot = 0; slot < weapon_slots; ++slot) {

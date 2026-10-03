@@ -65,8 +65,9 @@ a team of its own, and the screen (`TrainingScreen::start_backdrop`) keeps
 its stage, looks and effects and runs it without the HUD and unheard. The
 area's own battle is left as it was. A co-op contest stands them up from
 its match's world and save, and the places the players took go back to
-the contest robots' looks. `ResultBackdrop` follows one robot
-with the chase camera at 12.5, picking another standing robot every 20
+the contest robots' looks. `ResultBackdrop` watches one robot
+through the stage's fixed cameras with the eye brought within 12.5 of it
+(`0x07e538`), picking another standing robot every 20
 seconds or when that one is down, by the original's rule below; with
 nobody standing the camera stays where it was. RESULT follows only
 contests; one played without the live RUMBLING world (its tables failed
@@ -79,8 +80,13 @@ original does (researcher readings):
   (`0x04a6a0` spawns `0x046aa5`/`0x047aab`, the battle globals' 0xef370
   bytes) with quest +0x618c set, and stands up to six robots from the
   contest roster (`0x045a68`, `0x0456b7`; an empty slot is marked 0xfffe).
-  `0x04a78c` follows one robot with the chase camera at 12.5 (`0x07e538`)
-  and every 600 frames, or when that robot is gone or its +0x4c passes 60,
+  `0x04a78c` watches one robot through `0x07e538`: the battle camera's
+  fixed view (`0x07f641`, the placement table's view 5: every 30 ticks the
+  first of the three stage points nearest the robot that sees it, else the
+  nearest), its eye then brought within 12.5 of the look point (the torso
+  one leg radius up) along the line between them. With no point seeing the
+  robot the eye can stand behind or inside scenery, as in the original.
+  Every 600 frames, or when that robot is gone or its +0x4c passes 60, it
   picks another standing robot at random ((current + 1 + rand % 5) % 6);
   with none it falls back to `0x07e657`.
 - **Award.** On a champion win (+0x1a) of a contest the player has not won
@@ -100,6 +106,39 @@ original does (researcher readings):
   `0x11e6b0`), turned about z, y and x and spun 0.02 rad a frame about
   its own y; the plate slides out to the left and the dim fades by a
   hundredth a frame.
+
+## Attract demo
+
+The title's idle timeout starts the same kind of battle on its own
+(original scene 1: factory `0xa2c0e`, init `0x0135a0`, task `0x0134cd`;
+researcher readings). The port's screen is `attract_demo`
+(`desktop_screens_attract.cpp`, `desktop_attract_demo.cpp`), tuned by
+`data/ui/attract_demo.json`:
+
+- **Battle.** `0x0134cd` draws a contest from `{3, 7, 20, 24, 37, 41}`
+  (`0x1d6f54`, rand % 6), sets its roster up (`0x045270`), stands up to
+  six of it (`0x045a68`, `0x0456b7`) and starts the battle task
+  `0x04a6a0` with quest +0x618c = 1, which the draw (`0x047aab`) reads as
+  "no HUD" and the setup (`0x046aa5`) as battle state 3. The stage is the
+  save's stage index (+0x6104: area = index / 2, night when odd; the
+  finale's 6 and 7 play 0). The port draws the roster with
+  `draw_roster`, stands it up with `RumblingWorld::stand_up_contest`, builds a
+  RUMBLING battle screen on that stage and turns it into a backdrop at
+  once (`TrainingScreen::start_backdrop` with the robots' looks), which
+  `ResultBackdrop` follows by the camera rule above.
+- **Stages.** The cleanup (`0x013383`) moves the index on by `0x1d6f34`
+  (`[2, 3, 4, 5, 1, 0]`), so one session's demos go round stages 0, 2, 4, 1,
+  3, 5. The port keeps the index in the runner for the session, from 0.
+- **Timing.** Once the battle exists (`0x0468b2`), `0x013488` plays track
+  5 (12SENTOU, the port's `tutorial_battle`) and fades in over 0.5 s;
+  `0x013473` waits for the fade. `0x013404` counts 60 s (ac73b8 × 60 scene
+  ticks) and draws PRESS START BUTTON (`0x0135cd`: sprite `0xe91` at (225,
+  336), blinking). A fresh press on any pad of mask 0xfff0 (`0x01365b`:
+  every button but the D-pad) cuts to the title without a fade (result 1,
+  scene 40). Running out fades out over 0.5 s (`0x0133e8`) to the intro
+  loop (result 0, scene 158), as the continuation `0xa2c54` maps them.
+- The battle runs unheard in the port, as the receipt's does; whether the
+  original's demo plays its battle sounds was not checked.
 
 ## Result artwork and controls
 

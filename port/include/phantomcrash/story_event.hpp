@@ -122,6 +122,9 @@ struct StoryEvent {
 [[nodiscard]] std::vector<StoryEvent> parse_story_events(const json::JsonValue &document,
                                                          const GlyphFont &font);
 [[nodiscard]] TalkTables parse_talk_tables(const json::JsonValue &document);
+// story/talk.json's background_edges: the widescreen edges of every talk
+// background's back and front (the extraction has none).
+void apply_talk_edges(const json::JsonValue &tuning, TalkTables &tables);
 // A script's command array, as events.json and tables/lessons.json give it.
 [[nodiscard]] std::vector<EventCommand> parse_event_commands(const json::JsonValue &commands,
                                                              const GlyphFont &font);

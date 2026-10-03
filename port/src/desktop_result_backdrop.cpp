@@ -5,7 +5,7 @@
 
 namespace phantomcrash {
 namespace {
-constexpr float chase_distance = 12.5F; // 0x07e538, as 0x04a78c calls it
+constexpr float watch_distance = 12.5F; // 0x07e538, as 0x04a78c calls it
 constexpr float watch_seconds = 20.0F;  // 600 frames at 30 (0x04a78c)
 constexpr int roster_slots = 6;         // the stood-up contest robots
 constexpr int next_pick_spread = 5;     // (current + 1 + rand % 5) % 6
@@ -26,9 +26,9 @@ ResultBackdrop::ResultBackdrop(std::shared_ptr<ReplayArchive> tape, WorldFrame s
     tape_.reset();
     return;
   }
-  ChaseCameraSettings settings = tape_->chase;
-  settings.distance = chase_distance;
-  chase_.emplace(settings);
+  chase_.emplace(tape_->chase);
+  view_settings_ = tape_->views;
+  fixed_points_ = tape_->fixed_points;
   frame_ = tape_->read(0);
   pick();
 }
@@ -39,9 +39,9 @@ void ResultBackdrop::adopt(std::unique_ptr<BackdropBattle> battle) {
   }
   battle_ = std::move(battle);
   tape_.reset();
-  ChaseCameraSettings settings = battle_->backdrop_chase();
-  settings.distance = chase_distance;
-  chase_.emplace(settings);
+  chase_.emplace(battle_->backdrop_chase());
+  view_settings_ = battle_->backdrop_views();
+  fixed_points_ = battle_->backdrop_fixed_points();
   frame_ = {};
   frame_.subjects = battle_->backdrop_subjects();
   subject_ = -1;
@@ -90,8 +90,23 @@ void ResultBackdrop::follow(const StageCollision &collision, const float seconds
     return;
   }
   const CameraSubject &subject = frame_.subjects[static_cast<std::size_t>(subject_)].camera;
-  chase_->tick(subject.position, subject.yaw, subject.pitch, collision, seconds, snap_);
-  shot_ = chase_->chase();
+  if (snap_ || !views_) {
+    CameraViewSettings settings = view_settings_;
+    settings.start_view = camera_view::fixed;
+    views_.emplace(settings, fixed_points_);
+  }
+  // A stage without fixed cameras falls back to the behind view.
+  chase_->tick(subject, collision, seconds, snap_);
+  const SightTest sees = [&collision](const Vec3 from, const Vec3 to) {
+    return !collision.segment_hit(from, to);
+  };
+  views_->tick(subject, chase_->chase(), seconds, sees, snap_);
+  shot_ = views_->shot();
+  const Vec3 away = shot_.eye - shot_.target;
+  if (const float distance = length(away); distance > watch_distance) {
+    shot_.eye = shot_.target + away * (watch_distance / distance);
+  }
+  chase_->set_shot(shot_);
   snap_ = false;
   framed_ = true;
 }

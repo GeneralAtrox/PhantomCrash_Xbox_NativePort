@@ -6,6 +6,7 @@
 #include "phantomcrash/entry_shield.hpp"
 #include "phantomcrash/enemy_path.hpp"
 #include "phantomcrash/robot_mover.hpp"
+#include "phantomcrash/shown_armour.hpp"
 #include "phantomcrash/stage_collision.hpp"
 #include "phantomcrash/stage_doors.hpp"
 #include "phantomcrash/stage_objects.hpp"
@@ -99,7 +100,8 @@ struct Combatant {
   Vec3 push;                             // knockback still carrying it, units a second
   std::vector<float> damage_from;        // by attacker, since it was last whole
   int kills{};
-  float hit_flash{};
+  float hit_flash{};        // seconds of white left (hit_flash_seconds)
+  ShownArmour shown_armour; // the gauges' armour (+0x50)
   bool camouflaged{};
   float camouflage{1.0F};   // gauge, 0..1
   float camouflage_sweep{}; // 0 seen .. 1 fully camouflaged, easing after `camouflaged`
@@ -124,6 +126,12 @@ struct Combatant {
 struct FireControl {
   std::array<bool, weapon_slots> fire{}; // held
   bool camouflage{};                     // pressed: toggles Optic Camouflage
+};
+
+// Tools > Cheats for the piloted robots (a port addition; off by default).
+struct BattleCheats {
+  bool never_die{};     // armour stops at 1
+  bool infinite_ammo{}; // weapons stay full
 };
 
 // A battle on one stage: robot 0 is the player; the others are drones
@@ -238,6 +246,9 @@ public:
   void set_allowed_weapons(unsigned mask) noexcept {
     allowed_weapons_ = mask;
   }
+  void set_cheats(const BattleCheats cheats) noexcept {
+    cheats_ = cheats;
+  }
   // Robot `index` locks missiles and grenades after holding a target this long.
   void set_lock_seconds(int index, float seconds);
   void set_sight(int index, const SightBoxes &boxes);
@@ -316,6 +327,8 @@ private:
   void ai_pickup(Combatant &drone, float seconds);
   void ai_weapons(Combatant &drone, float seconds);
   void ai_reactions(Combatant &drone, float seconds);
+  void ai_jump(Combatant &drone, float seconds); // 0x05949b's jump at a target off the sight
+  [[nodiscard]] int ai_lock_target(const Combatant &drone) const; // 0x04f6a0, robot +0x130
   [[nodiscard]] FireControl ai_fire(const Combatant &drone) const;
   void fire_drones(float seconds);
   void update_lock(Combatant &robot, std::size_t slot, float seconds);
@@ -335,6 +348,9 @@ private:
                   float seconds);
   void recover(Combatant &robot, float seconds) const;
   float stage_floor(Combatant &robot) const;
+  // `position` raised onto the ground under a robot standing there, which
+  // becomes `mover`'s floor.
+  [[nodiscard]] Vec3 placed(Vec3 position, float radius, RobotMover &mover) const;
   std::optional<Vec3> tracked_sight(const Combatant &robot, Vec3 crosshair) const;
   void shot_down(int victim);
   void collide(int index, float seconds);
@@ -375,6 +391,7 @@ private:
   std::vector<BattleEvent> events_;
   std::vector<int> arrivals_;
   unsigned allowed_weapons_{0xf};
+  BattleCheats cheats_;
   int destroyed_{};
   bool drones_active_{true};
   bool first_kill_told_{}; // chatter_event::first_kill is said once a battle

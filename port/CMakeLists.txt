@@ -30,6 +30,7 @@ add_library(phantomcrash_core
   src/weapon_mounts.cpp
   src/pose_transform.cpp
   src/battle_damage.cpp
+  src/shown_armour.cpp
   src/battle_death.cpp
   src/battle_wrecks.cpp
   src/robot_wrecks.cpp
@@ -48,6 +49,7 @@ add_library(phantomcrash_core
   src/robot_ai_data.cpp
   src/battle_ai_pickups.cpp
   src/battle_ai_navigation.cpp
+  src/battle_ai_jump.cpp
   src/battle_ai_weapons.cpp
   src/battle_ai_reactions.cpp
   src/battle_ai.cpp
@@ -87,6 +89,7 @@ add_library(phantomcrash_core
   src/battle_watch.cpp
   src/split_screen.cpp
   src/sleep.cpp
+  src/cheats.cpp
   src/contests.cpp
   src/schedule.cpp
   src/schedule_script.cpp
@@ -248,6 +251,7 @@ if(BUILD_TESTING)
     tests/option_screen_tests.cpp
     tests/option_tests.cpp
     tests/battle_tests.cpp
+    tests/battle_ai_tests.cpp
     tests/armory_tests.cpp
     tests/battle_damage_tests.cpp
     tests/battle_chatter_tests.cpp
@@ -273,6 +277,7 @@ if(BUILD_TESTING)
     tests/battle_music_tests.cpp
     tests/sonic_amp_tests.cpp
     tests/garage_stock_tests.cpp
+    tests/cheats_tests.cpp
     tests/dealer_tests.cpp
     tests/used_sv_tests.cpp
     tests/chip_shop_tests.cpp
@@ -359,6 +364,7 @@ if(PHANTOMCRASH_BUILD_DESKTOP)
     src/desktop_input.cpp
     src/desktop_input_bindings.cpp
     src/desktop_audio_menu.cpp
+    src/desktop_cheats_menu.cpp
     src/desktop_controls_dialog.cpp
     src/desktop_intro.cpp
     src/desktop_main.cpp
@@ -408,7 +414,10 @@ if(PHANTOMCRASH_BUILD_DESKTOP)
     src/desktop_replay_overlay.cpp
     src/desktop_match_result.cpp
     src/desktop_screens_result.cpp
+    src/desktop_screens_attract.cpp
+    src/desktop_attract_demo.cpp
     src/desktop_screens_story.cpp
+    src/desktop_screens_cheats.cpp
     src/desktop_training_sound.cpp
     src/desktop_training_camera.cpp
     src/desktop_training_live.cpp

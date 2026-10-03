@@ -155,6 +155,16 @@ inline constexpr std::size_t save_slot_count = 3;
 [[nodiscard]] QuestSave quest_from_json(const json::JsonValue &value);
 [[nodiscard]] json::JsonValue quest_to_json(const QuestSave &quest);
 
+// Tools > Cheats' switches (a port addition; all off, as the original).
+// The one-off cheats change the game itself (cheats.hpp).
+struct CheatOptions {
+  bool infinite_money{}; // the money stays at money_limit
+  bool never_die{};      // a player's armour stops at 1
+  bool infinite_ammo{};  // a player's weapons stay full
+  bool open_contests{};  // every contest held may be entered: no ranker or regulation gate
+  bool operator==(const CheatOptions &) const = default;
+};
+
 inline constexpr int default_rumble_robots = 10;
 inline constexpr int max_rumble_robots = 16;
 
@@ -176,6 +186,7 @@ struct Settings {
   // (data/world/rumbling.json roster "live_size"); 0 keeps the original's
   // roster size. A port addition.
   int rumble_robots{default_rumble_robots};
+  CheatOptions cheats;
   GameOptions game;
   QuestSave quest;
   // The games SAVE has written to its slots, for LOAD GAME (the original's

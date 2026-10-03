@@ -114,6 +114,7 @@ ScreenRunner::ScreenRunner(SDL_Renderer *renderer, const DataRoots &roots, const
   return_scene_ = static_cast<int>(scenes.number_or("return_scene", -1));
   if (const auto talk = converted_table(roots, "tables/talk.json")) {
     talk_ = parse_talk_tables(*talk);
+    apply_talk_edges(roots.document("story/talk.json"), talk_);
   }
   if (const auto events = converted_table(roots, "tables/events.json")) {
     events_ = parse_story_events(*events, font_);
@@ -180,6 +181,12 @@ std::unique_ptr<Screen> ScreenRunner::make(const std::string &name, const std::s
     // The licence screen and Dolby play on the first intro only.
     const bool first_boot = intro_pass_ == 0;
     return std::make_unique<IntroScreen>(textures_, roots_, intro_, first_boot, intro_pass_++);
+  }
+  if (name == "attract_demo") {
+    if (auto demo = make_attract_demo()) {
+      return demo;
+    }
+    return make("intro", from); // as before the demo was ported
   }
   if (name == "title") {
     return std::make_unique<FrontEndScreen>(textures_, title_, menu_,
@@ -311,6 +318,7 @@ void ScreenRunner::tick(const InputFrame &raw_input, const double tick_seconds) 
       quest_ = *changed;
     }
   }
+  apply_cheat_switches();
   run_rumbling(tick_seconds);
   if (rumbling_world_) {
     screen_->set_live_rosters(quest_.rosters);

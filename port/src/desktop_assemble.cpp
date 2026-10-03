@@ -128,6 +128,30 @@ void AssembleScreen::draw_equipment(DrawList &list) const {
   }
 }
 
+// 0x03cbc3: the part shown in the details box, when it has a picture: a
+// CHIP's face, or a paint's or emblem's swatch.
+void AssembleScreen::draw_picture(DrawList &list, const Goods &goods) const {
+  const AssembleScript &script = logic_.script();
+  const AssembleDetails &details = script.details;
+  const Sprite *shown = nullptr;
+  if (goods.kind == GoodsKind::chip) {
+    if (const ChipRecord *record = logic_.parts().chip(goods.id); record && record->face) {
+      shown = &*record->face;
+    }
+  } else if (goods.kind == GoodsKind::paint || goods.kind == GoodsKind::emblem) {
+    const bool paint = goods.kind == GoodsKind::paint;
+    const std::vector<PriceEntry> &entries =
+        paint ? logic_.garage().paints : logic_.garage().emblems;
+    if (goods.id >= 0 && goods.id < static_cast<int>(entries.size())) {
+      shown = picture(paint ? script.paint_swatches : script.emblem_swatches,
+                      entries[static_cast<std::size_t>(goods.id)].index);
+    }
+  }
+  if (shown != nullptr) {
+    list.sprite(placed(*shown, details.picture_at, details.picture_layer));
+  }
+}
+
 // 0x01877e: the hangar's number, its sockets used and owned, its name and
 // Equipment Imperfection, or Underkill and Overweight side by side.
 void AssembleScreen::draw_panel(DrawList &list) const {

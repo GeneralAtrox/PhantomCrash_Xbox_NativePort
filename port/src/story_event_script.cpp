@@ -286,6 +286,23 @@ TalkTables parse_talk_tables(const json::JsonValue &document) {
   }
 }
 
+void apply_talk_edges(const json::JsonValue &tuning, TalkTables &tables) {
+  const auto *edges = tuning.find("background_edges");
+  if (edges == nullptr) {
+    return;
+  }
+  const auto *back = edges->find("back");
+  const auto *front = edges->find("front");
+  for (TalkBackground &background : tables.backgrounds) {
+    if (back != nullptr) {
+      parse_sprite_edges(*back, background.back);
+    }
+    if (front != nullptr) {
+      parse_sprite_edges(*front, background.front);
+    }
+  }
+}
+
 const StoryEvent *event_between(const std::vector<StoryEvent> &events, const int from_scene,
                                 const int to_scene, const std::vector<int> &seen,
                                 const StoryConditionContext *context) {

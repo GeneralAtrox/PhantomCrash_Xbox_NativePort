@@ -135,6 +135,13 @@ fee, zero for this contest), and garage. The current quest still saves normally
 on exit. The destination and rental are editable in `battle.quick_rental` in
 `data/world/rumbling.json`; `--start rumbling_d_rental` also opens it directly.
 
+**Tools > Cheats** holds infinite money, armour and ammo that never reach 0,
+and contests without ranker or regulation gates (switches, saved with the
+settings, all off by default), plus one-off changes to the quest: fill the
+empty hangars with one robot of each body model, add one of each distinct
+part, CHIP and module and every paint, emblem and music track, and go to any day (the
+menu marks the First and Area Ranker days). See [cheats](docs/CHEATS.md).
+
 The port finds `data\` by searching upward from the working directory and the
 executable, or takes `--root <folder>`. Other options: `--fullscreen`,
 `--windowed`, `--size <width>x<height>`, `--start <screen>` to begin on
@@ -161,7 +168,10 @@ movie. Any button skips the current step; one tap skips one step. Movies are
 read from the extracted `Media\movie` folder, or from `mods\` first.
 
 After the intro comes the title screen (press START) and the main menu, with
-the title music and menu sounds. QUEST MODE opens NEW GAME / LOAD GAME.
+the title music and menu sounds. QUEST MODE opens NEW GAME / LOAD GAME. Left
+idle for 30 s, the title plays the attract battle demo
+(`data\ui\attract_demo.json`): a RUMBLING contest's robots fight for a
+minute, then the intro plays again; any button goes back to the title.
 
 NEW GAME stops the music and plays the opening movie (any button skips it;
 `data\story\new_game.json`). Then comes the first conversation, Salsa and
@@ -230,7 +240,10 @@ and sticker, with NAME, DIS (take everything off), SPEC and EXIT. ARM and
 BACK first ask for the right or left side. The list greys out what cannot
 be fitted: another hangar holds it, it is of another maker than the robot
 (`same_maker`), a module needs more socket holes than are free, or a
-weapon sits on the other side. Gold is fitted here. A line's details show
+weapon sits on the other side. With `same_maker` off (a port mod), another
+maker's legs take the body's own body bones, and another maker's arms and
+back weapons hang from the body's maker's mounts (`robot_preview.json`'s
+maker tables). Gold is fitted here. A line's details show
 its own stats and the whole robot's before and after, with arrows, and
 confirm fits it or takes it off. A body with fewer socket holes takes the
 modules off. NAME names the hangar's Scoobee in NAME ENTRY. SV SPEC

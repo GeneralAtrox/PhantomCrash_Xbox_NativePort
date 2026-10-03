@@ -154,11 +154,16 @@
    "vs_mode",
    "vs_battle",
    "staff_roll",
-   "match_result"
+   "match_result",
+   "attract_demo"
   ],
   "ai": {
    "fight": true,
-   "trace": false
+   "trace": false,
+   "nearest_fallback_target": false,
+   "jump_keeps_target": false,
+   "rivals_by_sight": false,
+   "jump_any_floor": false
   }
  }
 }

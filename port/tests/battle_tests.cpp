@@ -227,6 +227,39 @@ TEST_CASE("robots stay inside the arena and out of its blocks") {
   CHECK(at.x <= 100.0F);
 }
 
+TEST_CASE("a robot placed a little under the ground stands on it") {
+  Battle battle(test_settings(), square_path());
+  battle.set_stage(StageCollision::box(ArenaBounds{}, 30.0F));
+  battle.add_robot("player", 0, {}, 0.0F, {}, 100.0F);
+  // Enemy path points lie up to about 1.5 under the street.
+  battle.place(0, {10.0F, -1.5F, 10.0F}, 0.0F);
+  for (int i = 0; i < 30; ++i) {
+    battle.tick({}, {}, tick);
+  }
+  CHECK(std::abs(battle.player().mover.position().y) < 0.01F);
+  CHECK(battle.player().mover.grounded());
+}
+
+TEST_CASE("the shown armour drains after a hit and flashes as it fills") {
+  ShownArmour shown;
+  shown.tick(1000.0F, 1000.0F, tick);
+  CHECK(shown.value() == 1000.0F);
+  // A fifth lost: 0.2 x 90 frames, 18 frames at 60 a second (0x076368).
+  shown.tick(800.0F, 1000.0F, 0.0F);
+  CHECK(shown.value() == 1000.0F);
+  shown.tick(800.0F, 1000.0F, 9.0F / 60.0F);
+  CHECK(std::abs(shown.value() - 900.0F) < 0.01F);
+  CHECK(!shown.filling());
+  shown.tick(800.0F, 1000.0F, 9.0F / 60.0F);
+  CHECK(shown.value() == 800.0F);
+  // A twentieth repaired: 0.05 x 300 frames, filling and flashing.
+  shown.tick(850.0F, 1000.0F, 5.0F / 60.0F);
+  CHECK(shown.filling());
+  shown.tick(850.0F, 1000.0F, 10.0F / 60.0F);
+  CHECK(!shown.filling());
+  CHECK(shown.value() == 850.0F);
+}
+
 TEST_CASE("the tutorial battle's data names its weapons and buttons") {
   const TrainingBattle setup = parse_training_battle(json::parse(R"({
     "weapons": {"handgun": {"kind": "gun"}},

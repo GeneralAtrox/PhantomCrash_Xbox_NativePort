@@ -80,12 +80,15 @@ struct RegulationCheck {
   const PartTables &parts;
   const GarageTables &garage;
   const PartStatsTable &stats;
+  // Tools > Cheats: any contest held may be entered, its rankers' and
+  // rentals' too, by any ridden Scoobee with the fee (a port addition).
+  bool open_contests{};
 };
 
 // A ridden Scoobee with a body, legs and a CHIP (0x01d4a4).
 [[nodiscard]] bool riding_ready(const QuestSave &quest);
 // The fee in hand, a Scoobee ridden and the class's maker, legs and other
-// rule met by it.
+// rule met by it (only the first two under open_contests).
 [[nodiscard]] bool meets_regulation(const RegulationCheck &check, const ContestClass &rules,
                                     const QuestSave &quest);
 

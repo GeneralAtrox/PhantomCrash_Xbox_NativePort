@@ -21,4 +21,16 @@ PoseContact pose_contact(const SkeletonNode &node, const Mat4 &parent, const Mot
   }
   return contact;
 }
+
+bool contact_stepped(const PoseContact &before, const PoseContact &now) {
+  if (now.motion != before.motion) {
+    return false;
+  }
+  for (std::size_t axis = 0; axis < 3; ++axis) {
+    if (now.keys[axis] > before.keys[axis]) {
+      return true;
+    }
+  }
+  return false;
+}
 } // namespace phantomcrash
