@@ -1,8 +1,9 @@
 # Entry shield rendering
 
 Validated against the European disc's XBE and shipped shader binaries on
-2026-09-30. This is a static validation of the original rendering path; it
-does not claim an emulator capture comparison or a corrected native renderer.
+2026-09-30, with the timing and lighting details added on 2026-10-03. This
+is a static validation of the original rendering path; it does not claim an
+emulator capture comparison.
 
 ## Shader selection
 
@@ -44,10 +45,15 @@ each channel, the colour term is equivalent to:
 d = abs(vertex.y + channel_phase)
 rainbow = abs((d >= 1 ? 2 : 0) - d)
 light = c5.rgb * max(dot(c4.xyz, vertex.normal), 0) + c6.rgb
-vertex.rgb = 0.75 * light + 0.5 * rainbow
+vertex.rgb = saturate(0.75 * light + 0.5 * rainbow)
 vertex.alpha = glow
 uv = (vertex.x + 0.5, vertex.y + 0.5 + scroll)
 ```
+
+`vertex.normal` is the mesh's own normal: `0x0c43ae` normalizes the light
+direction but does not take it into object space, so the lit side turns with
+the spinning shell rather than staying towards the light. The hardware clamps
+the output colour (oD0) to [0, 1].
 
 The phase at `0xa69c44` decreases by `0.03` per invocation of `0x0c43ae`,
 resetting to `1` when below `−1`. The scroll at `0x281828` starts at `1`,
@@ -63,6 +69,26 @@ waves, not the rainbow colours. The draw colour `0x64ffffff` is passed by the
 caller, but the rainbow vertex program supplies alpha from c9.x instead of
 consuming that diffuse alpha. `0x0c4373` clamps the supplied glow to [0, 1].
 
+## Timing
+
+A battle draws once per 30 Hz tick: `0x0b3220` calls `0x0c53b1`, which
+waits refresh / rate vertical blanks (`0xa69c94`, `0xac73b8`) before each
+swap. Every per-draw step is therefore 30 times a second:
+
+| Value | Where | Step per draw | Per second |
+| --- | --- | --- | --- |
+| Glow rise (to 0.3) | robot +0xac, `0x082e60` | +0.015 | 0.45 |
+| Glow fall | robot +0xac, `0x082e60` | −0.03 | 0.9 |
+| Shell angle | `0x988570`, `0x06f592` | +0.02, wraps at 2π | 0.6 rad |
+| Rainbow phase | `0xa69c44`, `0x0c43ae` | −0.03 | 0.9 |
+| UV scroll | `0x281828`, `0x0c43ae` | −0.01 | 0.3 |
+
+The glow falls once 10 or fewer timer frames are left (the timer at +0x27d4
+counts 1/60 s frames, two a tick) or when the armour is below 1; the shield
+is drawn while the glow is above zero. The angle, phase and scroll are
+globals stepped by each shield drawn, so with two shielded robots on screen
+they turn and cycle twice as fast.
+
 ## Native implementation
 
 The world vertex shader now evaluates the recovered height-dependent RGB
@@ -71,12 +97,20 @@ carries phase and scroll into every view and the replay archive. The shell's
 texture still supplies wave alpha; it is not recoloured in extraction. The
 extra 100/255 opacity multiplier has been removed.
 
-`BattleView` advances a shared 30 Hz clock once per simulation tick. Defaults
-are phase step -0.03 and scroll step -0.01, editable in the entry-shield
-settings in `data/world/training.json`. Rendering additional monitor or split
-views does not advance this clock. The exported glTF UVs remain a fallback
-for external viewers; the native rainbow shader replaces them.
+`BattleView::advance_shield` advances the shared angle, phase and scroll by
+elapsed time at `update_hz` (30) draws a second, times the number of robots
+whose glow is above zero (`per_shield`, on by default; off steps them once
+whatever the number). It advances continuously rather than in 30 Hz steps,
+so the effect is smooth at high frame rates, and rendering additional monitor
+or split views does not advance it. The rainbow branch of the world vertex
+shader lights with the untransformed mesh normal and clamps the colour. All
+rates are editable in the entry-shield settings in `data/world/training.json`.
+The exported glTF UVs remain a fallback for external viewers; the native
+rainbow shader replaces them.
 
-This implementation has been inspected in source only. No build, tests or
-runtime capture were performed for this change; appearance remains for user
-review. It is not a claim of exact shader or draw-state parity.
+The port's `ambient` and `sun_colour` stand in for c6 and c5: the shield is
+lit by the stage's lighting, like the robot inside it, rather than by the
+lighting record `0x0c43ae` indexes (from `0xa7836c`, 0x68 bytes apart). This
+is a deliberate choice; which record the original selects was not traced.
+Appearance remains for user review. It is not a claim of exact shader or
+draw-state parity.

@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <stdexcept>
 
 namespace phantomcrash {
@@ -81,10 +82,6 @@ Battle::Battle(BattleSettings settings, EnemyPath path, const std::uint32_t seed
     : settings_(std::move(settings)),
       stage_(StageCollision::box(settings_.arena, settings_.arena_wall_height)),
       path_(std::move(path)), random_(seed) {}
-
-void Battle::set_stage(StageCollision stage) {
-  stage_ = std::move(stage);
-}
 
 void Battle::set_doors(StageDoors doors) {
   doors_ = std::move(doors);
@@ -281,6 +278,8 @@ void Battle::separate() {
 
 void Battle::tick(const RobotControl &player, const FireControl &fire, const float seconds) {
   events_.clear();
+  const int plans = settings_.ai.navigation.plans_per_tick;
+  nav_plans_left_ = plans > 0 ? plans : std::numeric_limits<int>::max();
   wrecks_.tick(seconds);
   if (objects_) {
     objects_->tick(seconds);

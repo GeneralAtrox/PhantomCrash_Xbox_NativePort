@@ -140,7 +140,7 @@ void Assemble::update(const double tick_seconds, const InputFrame &input) {
   }
 }
 
-// 0x019a3e with 0x017060: left/right (sys 23) and up/down (sys 22) through
+// 0x019a3e with 0x017060: left/right (sys 4) and up/down (sys 3) through
 // the grid, cancel to EXIT (sys 4); confirm on a cell that cannot be
 // chosen is refused (sys 8).
 void Assemble::grid_input(const double tick_seconds, const InputFrame &input) {
@@ -215,7 +215,7 @@ void Assemble::choose_cell() {
   open_list();
 }
 
-// 0x01b78f: left and right choose the side on screen (sys 23); confirm
+// 0x01b78f: left and right choose the side on screen (sys 4); confirm
 // opens the list, cancel goes back to the grid.
 void Assemble::sides_input(const double tick_seconds, const InputFrame &input) {
   bool fresh = false;

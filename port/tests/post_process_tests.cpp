@@ -25,6 +25,17 @@ TEST_CASE("the original's screen effects default on and each selection survives 
   CHECK((partial.post_process == PostProcessOptions{false, true, true}));
 }
 
+TEST_CASE("volumetric light rides on dynamic lighting, on unless switched off") {
+  CHECK(PostProcessOptions{}.volumetric_light);
+  CHECK(settings_from_json(json::parse("{}")).post_process.volumetric_light);
+  Settings settings;
+  settings.post_process.dynamic_lighting = true;
+  settings.post_process.volumetric_light = false;
+  const auto loaded = settings_from_json(json::parse(json::write(settings_to_json(settings))));
+  CHECK(loaded.post_process.dynamic_lighting);
+  CHECK(!loaded.post_process.volumetric_light);
+}
+
 TEST_CASE("blur tint and stage distortion can be enabled independently") {
   ScreenPass stage;
   stage.depth_of_field = stage.distortion = true;

@@ -11,6 +11,8 @@ float flat(Vec3 v) {
   v.y = 0;
   return length(v);
 }
+// Port navigation: an approach plans a route to a target this far above or below.
+constexpr float approach_rise = 3.0F;
 float stick(float error, float speed, float seconds) {
   return speed > 0 ? std::clamp(error / (speed * seconds), -1.0F, 1.0F) : 0;
 }
@@ -24,7 +26,20 @@ void Battle::ai_route(Combatant &drone, const float seconds) {
     // Join an existing polyline. Keep the entrance's active segment until it
     // has carried the robot into the arena; never jump to its first point.
     if (!drone.path.active() || path_.segments[drone.path.segment()].kind != 0) {
-      float nearest = std::numeric_limits<float>::max();
+      // The reach flood is a graph search: without one to spare this tick,
+      // rejoin on a later one.
+      if (settings_.ai.navigation.enabled && nav_graph() != nullptr && !take_nav_search()) {
+        return;
+      }
+      // Port navigation: only points a planned route can reach. The nearest
+      // reachable point in sight wins, so test them nearest first.
+      const std::vector<bool> reach = nav_reach(drone);
+      struct Candidate {
+        float distance{};
+        Vec3 point;
+        PathFollower follower;
+      };
+      std::vector<Candidate> candidates;
       for (std::size_t i = 0; i < path_.segments.size(); ++i) {
         const auto &segment = path_.segments[i];
         if (segment.kind == 0 || segment.kind == 7) {
@@ -33,11 +48,14 @@ void Battle::ai_route(Combatant &drone, const float seconds) {
         PathFollower candidate;
         candidate.join(path_, static_cast<int>(i), at);
         const auto point = candidate.update(path_, at, settings_.drone_reach, random_);
-        const float distance = length(point - at);
-        if (distance < nearest &&
-            clear_target_sight(drone.aim_origin(), point + Vec3{0, drone.radius, 0})) {
-          nearest = distance;
-          drone.path = candidate;
+        candidates.push_back({length(point - at), point, candidate});
+      }
+      std::ranges::stable_sort(candidates, {}, &Candidate::distance);
+      for (const Candidate &c : candidates) {
+        if (nav_reaches(reach, c.point) &&
+            clear_target_sight(drone.aim_origin(), c.point + Vec3{0, drone.radius, 0})) {
+          drone.path = c.follower;
+          break;
         }
       }
     }
@@ -57,15 +75,32 @@ void Battle::ai_route(Combatant &drone, const float seconds) {
   s.route_target = target;
   s.last_position = at;
   const int kind = path_.segments[drone.path.segment()].kind;
-  const float error = wrap_angle(heading_toward(target - at) - drone.mover.heading());
-  s.control.move[0] = stick(error, radians(drone.mover.tuning().turn_degrees_per_second), seconds);
   const float speed = kind == 0 || kind == 3 ? data.value("route_walk")
                       : kind == 5            ? data.value("route_dash_walk")
                                              : 1.0F;
+  const bool pause =
+      kind == 2 && std::fmod(static_cast<float>(s.ticks) / data.value("tick_hz"),
+                             data.value("route_pause_cycle")) < data.value("route_pause_seconds");
+  if (ai_navigate(drone, target, seconds, speed)) {
+    // The planned route replaces the straight line and the wall recovery.
+    s.control.dash = kind == 5 && drone.mover.grounded() && !s.nav.lifting;
+    if (pause && drone.mover.grounded() && !s.nav.lifting) {
+      s.control.move[1] = 0;
+    }
+    if (s.route_stalled >= data.value("route_retry_seconds")) {
+      s.route_rejoin = true;
+      ++s.recoveries;
+    }
+    return;
+  }
+  if (settings_.ai.navigation.enabled && nav_graph() != nullptr) {
+    s.route_rejoin = true; // no route there: take another polyline
+  }
+  const float error = wrap_angle(heading_toward(target - at) - drone.mover.heading());
+  s.control.move[0] = stick(error, radians(drone.mover.tuning().turn_degrees_per_second), seconds);
   s.control.move[1] = std::abs(error) < data.value("route_turn_radians") ? speed : 0;
   s.control.dash = kind == 5;
-  if (kind == 2 && std::fmod(static_cast<float>(s.ticks) / data.value("tick_hz"),
-                             data.value("route_pause_cycle")) < data.value("route_pause_seconds")) {
+  if (pause) {
     s.control.move[1] = 0;
   }
   const bool touching = (drone.stage_contact & (stage_contact::wall | stage_contact::fence)) != 0;
@@ -97,6 +132,7 @@ void Battle::ai_move(Combatant &drone, const float seconds) {
   const auto &level = data.levels[static_cast<std::size_t>(s.ability)];
   const auto &motion = drone.mover.tuning();
   s.control = {};
+  s.nav.active = false;
   const bool ranker_entrant =
       std::ranges::find(data.ranker_entrants, s.entrant) != data.ranker_entrants.end();
   if (ranker_entrant) {
@@ -139,8 +175,12 @@ void Battle::ai_move(Combatant &drone, const float seconds) {
   }
   s.entered = false;
   const AiMode mode = ranker ? (s.ranker_engage ? AiMode::engage : AiMode::route) : s.mode;
-  if (mode == AiMode::route || mode == AiMode::route_special ||
-      (mode == AiMode::engage && !ranker && s.submode == 3)) {
+  // Port navigation: a fight's high ground takes the place of the route.
+  const bool climbing = mode == AiMode::engage && s.target >= 0 && s.nav.vantage >= 0 &&
+                        s.nav.vantage_target == s.target;
+  if ((mode == AiMode::route || mode == AiMode::route_special ||
+       (mode == AiMode::engage && !ranker && s.submode == 3)) &&
+      !climbing) {
     ai_route(drone, seconds);
   }
   if (mode == AiMode::engage && s.target < 0) {
@@ -195,14 +235,30 @@ void Battle::ai_move(Combatant &drone, const float seconds) {
       }
     }
     if (mode == AiMode::engage) {
-      if (s.submode == 4 || (ranker && s.ranker_engage)) {
+      // Port navigation: high ground, once taken, is held rather than left
+      // to close in.
+      if (!ranker && ai_high_ground(drone, seconds)) {
+        s.control.dash = false;
+      } else if ((s.submode == 4 || (ranker && s.ranker_engage)) && !s.nav.holding) {
         s.control.move[1] =
             flat(offset) > data.value(ranker ? "ranker_close_distance" : "approach_stop_distance")
                 ? 1.0F
                 : 0;
         s.control.dash = ranker && s.control.move[1] > 0;
+        // Port navigation: out of sight or on another level, walk a route.
+        if (s.control.move[1] > 0 && (!s.visible || std::abs(offset.y) > approach_rise) &&
+            ai_navigate(drone, s.last_seen, seconds, 1.0F)) {
+          s.control.dash = false;
+        }
       }
-      s.control.jump |= (drone.stage_contact & stage_contact::wall) != 0;
+      if (s.nav.active) {
+        // Steering follows the route: aim with the torso, as routing does.
+        s.control.reset_twist = false;
+        s.control.twist = stick(wrap_angle(yaw - drone.mover.twist()),
+                                radians(motion.twist_degrees_per_second), seconds);
+      } else {
+        s.control.jump |= (drone.stage_contact & stage_contact::wall) != 0;
+      }
     }
   }
   if (ranker && s.ranker_engage) {

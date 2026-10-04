@@ -125,7 +125,7 @@ void VsMode::ask() {
   across_.reset();
 }
 
-// Are you ready?: left/right choose (sys 23), cancel moves to NO (sys 4).
+// Are you ready?: left/right choose (sys 4), cancel moves to NO (sys 4).
 void VsMode::question_input(const double tick_seconds, const InputFrame &input) {
   if (!popup_.shown()) {
     return;

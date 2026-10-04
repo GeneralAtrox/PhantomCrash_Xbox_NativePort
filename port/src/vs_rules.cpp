@@ -100,7 +100,7 @@ void VsRound::update_menu(const VsMenuInput &input) {
 void VsRound::update_question(const VsMenuInput &input) {
   if (input.left || input.right) {
     answer_ = answer_ == vs_answer_yes ? vs_answer_no : vs_answer_yes;
-    sounds_.push_back(tuning_.move_sound);
+    sounds_.push_back(tuning_.answer_sound);
   } else if (input.confirm) {
     sounds_.push_back(tuning_.confirm_sound);
     enter(answer_ == vs_answer_yes ? VsRoundStage::fade : VsRoundStage::menu);

@@ -26,6 +26,7 @@ struct SettingsMenu::Impl {
   static constexpr UINT pause_unfocused_command = 0x7204;
   static constexpr UINT controls_command = 0x7205;
   static constexpr UINT coop_command = 0x7206;
+  static constexpr UINT skip_conversations_command = 0x7208;
   static constexpr UINT first_level_command = 0x7300;
   static constexpr UINT last_level_command = 0x73ff;
 
@@ -52,6 +53,7 @@ struct SettingsMenu::Impl {
       refresh_cheats_menu(cheats, settings.cheats);
     }
     check(pause_unfocused_command, settings.pause_unfocused);
+    check(skip_conversations_command, settings.skip_conversations);
     if (coop) {
       coop->refresh();
     }
@@ -88,6 +90,9 @@ struct SettingsMenu::Impl {
       break;
     case pause_unfocused_command:
       settings.pause_unfocused = !settings.pause_unfocused;
+      break;
+    case skip_conversations_command:
+      settings.skip_conversations = !settings.skip_conversations;
       break;
     case controls_command:
       edit_host_controls(window, settings.host_controls);
@@ -182,7 +187,9 @@ SettingsMenu::SettingsMenu(void *native_window, const Settings &initial)
       !AppendMenuW(state.menu, MF_STRING, Impl::controls_command,
                    L"&Keyboard / Controller Controls...") ||
       !AppendMenuW(state.menu, MF_STRING, Impl::pause_unfocused_command,
-                   L"&Pause When Unfocused")) {
+                   L"&Pause When Unfocused") ||
+      !AppendMenuW(state.menu, MF_STRING, Impl::skip_conversations_command,
+                   L"&Skip Story Conversations")) {
     throw std::runtime_error("Unable to fill the Settings menu");
   }
   state.audio = static_cast<HMENU>(create_audio_menu(state.menu, state.settings.audio));

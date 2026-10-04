@@ -1,11 +1,12 @@
 {
  "notes": [
+  "unscored_events (a port change): the story events every new game plays before the player has done anything (the opening, 48 to 50 and 156, and the first visit to Club Wired, 91) are left out of the achievement rate on both sides, so a new game reads 0% and the rest of the events and contests share the 100%. The original counted them, starting a game at 3%. An empty list restores that.",
   "RECORDS (the original's scene 29: task 0x34f97, create 0x34d83, destroy 0x335d5). Opened from Club Wired it keeps the radio playing (0x2a972), from the garage it plays 5GARAGE (0x133b1 track 12). EXIT returns to where it was opened from (0x33d3d: 0 garage, 1 Club Wired).",
-  "The menu (0x34336): RUMBLING RECORD, CONVENTION RECORD, GAME PLAY RECORD and EXIT, lit in yellow and pulsing (draw flag 0x2000). Up and down move (sys 22), cancel goes to EXIT (sys 4), confirm opens (sys 5). Behind a page the menu shows at a quarter alpha under the page's panel, on layers 2 and 3 (0x33aed). The original also draws sprite 2148 at (0, 376), which in this texture is an unused Japanese label; the port leaves it out.",
+  "The menu (0x34336): RUMBLING RECORD, CONVENTION RECORD, GAME PLAY RECORD and EXIT, lit in yellow and pulsing (draw flag 0x2000). Up and down move (sys 4), cancel goes to EXIT (sys 4), confirm opens (sys 5). Behind a page the menu shows at a quarter alpha under the page's panel, on layers 2 and 3 (0x33aed). The original also draws sprite 2148 at (0, 376), which in this texture is an unused Japanese label; the port leaves it out.",
   "A record page (0x33d99, 0x34123) grows its panel in over 0.3 s. Then each row appears in turn, 0.3 s plus 0.2 s a row after the page opened (0x33b2c): it plays sys 16, a light bar sweeps it, and its text fades in over 1.5 s while turning from yellow to white over 5 s. Cancel returns to the menu (sys 8).",
   "Values are right-aligned at x 522 with commas (0x331c0); a unit (%, NY) hangs past that edge. Times are hh:mm:ss, hours capped at 99 (0x32f76), from x 422. Counts come from the save's records (QuestSave.records): the original's words at + 0x5fe0 (total prize), + 0x5fe4 (highest prize), + 0x5fe8 (rumblings), + 0x5fec (returns), + 0x5ff4 (shot down), + 0x5ff8 (drones), + 0x600c (saves), + 0x6010 (enemy weapons destroyed), + 0x6014 (weapons destroyed); the days passed are + 0x5ffc (QuestSave.total_days). The battle times' words are not traced yet.",
   "The achievement rate (0x33556): the contests listed won, plus the story events played, over the contests listed plus the story events, times 100.",
-  "CONVENTION RECORD (0x34451): the WIRE HEADS TOKYO FIRST RANKER plate with the champion of contest 49, crossed LOSER once won, and a menu of the three venues, REGULATION and EXIT that slides in from the left over 0.5 s, the lowest item last. A venue (0x33660) shows its eight class contests (day and night, D to A) and its area ranker in a 4 x 2 grid and one large cell; REGULATION (0x3472d) shows the regulation contests 6 x 2, two pages turned with L and R. The cursor's contest shows its name, its champion team and their portraits, crossed LOSER once won. Rows move with sys 22, columns with sys 23.",
+  "CONVENTION RECORD (0x34451): the WIRE HEADS TOKYO FIRST RANKER plate with the champion of contest 49, crossed LOSER once won, and a menu of the three venues, REGULATION and EXIT that slides in from the left over 0.5 s, the lowest item last. A venue (0x33660) shows its eight class contests (day and night, D to A) and its area ranker in a 4 x 2 grid and one large cell; REGULATION (0x3472d) shows the regulation contests 6 x 2, two pages turned with L and R. The cursor's contest shows its name, its champion team and their portraits, crossed LOSER once won. Rows move with sys 3, columns with sys 4.",
   "Turning a REGULATION page lights its arrow for 0.15 s (a port choice; the original counts frames at + 0x34).",
   "The original stands a turning 3D trophy in each cell of a contest won (0x334fc, models 0x1fc25c); the port does not draw them yet.",
   "Contest 14's champion stays hidden (silhouettes and a blank name) until story event 58 has played (0x33660: event 10 of the table)."
@@ -37,13 +38,14 @@
   "page_forward": "right_trigger"
  },
  "sounds": {
-  "move": "schedule_row",
-  "column": "schedule_day",
+  "menu": "adjust",
+  "move": "cursor",
+  "column": "adjust",
   "select": "confirm",
   "to_exit": "adjust",
   "close": "cancel",
   "row": "record_row",
-  "page": "schedule_day"
+  "page": "cursor"
  },
  "layers": [
   {
@@ -267,6 +269,7 @@
    ]
   }
  },
+ "unscored_events": [48, 49, 50, 156, 91],
  "completion_contests": [6, 5, 4, 3, 10, 9, 8, 7, 14, 23, 22, 21, 20, 27, 26, 25, 24, 31, 40, 39, 38, 37, 44, 43, 42, 41, 48, 1, 2, 11, 12, 15, 16, 17, 18, 19, 28, 29, 32, 33, 34, 35, 36, 45, 46, 50, 49, 52, 53, 54],
  "convention": {
   "ellipse": {

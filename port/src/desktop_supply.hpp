@@ -1,5 +1,6 @@
 #pragma once
 
+#include "desktop_light_sources.hpp"
 #include "desktop_world_renderer.hpp"
 #include "phantomcrash/effect_system.hpp"
 #include "phantomcrash/battle.hpp"
@@ -33,6 +34,12 @@ public:
   void add_carrier(const SupplyCarrier &carrier, std::vector<WorldItem> &items);
   // Appends the pickups' glows, facing the camera at `eye`.
   void add_sprites(const SupplyDrop &drop, Vec3 eye, std::vector<WorldSprite> &sprites) const;
+  // The carrier's lamps (dynamic_lighting.json "supply"), carried by its
+  // meshes while it flies.
+  void set_lights(std::vector<AttachedLight> lights) {
+    lights_ = std::move(lights);
+  }
+  void add_lights(const SupplyDrop &drop, std::vector<WorldLight> &lights) const;
   // Starts this tick's takes' bursts in `effects` and keeps the bursts in
   // flight heading for their robots (0x066e50, 0x0880ad).
   void tick(const Battle &battle, EffectSystem *effects);
@@ -46,6 +53,9 @@ private:
   [[nodiscard]] int effect_of(const SupplyDrop &drop, int type) const;
 
   void add_mesh(int mesh, const Mat4 &world, std::vector<WorldItem> &items) const;
+  // Where the flying carrier's mesh is drawn: a turned door, the spinner or
+  // with the body.
+  [[nodiscard]] Mat4 mesh_world(const SupplyCarrier &carrier, int mesh) const;
   // The day or night model's mesh (0x069d52 draws each pickup from either).
   void add_pickup_mesh(std::size_t parity, int mesh, const Mat4 &world,
                        std::vector<WorldItem> &items) const;
@@ -59,6 +69,7 @@ private:
   std::array<std::vector<std::vector<int>>, 2> pickup_nodes_;
   int glow_texture_{-1};
   std::vector<Burst> bursts_;
+  std::vector<AttachedLight> lights_;
   std::minstd_rand random_{0x5eed};
 };
 

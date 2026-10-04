@@ -23,7 +23,7 @@ void Rumbling::open_gates(const bool rental) {
   view_ = RumblingView::gates;
 }
 
-// 0x0169e5: left and right choose the gate (sys 23, wrapping, past the
+// 0x0169e5: left and right choose the gate (sys 4, wrapping, past the
 // ranker's); confirm enters, cancel goes back to the sub-menu (sys 8).
 void Rumbling::gates_input(const double tick_seconds, const InputFrame &input) {
   const int count = gate_count();

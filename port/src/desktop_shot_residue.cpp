@@ -6,6 +6,40 @@
 #include <cmath>
 
 namespace phantomcrash {
+namespace {
+
+constexpr int fit_probes = 8;         // points round the mark tested for a surface
+constexpr float fit_depth = 0.25F;    // probe reach either side, of the half width
+constexpr float fit_tolerance = 0.1F; // off the plane still on it, of the half width
+constexpr int fit_tries = 2;          // the size, then half of it
+constexpr int scorch_kind = 1;
+
+// The largest of `half` and its halves whose ring of probes all find a
+// surface on the hit's plane; 0 when none does.
+float fitted_half(const StageCollision &stage, const StageHit &hit, const Vec3 normal, float half,
+                  const float reach) {
+  const Vec3 helper = std::fabs(normal.y) < 0.99F ? Vec3{0, 1, 0} : Vec3{1, 0, 0};
+  const Vec3 across = normalize(cross(helper, normal));
+  const Vec3 along = cross(normal, across);
+  for (int attempt = 0; attempt < fit_tries; ++attempt, half *= 0.5F) {
+    bool fits = true;
+    for (int i = 0; i < fit_probes && fits; ++i) {
+      const float angle = 2.0F * pi * static_cast<float>(i) / fit_probes;
+      const Vec3 point =
+          hit.position + (across * std::cos(angle) + along * std::sin(angle)) * (half * reach);
+      const auto found = stage.segment_contact(point + normal * (half * fit_depth),
+                                               point - normal * (half * fit_depth));
+      fits =
+          found && std::fabs(dot(found->position - hit.position, normal)) <= half * fit_tolerance;
+    }
+    if (fits) {
+      return half;
+    }
+  }
+  return 0.0F;
+}
+
+} // namespace
 
 DesktopShotResidue::DesktopShotResidue(WorldRenderer &world, const EffectBank &bank) : bank_(bank) {
   for (const auto &path : bank.decals.textures) {
@@ -21,7 +55,8 @@ DesktopShotResidue::DesktopShotResidue(WorldRenderer &world, const EffectBank &b
           smoke_texture_ >= 0 ? "loaded" : "unavailable", bank.missile_trail.sample_hz);
 }
 
-void DesktopShotResidue::mark(const StageHit &hit, const int kind, const float size) {
+void DesktopShotResidue::mark(const StageCollision &stage, const StageHit &hit, const int kind,
+                              const float size) {
   if (bank_.decals.count <= 0 || kind >= static_cast<int>(textures_.size()) ||
       textures_[kind] < 0 || hit.surface % 1000 == 8 || length(hit.normal) <= 0.0F) {
     return;
@@ -30,7 +65,14 @@ void DesktopShotResidue::mark(const StageHit &hit, const int kind, const float s
   mark.texture = textures_[kind];
   mark.surface_normal = normalize(hit.normal);
   mark.position = hit.position + mark.surface_normal * bank_.decals.depth_offset;
-  mark.size = size * 0.5F;
+  mark.size = fitted_half(stage, hit, mark.surface_normal, size * 0.5F, bank_.decals.fit_reach);
+  if (mark.size <= 0.0F) {
+    return;
+  }
+  if (kind == scorch_kind) {
+    const auto &tint = bank_.decals.scorch_tint;
+    mark.colour = {tint[0], tint[1], tint[2], 1.0F};
+  }
   mark.rotation = mark_rotation_;
   mark_rotation_ = std::fmod(mark_rotation_ + 1.0F, 2.0F * pi); // 0x0663d2
   marks_.push_back(mark);
@@ -53,10 +95,10 @@ void DesktopShotResidue::impact(const Battle &battle, const BattleEvent &event,
       surface = battle.stage().segment_contact(event.at, event.at - Vec3{0, radius, 0});
     }
     if (surface) {
-      mark(*surface, 1, radius * bank_.decals.scorch_scale);
+      mark(battle.stage(), *surface, scorch_kind, radius * bank_.decals.scorch_scale);
     }
   } else if (impact.decal && event.surface) {
-    mark(*event.surface, 0, bank_.decals.scale);
+    mark(battle.stage(), *event.surface, 0, bank_.decals.scale);
   }
 }
 

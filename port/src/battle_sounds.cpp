@@ -123,7 +123,7 @@ BattleSoundTable parse_battle_sounds(const json::JsonValue &value) {
     table.camouflage_break = robot->string_or("camouflage_break", "");
     table.arm_lost = robot->string_or("arm_lost", "");
     table.arm_lost_seconds = std::max(
-        static_cast<float>(robot->number_or("arm_lost_seconds", table.arm_lost_seconds)), 0.05F);
+        static_cast<float>(robot->number_or("arm_lost_seconds", table.arm_lost_seconds)), 0.0F);
     table.locked_on = robot->string_or("locked_on", "");
   }
   table.carrier_engine = value.string_or("carrier_engine", "");

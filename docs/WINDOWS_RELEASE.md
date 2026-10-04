@@ -47,11 +47,37 @@ Settings and saves use the same app-data location as a source build. The
 `--settings <file.json>` option selects a separate settings/save file.
 Controllers, keyboard and mouse are supported; bindings are available under
 Settings. F11 switches fullscreen. `Start Game.bat --start rumbling_d_rental`
-opens the Class D rental shortcut; it uses and saves the current quest.
+opens the Class D rental shortcut (`rumbling_d_night_rental` for the night
+one); it uses and saves the current quest.
 
 ## Included changes
 
-0.3.0 adds:
+0.4.0 adds:
+
+- **Dynamic lighting at night.** Ship and carrier searchlights sweep the
+  arena and cast shadows; entrance lamps replace the painted light pools;
+  fires, blasts, muzzle flashes, projectiles and beams light their
+  surroundings, and the strongest fires cast shadows.
+- **Light beams in the air.** On night stages the searchlights and lamps
+  show as beams through the haze, and fires glow in the air around them
+  (Settings > Visuals, "Light beams in the air"; needs Dynamic lighting).
+- **Smarter opponents.** The AI plans routes over the arena with jumps and
+  drops, frees itself when stuck and seeks high ground; ten-robot matches no
+  longer drop frames.
+- **Pause menu** with RESUME and EXIT (EXIT asks to confirm).
+- **Night rental match** in Level Select.
+- **Sharp text** option, drawing the menus' text with the MS Gothic font
+  installed with Windows (the font is not included).
+- Robots no longer stick in a jump on stepped ledges, kerbs and wreck rims.
+- The entry shield rises and falls at the original's speed; talk scenes no
+  longer show the HUD; menu cursor sounds match the original.
+- Optic camouflage hides the robot's shadow; the arm-loss crackle plays
+  once; shot marks fit the surfaces they hit and no longer cover fires.
+
+Existing users: copy your `artifacts` and `mods` folders into the new
+version. The converted assets are unchanged.
+
+0.3.0 added:
 
 - **No prerequisites.** The Python extraction tools are replaced by
   `phantomcrash_extract.exe`, and the Visual C++ runtime DLLs ship beside the
@@ -96,9 +122,6 @@ the separate Visual C++ runtime install are no longer needed.
 - **Fixes.** Robots no longer start under the Shinjuku street, light
   volume shadows have the original's length, and mixed-maker parts hang
   from the body's mounts when the `same_maker` rule is modded off.
-
-The invincibility shield's original rainbow appearance is still unfinished;
-see `docs/ENTRY_SHIELD_RENDERING.md`.
 
 ## Licenses and library sources
 

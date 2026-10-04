@@ -2,6 +2,7 @@
 
 #include "desktop_world_gpu.hpp"
 #include "desktop_dynamic_lights.hpp"
+#include "desktop_volumetric_lights.hpp"
 #include "desktop_world_shaders.hpp"
 #include "phantomcrash/math3d.hpp"
 #include "phantomcrash/optical_camouflage.hpp"
@@ -38,6 +39,9 @@ struct WorldItem {
   std::vector<std::string> sky_nodes;
   std::vector<std::string> shadow_nodes;
   std::vector<int> two_sided_materials; // resolved stage texture overrides
+  // Not drawn while dynamic lighting is on: the original's painted light
+  // pools, which its spotlights replace.
+  std::vector<int> lit_hidden_materials;
   std::vector<SkyMotion> sky_motion;
   double sky_seconds{};
   std::vector<std::string> monitor_nodes;
@@ -107,6 +111,7 @@ struct WorldFrame {
   StageLighting lighting;
   std::vector<WorldItem> items;
   std::vector<WorldLight> lights;
+  VolumetricAir air; // how the lights show in the air (with dynamic lighting)
   // Drawn last, in order, in the eye's space (+z ahead) with the same
   // projection, without fog and over everything: the cockpit (view layer
   // 0xb).
@@ -185,6 +190,10 @@ private:
   void render_lights(const WorldFrame &frame);
   std::unique_ptr<DynamicLightPass> dynamic_lights_;
   bool dynamic_failed_{};
+  // Adds the light the air scatters, after the world and before the screen pass.
+  void render_air(const WorldFrame &frame);
+  std::unique_ptr<VolumetricLightPass> volumetric_;
+  bool volumetric_failed_{};
   [[nodiscard]] std::array<float, 4> monitor_uv(const Draw &draw) const;
   void render(const WorldFrame &frame);
   // Appends the batches of `item` (item `index` of the frame) to `out`.

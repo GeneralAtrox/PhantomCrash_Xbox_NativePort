@@ -7,6 +7,22 @@ namespace phantomcrash {
 namespace {
 constexpr float stick_dead_zone = 0.2F;
 
+// The stick's other axis, for a stick axis.
+SDL_GamepadAxis across(const SDL_GamepadAxis axis) {
+  switch (axis) {
+  case SDL_GAMEPAD_AXIS_LEFTX:
+    return SDL_GAMEPAD_AXIS_LEFTY;
+  case SDL_GAMEPAD_AXIS_LEFTY:
+    return SDL_GAMEPAD_AXIS_LEFTX;
+  case SDL_GAMEPAD_AXIS_RIGHTX:
+    return SDL_GAMEPAD_AXIS_RIGHTY;
+  case SDL_GAMEPAD_AXIS_RIGHTY:
+    return SDL_GAMEPAD_AXIS_RIGHTX;
+  default:
+    return SDL_GAMEPAD_AXIS_INVALID;
+  }
+}
+
 Buttons action_mask(const std::string &action) {
   const Buttons mask = button_from_name(action).value_or(0);
   return mask | ((mask & button::pad) >> 8);
@@ -78,6 +94,13 @@ float DesktopInput::value(const Binding &binding, SDL_Gamepad *pad) const {
 Buttons DesktopInput::pad_held(SDL_Gamepad *pad) const {
   Buttons mask{};
   for (const Binding &binding : bindings_) {
+    // A stick pushed mostly one way is only that way as a button, so a menu
+    // flicked up a little off true does not also step sideways.
+    if (const SDL_GamepadAxis other = across(binding.axis);
+        other != SDL_GAMEPAD_AXIS_INVALID && std::abs(SDL_GetGamepadAxis(pad, other)) >
+                                                 std::abs(SDL_GetGamepadAxis(pad, binding.axis))) {
+      continue;
+    }
     if (value(binding, pad) > 0.5F) {
       mask |= binding.mask;
     }

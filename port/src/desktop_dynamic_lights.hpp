@@ -13,14 +13,32 @@ struct WorldLight {
   Vec3 colour{1, 1, 1};
   float intensity{2};
   float inner_degrees{20};
+  // The shadow map's near plane: a light thrown far keeps its depth
+  // precision (and its shadows' contact) only with a farther one.
+  float near_plane{0.5F};
+  // Omnidirectional and unshadowed: only position, range, colour and
+  // intensity apply (fires, explosions, muzzle flashes, energy shots).
+  bool point{};
+  // How strongly it lights the air, against its surfaces (volumetric light).
+  float air{1.0F};
+  // How far its beam carries before dimming in the air (0: the air's
+  // beam_fade); a searchlight's narrow beam carries far.
+  float air_fade{};
 };
 
-// A bounded set of spotlights shared by the main camera and monitor feed.
+// Whether a sphere can be lit by the light: inside its range and cone.
+[[nodiscard]] bool light_reaches(const WorldLight &light, Vec3 centre, float radius);
+
+// A bounded set of shadowed spotlights and unshadowed point lights, shared
+// by the main camera and monitor feed.
 class DynamicLightPass final {
 public:
   static constexpr unsigned capacity = 8;
+  static constexpr unsigned point_capacity = 32;
   explicit DynamicLightPass(ID3D11Device *device);
-  unsigned prepare(ID3D11DeviceContext *context, std::span<const WorldLight> lights);
+  // Returns the spotlights kept, whose shadow maps are drawn next.
+  unsigned prepare(ID3D11DeviceContext *context, std::span<const WorldLight> spots,
+                   std::span<const WorldLight> points);
   void begin_shadow(ID3D11DeviceContext *context, unsigned index);
   void caster(ID3D11DeviceContext *context, const GpuModel &model, const ModelDraw &draw,
               const Mat4 &world);

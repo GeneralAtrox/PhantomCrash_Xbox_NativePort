@@ -14,7 +14,7 @@ constexpr std::size_t scene_trail_length = 16;
 
 const StoryEvent *ScreenRunner::story_event(const std::string &from, const std::string &to) const {
   const auto from_scene =
-      scene_ids_.find(from == rumbling_battle_.quick_rental.screen ? "rumbling_battle" : from);
+      scene_ids_.find(find_quick_rental(rumbling_battle_, from) ? "rumbling_battle" : from);
   const auto to_scene = scene_ids_.find(to);
   if (from_scene == scene_ids_.end() || to_scene == scene_ids_.end()) {
     return nullptr;
@@ -27,27 +27,40 @@ const StoryEvent *ScreenRunner::story_event(const std::string &from, const std::
 // "event_<scene>": a talk scene, leading on to the screen it interrupted
 // (or, started on its own, the screen of its destination scene; the screen
 // it was opened from for the return scene).
-std::unique_ptr<Screen> ScreenRunner::make_event(const std::string &name, const std::string &from) {
+const StoryEvent *ScreenRunner::named_event(const std::string &name) const {
+  if (!name.starts_with("event_")) {
+    return nullptr;
+  }
   int scene = -1;
   const std::string_view digits = std::string_view(name).substr(6);
   std::from_chars(digits.data(), digits.data() + digits.size(), scene);
   const auto event =
       std::ranges::find_if(events_, [&](const StoryEvent &item) { return item.scene == scene; });
-  if (event == events_.end()) {
-    return nullptr;
-  }
+  return event == events_.end() ? nullptr : &*event;
+}
+
+std::string ScreenRunner::event_destination(const StoryEvent &event,
+                                            const std::string &from) const {
   std::string next = event_next_;
-  if (next.empty() && event->to_scene == return_scene_ && !from.empty()) {
+  if (next.empty() && event.to_scene == return_scene_ && !from.empty()) {
     next = from;
   }
   if (next.empty()) {
     const auto found = std::ranges::find_if(
-        scene_ids_, [&](const auto &entry) { return entry.second == event->to_scene; });
+        scene_ids_, [&](const auto &entry) { return entry.second == event.to_scene; });
     next = found == scene_ids_.end() ? "title" : found->first;
   }
+  return next;
+}
+
+std::unique_ptr<Screen> ScreenRunner::make_event(const std::string &name, const std::string &from) {
+  const StoryEvent *event = named_event(name);
+  if (event == nullptr) {
+    return nullptr;
+  }
   return std::make_unique<TalkScreen>(textures_, font_, *event, talk_, talk_tuning_,
-                                      std::move(next), quest_.player_name, frame_, credits_,
-                                      quest_);
+                                      event_destination(*event, from), quest_.player_name, frame_,
+                                      credits_, quest_);
 }
 
 void ScreenRunner::show(const std::string &name, const bool events) {
@@ -75,8 +88,30 @@ void ScreenRunner::show(const std::string &name, const bool events) {
       return;
     }
   }
+  // A conversation a screen leads to by name is passed over too, but not one
+  // asked for that returns to its screen (Pepper's explanations).
+  if (const StoryEvent *named = skip_conversations_ ? named_event(name) : nullptr;
+      named && named->to_scene != return_scene_ && event_from_.empty()) {
+    if (std::ranges::find(quest_.seen_events, named->scene) == quest_.seen_events.end()) {
+      quest_.seen_events.push_back(named->scene);
+    }
+    SDL_Log("Story event skipped: scene=%d from=%s", named->scene, name_.c_str());
+    show(event_destination(*named, name_), events);
+    return;
+  }
   const std::string source = event_from_.empty() ? name_ : event_from_;
-  if (const StoryEvent *event = events ? story_event(source, name) : nullptr) {
+  const StoryEvent *event = events ? story_event(source, name) : nullptr;
+  // Skipped conversations play out at once: seen, in the order they would
+  // have played, then the chain ends as it would after the last.
+  for (std::size_t skipped = 0; event && skip_conversations_ && skipped < events_.size();
+       ++skipped) {
+    quest_.seen_events.push_back(event->scene);
+    event_from_ = source;
+    SDL_Log("Story event skipped: scene=%d from=%s to=%s", event->scene, source.c_str(),
+            name.c_str());
+    event = story_event(source, name);
+  }
+  if (event && !skip_conversations_) {
     quest_.seen_events.push_back(event->scene);
     event_from_ = source;
     event_next_ = name;

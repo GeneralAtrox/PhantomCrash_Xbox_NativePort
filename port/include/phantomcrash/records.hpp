@@ -19,14 +19,15 @@
 namespace phantomcrash {
 
 // How far the story has got, for the achievement rate: the story events
-// there are (0x0d14f7) and those played (0x0d14c8).
+// there are (0x0d14f7) and those played (0x0d14c8), less the `unscored`.
 struct StoryProgress {
   int events{};
   int seen{};
 };
 
 [[nodiscard]] StoryProgress story_progress(const std::vector<StoryEvent> &events,
-                                           const QuestSave &quest);
+                                           const QuestSave &quest,
+                                           const std::vector<int> &unscored = {});
 
 // A row's value; a count the save lacks is 0.
 [[nodiscard]] std::int64_t record_value(const RecordRow &row, const RecordsScript &script,

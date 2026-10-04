@@ -69,6 +69,7 @@ private:
   std::vector<bool> wreck_solid_;
 
   void add_shield(const Combatant &robot, std::vector<WorldItem> &items) const;
+  void advance_shield(const Battle &battle, float seconds);
 
   struct Visual {
     RobotAssembly assembly;
@@ -98,7 +99,6 @@ private:
   float shield_spin_{}; // 0x06f592's angle (global 0x988570)
   float shield_phase_{};
   float shield_scroll_{1.0F};
-  double shield_clock_{};
 };
 
 // A point of the world on a `width` x `height` picture: pixel x, y and the

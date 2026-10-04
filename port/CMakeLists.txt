@@ -50,6 +50,7 @@ add_library(phantomcrash_core
   src/robot_ai_data.cpp
   src/battle_ai_pickups.cpp
   src/battle_ai_navigation.cpp
+  src/battle_ai_steering.cpp
   src/battle_ai_jump.cpp
   src/battle_ai_weapons.cpp
   src/battle_ai_reactions.cpp
@@ -62,6 +63,9 @@ add_library(phantomcrash_core
   src/battle_weapons.cpp
   src/battle_weapon_targets.cpp
   src/fence_impacts.cpp
+  src/collision_geometry.cpp
+  src/nav_graph_build.cpp
+  src/nav_graph_search.cpp
   src/stage_collision.cpp
     src/stage_play_area.cpp
   src/stage_doors.cpp
@@ -83,6 +87,7 @@ add_library(phantomcrash_core
   src/effect_particles.cpp
   src/effect_secondary.cpp
   src/effect_system.cpp
+  src/effect_glow.cpp
   src/shadow_volume.cpp
   src/supply_drop.cpp
   src/supply_settings.cpp
@@ -269,6 +274,7 @@ if(BUILD_TESTING)
     tests/battle_sounds_tests.cpp
     tests/robot_load_tests.cpp
     tests/stage_collision_tests.cpp
+    tests/nav_graph_tests.cpp
     tests/stage_doors_tests.cpp
     tests/stage_objects_tests.cpp
     tests/fence_impacts_tests.cpp
@@ -534,6 +540,8 @@ if(PHANTOMCRASH_BUILD_DESKTOP)
     src/desktop_supply.cpp
     src/desktop_effects.cpp
     src/desktop_shots.cpp
+    src/desktop_mech_vfx.cpp
+    src/mech_vfx_data.cpp
     src/desktop_movement_effects.cpp
     src/desktop_mount_effects.cpp
     src/desktop_foot_effects.cpp
@@ -543,13 +551,17 @@ if(PHANTOMCRASH_BUILD_DESKTOP)
     src/desktop_world_passes.cpp
     src/desktop_world_monitor.cpp
     src/desktop_dynamic_lights.cpp
+    src/desktop_volumetric_lights.cpp
     src/desktop_light_sources.cpp
+    src/desktop_point_lights.cpp
     src/desktop_world_lights.cpp
     src/desktop_visuals_dialog.cpp
     src/desktop_coop_dialog.cpp
     src/desktop_coop_rewards.cpp
     src/desktop_world_shadows.cpp
     src/desktop_world_screen.cpp
+    src/desktop_pause_menu.cpp
+    src/desktop_sharp_text.cpp
     src/desktop_smaa.cpp
     src/desktop_world_sprites.cpp
     src/desktop_world_renderer.cpp

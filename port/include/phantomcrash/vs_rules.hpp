@@ -24,7 +24,8 @@ struct VsRoundTuning {
   double frame_rate{60.0};
   double settle_frames{120.0};          // decided until the menu opens (0x19f884)
   double fade_frames{30.0};             // the menu's choice fades out (0x17ccfc)
-  std::string move_sound{"talk_page"};  // sys 23
+  std::string move_sound{"cursor"};     // sys 3: up/down the menu (0x046f81)
+  std::string answer_sound{"adjust"};   // sys 4: YES/NO
   std::string confirm_sound{"confirm"}; // sys 5
   std::string cancel_sound{"adjust"};   // sys 4: cancel moves to EXIT, or to NO
 };

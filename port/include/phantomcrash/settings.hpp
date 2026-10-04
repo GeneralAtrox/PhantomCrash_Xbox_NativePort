@@ -178,6 +178,7 @@ struct Settings {
   bool fullscreen{};
   bool frame_counter{};
   bool pause_unfocused{true};
+  bool skip_conversations{}; // story conversations never play (their scenes still count as seen)
   bool experimental_coop{};
   CoopOptions coop;
   // Independent experimental campaigns; importing a solo slot never overwrites it.

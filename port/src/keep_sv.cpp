@@ -122,7 +122,7 @@ void KeepSv::list_input(const double tick_seconds, const InputFrame &input) {
   column_input(tick_seconds, input);
 }
 
-// Up/down between the list, SAVE and EXIT (sys 22); cancel moves to EXIT
+// Up/down between the list, SAVE and EXIT (sys 3); cancel moves to EXIT
 // (sys 3); confirm on SAVE or EXIT.
 void KeepSv::column_input(const double tick_seconds, const InputFrame &input) {
   bool fresh = false;
@@ -184,7 +184,7 @@ bool KeepSv::can_save() const {
                              [](const Hangar &bay) { return bay.owned && bay.complete(); });
 }
 
-// Left/right choose (sys 23); cancel moves to CANCEL (sys 4).
+// Left/right choose (sys 4); cancel moves to CANCEL (sys 4).
 void KeepSv::popup_input(const double tick_seconds, const InputFrame &input) {
   const std::vector<KeepSvPopupOption> &options = *popup();
   const int last = static_cast<int>(options.size()) - 1;
@@ -225,7 +225,7 @@ void KeepSv::choose(const KeepSvOption option) {
   }
 }
 
-// YES/NO (sys 23), NO chosen by cancel (sys 4).
+// YES/NO (sys 4), NO chosen by cancel (sys 4).
 void KeepSv::question_input(const double tick_seconds, const InputFrame &input) {
   bool fresh = false;
   if (const int step = across_.step(tick_seconds, input, script_.left, script_.right, fresh)) {

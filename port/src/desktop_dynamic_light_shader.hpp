@@ -10,7 +10,10 @@ struct LocalLight {
 };
 cbuffer LocalLights : register(b2) {
   LocalLight lights[8];
-  float4 light_count;
+  float4 light_count; // spotlights, shadow texel, point lights
+  float4 point_position_range[32];
+  float4 point_colour[32]; // w: how strongly it lights the air
+  float4 spot_air[8];      // x: a spotlight's air strength, y: its beam fade (0: the air's)
 };
 Texture2DArray<float> light_depth : register(t3);
 SamplerComparisonState light_sampler : register(s3);
@@ -39,6 +42,13 @@ float3 local_lighting(float3 position, float3 normal) {
       }
     }
     result += light.colour_inner.rgb * (cone * falloff * falloff * diffuse * visibility / 9);
+  }
+  [loop] for (int p = 0; p < (int)light_count.z; ++p) {
+    float3 delta = point_position_range[p].xyz - position;
+    float d = length(delta);
+    float falloff = saturate(1.0 - d / point_position_range[p].w);
+    float diffuse = saturate(dot(normal, delta / max(d, 0.0001)));
+    result += point_colour[p].rgb * (falloff * falloff * diffuse);
   }
   return result;
 }

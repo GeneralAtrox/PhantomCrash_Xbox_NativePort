@@ -53,9 +53,10 @@ struct ModelDraw {
   std::uint32_t first_index{};
   std::uint32_t index_count{};
   int material{};
-  int node{};    // index into ModelData::nodes
-  int pass{};    // the original's draw pass within its node (0 first)
-  Vec3 centre{}; // bounds centre in model space, for sorting blended draws
+  int node{};     // index into ModelData::nodes
+  int pass{};     // the original's draw pass within its node (0 first)
+  Vec3 centre{};  // bounds centre in model space, for sorting blended draws
+  float radius{}; // from the centre to the bounds' corner, for culling
 };
 
 struct ModelNode {

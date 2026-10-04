@@ -7,18 +7,45 @@
 
 namespace phantomcrash {
 
+namespace {
+
+QuickRental parse_quick_rental(const json::JsonValue &value) {
+  return {json::required(value, "label").string(),
+          json::required(value, "screen").string(),
+          static_cast<int>(json::required(value, "day").number()),
+          static_cast<int>(json::required(value, "area").number()),
+          static_cast<int>(json::required(value, "gate").number()),
+          static_cast<int>(json::required(value, "robot").number())};
+}
+
+} // namespace
+
+const QuickRental *find_quick_rental(const RumblingBattle &battle, const std::string_view screen) {
+  const auto found = std::ranges::find(battle.quick_rentals, screen, &QuickRental::screen);
+  return found != battle.quick_rentals.end() ? &*found : nullptr;
+}
+
 RumblingBattle parse_rumbling_battle(const json::JsonValue &document) {
   try {
     RumblingBattle battle;
     const auto &value = json::required(document, "battle");
     battle.return_to = value.string_or("return_to", battle.return_to);
+    // quick_rental, a single entry, is the older form; mods may still use it.
     if (const auto *quick = value.find("quick_rental")) {
-      battle.quick_rental = {json::required(*quick, "label").string(),
-                             json::required(*quick, "screen").string(),
-                             static_cast<int>(json::required(*quick, "day").number()),
-                             static_cast<int>(json::required(*quick, "area").number()),
-                             static_cast<int>(json::required(*quick, "gate").number()),
-                             static_cast<int>(json::required(*quick, "robot").number())};
+      battle.quick_rentals.push_back(parse_quick_rental(*quick));
+    }
+    if (const auto *quick = value.find("quick_rentals")) {
+      for (const json::JsonValue &entry : quick->array()) {
+        battle.quick_rentals.push_back(parse_quick_rental(entry));
+      }
+    }
+    for (const QuickRental &rental : battle.quick_rentals) {
+      const std::string &screen = rental.screen;
+      if (screen.empty() || screen == "rumbling_battle" ||
+          std::ranges::count(battle.quick_rentals, screen, &QuickRental::screen) > 1) {
+        throw std::runtime_error("quick_rentals: each needs its own screen name, not '" + screen +
+                                 "'");
+      }
     }
     if (const json::JsonValue *lesson = value.find("lesson")) {
       battle.lesson.title = lesson->string_or("title", battle.lesson.title);

@@ -111,14 +111,24 @@
  },
  "battle": {
   "return_to": "club_wired",
-  "quick_rental": {
-   "label": "Class D: Fire Balloons (rental SV)",
-   "screen": "rumbling_d_rental",
-   "day": 0,
-   "area": 0,
-   "gate": 0,
-   "robot": 84
-  },
+  "quick_rentals": [
+   {
+    "label": "Class D: Fire Balloons (rental SV)",
+    "screen": "rumbling_d_rental",
+    "day": 0,
+    "area": 0,
+    "gate": 0,
+    "robot": 84
+   },
+   {
+    "label": "Class D: Night Electric (rental SV)",
+    "screen": "rumbling_d_night_rental",
+    "day": 3,
+    "area": 0,
+    "gate": 0,
+    "robot": 84
+   }
+  ],
   "lesson": {
    "title": "RUMBLING",
    "mode": 3
@@ -163,7 +173,37 @@
    "nearest_fallback_target": false,
    "jump_keeps_target": false,
    "rivals_by_sight": false,
-   "jump_any_floor": false
+   "jump_any_floor": false,
+   "navigation": {
+    "note": "Port addition. Computer robots plan routes over a grid built from the stage collision: they walk around walls, hold jumps up ledges and across gaps, and drop down, instead of the original's straight line to the next ENPT point. high_ground sends a robot in a fight to a spot above its target with a clear shot. A moved goal plans again no sooner than replan_min_seconds, and plans_per_tick caps the graph searches of all robots in one battle tick (0: no limit): route plans, high-ground searches and a rejoining robot's reach test. A robot over the limit searches in a later tick, so that many robots do not stall a frame. Set enabled to false for the original routing.",
+    "enabled": true,
+    "cell": 2.0,
+    "step": 0.9,
+    "jump_rise": 12.0,
+    "jump_cells": 3,
+    "headroom": 4.4,
+    "wall_clearance": 1.6,
+    "jump_cost": 6.0,
+    "drop_cost": 2.0,
+    "waypoint_reach": 1.6,
+    "replan_seconds": 2.0,
+    "stuck_seconds": 1.0,
+    "give_up_seconds": 2.5,
+    "avoid_seconds": 10.0,
+    "avoid_cost": 250.0,
+    "goal_moved": 4.0,
+    "replan_min_seconds": 0.5,
+    "plans_per_tick": 2,
+    "high_ground": true,
+    "vantage_rise": 4.0,
+    "vantage_radius": 45.0,
+    "vantage_nearest": 10.0,
+    "vantage_range_share": 0.8,
+    "vantage_path_limit": 90.0,
+    "vantage_seconds": 8.0,
+    "vantage_chance": 0.6,
+    "vantage_sight_tests": 48
+   }
   }
  }
 }

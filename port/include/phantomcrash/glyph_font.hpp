@@ -20,6 +20,7 @@ struct GlyphFont {
   float cell{18.0F};
   int columns{28};
   std::unordered_map<char32_t, int> glyphs;  // character -> glyph (first occurrence)
+  std::vector<char32_t> characters;          // glyph -> character
   std::vector<std::array<float, 2>> metrics; // left, width; later glyphs use 0, cell
   int fallback{};                            // the glyph for characters the font lacks
 };

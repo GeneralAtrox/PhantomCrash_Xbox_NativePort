@@ -22,6 +22,10 @@ struct RobotShadowLook {
   float volume_length{50.0F};       // how far a volume reaches from the robot (0x0c2637 c4.x)
   std::string ground_model;         // the flat shadows (resource 184)
   std::array<float, 4> ground_colour{1.0F, 1.0F, 1.0F, 0x60 / 255.0F};
+  // Port option: the original draws both shadows whatever the camouflage
+  // (+0x3494 only switches the body to the optical draw). With this, a flat
+  // shadow fades with the camouflage and a volume goes once it is half on.
+  bool camouflage_hides{false};
 };
 
 enum class RobotShadow { none, volume, ground };
@@ -29,6 +33,10 @@ enum class RobotShadow { none, volume, ground };
 // The shadow a robot has this frame.
 [[nodiscard]] RobotShadow robot_shadow(const RobotShadowLook &look, bool piloted, bool split_screen,
                                        bool grounded);
+
+// How strongly a robot camouflaged this far (0 seen .. 1 camouflaged)
+// casts its shadow: 1 unless the look's camouflage_hides is set.
+[[nodiscard]] float robot_shadow_strength(const RobotShadowLook &look, float camouflage);
 
 [[nodiscard]] RobotShadowLook parse_robot_shadow_look(const json::JsonValue &value);
 

@@ -83,6 +83,9 @@ public:
   [[nodiscard]] std::shared_ptr<Battle>
   stand_up_contest(int area, int contest, const QuestSave &quest, std::vector<RobotParts> &looks);
   [[nodiscard]] bool player_won() const;
+  // The bounties of the opponents the player has shot down in the lent area
+  // so far, for the HUD; give_back pays them.
+  [[nodiscard]] std::int64_t bounty_won() const;
   [[nodiscard]] std::int64_t coop_bounty(const QuestSave &quest, int entrant) const;
   void release_coop_robot(int area, int actor);
   void set_coop_level_offset(int area, int offset, const QuestSave &quest);
@@ -106,6 +109,7 @@ private:
     int changes{};
     int enemy_level_offset{};
     std::vector<RosterMember> player_kills; // since it was lent
+    std::int64_t player_bounty{};           // their bounties, paid on giving it back
   };
 
   void build(int area, const QuestSave &quest);

@@ -1,6 +1,6 @@
 {
   "notes": [
-    "A player's robot (0x093637, robot +8 not -1) also plays: the upper body's servo, twist_start (bank 3 0x0e) as the twist stick (robot +0x2f68) pushes past twist_push while the twist (+0xf8) is inside twist_limit_degrees, twist_stop (0x0f) when either ends (0x0949a0); Optic Camouflage's camouflage_on (0x0c, state 1), camouflage_off (0x10, state 5) and, when a hit breaks it, camouflage_break twice (0x0d, state 7; 0x093c5d); arm_lost (0x25) every arm_lost_seconds while an arm weapon is knocked off (mount state 4 at +0x8c or +0x90); and locked_on (0x2a) looping while another robot has it locked (+0x8a2, set by 0x051045).",
+    "A player's robot (0x093637, robot +8 not -1) also plays: the upper body's servo, twist_start (bank 3 0x0e) as the twist stick (robot +0x2f68) pushes past twist_push while the twist (+0xf8) is inside twist_limit_degrees, twist_stop (0x0f) when either ends (0x0949a0); Optic Camouflage's camouflage_on (0x0c, state 1), camouflage_off (0x10, state 5) and, when a hit breaks it, camouflage_break twice (0x0d, state 7; 0x093c5d); arm_lost (0x25) every arm_lost_seconds while an arm weapon is knocked off (mount state 4 at +0x8c or +0x90; the original repeats it every 5 s, the port plays it once for each arm knocked off with 0); and locked_on (0x2a) looping while another robot has it locked (+0x8a2, set by 0x051045).",
     "carrier_engine: bank 1 entry 0x2f, looping at the supply carrier from the battle's start (0x066940); the falling wreck carries it and its crash stops it (0x06828e). The original has no other carrier sound: the crash sets off effect 0x3f and a shot at the carrier sounds as any impact.",
     "The battle's sounds, placed in the world where they happen and heard from the camera (docs/BATTLE_SOUNDS.md). File names are the extracted bank entries: sound/sfx/battle_player is bank 3 (Media/sound/battle_player.bin), which the players' robots play from; sound/sfx/battle is bank 1 and sound/sfx/battle_old bank 2, which the computer's robots play from (0x09df75 and 0x0493c0, told apart by the robot's +8). A pair gives the 'player' and 'computer' files, or one 'sound' for both; a side left out plays nothing.",
     "falloff: DirectSound 3D's inverse distance law as the original sets it up: world distances halved (0x17accc), a minimum distance of 1 (0x0ddd4f) and a rolloff factor of 0.1 (0x0de616). So a sound is whole within 2 world units and half as loud 22 away.",
@@ -34,7 +34,7 @@
     "camouflage_off": "sound/sfx/battle_player/16.wav",
     "camouflage_break": "sound/sfx/battle_player/13.wav",
     "arm_lost": "sound/sfx/battle_player/37.wav",
-    "arm_lost_seconds": 5,
+    "arm_lost_seconds": 0,
     "locked_on": "sound/sfx/battle_player/42.wav"
   },
   "footstep_seconds": 0.5,

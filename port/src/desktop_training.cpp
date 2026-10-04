@@ -44,6 +44,7 @@ TrainingScreen::TrainingScreen(TextureCache &textures, const GlyphFont &font,
   standard_controls_ = context.standard_controls;
   beginner_ = context.beginner;
   money_ = context.money;
+  money_at_start_ = money_;
   match_results_ = context.match_results;
   victory_hold_ = context.victory_hold_seconds;
   coop_match_ = context.coop_match;
@@ -75,6 +76,7 @@ TrainingScreen::TrainingScreen(TextureCache &textures, const GlyphFont &font,
     shots_ = std::make_unique<DesktopShots>(*world_, effects_->system().bank(),
                                             load_fence_contact(context.roots));
   }
+  mech_vfx_ = std::make_unique<DesktopMechVfx>(*world_, context.roots);
   door_model_ = load_stage_doors(world_, context.roots, script_.battle.scenes, *battle_);
   if (free_play_ && !finale_) {
     supply_ =
@@ -262,6 +264,12 @@ void TrainingScreen::tick(const InputFrame &input, const double tick_seconds) {
   if (shots_) {
     shots_->tick(*battle_, effects_->system(), seconds);
   }
+  if (point_lights_) {
+    point_lights_->tick(*battle_, seconds);
+  }
+  if (mech_vfx_) {
+    mech_vfx_->tick(*battle_, seconds);
+  }
   if (effects_) {
     effects_->tick(seconds);
   }
@@ -274,9 +282,11 @@ BattleHudInfo TrainingScreen::hud_info() const {
   BattleHudInfo info;
   const LessonStep *step = tutorial_.step();
   info.panels.day = day_;
-  // The battle's bounties show as they are won; settling halves a rental's.
-  info.panels.money =
-      money_ + (coop_match_ ? coop_match_->players[coop_slot_].bounty : extra_prize_);
+  // Only this match's earnings, as the original's HUD: pickups, and the
+  // bounties as they are won; settling halves a rental's.
+  info.panels.money = money_ - money_at_start_ +
+                      (coop_match_ ? coop_match_->players[coop_slot_].bounty
+                                   : extra_prize_ + (live_world_ ? live_world_->bounty_won() : 0));
   info.panels.mission_seconds = clock_;
   info.panels.gauges = !cockpit_up();
   info.sights = views_.view() <= camera_view::behind; // 0x04eaa3

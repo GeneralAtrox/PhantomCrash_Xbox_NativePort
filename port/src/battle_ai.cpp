@@ -53,6 +53,9 @@ DroneAi parse_drone_ai(const json::JsonValue &value) {
   ai.jump_keeps_target = value.boolean_or("jump_keeps_target", false);
   ai.rivals_by_sight = value.boolean_or("rivals_by_sight", false);
   ai.jump_any_floor = value.boolean_or("jump_any_floor", false);
+  if (const json::JsonValue *navigation = value.find("navigation")) {
+    ai.navigation = parse_nav_tuning(*navigation);
+  }
   return ai;
 }
 
@@ -214,6 +217,11 @@ RobotControl Battle::ai_control(Combatant &drone, const float seconds) {
       throw std::runtime_error("NPC has an invalid original AI profile");
     }
     s.initialized = true;
+    // Robots think in turn: with two battle ticks to each AI step, half of
+    // them step on each tick instead of all of them on every other one.
+    const auto index = static_cast<int>(&drone - robots_.data());
+    const int phases = std::max(1, static_cast<int>(std::lround(step / seconds)));
+    s.accumulator = step * static_cast<float>(index % phases) / static_cast<float>(phases);
     s.previous_hp = drone.hp;
     s.last_position = drone.mover.position();
     ai_enter(s, AiMode::route, data, random_);

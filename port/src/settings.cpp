@@ -153,7 +153,10 @@ Settings settings_from_json(const json::JsonValue &value) {
     settings.post_process.colour_tint = post->boolean_or("colour_tint", defaults.colour_tint);
     settings.post_process.smaa = post->boolean_or("smaa", false);
     settings.post_process.dynamic_lighting = post->boolean_or("dynamic_lighting", false);
+    settings.post_process.volumetric_light =
+        post->boolean_or("volumetric_light", defaults.volumetric_light);
     settings.post_process.original_softness = post->boolean_or("original_softness", false);
+    settings.post_process.sharp_text = post->boolean_or("sharp_text", defaults.sharp_text);
     settings.post_process.softness_strength = std::clamp(
         static_cast<float>(post->number_or("softness_strength", defaults.softness_strength)), 0.0F,
         1.0F);
@@ -168,6 +171,7 @@ Settings settings_from_json(const json::JsonValue &value) {
   settings.fullscreen = value.boolean_or("fullscreen", settings.fullscreen);
   settings.frame_counter = value.boolean_or("frame_counter", settings.frame_counter);
   settings.pause_unfocused = value.boolean_or("pause_unfocused", settings.pause_unfocused);
+  settings.skip_conversations = value.boolean_or("skip_conversations", settings.skip_conversations);
   settings.experimental_coop = value.boolean_or("experimental_coop", false);
   if (const auto *coop = value.find("coop")) {
     settings.coop.enemy_level_offset = clamped(*coop, "enemy_level_offset", 0, -99, 99);
@@ -250,12 +254,15 @@ json::JsonValue settings_to_json(const Settings &settings) {
            {"colour_tint", JsonValue{settings.post_process.colour_tint}},
            {"smaa", JsonValue{settings.post_process.smaa}},
            {"dynamic_lighting", JsonValue{settings.post_process.dynamic_lighting}},
+           {"volumetric_light", JsonValue{settings.post_process.volumetric_light}},
            {"original_softness", JsonValue{settings.post_process.original_softness}},
+           {"sharp_text", JsonValue{settings.post_process.sharp_text}},
            {"softness_strength",
             JsonValue{static_cast<double>(settings.post_process.softness_strength)}}}}},
       {"fullscreen", JsonValue{settings.fullscreen}},
       {"frame_counter", JsonValue{settings.frame_counter}},
       {"pause_unfocused", JsonValue{settings.pause_unfocused}},
+      {"skip_conversations", JsonValue{settings.skip_conversations}},
       {"experimental_coop", JsonValue{settings.experimental_coop}},
       {"coop",
        JsonValue{JsonValue::Object{

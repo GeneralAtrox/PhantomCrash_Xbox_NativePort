@@ -212,7 +212,7 @@ void HangarMenu::choose_card(const int card) {
   refresh_help();
 }
 
-// 0x01e81b: left/right along the wheel (sys 23), X to the ridden hangar,
+// 0x01e81b: left/right along the wheel (sys 3), X to the ridden hangar,
 // cancel to EXIT (sys 8 and 28); confirm leaves on EXIT, offers a hangar
 // not owned for sale and opens an owned one's menu; an origin with refusals
 // (KEEP SV) turns away what it will not take instead.
@@ -265,7 +265,7 @@ void HangarMenu::open_menu(const int item) {
   refresh_help();
 }
 
-// 0x01e4d3: up/down through what the hangar can do (sys 22), stepping over
+// 0x01e4d3: up/down through what the hangar can do (sys 3), stepping over
 // TEST DRIVE unless it is the ridden hangar; cancel moves to CLOSE (sys 3).
 void HangarMenu::menu_input(const double tick_seconds, const InputFrame &input) {
   bool fresh = false;

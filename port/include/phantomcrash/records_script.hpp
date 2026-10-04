@@ -141,11 +141,15 @@ struct ConventionStyle {
 struct RecordsScript : TownBasics {
   Buttons up{}, down{}, left{}, right{}, page_back{}, page_forward{};
   std::string column_sound, exit_sound, close_sound, row_sound, page_sound;
+  std::string menu_sound; // the first menu's cursor (0x34336: sys 4), else move_sound
   RecordsMenu menu;
   RowReveal reveal;
   RecordNumbers numbers;
   std::map<std::string, RecordPage> pages;
   std::vector<int> completion_contests;
+  // Story events every new game plays before the player has done anything,
+  // left out of the achievement rate so it starts at 0%.
+  std::vector<int> unscored_events;
   ConventionStyle convention;
 };
 

@@ -30,6 +30,11 @@ bool locked_on(const std::vector<Combatant> &robots, const std::size_t index) {
   return false;
 }
 
+int arms_knocked_off(const Combatant &robot) {
+  return static_cast<int>(robot.lost[static_cast<std::size_t>(WeaponSlot::right_arm)]) +
+         static_cast<int>(robot.lost[static_cast<std::size_t>(WeaponSlot::left_arm)]);
+}
+
 } // namespace
 
 void BattleSounds::loop(const bool on, const bool was, const std::string &name,
@@ -61,6 +66,7 @@ void BattleSounds::observe_pilot(const Battle &battle, const std::size_t index,
     watch.twisting = false;
     watch.camouflaged = robot.camouflaged;
     watch.arm_alarm_left = 0.0F;
+    watch.arms_lost = arms_knocked_off(robot);
     return;
   }
   // 0x0949a0: robot +0x2f68 is the twist stick, +0xf8 the twist.
@@ -88,10 +94,14 @@ void BattleSounds::observe_pilot(const Battle &battle, const std::size_t index,
   }
   watch.camouflaged = robot.camouflaged;
   // The arms' mounts (+0x8c, +0x90): a knocked-off arm weapon warns every
-  // arm_lost_seconds, the first time at once.
-  const bool arm_lost = robot.lost[static_cast<std::size_t>(WeaponSlot::right_arm)] ||
-                        robot.lost[static_cast<std::size_t>(WeaponSlot::left_arm)];
-  if (arm_lost) {
+  // arm_lost_seconds, the first time at once; with 0, once for each arm.
+  const int arms_lost = arms_knocked_off(robot);
+  const bool arm_lost = arms_lost > 0;
+  if (table_.arm_lost_seconds <= 0.0F) {
+    if (arms_lost > watch.arms_lost) {
+      play(table_.arm_lost, at);
+    }
+  } else if (arm_lost) {
     watch.arm_alarm_left -= seconds;
     if (watch.arm_alarm_left <= 0.0F) {
       play(table_.arm_lost, at);
@@ -100,6 +110,7 @@ void BattleSounds::observe_pilot(const Battle &battle, const std::size_t index,
   } else {
     watch.arm_alarm_left = 0.0F;
   }
+  watch.arms_lost = arms_lost;
 }
 
 // 0x066940 starts bank 1 entry 0x2f looping at the carrier for the whole

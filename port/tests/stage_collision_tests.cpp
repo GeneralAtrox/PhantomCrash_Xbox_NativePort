@@ -129,3 +129,34 @@ TEST_CASE("shots stop at walls") {
   }
   CHECK(battle.robots()[static_cast<std::size_t>(target)].hp == 50.0F);
 }
+
+TEST_CASE("a sphere past a ledge's lip stands on the lip while its push still counts as ground") {
+  const StageCollision stage = sample_stage();
+  const float radius = 2.0F;
+  // The platform's top ends at x = -6; the centre is 0.6 past it.
+  const float lip = 3.0F + std::sqrt(radius * radius - 0.36F) - radius;
+  CHECK(std::fabs(stage.ground_height({-5.4F, lip, 0.0F}, 0.5F, radius) - lip) < 1e-3F);
+  // Without a radius there is nothing under the centre but the floor.
+  CHECK(std::fabs(stage.ground_height({-5.4F, lip, 0.0F}, 0.5F)) < 1e-5F);
+  // Further out the push turns sideways and the robot falls.
+  CHECK(std::fabs(stage.ground_height({-4.5F, 2.0F, 0.0F}, 0.5F, radius)) < 1e-5F);
+}
+
+TEST_CASE("robots resting on a ledge's lip are not held in a jump and can walk away") {
+  Battle battle(parse_battle_settings(json::parse("{}")), EnemyPath{});
+  battle.set_stage(sample_stage());
+  const int player = battle.add_robot("player", 0, {-5.4F, 2.92F, 0.0F}, -pi * 0.5F, {}, 100.0F);
+  battle.set_radius(player, 2.0F);
+  for (int i = 0; i < 60; ++i) {
+    battle.tick({}, {}, tick);
+  }
+  CHECK(battle.player().mover.grounded());
+  CHECK(battle.player().mover.mode() != MoveMode::jump);
+  RobotControl control;
+  control.move = {0.0F, 1.0F};
+  for (int i = 0; i < 90; ++i) {
+    battle.tick(control, {}, tick);
+  }
+  CHECK(battle.player().mover.position().x > -1.0F);
+  CHECK(std::fabs(battle.player().mover.position().y) < 1e-3F);
+}

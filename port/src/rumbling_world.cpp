@@ -118,6 +118,7 @@ void RumblingWorld::build(const int index, const QuestSave &quest) {
   area.battle.reset();
   area.robots.clear();
   area.player_kills.clear();
+  area.player_bounty = 0;
   area.clock = 0.0;
   ++area.changes;
   if (area.roster.members.empty()) {
@@ -279,6 +280,8 @@ void RumblingWorld::step(const int index, const QuestSave &quest, const float se
       member.live.arrival = live_.arrival_seconds;
       if (lent_ == index && robot.shot_by == 0) {
         area.player_kills.push_back(member);
+        area.player_bounty +=
+            roster_card(check_, tables_.contests, quest, member.entrant, true).bounty;
       }
       robot.shot_by = -1;
     }
@@ -310,6 +313,7 @@ std::shared_ptr<Battle> RumblingWorld::lend(const int area, QuestSave &quest) {
   lent_ = area;
   Area &lent = areas_[static_cast<std::size_t>(area)];
   lent.player_kills.clear();
+  lent.player_bounty = 0;
   return lent.battle;
 }
 
@@ -320,6 +324,10 @@ bool RumblingWorld::player_won() const {
   return std::ranges::any_of(
       areas_[static_cast<std::size_t>(lent_)].player_kills,
       [](const RosterMember &kill) { return kill.source == RosterSource::champion; });
+}
+
+std::int64_t RumblingWorld::bounty_won() const {
+  return lent_ < 0 ? 0 : areas_[static_cast<std::size_t>(lent_)].player_bounty;
 }
 
 std::int64_t RumblingWorld::give_back(QuestSave &quest) {
@@ -344,6 +352,7 @@ std::int64_t RumblingWorld::give_back(QuestSave &quest) {
     quest.money = std::min(quest.money + card.bounty, money_limit);
   }
   area.player_kills.clear();
+  area.player_bounty = 0;
   return prize;
 }
 

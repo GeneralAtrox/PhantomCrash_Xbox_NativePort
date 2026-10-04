@@ -103,7 +103,7 @@ public:
     std::string label;
     std::string screen;
   };
-  // The training ground's lessons (FreePlay first) and the quick rental match.
+  // The training ground's lessons (FreePlay first), then the quick rental matches.
   [[nodiscard]] std::vector<Level> levels() const;
   // Opens `name` straight away, with no story event in between (debugging).
   void jump(const std::string &name) {
@@ -136,6 +136,7 @@ public:
   void set_audio_options(const AudioOptions &options);
   void set_post_process(const PostProcessOptions &options) {
     post_process_ = options;
+    textures_.set_sharp_text(options.sharp_text);
   }
   // The scene dump (desktop_screens_dump.cpp): the screen, the way it was
   // reached and the save; and that with the task, the steps from `launch`
@@ -153,6 +154,10 @@ public:
   // tick, and a one-off change, made to the game as the next screen opens
   // (at once on a place's menu or the town map, which opens again).
   void set_cheats(const CheatOptions &cheats);
+  // Story conversations are passed over: their scenes count as seen.
+  void set_skip_conversations(bool skip) noexcept {
+    skip_conversations_ = skip;
+  }
   void cheat(const CheatRequest &request);
   // Go to Day's entries: each calendar day and the rankers' contests on it.
   [[nodiscard]] std::vector<std::string> cheat_days() const;
@@ -193,6 +198,10 @@ private:
   void hear_music(double tick_seconds);
   // The story event that plays on the move between two screens, if any.
   [[nodiscard]] const StoryEvent *story_event(const std::string &from, const std::string &to) const;
+  [[nodiscard]] const StoryEvent *named_event(const std::string &name) const; // "event_<scene>"
+  // The screen a conversation leads on to, opened from `from`.
+  [[nodiscard]] std::string event_destination(const StoryEvent &event,
+                                              const std::string &from) const;
   [[nodiscard]] std::unique_ptr<Screen> make_event(const std::string &name,
                                                    const std::string &from);
   // The file of a music track ("keep": the one playing), or empty.
@@ -293,6 +302,7 @@ private:
   std::vector<int> volume_millibels_;              // tables/music.json
   std::map<std::string, std::string> track_files_; // music name -> file
   GameOptions options_;
+  bool skip_conversations_{};
   QuestSave quest_;
   std::unique_ptr<GameScreens> game_; // the town's screens, and the placeholders
   TrainingScript training_;

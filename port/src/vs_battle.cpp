@@ -14,6 +14,7 @@ VsRoundTuning parse_round(const json::JsonValue &value, VsRoundTuning round) {
   round.fade_frames = value.number_or("fade_frames", round.fade_frames);
   if (const json::JsonValue *sounds = value.find("sounds")) {
     round.move_sound = sounds->string_or("move", round.move_sound);
+    round.answer_sound = sounds->string_or("answer", round.answer_sound);
     round.confirm_sound = sounds->string_or("confirm", round.confirm_sound);
     round.cancel_sound = sounds->string_or("cancel", round.cancel_sound);
   }

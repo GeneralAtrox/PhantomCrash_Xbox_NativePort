@@ -28,13 +28,15 @@ std::unique_ptr<Screen> ScreenRunner::make_battle(const std::string &name) {
                                            quest_.garage.riding, game_->part_tables());
     return make_training(battle_training_, test_drive_.lesson);
   }
-  if (name == "rumbling_battle" || name == rumbling_battle_.quick_rental.screen) {
+  const QuickRental *preset = find_quick_rental(rumbling_battle_, name);
+  if (name == "rumbling_battle" || preset != nullptr) {
     std::optional<RumblingEntry> quick;
-    if (name == rumbling_battle_.quick_rental.screen) {
-      quick = prepare_quick_rental(rumbling_battle_.quick_rental, game_->contests(),
-                                   game_->regulation_check().rules, game_->garage_tables(), quest_);
+    if (preset != nullptr) {
+      quick = prepare_quick_rental(*preset, game_->contests(), game_->regulation_check().rules,
+                                   game_->garage_tables(), quest_);
       if (!quick) {
-        SDL_Log("Quick rental unavailable: check the preset, converted tables and entry fee");
+        SDL_Log("Quick rental %s unavailable: check the preset, converted tables and entry fee",
+                name.c_str());
         return game_->make("rumbling", "", place_before_, quest_);
       }
     }
@@ -156,8 +158,7 @@ std::vector<ScreenRunner::Level> ScreenRunner::levels() const {
   for (auto &entry : found) {
     out.push_back(std::move(entry.second));
   }
-  const QuickRental &rental = rumbling_battle_.quick_rental;
-  if (!rental.screen.empty()) {
+  for (const QuickRental &rental : rumbling_battle_.quick_rentals) {
     out.push_back({rental.label, rental.screen});
   }
   return out;

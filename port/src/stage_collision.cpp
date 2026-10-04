@@ -1,5 +1,7 @@
 #include "phantomcrash/stage_collision.hpp"
 
+#include "collision_geometry.hpp"
+
 #include <algorithm>
 #include <cmath>
 #include <limits>
@@ -8,93 +10,16 @@
 namespace phantomcrash {
 namespace {
 
+using namespace collision_geometry;
+
 // The contact flags per surface % 1000 (0x2057d8).
 constexpr std::array<unsigned, 11> surface_table{0x1,   0x40,   0x80,   0x100,  0x200, 0x400,
                                                  0x800, 0x1000, 0x2000, 0x4000, 0x8000};
 constexpr int surface_modulus = 1000;
-constexpr float grid_cell = 8.0F;   // port grid, world units
-constexpr int push_passes = 3;      // corners need a second push
-constexpr int box_wall_surface = 9; // a plain wall
-constexpr float parallel = 1e-7F;
+constexpr float grid_cell = 8.0F;        // port grid, world units
+constexpr int push_passes = 3;           // corners need a second push
+constexpr int box_wall_surface = 9;      // a plain wall
 constexpr float contact_epsilon = 1e-4F; // retain tangency after floating-point push-out
-
-struct Closest {
-  Vec3 point;
-  bool face{}; // inside the triangle, not on an edge or corner
-};
-
-// The point of the triangle nearest `p` (Ericson, Real-Time Collision
-// Detection 5.1.5).
-Closest closest_point(const Vec3 p, const std::array<Vec3, 3> &t) {
-  const Vec3 a = t[0], b = t[1], c = t[2];
-  const Vec3 ab = b - a, ac = c - a, ap = p - a;
-  const float d1 = dot(ab, ap), d2 = dot(ac, ap);
-  if (d1 <= 0.0F && d2 <= 0.0F) {
-    return {a};
-  }
-  const Vec3 bp = p - b;
-  const float d3 = dot(ab, bp), d4 = dot(ac, bp);
-  if (d3 >= 0.0F && d4 <= d3) {
-    return {b};
-  }
-  const float vc = d1 * d4 - d3 * d2;
-  if (vc <= 0.0F && d1 >= 0.0F && d3 <= 0.0F) {
-    return {a + ab * (d1 / (d1 - d3))};
-  }
-  const Vec3 cp = p - c;
-  const float d5 = dot(ab, cp), d6 = dot(ac, cp);
-  if (d6 >= 0.0F && d5 <= d6) {
-    return {c};
-  }
-  const float vb = d5 * d2 - d1 * d6;
-  if (vb <= 0.0F && d2 >= 0.0F && d6 <= 0.0F) {
-    return {a + ac * (d2 / (d2 - d6))};
-  }
-  const float va = d3 * d6 - d5 * d4;
-  if (va <= 0.0F && d4 - d3 >= 0.0F && d5 - d6 >= 0.0F) {
-    return {b + (c - b) * ((d4 - d3) / ((d4 - d3) + (d5 - d6)))};
-  }
-  const float scale = 1.0F / (va + vb + vc);
-  return {a + ab * (vb * scale) + ac * (vc * scale), true};
-}
-
-// The triangle's height at (x, z), if the point lies over it.
-std::optional<float> height_at(const CollisionTriangle &t, const float x, const float z) {
-  if (std::abs(t.normal.y) < parallel) {
-    return std::nullopt;
-  }
-  const Vec3 a = t.points[0], b = t.points[1], c = t.points[2];
-  const float det = (b.z - c.z) * (a.x - c.x) + (c.x - b.x) * (a.z - c.z);
-  if (std::abs(det) < parallel) {
-    return std::nullopt;
-  }
-  const float u = ((b.z - c.z) * (x - c.x) + (c.x - b.x) * (z - c.z)) / det;
-  const float v = ((c.z - a.z) * (x - c.x) + (a.x - c.x) * (z - c.z)) / det;
-  if (u < 0.0F || v < 0.0F || u + v > 1.0F) {
-    return std::nullopt;
-  }
-  return a.y * u + b.y * v + c.y * (1.0F - u - v);
-}
-
-// Möller-Trumbore: the segment parameter where it crosses the triangle.
-std::optional<float> segment_cross(const Vec3 from, const Vec3 delta, const CollisionTriangle &t) {
-  const Vec3 e1 = t.points[1] - t.points[0];
-  const Vec3 e2 = t.points[2] - t.points[0];
-  const Vec3 p = cross(delta, e2);
-  const float det = dot(e1, p);
-  if (std::abs(det) < parallel) {
-    return std::nullopt;
-  }
-  const Vec3 s = from - t.points[0];
-  const float u = dot(s, p) / det;
-  const Vec3 q = cross(s, e1);
-  const float v = dot(delta, q) / det;
-  const float along = dot(e2, q) / det;
-  if (u < 0.0F || v < 0.0F || u + v > 1.0F || along < 0.0F || along > 1.0F) {
-    return std::nullopt;
-  }
-  return along;
-}
 
 CollisionTriangle triangle(const Vec3 a, const Vec3 b, const Vec3 c, const int surface) {
   return {{a, b, c}, normalize(cross(b - a, c - a)), surface};
@@ -255,25 +180,42 @@ float StageCollision::ground_height(const Vec3 at, const float step, const float
                                     int *surface) const {
   float best = no_ground;
   int best_surface = -1;
+  const auto offer = [&](const float support, const CollisionTriangle &t) {
+    if (support <= at.y + step && support > best) {
+      best = support;
+      best_surface = t.surface;
+    }
+  };
+  // push_sphere stands a sphere on an edge or corner while the push points
+  // more upward than ground_normal_y: within this distance across.
+  const float reach = radius * std::sqrt(1.0F - ground_normal_y * ground_normal_y);
   const auto consider = [&](const CollisionTriangle &t) {
-    if (t.normal.y <= ground_normal_y || (surface_flags(t.surface) & stage_contact::fence) != 0) {
+    if ((surface_flags(t.surface) & stage_contact::fence) != 0) {
       return;
     }
-    if (const auto h = height_at(t, at.x, at.z)) {
-      // A sphere's centre must be radius / normal.y above a sloped plane.
-      // Comparing its feet with the unadjusted plane falsely reports a fall
-      // after collision has already lifted it onto the ramp.
-      const float support = *h + radius * (1.0F / t.normal.y - 1.0F);
-      if (support <= at.y + step && support > best) {
-        best = support;
-        best_surface = t.surface;
+    if (t.normal.y > ground_normal_y) {
+      if (const auto h = height_at(t, at.x, at.z)) {
+        // A sphere's centre must be radius / normal.y above a sloped plane.
+        // Comparing its feet with the unadjusted plane falsely reports a fall
+        // after collision has already lifted it onto the ramp.
+        offer(*h + radius * (1.0F / t.normal.y - 1.0F), t);
+      }
+    }
+    // The foot sphere can also rest on a ledge's lip, a kerb or a low rim
+    // past its centre. Ignoring that support made the robot "walk off" the
+    // edge it stood on every tick, held in its jump.
+    if (reach > 0.0F) {
+      if (const auto lip = edge_support(t, at.x, at.z, radius, reach)) {
+        offer(*lip, t);
       }
     }
   };
-  for (const std::uint32_t index : candidates(at.x, at.z, at.x, at.z, true)) {
+  for (const std::uint32_t index :
+       candidates(at.x - reach, at.z - reach, at.x + reach, at.z + reach, true)) {
     consider(triangles_floor_[index]);
   }
-  for (const std::uint32_t index : candidates(at.x, at.z, at.x, at.z, false)) {
+  for (const std::uint32_t index :
+       candidates(at.x - reach, at.z - reach, at.x + reach, at.z + reach, false)) {
     consider(triangles_walls_[index]);
   }
   if (surface != nullptr) {

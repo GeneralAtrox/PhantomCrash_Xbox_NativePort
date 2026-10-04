@@ -62,7 +62,8 @@ GlyphFont parse_glyph_font(const json::JsonValue &document) {
     const std::string &characters = required(document, "characters").string();
     int glyph = 0;
     for (std::size_t index = 0; index < characters.size(); ++glyph) {
-      font.glyphs.try_emplace(next_code_point(characters, index), glyph);
+      font.characters.push_back(next_code_point(characters, index));
+      font.glyphs.try_emplace(font.characters.back(), glyph);
     }
     for (const auto &pair : required(document, "metrics").array()) {
       font.metrics.push_back(numbers<2>(pair, "metrics entry"));

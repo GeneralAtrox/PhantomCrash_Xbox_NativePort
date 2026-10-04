@@ -24,6 +24,8 @@ int mesh_node(const ModelData *model, const int mesh) {
   return -1;
 }
 
+constexpr float half_strength = 0.5F; // a camouflage-hidden volume goes from here
+
 } // namespace
 
 bool project_point(const Mat4 &view_projection, const Vec3 point, const int width, const int height,
@@ -101,19 +103,23 @@ void BattleView::set_shadows(const RobotShadowLook &look, const bool split_scree
 
 void BattleView::add_shadow(const Combatant &robot, const Visual &visual, const Mat4 &root,
                             const std::size_t first, std::vector<WorldItem> &items) const {
+  // A stencil volume cannot fade: it goes once the camouflage is half on.
+  const float strength = robot_shadow_strength(shadows_, robot.camouflage_sweep);
   switch (robot_shadow(shadows_, robot.piloted, split_screen_, robot.mover.grounded())) {
   case RobotShadow::volume:
     for (std::size_t item = first; item < items.size(); ++item) {
-      items[item].casts_shadow = true;
+      items[item].casts_shadow = strength >= half_strength;
     }
     break;
   case RobotShadow::ground:
-    if (ground_model_ >= 0 && visual.ground_node >= 0) {
+    if (ground_model_ >= 0 && visual.ground_node >= 0 && strength > 0.0F) {
       WorldItem shadow;
       shadow.model = ground_model_;
       shadow.node = visual.ground_node;
       shadow.world = root;
-      shadow.colour = shadows_.ground_colour;
+      std::array<float, 4> colour = shadows_.ground_colour;
+      colour[3] *= strength;
+      shadow.colour = colour;
       shadow.ground_shadow = true;
       shadow.double_sided = true;
       items.push_back(std::move(shadow));
@@ -143,19 +149,7 @@ void BattleView::bind(Battle &battle) {
 void BattleView::tick(Battle &battle, const float seconds) {
   bind(battle);
   sync_wrecks(battle);
-  shield_spin_ = std::fmod(shield_spin_ + shield_.spin_per_second * seconds, 2.0F * pi);
-  shield_clock_ += std::max(seconds, 0.0F) * shield_.update_hz;
-  while (shield_clock_ >= 1.0) {
-    shield_clock_ -= 1.0;
-    shield_phase_ += shield_.phase_step;
-    if (shield_phase_ < -1.0F) {
-      shield_phase_ = 1.0F;
-    } else if (shield_phase_ > 1.0F) {
-      shield_phase_ = -1.0F;
-    }
-    shield_scroll_ += shield_.scroll_step;
-    shield_scroll_ -= std::floor(shield_scroll_);
-  }
+  advance_shield(battle, seconds);
   const auto &robots = battle.robots();
   for (std::size_t index = 0; index < visuals_.size() && index < robots.size(); ++index) {
     const auto &robot = robots[index];
@@ -216,6 +210,25 @@ void BattleView::add_items(const Battle &battle, std::vector<WorldItem> &items, 
       items[item].robot = static_cast<int>(index);
     }
   }
+}
+
+// The shared shield angle, rainbow phase and UV scroll: the original steps
+// them at every shield draw (0x06f592, 0x0c43ae), 30 draws a second for each
+// shield shown, whatever the number of rendered views here.
+void BattleView::advance_shield(const Battle &battle, const float seconds) {
+  float shields = 1.0F;
+  if (shield_.per_shield) {
+    shields = static_cast<float>(std::ranges::count_if(
+        battle.robots(), [](const Combatant &robot) { return robot.shield_glow > 0.0F; }));
+  }
+  const float draws = std::max(seconds, 0.0F) * shield_.update_hz * shields;
+  shield_spin_ =
+      std::fmod(shield_spin_ + shield_.spin_per_second / shield_.update_hz * draws, 2.0F * pi);
+  // The phase restarts at 1 below -1 (and at -1 above 1 for a rising one).
+  shield_phase_ = std::fmod(shield_phase_ + shield_.phase_step * draws + 1.0F, 2.0F);
+  shield_phase_ += shield_phase_ < 0.0F ? 1.0F : -1.0F;
+  shield_scroll_ += shield_.scroll_step * draws;
+  shield_scroll_ -= std::floor(shield_scroll_);
 }
 
 // 0x06f592: the sphere around the robot's lower collision sphere, turning,

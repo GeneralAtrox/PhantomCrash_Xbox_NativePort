@@ -1060,6 +1060,13 @@ Robot ground queries include the lower sphere's slope clearance:
 standing on a ramp does not falsely exceed the ground-snap distance and
 restart the falling/landing animation. Point queries used by scenery and
 play-area checks continue to return the actual surface height.
+Robot ground queries also count the lower sphere resting on an edge or
+corner past its centre (a ledge's lip, a kerb, a scenery wreck's rim), out to
+`radius * sqrt(1 - 0.75²)` across, where the push stops counting as ground.
+Without this the push stood the robot on the lip while the floor under its
+centre was lower, so every tick it "walked off" the edge and landed again,
+held in its jump motion and unable to walk (the Shinjuku stepped ledges and
+destroyed sheds).
 
 ### The stage's environment
 

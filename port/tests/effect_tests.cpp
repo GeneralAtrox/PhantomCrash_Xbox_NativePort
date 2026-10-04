@@ -3,9 +3,11 @@
 
 #include "test_support.hpp"
 
+#include <cmath>
 #include <memory>
 
 #include "phantomcrash/effect_bank.hpp"
+#include "phantomcrash/effect_glow.hpp"
 #include "phantomcrash/effect_system.hpp"
 #include "phantomcrash/json.hpp"
 
@@ -241,4 +243,34 @@ TEST_CASE("a rising flash climbs, grows and thins") {
   CHECK(smoke.alpha < 112);
   CHECK(smoke.grow > 1.0F);
   CHECK(smoke.position.y > 0.3F);
+}
+
+TEST_CASE("a flash glows where it is, in the flash colour, unless its group is unlit") {
+  EffectSystem effects(flash_bank(fade_and_rise));
+  effects.start(0, {1.0F, 2.0F, 3.0F}, {}, {0, 1, 0}, 6.0F);
+  EffectGlowTuning tuning;
+  tuning.flash_colour = {1.0F, 0.5F, 0.25F};
+  const auto glows = effect_glows(effects, tuning);
+  REQUIRE(glows.size() == 1);
+  CHECK(glows[0].group == 0);
+  CHECK(glows[0].energy > 0.0F);
+  CHECK(length(glows[0].position - Vec3{1.0F, 2.0F, 3.0F}) < 0.01F);
+  CHECK(length(glows[0].colour - tuning.flash_colour) < 0.01F);
+  tuning.flash_weight = 2.0F;
+  CHECK(std::abs(effect_glows(effects, tuning)[0].energy - glows[0].energy * 2.0F) < 0.001F);
+  tuning.group_scale = [](int) { return 0.0F; };
+  CHECK(effect_glows(effects, tuning).empty());
+}
+
+TEST_CASE("only additive particles glow") {
+  const std::string looks = R"("life": 30, "rate": 30, "colour": [255, 128, 0], "alpha": 255)";
+  for (const bool additive : {false, true}) {
+    EffectSystem effects(bank_of(R"(["spawn"])", std::string("{") + looks +
+                                                     (additive ? R"(, "additive": true})" : "}")));
+    effects.start(0, {0.0F, 5.0F, 0.0F});
+    effects.tick(3.0F / 30.0F);
+    REQUIRE(live(effects) > 0);
+    const auto glows = effect_glows(effects, {});
+    CHECK(glows.size() == (additive ? 1U : 0U));
+  }
 }

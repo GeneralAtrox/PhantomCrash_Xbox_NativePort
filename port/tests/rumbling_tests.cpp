@@ -254,7 +254,7 @@ TEST_CASE("the quick rental restarts its contest while preserving the player's g
   const QuickRental preset =
       parse_rumbling_battle(
           DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT).document("world/rumbling.json"))
-          .quick_rental;
+          .quick_rentals.front();
   CHECK(preset.screen == "rumbling_d_rental");
   fixture.garage.robots.resize(static_cast<std::size_t>(preset.robot + 1));
   RobotRecord &rental = fixture.garage.robots[static_cast<std::size_t>(preset.robot)];
@@ -287,12 +287,24 @@ TEST_CASE("the quick rental restarts its contest while preserving the player's g
   CHECK(quest == poor);
 }
 
+TEST_CASE("the level select offers a night rental match under its own screen") {
+  const auto battle = parse_rumbling_battle(
+      DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT).document("world/rumbling.json"));
+  REQUIRE(battle.quick_rentals.size() == 2);
+  const QuickRental *night = find_quick_rental(battle, "rumbling_d_night_rental");
+  REQUIRE(night != nullptr);
+  CHECK(night == &battle.quick_rentals[1]);
+  CHECK(night->day == 3); // Night Electric, Shinjuku's Class D night contest
+  CHECK(night->area == 0);
+  CHECK(find_quick_rental(battle, "rumbling_battle") == nullptr);
+}
+
 TEST_CASE("an unavailable quick rental leaves the saved quest untouched") {
   const Fixture fixture;
   const QuickRental preset =
       parse_rumbling_battle(
           DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT).document("world/rumbling.json"))
-          .quick_rental;
+          .quick_rentals.front();
   QuestSave quest = riding_quest();
   const QuestSave before = quest;
   CHECK(!prepare_quick_rental(preset, fixture.tables, fixture.rules, fixture.garage, quest));

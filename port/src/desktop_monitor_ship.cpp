@@ -65,6 +65,7 @@ MonitorShip::MonitorShip(WorldRenderer &world, const DataRoots &roots, const int
       const int mesh = std::stoi(name.substr(4));
       Part part;
       part.node = static_cast<int>(i);
+      part.mesh = mesh;
       part.name = name;
       part.screen = contains(screens, mesh);
       for (const auto &hinge : json::required(look, "hinges").array()) {
@@ -113,14 +114,36 @@ void MonitorShip::tick(const float seconds) {
   world_ = rotation_y(std::atan2(direction.x, direction.z)) * translation(bezier_point(curve, t));
 }
 
+Mat4 MonitorShip::part_world(const Part &part) const {
+  if (part.hinge_sign != 0) {
+    return translation({-part.hinge_x, 0, 0}) * rotation_z(part.hinge_sign * hinge_) *
+           translation({part.hinge_x, 0, 0}) * world_;
+  }
+  if (part.spinner) {
+    // 0x06a5ac moves each beam to its pivot and turns it there about its
+    // own origin, where the mesh is authored.
+    return rotation_y(spin_) * translation(part.pivot) * world_;
+  }
+  return world_;
+}
+
+// A light on a part (its "mesh") follows it: the night ship's lamps sit in
+// its turning beams.
 void MonitorShip::add_lights(std::vector<WorldLight> &lights) const {
   if (model_ < 0 || route_.empty()) {
     return;
   }
-  for (auto light : lights_) {
-    light.position = transform_point(light.position, world_);
-    const Mat4 axes = rotation_y(spin_) * world_;
-    light.direction = normalize(transform_point(light.direction, axes) - transform_point({}, axes));
+  for (const AttachedLight &source : lights_) {
+    Mat4 frame = world_;
+    for (const Part &part : parts_) {
+      if (source.mesh >= 0 && part.mesh == source.mesh) {
+        frame = part_world(part);
+      }
+    }
+    WorldLight light = source.light;
+    light.position = transform_point(light.position, frame);
+    light.direction =
+        normalize(transform_point(light.direction, frame) - transform_point({}, frame));
     lights.push_back(light);
   }
 }
@@ -133,18 +156,11 @@ void MonitorShip::add_items(std::vector<WorldItem> &items) const {
     WorldItem item;
     item.model = model_;
     item.node = part.node;
-    item.world = world_;
+    item.world = part_world(part);
     // 0x06a5ac submits the hull and TVs with flag 0x02000000 through
     // 0x0afef7/0x0aff4a; 0x0b3240 disables fog for those draws. At the
     // ship's altitude, ordinary arena fog otherwise hides all texture detail.
     item.fogged = false;
-    if (part.hinge_sign != 0) {
-      item.world = translation({-part.hinge_x, 0, 0}) * rotation_z(part.hinge_sign * hinge_) *
-                   translation({part.hinge_x, 0, 0}) * world_;
-    } else if (part.spinner) {
-      const Vec3 p = part.pivot;
-      item.world = translation({-p.x, -p.y, -p.z}) * rotation_y(spin_) * translation(p) * world_;
-    }
     if (part.screen) {
       item.monitor_nodes.push_back(part.name);
     }

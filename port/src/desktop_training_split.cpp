@@ -8,6 +8,7 @@
 #include <SDL3/SDL.h>
 
 #include <algorithm>
+#include <exception>
 
 namespace phantomcrash {
 
@@ -16,8 +17,24 @@ void TrainingScreen::load_stage_art(const StageDefinition *stage, const DataRoot
     return;
   }
   lighting_ = stage->lighting;
-  local_lights_ = light_sources(roots, "stages", stage->scene_stage);
+  local_lights_.clear();
+  for (const AttachedLight &source : light_sources(roots, "stages", stage->scene_stage)) {
+    local_lights_.push_back(source.light);
+  }
   SDL_Log("Stage %d: %zu configured local lights", stage->scene_stage, local_lights_.size());
+  try {
+    air_ = load_volumetric_air(roots, stage->scene_stage);
+  } catch (const std::exception &error) {
+    air_ = {};
+    SDL_Log("Volumetric light disabled: %s", error.what());
+  }
+  try {
+    // Odd scene stages are the night ones (their ships carry searchlights).
+    point_lights_ = std::make_unique<PointLights>(load_point_light_tuning(roots),
+                                                  (stage->scene_stage & 1) != 0);
+  } catch (const std::exception &error) {
+    SDL_Log("Point lights disabled: %s", error.what());
+  }
   lighting_.screen = screen_for_day(lighting_.screen, day_);
   stage_.sky_nodes = stage->sky_nodes;
   stage_.shadow_nodes = stage->shadow_nodes;
@@ -48,6 +65,20 @@ void TrainingScreen::load_stage_art(const StageDefinition *stage, const DataRoot
         SDL_Log("Stage %d: %zu two-sided fence/post materials resolved from %zu textures",
                 stage->scene_stage, stage_.two_sided_materials.size(),
                 stage->two_sided_textures.size());
+        // The pools are blended, unlit layers; the same atlas also paints
+        // ordinary lit surfaces, which stay.
+        const auto pools = light_pool_textures(roots, stage->scene_stage);
+        stage_.lit_hidden_materials.clear();
+        for (std::size_t index = 0; index < model->materials.size(); ++index) {
+          const ModelMaterial &material = model->materials[index];
+          if (material.base_texture >= 0 && material.alpha == AlphaMode::blend && material.unlit &&
+              std::ranges::find(pools, model->textures[material.base_texture].image) !=
+                  pools.end()) {
+            stage_.lit_hidden_materials.push_back(static_cast<int>(index));
+          }
+        }
+        SDL_Log("Stage %d: %zu painted light pools give way to dynamic lights", stage->scene_stage,
+                stage_.lit_hidden_materials.size());
         for (const auto &name : stage_.shadow_nodes) {
           const bool submitted = std::ranges::any_of(model->draws, [&](const ModelDraw &draw) {
             return model->nodes[draw.node].name == name;
@@ -108,9 +139,16 @@ WorldFrame TrainingScreen::battle_frame(const ChaseCamera &camera, const int wid
   frame.shadow_length = script_.battle.shadows.volume_length;
   frame.items.push_back(stage_);
   frame.lights = local_lights_;
+  frame.air = air_;
   if (monitor_ship_) {
     monitor_ship_->add_items(frame.items);
     monitor_ship_->add_lights(frame.lights);
+  }
+  if (supply_ && battle_->supply() != nullptr) {
+    supply_->add_lights(*battle_->supply(), frame.lights);
+  }
+  if (point_lights_) {
+    point_lights_->add(*battle_, effects_ ? &effects_->system() : nullptr, frame.eye, frame.lights);
   }
   if (object_model_ >= 0) {
     add_object_items(*battle_, object_model_, frame.items);
@@ -131,6 +169,9 @@ WorldFrame TrainingScreen::battle_frame(const ChaseCamera &camera, const int wid
   if (shots_) {
     shots_->add_items(*battle_, frame.view, frame.items);
     shots_->add_sprites(*battle_, effects_->system(), frame.sprites);
+  }
+  if (mech_vfx_) {
+    mech_vfx_->add_items(frame.view, frame.items);
   }
   if (view_) {
     const int state = scene_ ? scene_->scene().state() : scene_state::none;
@@ -189,7 +230,7 @@ void TrainingScreen::draw_screen(const Viewport &screen, const std::size_t index
   }
   BattleHudInfo info;
   info.panels.day = day_;
-  info.panels.money = money_;
+  info.panels.money = money_ - money_at_start_;
   info.panels.mission_seconds = clock_;
   split->hud->draw(screen, *battle_, view_projection, info, clock_);
 }

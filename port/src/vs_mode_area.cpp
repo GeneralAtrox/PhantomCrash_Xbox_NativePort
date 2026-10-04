@@ -122,7 +122,7 @@ void VsMode::update_area(const double tick_seconds) {
   }
 }
 
-// 0x0411ac: any entered player moves the cursor (sys 23, no wrapping);
+// 0x0411ac: any entered player moves the cursor (sys 4, no wrapping);
 // cancel moves to EXIT (sys 4); confirm once the pictures have faded.
 void VsMode::area_input(const double tick_seconds, const InputFrame &input) {
   if (black_seconds_ >= 0.0 || items_.empty()) {
@@ -182,7 +182,7 @@ void VsMode::confirm_area() {
   }
 }
 
-// The time-zone window (0x1ffb1c): DAY or NIGHT (sys 23), confirm starts
+// The time-zone window (0x1ffb1c): DAY or NIGHT (sys 4), confirm starts
 // the battle there, cancel closes it (sys 8).
 void VsMode::zone_input(const double tick_seconds, const InputFrame &input) {
   if (!zone_.shown()) {

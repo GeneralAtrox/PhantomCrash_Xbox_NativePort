@@ -80,7 +80,7 @@ struct BattleSoundTable {
   std::string camouflage_off;       // state 5, turning off
   std::string camouflage_break;     // state 7, a hit broke it: played twice
   std::string arm_lost;             // an arm weapon knocked off (+0x8c/+0x90 state 4) ...
-  float arm_lost_seconds{5.0F};     // ... repeats this often (DAT_ac73b8 * 5)
+  float arm_lost_seconds{5.0F};     // ... repeats this often (DAT_ac73b8 * 5); 0: once an arm
   std::string locked_on;            // loops while another robot locks on (+0x8a2, 0x051045)
   std::string carrier_engine;       // the supply carrier's loop (0x066940, stopped by 0x06828e)
 };
@@ -142,6 +142,7 @@ private:
     bool camouflaged{};
     bool locked{};
     float arm_alarm_left{};
+    int arms_lost{};
   };
 
   void play(const std::string &name, Vec3 at, AudioBus bus = AudioBus::robots);

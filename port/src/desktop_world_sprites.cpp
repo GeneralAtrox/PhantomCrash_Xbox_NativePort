@@ -10,9 +10,12 @@
 #include "desktop_world_renderer.hpp"
 #include "phantomcrash/effect_sprite.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <numeric>
 #include <stdexcept>
+#include <vector>
 
 namespace phantomcrash {
 namespace {
@@ -182,9 +185,17 @@ void WorldRenderer::render_sprites(const WorldFrame &frame) {
   if (FAILED(context_->Map(sprite_vertices_.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped))) {
     return;
   }
+  // Marks fixed to a surface go first, as part of the surface: drawn after
+  // a fire, a scorch mark on the wall behind it would cover it.
+  std::vector<UINT> order(count);
+  std::iota(order.begin(), order.end(), 0U);
+  std::ranges::stable_partition(order, [&](const UINT i) {
+    const Vec3 &normal = frame.sprites[i].surface_normal;
+    return normal.x != 0.0F || normal.y != 0.0F || normal.z != 0.0F;
+  });
   auto *out = static_cast<SpriteVertex *>(mapped.pData);
   for (UINT i = 0; i < count; ++i) {
-    WorldSprite sprite = frame.sprites[i];
+    WorldSprite sprite = frame.sprites[order[i]];
     const auto geometry = effect_sprite_geometry(sprite.particle_kind, sprite.position,
                                                  sprite.cluster_centre, sprite.size, view);
     sprite.position = geometry.position;
@@ -209,9 +220,9 @@ void WorldRenderer::render_sprites(const WorldFrame &frame) {
   // One draw for each run of sprites over the same picture.
   UINT first = 0;
   while (first < count) {
-    const int texture = frame.sprites[first].texture;
+    const int texture = frame.sprites[order[first]].texture;
     UINT end = first + 1;
-    while (end < count && frame.sprites[end].texture == texture) {
+    while (end < count && frame.sprites[order[end]].texture == texture) {
       ++end;
     }
     if (texture >= 0 && texture < static_cast<int>(textures_.size()) && textures_[texture]) {

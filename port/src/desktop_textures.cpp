@@ -1,4 +1,5 @@
 #include "desktop_textures.hpp"
+#include "desktop_sharp_text.hpp"
 
 #include <SDL3_image/SDL_image.h>
 
@@ -77,6 +78,22 @@ SDL_Texture *load_texture(SDL_Renderer *renderer, const char *path) {
 
 TextureCache::TextureCache(SDL_Renderer *renderer, const DataRoots &roots)
     : renderer_(renderer), roots_(roots) {}
+
+SharpText *TextureCache::sharp_text() {
+  if (!sharp_enabled_) {
+    return nullptr;
+  }
+  if (!sharp_) {
+    SharpTextStyle style;
+    try {
+      style = parse_sharp_text(roots_.document("ui/text.json"));
+    } catch (const std::exception &error) {
+      SDL_Log("ui/text.json: %s", error.what());
+    }
+    sharp_ = std::make_unique<SharpText>(renderer_, std::move(style));
+  }
+  return sharp_->available() ? sharp_.get() : nullptr;
+}
 
 TextureCache::~TextureCache() {
   for (auto &[file, texture] : textures_) {

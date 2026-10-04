@@ -226,6 +226,7 @@ RecordsScript parse_records(const json::JsonValue &document) {
     script.page_forward = buttons_from_json(required(buttons, "page_forward"));
     const auto &sounds = required(document, "sounds");
     script.column_sound = sounds.string_or("column", "");
+    script.menu_sound = sounds.string_or("menu", script.move_sound);
     script.exit_sound = sounds.string_or("to_exit", "");
     script.close_sound = sounds.string_or("close", "");
     script.row_sound = sounds.string_or("row", "");
@@ -238,6 +239,9 @@ RecordsScript parse_records(const json::JsonValue &document) {
       script.pages[name] = member(pages, name.c_str(), parse_page);
     }
     script.completion_contests = integers(required(document, "completion_contests"));
+    if (const auto *unscored = document.find("unscored_events")) {
+      script.unscored_events = integers(*unscored);
+    }
     script.convention = member(document, "convention", parse_convention);
     return script;
   } catch (const std::exception &error) {

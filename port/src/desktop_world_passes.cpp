@@ -194,6 +194,7 @@ void WorldRenderer::render(const WorldFrame &frame) {
   if (frame.transparent) {
     render_coverage();
   } else {
+    render_air(frame);
     render_screen(frame);
   }
   render_overlay(frame);
@@ -211,8 +212,13 @@ void WorldRenderer::item_draws(const WorldItem &item, const int index, const Vec
           ? textures_[static_cast<std::size_t>(item.paint)].Get()
           : nullptr;
   const Mat4 stretch = scaling({item.scale_x, 1.0F, 1.0F});
+  const bool lit = post_process_.dynamic_lighting && dynamic_lights_ && !dynamic_failed_;
   for (const ModelDraw &draw : model.data.draws) {
     if (item.node >= 0 && draw.node != item.node) {
+      continue;
+    }
+    if (lit && std::ranges::find(item.lit_hidden_materials, draw.material) !=
+                   item.lit_hidden_materials.end()) {
       continue;
     }
     const auto node_index = static_cast<std::size_t>(draw.node);

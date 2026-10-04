@@ -122,7 +122,8 @@ settings are left unchanged.
 
 **Settings > Visuals...** opens a panel that stays open while you compare changes
 in the running game. It contains fullscreen, VSync, frame-rate cap/counter,
-**Dynamic lighting and shadows**, **SMAA anti-aliasing**, **Depth blur**,
+**Dynamic lighting and shadows** (with **Light beams in the air**, the lights
+seen as shafts on night stages), **SMAA anti-aliasing**, **Depth blur**,
 **Shinjuku distortion**, **Stage colour tint** and **Original softness**, which
 gives the 3D view the softness of the original's 640x480 picture while still
 rendering at native resolution. The port's additions default off;
@@ -139,9 +140,12 @@ file; append `--settings <file.json>` to use a different one.
 For a rental match, choose **Tools > Level Select > Class D: Fire Balloons
 (rental SV)**. This testing shortcut restarts Day 1's Shinjuku contest and its
 opponents with a rental SV, keeping your pilot, money (less the normal entry
-fee, zero for this contest), and garage. The current quest still saves normally
-on exit. The destination and rental are editable in `battle.quick_rental` in
-`data/world/rumbling.json`; `--start rumbling_d_rental` also opens it directly.
+fee, zero for this contest), and garage. **Class D: Night Electric (rental
+SV)** does the same with Day 4's Shinjuku night contest. The current quest
+still saves normally on exit. The entries, their destinations and rentals are
+editable in `battle.quick_rentals` in `data/world/rumbling.json`; `--start
+rumbling_d_rental` and `--start rumbling_d_night_rental` also open them
+directly.
 
 **Tools > Cheats** holds infinite money, armour and ammo that never reach 0,
 and contests without ranker or regulation gates (switches, saved with the

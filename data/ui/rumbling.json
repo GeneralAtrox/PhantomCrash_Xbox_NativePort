@@ -33,8 +33,8 @@
   "down": "down"
  },
  "sounds": {
-  "move": "wheel",
-  "row": "schedule_row",
+  "move": "adjust",
+  "row": "cursor",
   "select": "confirm",
   "to_exit": "adjust",
   "no": "cancel",

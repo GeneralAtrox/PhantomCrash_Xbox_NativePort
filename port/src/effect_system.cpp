@@ -87,6 +87,7 @@ EffectHandle EffectSystem::start(const int group, const Vec3 position, const Vec
       emitter.definition = spec.definition;
       emitter.flags = spec.flags;
       emitter.instance = instance;
+      emitter.group = group;
       // The original starts at the definition's offset and is then moved,
       // so its first frame's motion runs from there (ParticleMotion).
       emitter.position = position;

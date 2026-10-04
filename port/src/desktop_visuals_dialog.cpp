@@ -12,23 +12,39 @@ struct VisualsDialog::Impl {
   HWND owner{}, window{};
   Settings &settings;
   bool changed{};
-  enum { fullscreen = 100, vsync, counter, dynamic, smaa, blur, distortion, tint, soft, cap };
+  enum {
+    fullscreen = 100,
+    vsync,
+    counter,
+    dynamic,
+    volumetric,
+    smaa,
+    blur,
+    distortion,
+    tint,
+    soft,
+    sharp,
+    cap
+  };
   struct Toggle {
     int id;
     const wchar_t *label;
     bool *value;
   };
   auto toggles() {
-    return std::array<Toggle, 9>{
+    return std::array<Toggle, 11>{
         {{fullscreen, L"Fullscreen (F11 / Alt + Enter)", &settings.fullscreen},
          {vsync, L"VSync", &settings.frame_rate.vsync},
          {counter, L"Frame rate counter", &settings.frame_counter},
          {dynamic, L"Dynamic lighting and shadows", &settings.post_process.dynamic_lighting},
+         {volumetric, L"Light beams in the air (with dynamic lighting)",
+          &settings.post_process.volumetric_light},
          {smaa, L"SMAA anti-aliasing", &settings.post_process.smaa},
          {blur, L"Depth blur", &settings.post_process.depth_blur},
          {distortion, L"Shinjuku distortion", &settings.post_process.distortion},
          {tint, L"Stage colour tint and levels", &settings.post_process.colour_tint},
-         {soft, L"Original softness (640x480 look)", &settings.post_process.original_softness}}};
+         {soft, L"Original softness (640x480 look)", &settings.post_process.original_softness},
+         {sharp, L"Sharp text (MS Gothic)", &settings.post_process.sharp_text}}};
   }
   void refresh() {
     if (!window) {
@@ -126,7 +142,7 @@ void VisualsDialog::show() {
   cls.hCursor = LoadCursorW(nullptr, MAKEINTRESOURCEW(32512));
   cls.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_BTNFACE + 1);
   RegisterClassW(&cls);
-  RECT rect{0, 0, 378, 396};
+  RECT rect{0, 0, 378, 460};
   constexpr DWORD style = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU;
   AdjustWindowRectEx(&rect, style, FALSE, WS_EX_TOOLWINDOW);
   CreateWindowExW(WS_EX_TOOLWINDOW, cls.lpszClassName, L"Visuals", style | WS_VISIBLE,

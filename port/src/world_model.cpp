@@ -253,6 +253,7 @@ private:
     }
     draw.index_count = static_cast<std::uint32_t>(model_.indices.size()) - draw.first_index;
     draw.centre = (low + high) * 0.5F;
+    draw.radius = length(high - low) * 0.5F;
     if (draw.index_count > 0) {
       model_.draws.push_back(draw);
     }

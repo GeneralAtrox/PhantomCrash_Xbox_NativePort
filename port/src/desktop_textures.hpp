@@ -9,9 +9,12 @@
 #include <SDL3/SDL.h>
 
 #include <map>
+#include <memory>
 #include <string>
 
 namespace phantomcrash {
+
+class SharpText;
 
 // Images named by the data files, loaded through the data roots on first use
 // and kept for the whole run (the front end uses two textures).
@@ -38,12 +41,20 @@ public:
   [[nodiscard]] SDL_Renderer *renderer() const noexcept {
     return renderer_;
   }
+  // The game's font drawn from its outline font (desktop_sharp_text.hpp),
+  // made on first use; null when turned off or the font is not installed.
+  [[nodiscard]] SharpText *sharp_text();
+  void set_sharp_text(bool enabled) {
+    sharp_enabled_ = enabled;
+  }
 
 private:
   SDL_Renderer *renderer_{};
   ReplayOverlay *recording_{};
   const DataRoots &roots_;
   std::map<std::string, SDL_Texture *> textures_;
+  std::unique_ptr<SharpText> sharp_;
+  bool sharp_enabled_{true};
   struct HitMask {
     int width{}, height{};
     std::vector<std::uint8_t> alpha;

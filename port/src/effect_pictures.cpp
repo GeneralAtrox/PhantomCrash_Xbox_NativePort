@@ -122,6 +122,11 @@ void parse_effect_pictures(const JsonValue &value, EffectBank &bank) {
         static_cast<float>(decals->number_or("depth_offset", bank.decals.depth_offset));
     bank.decals.scorch_scale =
         static_cast<float>(decals->number_or("scorch_scale", bank.decals.scorch_scale));
+    if (const JsonValue *tint = decals->find("scorch_tint")) {
+      bank.decals.scorch_tint = json::numbers<3>(*tint, "scorch_tint");
+    }
+    bank.decals.fit_reach =
+        static_cast<float>(decals->number_or("fit_reach", bank.decals.fit_reach));
   }
   if (const auto *trail = value.find("missile_trail")) {
     auto &look = bank.missile_trail;

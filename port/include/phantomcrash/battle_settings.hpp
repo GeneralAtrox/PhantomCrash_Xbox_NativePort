@@ -21,6 +21,7 @@ struct DroneAi {
   bool jump_keeps_target{};       // the target is remembered through the jump at it
   bool rivals_by_sight{};         // a computer rival is taken on sight, as a player's robot is
   bool jump_any_floor{};          // the jump ignores area 1's floors (0x06e331) elsewhere
+  NavTuning navigation;           // planned routes, held jumps and high ground
   std::shared_ptr<const OriginalAiData> original;
   float walk{0.8F}; // retained for existing callers; original routes use their own table
 };

@@ -10,12 +10,15 @@ import sys
 from . import stats_csv, xbe
 from .convert import convert, update_robots, update_town
 from .extract import extract
+from .mechassault import arm_swap as mechassault_arm
+from .mechassault import export as mechassault_export
 from .xdvdfs import XdvdfsImage
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_DISC = REPOSITORY_ROOT.parent / "Games" / "Phantom Crash (Europe).xiso.iso"
 DEFAULT_OUTPUT = REPOSITORY_ROOT / "artifacts" / "europe"
 DEFAULT_ASSETS = DEFAULT_OUTPUT / "assets"
+DEFAULT_MODS = REPOSITORY_ROOT / "mods"
 
 
 def _command_list(arguments: argparse.Namespace) -> int:
@@ -69,6 +72,36 @@ def _command_convert_robots(arguments: argparse.Namespace) -> int:
         f"Converted {len(robots['models'])} robot models, {robots['textures']} paints and "
         f"{robots['motion_banks']} motion banks to {arguments.output}"
     )
+    return 0
+
+
+def _command_convert_mechassault_vfx(arguments: argparse.Namespace) -> int:
+    summary = mechassault_export.convert(Path(arguments.disc), Path(arguments.output))
+    print(
+        f"Converted {summary['effects']} weapon effects, {summary['meshes']} meshes and "
+        f"{summary['textures']} textures to {arguments.output}"
+    )
+    for label in ("skipped", "missing"):
+        if summary[label]:
+            print(f"{label}: {len(summary[label])}, e.g. {summary[label][:3]}")
+    return 0
+
+
+def _command_swap_mechassault_arm(arguments: argparse.Namespace) -> int:
+    for model, source in ((arguments.right, arguments.right_arm), (arguments.left, arguments.left_arm)):
+        if not model:
+            continue
+        directory, name = source.rsplit("\\", 1)
+        summary = mechassault_arm.swap_arm(
+            Path(arguments.disc),
+            arguments.archive,
+            directory,
+            name,
+            Path(arguments.assets) / model,
+            Path(arguments.output),
+            model,
+        )
+        print(f"Wrote {arguments.output}/{model}: {len(summary['parts'])} parts, scale {summary['scale']}")
     return 0
 
 
@@ -131,6 +164,29 @@ def build_parser() -> argparse.ArgumentParser:
     town_conversion.add_argument("--files", default=str(DEFAULT_OUTPUT / "files"))
     town_conversion.add_argument("--output", default=str(DEFAULT_ASSETS))
     town_conversion.set_defaults(handler=_command_convert_town)
+
+    mechassault = commands.add_parser(
+        "convert-mechassault-vfx",
+        help="Convert a MechAssault disc's weapon effects into a mod for the port",
+    )
+    mechassault.add_argument("disc", help="MechAssault .iso or .xiso")
+    mechassault.add_argument("--output", default=str(DEFAULT_MODS))
+    mechassault.set_defaults(handler=_command_convert_mechassault_vfx)
+
+    arm = commands.add_parser(
+        "swap-mechassault-arm",
+        help="Give Phantom Crash arm models a MechAssault mech's gun arms (a mod)",
+    )
+    arm.add_argument("disc", help="MechAssault .iso or .xiso")
+    arm.add_argument("--archive", default="Mission06a.mgf")
+    madcat = r"\Models\Mechs\Heavy\MadCat\Model_Low_Eny"
+    arm.add_argument("--right-arm", default=madcat + r"\mad_rgimparm\mad_rgimparm")
+    arm.add_argument("--left-arm", default=madcat + r"\mad_lgimparm\mad_lgimparm")
+    arm.add_argument("--right", default="models/binlink/105.gltf", help="right arm model to replace")
+    arm.add_argument("--left", default="models/binlink/92.gltf", help="left arm model to replace")
+    arm.add_argument("--assets", default=str(DEFAULT_ASSETS))
+    arm.add_argument("--output", default=str(DEFAULT_MODS))
+    arm.set_defaults(handler=_command_swap_mechassault_arm)
 
     stats_export = commands.add_parser(
         "export-stats", help="Write every part, item and opponent's stats as CSV files"

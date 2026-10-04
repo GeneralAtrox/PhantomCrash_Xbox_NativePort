@@ -8,6 +8,7 @@ namespace phantomcrash {
 namespace {
 
 constexpr double turn = 2.0 * std::numbers::pi;
+constexpr float stick_pushed = 0.5F; // right thumbstick deflection that turns the rider
 
 std::array<float, 2> size_of(const Sprite &sprite) {
   return {sprite.rect[2] - sprite.rect[0], sprite.rect[3] - sprite.rect[1]};
@@ -114,7 +115,8 @@ void TownMap::update(const double tick_seconds, const InputFrame &input) {
 }
 
 // The mouse is in use from when it moves until it leaves the window or the
-// cursor keys move the map on.
+// cursor keys move the map on. The right thumbstick, while pushed, turns the
+// rider to point its way, as on the original.
 void TownMap::follow_mouse(const InputFrame &input, const int step) {
   if (!input.pointer || step != 0) {
     mouse_ = false;
@@ -123,7 +125,11 @@ void TownMap::follow_mouse(const InputFrame &input, const int step) {
     mouse_ = true;
     hovered_ = place_at(*input.pointer, false);
   }
-  if (mouse_ && input.pointer) {
+  const auto &stick = input.right_stick;
+  if (std::hypot(stick[0], stick[1]) > stick_pushed) {
+    mouse_ = false;
+    turn_to(std::atan2(stick[0], stick[1]));
+  } else if (mouse_ && input.pointer) {
     spin(*input.pointer);
   } else {
     // As on letting the thumbstick go, the rider stands up straight again.
@@ -147,7 +153,12 @@ void TownMap::spin(const std::array<float, 2> pointer) {
   if (dx * dx + dy * dy < 1.0F) {
     return; // on the pivot: no way to face
   }
-  const double angle = std::atan2(dx, -dy); // clockwise from straight up
+  turn_to(std::atan2(dx, -dy));
+}
+
+// Faces the rider `angle` radians clockwise from straight up, adding up his
+// turns and paying for each full one.
+void TownMap::turn_to(const double angle) {
   if (facing_) {
     double delta = angle - *facing_;
     if (delta > std::numbers::pi) {
@@ -252,7 +263,7 @@ std::optional<Sprite> TownMap::unturned_rider() const {
 // the point a quarter of his height above his middle (0x3eadc's pivot).
 std::optional<Sprite> TownMap::rider() const {
   auto rider = unturned_rider();
-  if (rider && rider->size && mouse_ && facing_) {
+  if (rider && rider->size && facing_) {
     const auto [width, height] = *rider->size;
     rider->angle = static_cast<float>(*facing_ * 180.0 / std::numbers::pi);
     rider->pivot = std::array<float, 2>{width * 0.5F, height * 0.25F};

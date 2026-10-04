@@ -1,5 +1,6 @@
 #pragma once
 
+#include "desktop_light_sources.hpp"
 #include "desktop_world_renderer.hpp"
 
 namespace phantomcrash {
@@ -16,6 +17,7 @@ public:
 private:
   struct Part {
     int node{-1};
+    int mesh{-1};
     std::string name;
     bool screen{};
     float hinge_x{};
@@ -24,7 +26,7 @@ private:
     Vec3 pivot;
   };
   int model_{-1};
-  std::vector<WorldLight> lights_;
+  std::vector<AttachedLight> lights_;
   std::vector<Part> parts_;
   std::vector<std::array<Vec3, 4>> route_;
   std::vector<int> open_segments_, close_segments_;
@@ -32,6 +34,9 @@ private:
   float along_{}, hinge_{}, spin_{};
   int segment_{}, hinge_direction_{};
   Mat4 world_;
+
+  // Where a part is drawn this frame: hinged, spinning or with the hull.
+  [[nodiscard]] Mat4 part_world(const Part &part) const;
 };
 
 } // namespace phantomcrash

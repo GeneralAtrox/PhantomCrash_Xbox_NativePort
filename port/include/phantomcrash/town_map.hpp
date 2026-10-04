@@ -120,6 +120,7 @@ private:
   void move_to(int next, bool wrapped);
   void follow_mouse(const InputFrame &input, int step);
   void spin(std::array<float, 2> pointer);
+  void turn_to(double angle);
 
   TownMapScript script_;
   QuestSave quest_;

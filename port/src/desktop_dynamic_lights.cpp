@@ -35,12 +35,16 @@ struct LightConstants {
 struct LightBuffer {
   std::array<LightConstants, DynamicLightPass::capacity> lights;
   std::array<float, 4> count;
+  std::array<std::array<float, 4>, DynamicLightPass::point_capacity> point_position_range;
+  std::array<std::array<float, 4>, DynamicLightPass::point_capacity> point_colour; // w: air
+  // Each spotlight's air: strength, and the distance its beam starts to dim (0: the air's).
+  std::array<std::array<float, 4>, DynamicLightPass::capacity> spot_air;
 };
 struct CasterConstants {
   Mat4 transform;
   std::array<float, 4> alpha;
 };
-static_assert(sizeof(LightBuffer) == 912 && sizeof(CasterConstants) == 80);
+static_assert(sizeof(LightBuffer) == 2064 && sizeof(CasterConstants) == 80);
 constexpr char shadow_source[] = R"hlsl(
 cbuffer Caster : register(b0) {
  row_major float4x4 transform;
@@ -62,6 +66,19 @@ void ps_main(Output i) {
 }
 )hlsl";
 } // namespace
+
+bool light_reaches(const WorldLight &light, const Vec3 centre, const float radius) {
+  const Vec3 to = centre - light.position;
+  const float along = dot(to, light.direction);
+  if (along < -radius || along > light.range + radius) {
+    return false;
+  }
+  // Out of the cone by more than the sphere: from its axis, past the cone's
+  // edge at that depth, measured square to the edge.
+  const float angle = light.outer_degrees * pi / 180.0F;
+  const float across = length(to - light.direction * along);
+  return across * std::cos(angle) - along * std::sin(angle) <= radius;
+}
 
 DynamicLightPass::DynamicLightPass(ID3D11Device *device) {
   lights_ = buffer(device, sizeof(LightBuffer));
@@ -119,23 +136,32 @@ DynamicLightPass::DynamicLightPass(ID3D11Device *device) {
       device->CreateInputLayout(layout, 3, vs->GetBufferPointer(), vs->GetBufferSize(), &layout_));
 }
 
-unsigned DynamicLightPass::prepare(ID3D11DeviceContext *context,
-                                   std::span<const WorldLight> lights) {
+unsigned DynamicLightPass::prepare(ID3D11DeviceContext *context, std::span<const WorldLight> spots,
+                                   std::span<const WorldLight> points) {
   LightBuffer data{};
-  const unsigned count = static_cast<unsigned>(std::min<std::size_t>(lights.size(), capacity));
-  data.count = {static_cast<float>(count), 1.0F / resolution, 0, 0};
+  const unsigned count = static_cast<unsigned>(std::min<std::size_t>(spots.size(), capacity));
+  const unsigned point_count =
+      static_cast<unsigned>(std::min<std::size_t>(points.size(), point_capacity));
+  data.count = {static_cast<float>(count), 1.0F / resolution, static_cast<float>(point_count), 0};
+  for (unsigned i = 0; i < point_count; ++i) {
+    const auto &p = points[i];
+    data.point_position_range[i] = {p.position.x, p.position.y, p.position.z, p.range};
+    data.point_colour[i] = {p.colour.x * p.intensity, p.colour.y * p.intensity,
+                            p.colour.z * p.intensity, p.air};
+  }
   for (unsigned i = 0; i < count; ++i) {
-    const auto &l = lights[i];
+    const auto &l = spots[i];
     Vec3 direction = normalize(l.direction);
     const Vec3 up = std::abs(direction.y) > 0.95F ? Vec3{0, 0, 1} : Vec3{0, 1, 0};
     matrices_[i] = look_at(l.position, l.position + direction, up) *
-                   perspective(l.outer_degrees * pi / 90.0F, 1, 0.5F, l.range);
+                   perspective(l.outer_degrees * pi / 90.0F, 1, l.near_plane, l.range);
     data.lights[i] = {
         matrices_[i],
         {l.position.x, l.position.y, l.position.z, l.range},
         {direction.x, direction.y, direction.z, std::cos(l.outer_degrees * pi / 180.0F)},
         {l.colour.x * l.intensity, l.colour.y * l.intensity, l.colour.z * l.intensity,
          std::cos(l.inner_degrees * pi / 180.0F)}};
+    data.spot_air[i] = {l.air, l.air_fade, 0, 0};
   }
   upload(context, lights_.Get(), data);
   ID3D11ShaderResourceView *none = nullptr;

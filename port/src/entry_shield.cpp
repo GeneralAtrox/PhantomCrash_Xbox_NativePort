@@ -28,6 +28,7 @@ EntryShieldLook parse_entry_shield_look(const json::JsonValue &value) {
   look.update_hz = std::max(1.0F, static_cast<float>(value.number_or("update_hz", look.update_hz)));
   look.phase_step = static_cast<float>(value.number_or("phase_step", look.phase_step));
   look.scroll_step = static_cast<float>(value.number_or("scroll_step", look.scroll_step));
+  look.per_shield = value.boolean_or("per_shield", look.per_shield);
   if (const json::JsonValue *colour = value.find("colour")) {
     look.colour = json::numbers<4>(*colour, "entry_shield colour");
   }

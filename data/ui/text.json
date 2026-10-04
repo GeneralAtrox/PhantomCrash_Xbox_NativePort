@@ -1,0 +1,11 @@
+{
+ "notes": [
+  "The game's text font (tables/font.json, the atlas textures/scroll/ascii_font_sys_tex/0.png) is MS Gothic drawn 18 pixels high (its em) in 18-pixel cells, the pen at the cell's left edge and the baseline 15 pixels down, with plain antialiasing and no bold: rendering MS Gothic that way reproduces the atlas glyph for glyph (researcher's identification, 2026-10-03; the disc names no font). The atlas holds the full-width letters the game writes its text in, and the width table at 0x1C3FB0 crops each to its own width, which is where the wide letter spacing comes from.",
+  "With post_process.sharp_text on (the default), the port draws each glyph from the installed outline font at the window's own size into a cache, keeping the atlas's widths and positions, so text has the same glyphs, spacing and line breaks but stays sharp. MS Gothic is Microsoft's font and is not shipped: when it is not installed, or a glyph is missing from it, the atlas is drawn as before.",
+  "face names an installed font; file loads a font file instead (privately, for this run) whose family is face. em, baseline and pen_x are in font cell units."
+ ],
+ "face": "MS Gothic",
+ "em": 18,
+ "baseline": 15,
+ "pen_x": 0
+}

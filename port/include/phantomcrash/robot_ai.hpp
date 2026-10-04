@@ -1,6 +1,7 @@
 #pragma once
 
 #include "phantomcrash/json.hpp"
+#include "phantomcrash/nav_graph.hpp"
 #include "phantomcrash/robot_mover.hpp"
 #include <array>
 #include <map>
@@ -60,6 +61,7 @@ struct RobotAiState {
   float ranker_left{}, diagnostics_left{};
   Vec3 last_seen{}, last_position{}, route_target{};
   RobotControl control;
+  NavAgent nav; // port navigation (nav_graph.hpp)
   std::array<bool, 4> request{}, fire{};
   std::array<float, 4> fire_wait{}, fire_delay{};
   unsigned ticks{}, transitions{}, detections{}, dodges{}, shots{}, attacks{}, recoveries{};

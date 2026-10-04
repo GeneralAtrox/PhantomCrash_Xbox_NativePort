@@ -162,6 +162,7 @@ int run(const Options &options) {
   FrameRateSettings persisted_rate = initial.frame_rate;
   bool persisted_fullscreen = initial.fullscreen;
   bool persisted_counter = initial.frame_counter;
+  bool persisted_skip = initial.skip_conversations;
   bool persisted_coop = initial.experimental_coop;
   CoopOptions persisted_coop_options = initial.coop;
   CheatOptions persisted_cheats = initial.cheats;
@@ -204,12 +205,13 @@ int run(const Options &options) {
     screens.set_post_process(settings.post_process);
     screens.set_audio_options(settings.audio);
     screens.set_cheats(settings.cheats);
+    screens.set_skip_conversations(settings.skip_conversations);
     if (!smoke &&
         (settings.post_process != persisted_post || settings.audio != persisted_audio ||
          settings.frame_rate != persisted_rate || settings.fullscreen != persisted_fullscreen ||
          settings.frame_counter != persisted_counter ||
          settings.experimental_coop != persisted_coop || settings.coop != persisted_coop_options ||
-         settings.cheats != persisted_cheats)) {
+         settings.cheats != persisted_cheats || settings.skip_conversations != persisted_skip)) {
       // Save the preference at selection time without checkpointing the live match.
       Settings disk = load_settings(preferences);
       disk.post_process = settings.post_process;
@@ -219,6 +221,7 @@ int run(const Options &options) {
       disk.experimental_coop = settings.experimental_coop;
       disk.coop = settings.coop;
       disk.cheats = settings.cheats;
+      disk.skip_conversations = settings.skip_conversations;
       if (settings.fullscreen != persisted_fullscreen) {
         disk.fullscreen = settings.fullscreen;
       }
@@ -233,6 +236,7 @@ int run(const Options &options) {
       persisted_coop = settings.experimental_coop;
       persisted_coop_options = settings.coop;
       persisted_cheats = settings.cheats;
+      persisted_skip = settings.skip_conversations;
     }
     apply_fullscreen(host, menu);
     FrameRateSettings rate = settings.frame_rate;

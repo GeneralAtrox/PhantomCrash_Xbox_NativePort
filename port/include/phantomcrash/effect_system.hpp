@@ -56,6 +56,7 @@ struct EffectEmitter {
   int definition{};
   std::uint32_t flags{};
   int instance{}; // the start() it belongs to
+  int group{};    // ... and the group that start() played
   Vec3 position;
   Vec3 previous;
   Vec3 velocity; // per frame
@@ -80,6 +81,7 @@ struct EffectEmitter {
 struct EffectFlashState {
   int flash{};
   int instance{};
+  int group{};
   int age{}; // frames; the picture shown is frames[age]
   Vec3 position;
   Vec3 previous;

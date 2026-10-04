@@ -15,7 +15,7 @@
   "frame_rate": 60,
   "settle_frames": 120,
   "fade_frames": 30,
-  "sounds": {"move": "talk_page", "confirm": "confirm", "cancel": "adjust"}
+  "sounds": {"move": "cursor", "answer": "adjust", "confirm": "confirm", "cancel": "adjust"}
  },
  "overlay": {
   "window": {"id": "vs_window", "image": "textures/scroll/game_vs_tex/0.png", "rect": [0, 0, 200, 216], "position": [221, 127], "layer": 262},

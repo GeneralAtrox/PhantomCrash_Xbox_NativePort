@@ -4,7 +4,7 @@
   "It shows five days of the 60-day contest calendar (tables/town.json) in three rows, one per venue: Shinjuku East, Shibuya and 409 Tokyo Aqua, whose logos are in the grid picture. It opens on the day it is (the save's day, the window starting there).",
   "Each cell (0x35a9f) at origin + step x (column, row): the venue's day or night tile (the contest's +8), lit in the cursor's column; with no contest, CLOSED. Over a contest, the class badge (layer 0x102; white in the cursor's column, #404040 otherwise and while scrolling) and CLEAR (0x103) once the contest has been won (save + 0x990 + contest), except for the three Burning Chrome contests (0x34-0x36). Contest 0x30 (Breaking Strain) shows as closed once won. Above each column, its day + 1 in two digits (0x359ec).",
   "The cursor (0x35fc7): a frame, a pulsing frame and a pulsing mark over the column's day, while no popup is open and nothing scrolls; on the EXIT row, the lit EXIT.",
-  "Input (0x363e7): up/down move between the rows and EXIT (wrapping, sys entry 22); left/right move the column (entry 23), and past either end scroll the calendar a day, the cursor staying at the end. R and L scroll five days (entry 4), the cursor going to the first or last column. cancel moves to EXIT (entry 4). confirm (entry 5) on a contest opens its INFORMATION popup, on EXIT fades out over 0.5 s and leaves.",
+  "Input (0x363e7): up/down move between the rows and EXIT (wrapping, sys entry 3); left/right move the column (entry 4), and past either end scroll the calendar a day, the cursor staying at the end. R and L scroll five days (entry 4), the cursor going to the first or last column. cancel moves to EXIT (entry 4). confirm (entry 5) on a contest opens its INFORMATION popup, on EXIT fades out over 0.5 s and leaves.",
   "A scroll (0x35a9f) takes three steps of step_seconds a day: the column leaving folds away, the others slide one column across, the new day unfolds. The day numbers change at once.",
   "The popup (0x35fc7) grows from the cell over grow_seconds from grow_from_scale, then shows the contest's name, class, body regulation (its class's text when the class names a maker), leg regulation (when it names leg types), other regulations (rentals only or no Optic Camouflage) and play fee, 'No limits.' for a rule the class lacks. cancel (entry 8) closes it.",
   "While the cursor is on a contest, its name scrolls along the top (0x358c1: the name and eight wide spaces, a ticker at (0, 72) 40 glyphs wide, restarted when the cursor moves). The CURRENT MUSIC band at the bottom shows the credit (0x2a85a at y 419) once the screen has faded in.",
@@ -37,8 +37,8 @@
   "page_forward": "right_trigger"
  },
  "sounds": {
-  "move": "schedule_day",
-  "row": "schedule_row",
+  "move": "adjust",
+  "row": "cursor",
   "select": "confirm",
   "page": "adjust",
   "to_exit": "adjust",

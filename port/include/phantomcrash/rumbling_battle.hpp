@@ -12,10 +12,14 @@
 
 #include <optional>
 #include <string>
+#include <string_view>
+#include <vector>
 
 namespace phantomcrash {
 
-// An editable testing destination, entered with the current quest's inventory.
+// An editable testing destination, entered with the current quest's inventory:
+// a Tools > Level Select entry that opens `screen` as a rental match in the
+// contest held at `area` on calendar `day`.
 struct QuickRental {
   std::string label;
   std::string screen;
@@ -31,8 +35,12 @@ struct QuickRental {
 struct RumblingBattle {
   std::string return_to{"club_wired"};
   TrainingLesson lesson{"RUMBLING", 3, 1};
-  QuickRental quick_rental;
+  std::vector<QuickRental> quick_rentals; // in Level Select order, screens unique
 };
+
+// The quick rental that opens `screen`, if any.
+[[nodiscard]] const QuickRental *find_quick_rental(const RumblingBattle &battle,
+                                                   std::string_view screen);
 
 // Throws std::runtime_error naming the member at fault.
 [[nodiscard]] RumblingBattle parse_rumbling_battle(const json::JsonValue &document);

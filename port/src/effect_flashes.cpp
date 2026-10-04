@@ -37,6 +37,7 @@ bool EffectSystem::start_flashes(const int group, const Vec3 position, const flo
     EffectFlashState &flash = flashes_.emplace_back();
     flash.flash = id;
     flash.instance = instance;
+    flash.group = group;
     flash.position = flash.previous = position;
     flash.scale = scale;
     update(flash);

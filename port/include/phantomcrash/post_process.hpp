@@ -15,10 +15,15 @@ struct PostProcessOptions {
   bool colour_tint{true};
   bool smaa{};
   bool dynamic_lighting{}; // opt-in local lights and shadow maps
+  // With dynamic lighting: the lights' beams and glow seen in the air.
+  bool volumetric_light{true};
   // Opt-in: the softness of the original's 640x480 picture scaled to the
   // window, mixed over the native frame by softness_strength (0 to 1).
   bool original_softness{};
   float softness_strength{1.0F};
+  // The game's text drawn from MS Gothic at the window's size instead of
+  // its 18-pixel atlas: the same glyphs and spacing, sharp (data/ui/text.json).
+  bool sharp_text{true};
   bool operator==(const PostProcessOptions &) const = default;
 };
 

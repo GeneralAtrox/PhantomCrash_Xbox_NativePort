@@ -6,10 +6,13 @@
 #include "desktop_battle_view.hpp"
 #include "desktop_cockpit.hpp"
 #include "desktop_effects.hpp"
+#include "desktop_mech_vfx.hpp"
+#include "desktop_point_lights.hpp"
 #include "desktop_shots.hpp"
 #include "desktop_screen.hpp"
 #include "desktop_supply.hpp"
 #include "desktop_monitor_ship.hpp"
+#include "desktop_pause_menu.hpp"
 #include "desktop_textures.hpp"
 #include "desktop_replay_archive.hpp"
 #include "desktop_result_backdrop.hpp"
@@ -204,10 +207,7 @@ private:
   bool tick_pause(const InputFrame &input);
   void draw_pause(const Viewport &viewport);
   bool paused_{};
-  Sprite pause_exit_;
-  TextBlock pause_text_;
-  float pause_dim_{};
-  Buttons pause_buttons_{}, resume_buttons_{}, pause_exit_button_{};
+  PauseMenu pause_menu_;
   void start_recording(const TrainingContext &context);
   void begin_recording();
   void record_world(const WorldFrame &frame, const std::optional<WorldFrame> &monitor);
@@ -262,6 +262,7 @@ private:
   EventTuning tuning_;
   StageLighting lighting_;
   std::vector<WorldLight> local_lights_;
+  VolumetricAir air_; // the stage's air for the lights to show in
   WorldItem stage_;
   std::unique_ptr<BattleMonitor> monitor_;
   std::unique_ptr<MonitorShip> monitor_ship_;
@@ -297,10 +298,12 @@ private:
   // FreePlay's entrance and exit; null in the lessons, which start where
   // the script puts the robot.
   std::unique_ptr<BattleScenePresenter> scene_;
-  int door_model_{-1};                      // the gate doors' leaves
-  std::unique_ptr<DesktopSupply> supply_;   // FreePlay's; null without its model
-  std::unique_ptr<DesktopEffects> effects_; // null without the effect bank
-  std::unique_ptr<DesktopShots> shots_;     // with the effects, whose bank it draws
+  int door_model_{-1};                        // the gate doors' leaves
+  std::unique_ptr<DesktopSupply> supply_;     // FreePlay's; null without its model
+  std::unique_ptr<DesktopEffects> effects_;   // null without the effect bank
+  std::unique_ptr<DesktopMechVfx> mech_vfx_;  // MechAssault's weapon effects, when modded in
+  std::unique_ptr<DesktopShots> shots_;       // with the effects, whose bank it draws
+  std::unique_ptr<PointLights> point_lights_; // fires, blasts and shots lighting the stage
   std::string cue_music_;
   std::string heard_music_; // the actual song, including the saved program, for replay
   // The message playing now, its script kept for the player.
@@ -328,6 +331,7 @@ private:
   bool standard_controls_{true}; // BUTTON CONFIG's CONTROL TYPE
   bool beginner_{};              // and its BEGINNER MODE
   std::int64_t money_{};
+  std::int64_t money_at_start_{}; // the HUD shows only what this match has earned
 };
 
 } // namespace phantomcrash

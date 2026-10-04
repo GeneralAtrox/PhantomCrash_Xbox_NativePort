@@ -1,19 +1,23 @@
 {
-  "notes": "Port pause overlay. Reuses the highlighted EXIT sprite from match_result.json. Escape is the host Back binding. START/Back opens or resumes; A explicitly leaves for results (training returns to its originating screen).",
+  "notes": "Port pause menu (desktop_pause_menu.cpp). START or Back opens it with RESUME chosen and EXIT beside it; left/right or the mouse moves between them and A or a click takes one. EXIT asks NO / YES first, on NO. B, START, Back or a right click resumes (in the question, answers NO). The buttons are the result screen's EXIT pill (result_tex: plain and lit) drawn width units wide: cap texels at each end as they are, the middle stretched from fill_column, the label in the game font centred over it in text_colour (lit_text_colour when chosen). title and help are centred on their x.",
   "pause_buttons": ["start", "back"],
-  "resume_buttons": ["start", "back", "b"],
-  "exit_button": "a",
+  "back_buttons": ["start", "back", "b"],
+  "choose_buttons": ["a"],
   "dim_alpha": 0.55,
-  "exit_position": [276, 274],
-  "text": {
-    "at": [136, 180],
-    "line_step": 24,
-    "colour": "#ffffff",
-    "layer": 300,
-    "lines": [
-      "PAUSED",
-      "ESC / START / B: Resume",
-      "A / Click EXIT: Leave match"
-    ]
-  }
+  "layer": 300,
+  "title": { "at": [320, 196], "colour": "#ffffff", "menu": "PAUSED", "asking": "Leave the match?" },
+  "help": { "at": [320, 300], "colour": "#c8c8c8", "menu": "A: OK   B / START: Resume", "asking": "A: OK   B: Back" },
+  "button": {
+    "image": "textures/scroll/result_tex/0.png",
+    "plain": [832, 264, 920, 296],
+    "lit": [920, 264, 1008, 296],
+    "cap": 20,
+    "fill_column": 20,
+    "width": 128,
+    "gap": 24,
+    "y": 240,
+    "text_colour": "#ffcc00",
+    "lit_text_colour": "#000000"
+  },
+  "labels": { "menu": ["RESUME", "EXIT"], "asking": ["NO", "YES"] }
 }

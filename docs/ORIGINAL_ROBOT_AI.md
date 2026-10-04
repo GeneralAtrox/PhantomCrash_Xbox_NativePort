@@ -459,6 +459,80 @@ original's:
 | `rivals_by_sight` | A computer rival is taken on sight like a player's robot, not only once locked. Opponents then fight each other as readily as they go for the player. |
 | `jump_any_floor` | Area 1's floors (`0x06e331`) no longer block the jump in other areas, where they describe no real ground. |
 
+### Port navigation (`live.ai.navigation`)
+
+The original steers in a straight line to the next ENPT point and escapes
+obstructions with timed taps and reversals (see Navigation and getting
+unstuck). On the real stages that leaves robots pressed against walls and
+props for long stretches. `live.ai.navigation` replaces only the steering
+between route points. Route choice, the ENPT graph and the fight logic stay
+the original's. This is a port addition. It is on in the shipped data because
+it was requested; `"enabled": false` gives back the original steering. The
+code default is off.
+
+- **Grid** (`nav_graph_build.cpp`). The grid is built from the stage
+  collision, one cell every `cell` units, with a node per standable level.
+  Nodes need `headroom` above them and must not be enclosed by walls.
+  - Walk links join neighbours within `step` of each other's height and pass
+    knee and chest tests against walls.
+  - Ledge nodes also get held-jump links, up to `jump_rise` and across gaps
+    up to `jump_cells`, and drop links down.
+  - The grid builds once per stage on a worker thread and is shared by all
+    battles on that stage. It takes 0.4–0.9 s per stage; until it is ready,
+    robots use the original steering.
+- **Following** (`battle_ai_steering.cpp`). A robot runs A* to its route
+  point, string-pulls the walk legs, and steers waypoint to waypoint.
+  - On a jump link it faces the ledge, presses jump and holds it until it is
+    level with the landing. It lets go once, because a second press would
+    dive.
+  - If it makes no progress for `stuck_seconds`, it hops.
+  - After `give_up_seconds` it replans without shortcuts. If it is still
+    stuck after that, it avoids the waypoint for `avoid_seconds`.
+  - When the route point cannot be reached on the grid, the original's
+    rejoin picks a reachable ENPT point instead.
+  - **Cost**. A plan (A* and string-pulling) on Umihotaru's 23,600-node
+    grid takes about 1 ms on average and up to 5 ms. A robot replans when
+    its goal moves `goal_moved` units, but no sooner than
+    `replan_min_seconds` after its last plan. At most `plans_per_tick`
+    searches run per battle tick for all robots together (0: no limit). A
+    robot over the limit keeps its route and plans in a later tick. Without
+    these limits, 9 robots chasing moving targets stacked several plans into
+    one tick, and frames missed a 144 Hz refresh.
+    The same budget covers the two other graph searches. A high-ground
+    search waits for a tick with a search to spare. A route rejoin's reach
+    test waits too, and is a flood without costs (`reachable_from`, about
+    1 ms on Umihotaru; the costed search took up to 8 ms). The rejoin then
+    sight-tests route points nearest first and stops at the first clear
+    one, picking the same point as before. Before, it tested every closer
+    candidate, up to 200 sight tests and 17 ms in one tick.
+    Robots also think in turn: the AI steps at 30 Hz in a 60 Hz battle, and
+    each robot starts half a step apart from the one before it, so half of
+    them step on each tick. Otherwise all of them step together on every
+    other tick.
+    Measured on Umihotaru night, 10-robot Rumbling at 2263x1272, three 30 s
+    runs each: the 99th-percentile frame went from 8.4–11.2 ms to 7.3–7.9 ms,
+    and frames under 10.4 ms from 98.2–99.9% to 99.9–100%.
+- **High ground**. In a fight, every `vantage_seconds` a robot with a ranged
+  weapon may, with `vantage_chance`, pick a spot it can reach.
+  - The spot must be at least `vantage_rise` above its target, within the
+    weapon's range times `vantage_range_share`, and have a clear line of
+    sight to the target.
+  - The robot climbs there, then fights from the spot without closing in.
+  - It also uses the grid to chase a target it has lost sight of, or one on
+    a different level.
+
+Headless 9-robot runs (300 s, two seeds, handgun) measured the time robots
+spent trying to move without getting anywhere:
+
+| Stage | Original steering: stuck | Navigation: stuck | Original: parked at a route point | Navigation: parked |
+| --- | --- | --- | --- | --- |
+| Shinjuku and Shibuya | 20–47% | 1.1–6.5% | 11–30% | 1.5–7% |
+
+Most of the stuck time left is fight states such as hit stagger, turning and
+withdrawal. Shibuya's underground pit (y −65 to −75) has no exit, either on
+the grid or in the ENPT data. A robot that falls in stays on the original
+steering.
+
 Set `live.ai.trace` in `world/rumbling.json` to true for per-opponent identity and
 periodic state/target/health/request/actual-attack/dodge/recovery diagnostics.
 It is disabled by default. Release build and bounded native battle runs were

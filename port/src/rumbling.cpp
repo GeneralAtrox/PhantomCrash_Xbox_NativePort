@@ -222,7 +222,7 @@ void Rumbling::move_area(const int area) {
   fade_seconds_ = 0.0;
 }
 
-// 0x0163e7: left and right choose the area (sys 23, wrapping); cancel moves
+// 0x0163e7: left and right choose the area (sys 4, wrapping); cancel moves
 // to EXIT (sys 4).
 void Rumbling::areas_input(const double tick_seconds, const InputFrame &input) {
   const int count = static_cast<int>(script_.areas.size());
@@ -277,7 +277,7 @@ void Rumbling::areas_input(const double tick_seconds, const InputFrame &input) {
   }
 }
 
-// 0x01671e: up and down choose (sys 22); cancel moves to BACK (sys 4).
+// 0x01671e: up and down choose (sys 3); cancel moves to BACK (sys 4).
 void Rumbling::menu_input(const double tick_seconds, const InputFrame &input) {
   const int count = static_cast<int>(script_.menu.items.size());
   bool fresh = false;

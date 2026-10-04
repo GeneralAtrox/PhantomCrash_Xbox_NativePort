@@ -95,6 +95,12 @@ void TrainingScreen::tick_backdrop(const float seconds) {
   if (shots_) {
     shots_->tick(*battle_, effects_->system(), seconds);
   }
+  if (point_lights_) {
+    point_lights_->tick(*battle_, seconds);
+  }
+  if (mech_vfx_) {
+    mech_vfx_->tick(*battle_, seconds);
+  }
   if (effects_) {
     effects_->tick(seconds);
   }

@@ -194,6 +194,14 @@ struct EffectDecals {
   int count{100};
   float depth_offset{0.01F}; // native separation from the receiving surface
   float scorch_scale{1.0F};  // fraction of the blast radius
+  // A port choice: the scorch picture is a mid brown that, laid over a
+  // dark stage at full brightness, reads lighter than the ground it burns.
+  // Its colour is multiplied by this, so it darkens what it covers.
+  std::array<float, 3> scorch_tint{0.2F, 0.2F, 0.2F};
+  // Also the port's: share of a mark's half width that must lie on its
+  // surface. Marks that overhang are halved, then dropped, so none hangs
+  // off a fence or a ledge.
+  float fit_reach{0.7F};
 };
 
 // 0x0702d8 / 0x0704a5: 33 positions, updated on alternate 30 Hz frames.

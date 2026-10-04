@@ -25,7 +25,7 @@ private:
     float stopped{};
     bool seen{};
   };
-  void mark(const StageHit &hit, int kind, float size);
+  void mark(const StageCollision &stage, const StageHit &hit, int kind, float size);
   const EffectBank &bank_;
   std::vector<int> textures_;
   int smoke_texture_{-1};

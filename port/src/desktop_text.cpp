@@ -1,4 +1,5 @@
 #include "desktop_text.hpp"
+#include "desktop_sharp_text.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -14,6 +15,7 @@ void draw_glyphs(TextureCache &textures, const GlyphFont &font,
     return;
   }
   SDL_Renderer *renderer = textures.renderer();
+  SharpText *sharp = textures.sharp_text();
   if (clip) {
     const auto [left, top, right, bottom] = *clip;
     const auto x0 = static_cast<int>(std::lround(viewport.to_pixel_x(left)));
@@ -32,7 +34,10 @@ void draw_glyphs(TextureCache &textures, const GlyphFont &font,
     const auto pixels = viewport.to_pixels(glyph.x, glyph.y, glyph.width, glyph.height);
     const SDL_FRect target{pixels.x, pixels.y, pixels.width, pixels.height};
     record_quad(textures, texture, source, target);
-    SDL_RenderTexture(renderer, texture, &source, &target);
+    if (sharp == nullptr ||
+        !sharp->draw(font, source, target, viewport.scale, colour, std::min(alpha, 1.0F))) {
+      SDL_RenderTexture(renderer, texture, &source, &target);
+    }
   }
   if (clip) {
     SDL_SetRenderClipRect(renderer, nullptr);

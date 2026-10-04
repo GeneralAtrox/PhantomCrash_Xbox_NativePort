@@ -75,7 +75,7 @@ TEST_CASE("the VS menu's choice fades out and tallies, a draw tallying nothing")
   REQUIRE(round.stage() == VsRoundStage::menu);
   press(round, standing, key(&VsMenuInput::down));
   CHECK(round.cursor() == 1);
-  CHECK(round.take_sounds() == std::vector<std::string>{"talk_page"});
+  CHECK(round.take_sounds() == std::vector<std::string>{"cursor"});
   press(round, standing, key(&VsMenuInput::confirm));
   CHECK(round.stage() == VsRoundStage::fade);
   CHECK(!round.choice());

@@ -96,8 +96,10 @@ VertexOut vs_main(VertexIn input) {
     float3 phase = rainbow.x + float3(-0.6666, 0.0, 0.6666);
     float3 d = abs(input.position.y + phase);
     float3 bands = abs(step(1.0, d) * 2.0 - d);
-    float3 light = ambient + sun_colour * saturate(dot(normalize(output.normal), -sun_direction));
-    output.colour = float4(0.75 * light + 0.5 * bands, 1.0);
+    // rainbow.xvu dots the light direction with the model's own normal, not
+    // a world one, so the lit side turns with the spinning shell; oD0 clamps.
+    float3 light = ambient + sun_colour * saturate(dot(normalize(input.normal), -sun_direction));
+    output.colour = float4(saturate(0.75 * light + 0.5 * bands), 1.0);
     output.uv = input.position.xy + float2(0.5, 0.5 + rainbow.y);
   }
   if (optical > 0.5) {

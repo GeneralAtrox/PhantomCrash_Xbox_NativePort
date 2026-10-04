@@ -7,6 +7,7 @@
 #include <SDL3/SDL.h>
 
 #include <algorithm>
+#include <exception>
 
 namespace phantomcrash {
 namespace {
@@ -97,14 +98,40 @@ void DesktopSupply::add_carrier(const SupplyCarrier &carrier, std::vector<WorldI
         items[index].colour = colour;
       }
     }
-    for (std::size_t door = 0; door < parts_.doors.size(); ++door) {
-      const Vec3 hinge = look_.door_hinges[door];
-      const Mat4 turned = translation(Vec3{-hinge.x, -hinge.y, -hinge.z}) *
-                          rotation_z(carrier.hatch * look_.door_turns[door]) * translation(hinge) *
-                          frame;
-      add_mesh(parts_.doors[door], turned, items);
+    for (const int door : parts_.doors) {
+      add_mesh(door, mesh_world(carrier, door), items);
     }
-    add_mesh(parts_.spinner, rotation_y(carrier.spin) * frame, items);
+    add_mesh(parts_.spinner, mesh_world(carrier, parts_.spinner), items);
+  }
+}
+
+Mat4 DesktopSupply::mesh_world(const SupplyCarrier &carrier, const int mesh) const {
+  const Mat4 frame = rotation_y(carrier.heading) * translation(carrier.position);
+  if (mesh == parts_.spinner) {
+    return rotation_y(carrier.spin) * frame;
+  }
+  for (std::size_t door = 0; door < parts_.doors.size(); ++door) {
+    if (mesh == parts_.doors[door]) {
+      const Vec3 hinge = look_.door_hinges[door];
+      return translation(Vec3{-hinge.x, -hinge.y, -hinge.z}) *
+             rotation_z(carrier.hatch * look_.door_turns[door]) * translation(hinge) * frame;
+    }
+  }
+  return frame;
+}
+
+void DesktopSupply::add_lights(const SupplyDrop &drop, std::vector<WorldLight> &lights) const {
+  const SupplyCarrier &carrier = drop.carrier();
+  if (!ready() || !drop.active() || carrier.wrecked || carrier.parked) {
+    return;
+  }
+  for (const AttachedLight &source : lights_) {
+    const Mat4 frame = mesh_world(carrier, source.mesh);
+    WorldLight light = source.light;
+    light.position = transform_point(light.position, frame);
+    light.direction =
+        normalize(transform_point(light.direction, frame) - transform_point({}, frame));
+    lights.push_back(light);
   }
 }
 
@@ -221,6 +248,11 @@ std::unique_ptr<DesktopSupply> load_supply(WorldRenderer *world, const DataRoots
     return nullptr;
   }
   auto view = std::make_unique<DesktopSupply>(*world, look, tuning.stage);
+  try {
+    view->set_lights(light_sources(roots, "supply", tuning.stage & 1));
+  } catch (const std::exception &error) {
+    SDL_Log("Supply carrier lights: %s", error.what());
+  }
   if (view->ready()) {
     return view;
   }

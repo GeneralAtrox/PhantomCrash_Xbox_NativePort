@@ -60,10 +60,11 @@ float clamp01(const double value) {
 
 } // namespace
 
-StoryProgress story_progress(const std::vector<StoryEvent> &events, const QuestSave &quest) {
+StoryProgress story_progress(const std::vector<StoryEvent> &events, const QuestSave &quest,
+                             const std::vector<int> &unscored) {
   StoryProgress progress;
   for (const StoryEvent &event : events) {
-    if (event.enabled) {
+    if (event.enabled && !contains(unscored, event.scene)) {
       ++progress.events;
       progress.seen += contains(quest.seen_events, event.scene) ? 1 : 0;
     }
@@ -277,7 +278,7 @@ void Records::menu_input(const double tick_seconds, const InputFrame &input) {
   const int step = rows_repeat_.step(tick_seconds, input, script_.up, script_.down, fresh);
   if (const int moved = move_cursor(menu_cursor_, step, fresh, exit_item + 1);
       moved != menu_cursor_) {
-    sounds_.play(script_.move_sound);
+    sounds_.play(script_.menu_sound);
     menu_cursor_ = moved;
   }
 }

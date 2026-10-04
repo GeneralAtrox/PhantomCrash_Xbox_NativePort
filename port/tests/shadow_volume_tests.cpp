@@ -143,6 +143,15 @@ TEST_CASE("a player's robot casts a volume; the others lie flat while grounded")
   CHECK(robot_shadow(look, false, false, true) == RobotShadow::none);
 }
 
+TEST_CASE("camouflage leaves the shadow as in the original unless camouflage_hides is set") {
+  RobotShadowLook look;
+  CHECK(robot_shadow_strength(look, 1.0F) == 1.0F);
+  look = parse_robot_shadow_look(json::parse(R"({"camouflage_hides": true})"));
+  CHECK(robot_shadow_strength(look, 0.0F) == 1.0F);
+  CHECK(robot_shadow_strength(look, 0.25F) == 0.75F);
+  CHECK(robot_shadow_strength(look, 1.0F) == 0.0F);
+}
+
 TEST_CASE("the shadows' look and the stage's shadow colour come from data") {
   const RobotShadowLook look = parse_robot_shadow_look(json::parse(
       R"({"volumes": false, "volume_length": 25, "ground_model": "m.gltf",
