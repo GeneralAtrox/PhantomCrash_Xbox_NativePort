@@ -260,6 +260,23 @@ std::optional<RosterMember> draw_replacement(const RegulationCheck &check,
   return draw(pools, check.rules.roster, held->reserve_after, random);
 }
 
+std::vector<int> replacement_entrants(const RegulationCheck &check, const ContestTables &contests,
+                                      const QuestSave &quest, const AreaRoster &roster) {
+  Pools pools;
+  std::vector<int> entrants;
+  if (!fill_pools(check, contests, quest, roster.drawn_for, pools)) {
+    return entrants;
+  }
+  for (const Pool &pool : pools) {
+    for (const RosterMember &member : pool.left) {
+      if (std::ranges::find(entrants, member.entrant) == entrants.end()) {
+        entrants.push_back(member.entrant);
+      }
+    }
+  }
+  return entrants;
+}
+
 bool refresh_rosters(const RegulationCheck &check, const ContestTables &contests, QuestSave &quest,
                      const RosterRandom &random, const bool fill_vacancies) {
   bool changed = false;

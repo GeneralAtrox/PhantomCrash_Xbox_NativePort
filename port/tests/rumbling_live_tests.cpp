@@ -56,6 +56,26 @@ TEST_CASE("the live roster has live_size places and the next one is not already 
   }
 }
 
+TEST_CASE("every opponent a replacement can bring in is known ahead, to be loaded") {
+  Fixture fixture;
+  fixture.rules.roster.live_size = 5;
+  QuestSave quest;
+  const AreaRoster roster = draw_roster(fixture.check(), fixture.tables, quest, 0, constant(0.0F));
+  const std::vector<int> ahead =
+      replacement_entrants(fixture.check(), fixture.tables, quest, roster);
+  for (const RosterMember &member : roster.members) {
+    CHECK(std::ranges::find(ahead, member.entrant) != ahead.end());
+  }
+  for (const float share : {0.0F, 0.3F, 0.6F, 0.99F}) {
+    for (int leaving = 0; leaving < static_cast<int>(roster.members.size()); ++leaving) {
+      const auto next = draw_replacement(fixture.check(), fixture.tables, quest, roster, leaving,
+                                         constant(share));
+      REQUIRE(next.has_value());
+      CHECK(std::ranges::find(ahead, next->entrant) != ahead.end());
+    }
+  }
+}
+
 TEST_CASE("the live world runs the areas, lends one and pays for the player's kills") {
   Fixture fixture;
   fixture.rules.roster.live_size = 4;

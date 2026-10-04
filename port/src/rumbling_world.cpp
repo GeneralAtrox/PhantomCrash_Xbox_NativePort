@@ -314,6 +314,11 @@ std::shared_ptr<Battle> RumblingWorld::lend(const int area, QuestSave &quest) {
   Area &lent = areas_[static_cast<std::size_t>(area)];
   lent.player_kills.clear();
   lent.player_bounty = 0;
+  lent_looks_.clear();
+  for (const int entrant : replacement_entrants(check_, tables_.contests, quest, lent.roster)) {
+    lent_looks_.push_back(
+        rumbling_robot(tables_, quest, entrant, "look", settings_.movement, 0).look);
+  }
   return lent.battle;
 }
 

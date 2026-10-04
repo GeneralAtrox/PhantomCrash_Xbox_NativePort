@@ -219,12 +219,20 @@ const SharpText::Slot *SharpText::slot(const GlyphFont &font, const int glyph) {
   if (pages_.empty() || used_ == per_page) {
     const int side = slots_per_side_ * cell_;
     SDL_Texture *page =
-        SDL_CreateTexture(renderer_, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STATIC, side, side);
+        SDL_CreateTexture(renderer_, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_TARGET, side, side);
     if (page == nullptr) {
       return nullptr;
     }
-    const std::vector<std::uint8_t> clear(static_cast<std::size_t>(side) * side * 4, 0);
-    SDL_UpdateTexture(page, nullptr, clear.data(), side * 4);
+    // Cleared on the GPU: uploading a page's worth of zeros (up to 64 MB)
+    // held up the frame the first text appeared in.
+    SDL_Texture *target = SDL_GetRenderTarget(renderer_);
+    Uint8 r = 0, g = 0, b = 0, a = 0;
+    SDL_GetRenderDrawColor(renderer_, &r, &g, &b, &a);
+    SDL_SetRenderTarget(renderer_, page);
+    SDL_SetRenderDrawColor(renderer_, 0, 0, 0, 0);
+    SDL_RenderClear(renderer_);
+    SDL_SetRenderTarget(renderer_, target);
+    SDL_SetRenderDrawColor(renderer_, r, g, b, a);
     SDL_SetTextureBlendMode(page, SDL_BLENDMODE_BLEND);
     SDL_SetTextureScaleMode(page, SDL_SCALEMODE_LINEAR);
     pages_.push_back(page);

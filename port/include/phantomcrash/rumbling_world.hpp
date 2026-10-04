@@ -96,6 +96,11 @@ public:
   [[nodiscard]] const RumblingRobot *robot(int area, int index) const;
   // Counts each time one of the area's robots becomes someone else.
   [[nodiscard]] int changes(int area) const;
+  // The looks of everyone who may come in at the lent area, as it was lent:
+  // their robots can be loaded before they are needed.
+  [[nodiscard]] const std::vector<RobotParts> &lent_looks() const noexcept {
+    return lent_looks_;
+  }
   [[nodiscard]] const RumblingLive &live() const noexcept {
     return live_;
   }
@@ -137,6 +142,7 @@ private:
   std::int64_t epoch_{};
   std::array<Area, roster_areas> areas_{};
   int lent_{-1};
+  std::vector<RobotParts> lent_looks_;
 };
 
 } // namespace phantomcrash

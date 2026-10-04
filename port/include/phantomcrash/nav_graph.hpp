@@ -52,6 +52,10 @@ struct NavTuning {
   float vantage_seconds{8.0F};     // a vantage is held this long before choosing again
   float vantage_chance{0.6F};      // the share of choices that look for one
   int vantage_sight_tests{48};     // sight lines tested per choice
+  // Rejoining the route: the nearest reachable points tested for sight. With
+  // none in sight the nearest reachable one is taken; a planned route gets
+  // there all the same.
+  int rejoin_sight_tests{12};
 };
 
 [[nodiscard]] NavTuning parse_nav_tuning(const json::JsonValue &value);

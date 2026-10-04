@@ -66,6 +66,8 @@ NavTuning parse_nav_tuning(const json::JsonValue &value) {
   t.vantage_seconds = number("vantage_seconds", t.vantage_seconds);
   t.vantage_chance = number("vantage_chance", t.vantage_chance);
   t.vantage_sight_tests = static_cast<int>(number("vantage_sight_tests", 48.0F));
+  t.rejoin_sight_tests = std::max(
+      1, static_cast<int>(number("rejoin_sight_tests", static_cast<float>(t.rejoin_sight_tests))));
   return t;
 }
 

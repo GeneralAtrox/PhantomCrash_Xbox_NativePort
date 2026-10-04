@@ -10,6 +10,10 @@
 
 namespace phantomcrash {
 namespace {
+// Frames the writer may fall behind by before a match waits for it, bounding
+// the memory held (a busy frame serializes to about 400 KB).
+constexpr std::size_t max_queued_frames = 60;
+
 class Stream {
 public:
   Stream(std::vector<unsigned char> &buffer, bool reading) : buffer_(buffer), reading_(reading) {}
@@ -129,10 +133,54 @@ ReplayArchive::ReplayArchive() {
     _close(descriptor);
     throw std::runtime_error("Replay file stream failed");
   }
+  writer_ = std::thread([this] { write_frames(); });
 }
 ReplayArchive::~ReplayArchive() {
-  if (file_) {
-    std::fclose(file_);
+  {
+    const std::lock_guard lock(mutex_);
+    stopping_ = true;
+  }
+  changed_.notify_all();
+  writer_.join();
+  std::fclose(file_);
+}
+
+void ReplayArchive::write_frames() {
+  for (;;) {
+    std::vector<unsigned char> buffer;
+    {
+      std::unique_lock lock(mutex_);
+      changed_.wait(lock, [this] { return stopping_ || !queue_.empty(); });
+      if (stopping_) {
+        return;
+      }
+      buffer = std::move(queue_.front());
+      queue_.pop_front();
+    }
+    const uLong size = static_cast<uLong>(buffer.size());
+    uLongf packed_size = compressBound(size);
+    std::vector<unsigned char> packed(packed_size);
+    bool ok = compress2(packed.data(), &packed_size, buffer.data(), size, Z_BEST_SPEED) == Z_OK;
+    std::int64_t offset = 0;
+    if (ok) {
+      const std::lock_guard file(file_mutex_);
+      ok = _fseeki64(file_, 0, SEEK_END) == 0 && (offset = _ftelli64(file_)) >= 0 &&
+           std::fwrite(&size, sizeof(size), 1, file_) == 1 &&
+           std::fwrite(&packed_size, sizeof(packed_size), 1, file_) == 1 &&
+           std::fwrite(packed.data(), 1, packed_size, file_) == packed_size;
+    }
+    {
+      const std::lock_guard lock(mutex_);
+      if (ok) {
+        offsets_.push_back(offset);
+      } else {
+        failed_ = true;
+      }
+    }
+    changed_.notify_all();
+    if (!ok) {
+      return;
+    }
   }
 }
 
@@ -143,27 +191,38 @@ void ReplayArchive::append(const ReplayFrame &frame) {
   if (!times_.empty() && frame.seconds - origin_ <= times_.back()) {
     return;
   }
-  _fseeki64(file_, 0, SEEK_END);
-  const auto offset = _ftelli64(file_);
   // Stream's writer does not mutate its input; sharing the serializer ensures
   // every field written is consumed by playback, including monitor and overlays.
   std::vector<unsigned char> buffer;
   Stream stream(buffer, false);
   stream.value(const_cast<ReplayFrame &>(frame));
-  const uLong size = static_cast<uLong>(buffer.size());
-  uLongf packed_size = compressBound(size);
-  std::vector<unsigned char> packed(packed_size);
-  if (compress2(packed.data(), &packed_size, buffer.data(), size, Z_BEST_SPEED) != Z_OK ||
-      std::fwrite(&size, sizeof(size), 1, file_) != 1 ||
-      std::fwrite(&packed_size, sizeof(packed_size), 1, file_) != 1 ||
-      std::fwrite(packed.data(), 1, packed_size, file_) != packed_size) {
-    throw std::runtime_error("Replay storage failed");
+  {
+    std::unique_lock lock(mutex_);
+    changed_.wait(lock, [this] { return failed_ || queue_.size() < max_queued_frames; });
+    if (failed_) {
+      throw std::runtime_error("Replay storage failed");
+    }
+    queue_.push_back(std::move(buffer));
   }
-  offsets_.push_back(offset);
+  changed_.notify_all();
   times_.push_back(frame.seconds - origin_);
 }
 ReplayFrame ReplayArchive::read(const std::size_t index) {
-  if (index >= size() || _fseeki64(file_, offsets_[index], SEEK_SET) != 0) {
+  if (index >= size()) {
+    throw std::runtime_error("Replay frame unavailable");
+  }
+  std::int64_t offset = 0;
+  {
+    // A frame just appended may still be with the writer.
+    std::unique_lock lock(mutex_);
+    changed_.wait(lock, [&] { return failed_ || offsets_.size() > index; });
+    if (offsets_.size() <= index) {
+      throw std::runtime_error("Replay frame unavailable");
+    }
+    offset = offsets_[index];
+  }
+  std::unique_lock file(file_mutex_);
+  if (_fseeki64(file_, offset, SEEK_SET) != 0) {
     throw std::runtime_error("Replay frame unavailable");
   }
   ReplayFrame frame;
@@ -181,6 +240,7 @@ ReplayFrame ReplayArchive::read(const std::size_t index) {
       actual_size != size) {
     throw std::runtime_error("Invalid compressed replay frame");
   }
+  file.unlock();
   Stream stream(buffer, true);
   stream.value(frame);
   frame.seconds = times_[index];

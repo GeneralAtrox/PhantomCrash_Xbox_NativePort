@@ -29,6 +29,9 @@ public:
   void add(const RobotParts &parts);
   // Robot `index` looks like `parts` from now on (another robot has come in).
   void replace(std::size_t index, const RobotParts &parts);
+  // Loads the models and textures of robots that may come in later, so that
+  // replace finds them ready instead of loading them mid-match.
+  void preload(const std::vector<RobotParts> &looks);
   [[nodiscard]] std::size_t size() const noexcept {
     return visuals_.size();
   }

@@ -4,8 +4,12 @@
 #include "phantomcrash/battle_camera.hpp"
 #include "phantomcrash/world_sound.hpp"
 #include "phantomcrash/cockpit.hpp"
+#include <condition_variable>
 #include <cstdio>
+#include <deque>
 #include <memory>
+#include <mutex>
+#include <thread>
 
 namespace phantomcrash {
 struct ReplaySubject {
@@ -27,6 +31,8 @@ struct ReplayFrame {
 };
 // A process-private, automatically deleted spool. Only offsets/timestamps stay
 // in RAM, so a long match does not retain thousands of skeletal poses in memory.
+// A writer thread compresses and stores the frames, keeping that work (a few
+// milliseconds a frame in a busy match) off the frame being drawn.
 class ReplayArchive final {
 public:
   ReplayArchive();
@@ -52,10 +58,19 @@ public:
   std::string player_name;
 
 private:
+  void write_frames();
+
   std::FILE *file_{};
-  std::vector<std::int64_t> offsets_;
   std::vector<double> times_;
   std::vector<SoundCue> sounds_;
   double origin_{};
+  std::mutex file_mutex_; // the writer's appends against read's seeks
+  std::mutex mutex_;      // guards the members below
+  std::condition_variable changed_;
+  std::deque<std::vector<unsigned char>> queue_; // serialized frames awaiting the writer
+  std::vector<std::int64_t> offsets_;            // of the frames stored so far
+  bool stopping_{};
+  bool failed_{};
+  std::thread writer_;
 };
 } // namespace phantomcrash

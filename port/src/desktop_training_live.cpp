@@ -37,6 +37,7 @@ void TrainingScreen::add_live_views() {
       view_->add(RobotParts{}); // a part out of range: still drawn, as a stand-in
     }
   }
+  view_->preload(live_world_->lent_looks());
 }
 
 void TrainingScreen::follow_live() {

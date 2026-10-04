@@ -52,7 +52,20 @@ one); it uses and saves the current quest.
 
 ## Included changes
 
-0.4.0 adds:
+0.4.1 adds:
+
+- **Smoother frames.** Removed the stutters seen in busy matches: replay
+  recording compresses and saves frames on a separate thread; the robots
+  that may enter a Rumbling match are loaded when it starts instead of when
+  they arrive; sharp text no longer stalls the frame its first text appears
+  in; and a computer robot rejoining its route no longer runs over a hundred
+  line-of-sight tests in one tick. In a ten-robot match the worst frames
+  fell from 27–76 ms to about 8–10 ms.
+
+Existing users: copy your `artifacts` and `mods` folders into the new
+version. The converted assets are unchanged.
+
+0.4.0 added:
 
 - **Dynamic lighting at night.** Ship and carrier searchlights sweep the
   arena and cast shadows; entrance lamps replace the painted light pools;

@@ -44,6 +44,13 @@ using RosterRandom = std::function<float()>;
                                                            const AreaRoster &roster, int leaving,
                                                            const RosterRandom &random);
 
+// Every entrant draw_replacement could bring in for `roster`, including
+// those already out.
+[[nodiscard]] std::vector<int> replacement_entrants(const RegulationCheck &check,
+                                                    const ContestTables &contests,
+                                                    const QuestSave &quest,
+                                                    const AreaRoster &roster);
+
 // 0x06cf5a: draws each area's roster anew when it is not for today's
 // contest; true when any was.
 bool refresh_rosters(const RegulationCheck &check, const ContestTables &contests, QuestSave &quest,

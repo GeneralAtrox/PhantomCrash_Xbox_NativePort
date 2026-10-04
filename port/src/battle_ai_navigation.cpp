@@ -51,12 +51,30 @@ void Battle::ai_route(Combatant &drone, const float seconds) {
         candidates.push_back({length(point - at), point, candidate});
       }
       std::ranges::stable_sort(candidates, {}, &Candidate::distance);
+      // Each sight line is a stage raycast: testing every point when none is
+      // in sight cost several milliseconds, so a planned route tests only the
+      // nearest few and otherwise takes the nearest it can reach.
+      const bool planned = !reach.empty();
+      int tests_left =
+          planned ? settings_.ai.navigation.rejoin_sight_tests : std::numeric_limits<int>::max();
+      const Candidate *nearest = nullptr;
+      const Candidate *chosen = nullptr;
       for (const Candidate &c : candidates) {
-        if (nav_reaches(reach, c.point) &&
-            clear_target_sight(drone.aim_origin(), c.point + Vec3{0, drone.radius, 0})) {
-          drone.path = c.follower;
+        if (!nav_reaches(reach, c.point)) {
+          continue;
+        }
+        nearest = nearest != nullptr ? nearest : &c;
+        if (tests_left-- <= 0) {
           break;
         }
+        if (clear_target_sight(drone.aim_origin(), c.point + Vec3{0, drone.radius, 0})) {
+          chosen = &c;
+          break;
+        }
+      }
+      chosen = chosen != nullptr ? chosen : (planned ? nearest : nullptr);
+      if (chosen != nullptr) {
+        drone.path = chosen->follower;
       }
     }
     s.route_rejoin = false;

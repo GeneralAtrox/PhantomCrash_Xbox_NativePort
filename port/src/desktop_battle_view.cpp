@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cmath>
 #include <string>
 
@@ -60,6 +61,19 @@ void BattleView::replace(const std::size_t index, const RobotParts &parts) {
   if (index < visuals_.size()) {
     visuals_[index] = make_visual(parts);
   }
+}
+
+void BattleView::preload(const std::vector<RobotParts> &looks) {
+  const auto start = std::chrono::steady_clock::now();
+  for (const RobotParts &parts : looks) {
+    try {
+      static_cast<void>(make_visual(parts)); // the world keeps what it loaded
+    } catch (const std::exception &) {
+      // replace draws a stand-in for a part out of range
+    }
+  }
+  const std::chrono::duration<double, std::milli> took = std::chrono::steady_clock::now() - start;
+  SDL_Log("Robots: %zu possible newcomers loaded ahead in %.0f ms", looks.size(), took.count());
 }
 
 MovementTuning BattleView::movement(const std::size_t index, const MovementTuning &base) const {

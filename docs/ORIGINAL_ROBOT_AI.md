@@ -504,7 +504,12 @@ code default is off.
     1 ms on Umihotaru; the costed search took up to 8 ms). The rejoin then
     sight-tests route points nearest first and stops at the first clear
     one, picking the same point as before. Before, it tested every closer
-    candidate, up to 200 sight tests and 17 ms in one tick.
+    candidate, up to 200 sight tests and 17 ms in one tick. With none in
+    sight it still tested all of them (119 sight tests, about 10 ms), so
+    only the nearest `rejoin_sight_tests` reachable points are tested; with
+    none of those in sight it takes the nearest reachable one, which a
+    planned route reaches anyway. Without the grid, every point is tested
+    as the original does.
     Robots also think in turn: the AI steps at 30 Hz in a 60 Hz battle, and
     each robot starts half a step apart from the one before it, so half of
     them step on each tick. Otherwise all of them step together on every
