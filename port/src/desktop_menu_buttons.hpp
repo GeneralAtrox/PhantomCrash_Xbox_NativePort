@@ -16,6 +16,9 @@ public:
   ~MenuButtons();
   void draw(const std::string &label, const std::array<float, 2> &position,
             const Viewport &viewport, bool selected, bool available);
+  // Whether `point` (canvas units) is on the button drawn at `position`.
+  [[nodiscard]] bool contains(const std::array<float, 2> &position,
+                              const std::array<float, 2> &point) const;
 
 private:
   struct Impl;

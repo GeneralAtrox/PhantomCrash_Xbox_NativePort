@@ -33,6 +33,8 @@ struct SettingsMenu::Impl {
   Settings settings;
   bool interacted{};
   bool visible{};
+  bool pointer_on_frame{}; // over the title or menu bar
+  bool in_menu{};
   std::optional<int> level;
   std::optional<CheatRequest> cheat;
   bool copy_requested{};
@@ -121,6 +123,30 @@ struct SettingsMenu::Impl {
     SetWindowPos(window, nullptr, 0, 0, client.right - client.left, client.bottom - client.top,
                  SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
   }
+  // Where the pointer is on the window frame, and whether a menu is open.
+  static void track_frame(HWND hwnd, UINT message, Impl &self) {
+    switch (message) {
+    case WM_NCMOUSEMOVE:
+      if (!self.pointer_on_frame) {
+        TRACKMOUSEEVENT leave{sizeof(leave), TME_LEAVE | TME_NONCLIENT, hwnd, 0};
+        TrackMouseEvent(&leave);
+        self.pointer_on_frame = true;
+      }
+      break;
+    case WM_NCMOUSELEAVE:
+    case WM_MOUSEMOVE:
+      self.pointer_on_frame = false;
+      break;
+    case WM_ENTERMENULOOP:
+      self.in_menu = true;
+      break;
+    case WM_EXITMENULOOP:
+      self.in_menu = false;
+      break;
+    default:
+      break;
+    }
+  }
   static LRESULT CALLBACK message(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam,
                                   UINT_PTR id, DWORD_PTR data) {
     auto &self = *reinterpret_cast<Impl *>(data);
@@ -136,6 +162,7 @@ struct SettingsMenu::Impl {
     if (LRESULT result = 0; self.copy && self.copy->message(message, wparam, lparam, result)) {
       return result;
     }
+    track_frame(hwnd, message, self);
     if (message == WM_EXITMENULOOP) {
       self.interacted = true;
     }
@@ -228,6 +255,10 @@ void SettingsMenu::set_visible(const bool visible) {
   }
 }
 
+bool SettingsMenu::frame_active() const {
+  return impl_->pointer_on_frame || impl_->in_menu;
+}
+
 bool SettingsMenu::take_interaction() {
   const bool preview = impl_->visuals && impl_->visuals->take_interaction();
   const bool coop = impl_->coop && impl_->coop->take_interaction();
@@ -300,6 +331,9 @@ void SettingsMenu::set_fullscreen(const bool enabled) {
 }
 void SettingsMenu::set_visible(bool) {}
 bool SettingsMenu::visuals_open() const {
+  return false;
+}
+bool SettingsMenu::frame_active() const {
   return false;
 }
 bool SettingsMenu::take_interaction() {

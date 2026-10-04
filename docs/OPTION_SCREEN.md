@@ -123,3 +123,12 @@ Init `0x132d8`, adjust `0x131d0`, question `0x130ee`, draw `0x13004`
   Left and right move the choice; B moves it to NO. A plays the confirm
   sound, and NO puts back the offset the screen started with. Either way
   the screen fades out with the box still shown (`0x130b4`).
+
+## Mouse
+
+A port addition: moving the pointer onto an item moves the cursor there (with
+the cursor sound) and a click on it confirms it, as A does. Once a question
+box has grown, a click on YES or NO answers with it; a click on a notice's OK
+closes it. Right-click is B (cancel), as in the other menus. Hit areas are the
+items' and buttons' own sprites. Sound Config, Button Config and Screen Adjust
+are still controller-only.

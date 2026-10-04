@@ -39,12 +39,14 @@ struct LightBuffer {
   std::array<std::array<float, 4>, DynamicLightPass::point_capacity> point_colour; // w: air
   // Each spotlight's air: strength, and the distance its beam starts to dim (0: the air's).
   std::array<std::array<float, 4>, DynamicLightPass::capacity> spot_air;
+  // xyz: a strip lamp's half length (bar); w: its bar_setback.
+  std::array<std::array<float, 4>, DynamicLightPass::capacity> spot_bar;
 };
 struct CasterConstants {
   Mat4 transform;
   std::array<float, 4> alpha;
 };
-static_assert(sizeof(LightBuffer) == 2064 && sizeof(CasterConstants) == 80);
+static_assert(sizeof(LightBuffer) == 2192 && sizeof(CasterConstants) == 80);
 constexpr char shadow_source[] = R"hlsl(
 cbuffer Caster : register(b0) {
  row_major float4x4 transform;
@@ -67,10 +69,22 @@ void ps_main(Output i) {
 )hlsl";
 } // namespace
 
+float bar_setback(const WorldLight &light) {
+  const Vec3 axis = normalize(light.direction);
+  const float along = dot(light.bar, axis);
+  const float across = length(light.bar - axis * along);
+  if (across <= 0 && along == 0) {
+    return 0;
+  }
+  return across / std::tan(light.outer_degrees * pi / 180.0F) + std::abs(along);
+}
+
 bool light_reaches(const WorldLight &light, const Vec3 centre, const float radius) {
-  const Vec3 to = centre - light.position;
+  // A strip's beam fits in the cone from behind it (bar_setback).
+  const float setback = bar_setback(light);
+  const Vec3 to = centre - (light.position - light.direction * setback);
   const float along = dot(to, light.direction);
-  if (along < -radius || along > light.range + radius) {
+  if (along < -radius || along > light.range + setback + radius) {
     return false;
   }
   // Out of the cone by more than the sphere: from its axis, past the cone's
@@ -153,8 +167,13 @@ unsigned DynamicLightPass::prepare(ID3D11DeviceContext *context, std::span<const
     const auto &l = spots[i];
     Vec3 direction = normalize(l.direction);
     const Vec3 up = std::abs(direction.y) > 0.95F ? Vec3{0, 0, 1} : Vec3{0, 1, 0};
-    matrices_[i] = look_at(l.position, l.position + direction, up) *
-                   perspective(l.outer_degrees * pi / 90.0F, 1, l.near_plane, l.range);
+    // A strip's shadow map is seen from behind it, so that it covers the
+    // strip's whole beam; its near plane stays just past the strip.
+    const float setback = bar_setback(l);
+    const Vec3 eye = l.position - direction * setback;
+    matrices_[i] = look_at(eye, eye + direction, up) *
+                   perspective(l.outer_degrees * pi / 90.0F, 1, l.near_plane + setback,
+                               l.range + setback + length(l.bar));
     data.lights[i] = {
         matrices_[i],
         {l.position.x, l.position.y, l.position.z, l.range},
@@ -162,6 +181,7 @@ unsigned DynamicLightPass::prepare(ID3D11DeviceContext *context, std::span<const
         {l.colour.x * l.intensity, l.colour.y * l.intensity, l.colour.z * l.intensity,
          std::cos(l.inner_degrees * pi / 180.0F)}};
     data.spot_air[i] = {l.air, l.air_fade, 0, 0};
+    data.spot_bar[i] = {l.bar.x, l.bar.y, l.bar.z, setback};
   }
   upload(context, lights_.Get(), data);
   ID3D11ShaderResourceView *none = nullptr;

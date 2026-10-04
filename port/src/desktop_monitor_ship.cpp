@@ -144,6 +144,7 @@ void MonitorShip::add_lights(std::vector<WorldLight> &lights) const {
     light.position = transform_point(light.position, frame);
     light.direction =
         normalize(transform_point(light.direction, frame) - transform_point({}, frame));
+    light.bar = transform_point(light.bar, frame) - transform_point({}, frame);
     lights.push_back(light);
   }
 }

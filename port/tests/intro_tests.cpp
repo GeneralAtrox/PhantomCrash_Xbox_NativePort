@@ -142,6 +142,8 @@ TEST_CASE("the shipped intro parses") {
   CHECK(shipped.steps.size() == 5);
   CHECK(shipped.steps.front().id == "phantagram");
   CHECK(shipped.steps.back().rotate);
+  // The original boots into phantomcrash.sfd: its counter (0x1d6f6c) starts at 1.
+  CHECK(shipped.steps.back().files.front() == "movie/phantomcrash.sfd");
 }
 
 TEST_CASE("the audio clock trails the queue by what is still buffered") {

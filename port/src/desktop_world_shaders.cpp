@@ -164,7 +164,7 @@ float4 ps_main(VertexOut input, bool front : SV_IsFrontFace) : SV_Target {
   colour.rgb += highlight;
   if (fog_enabled > 0.5 && fogged > 0.5) {
     float amount = saturate((input.fog_depth - fog_start) / max(fog_end - fog_start, 1e-3));
-    colour.rgb = lerp(colour.rgb, fog_colour, amount);
+    colour.rgb = fogged > 1.5 ? colour.rgb * (1.0 - amount) : lerp(colour.rgb, fog_colour, amount);
   }
   colour.rgb = lerp(colour.rgb, float3(1.0, 1.0, 1.0), flash * 0.6);
   if (optical > 0.5) {

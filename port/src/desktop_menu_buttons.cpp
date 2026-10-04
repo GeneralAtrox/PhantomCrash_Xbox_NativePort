@@ -187,6 +187,14 @@ MenuButtons::MenuButtons(SDL_Renderer *renderer, const json::JsonValue &style)
     : impl_(std::make_unique<Impl>(renderer, style)) {}
 MenuButtons::~MenuButtons() = default;
 
+bool MenuButtons::contains(const std::array<float, 2> &position,
+                           const std::array<float, 2> &point) const {
+  const float left = position[0] + impl_->offset[0];
+  const float top = position[1] + impl_->offset[1];
+  return point[0] >= left && point[0] < left + impl_->size[0] && point[1] >= top &&
+         point[1] < top + impl_->size[1];
+}
+
 void MenuButtons::draw(const std::string &label, const std::array<float, 2> &position,
                        const Viewport &viewport, bool selected, bool available) {
   auto &p = *impl_;

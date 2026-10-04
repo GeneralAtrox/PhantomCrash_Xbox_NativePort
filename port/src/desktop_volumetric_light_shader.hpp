@@ -94,7 +94,8 @@ bool reach_span(float3 dir, float3 centre, float radius, float limit, out float 
 bool cone_span(int i, float3 dir, inout float t0, inout float t1) {
   float3 axis = lights[i].direction_outer.xyz;
   float cos2 = lights[i].direction_outer.w * lights[i].direction_outer.w;
-  float3 offset = eye - lights[i].position_range.xyz;
+  // A strip's beam: the cone from behind it that holds every point's.
+  float3 offset = eye - (lights[i].position_range.xyz - axis * spot_bar[i].w);
   float along = dot(dir, axis);
   float ahead = dot(offset, axis);
   float lo = t0;
@@ -152,7 +153,8 @@ float spot_scatter(int i, float3 dir, float t0, float t1, float start) {
   float sum = 0;
   [loop] for (int k = 0; k < (int)steps; ++k) {
     float t = t0 + (k + start) * step;
-    float3 delta = eye + dir * t - light.position_range.xyz;
+    float3 at = eye + dir * t;
+    float3 delta = at - emitter(i, at);
     float d = length(delta);
     float3 away = delta / max(d, 0.0001);
     float cone = smoothstep(light.direction_outer.w, light.colour_inner.w,
@@ -161,7 +163,6 @@ float spot_scatter(int i, float3 dir, float t0, float t1, float start) {
     // A beam spreads as it leaves the lamp: the air it lights dims with the
     // square of the distance once past its fade distance.
     float spread = 1.0 / (1.0 + (d / fade) * (d / fade));
-    float3 at = eye + dir * t;
     float weight = cone * falloff * falloff * spread * thickness(at.y);
     if (weight <= 0) continue;
     float4 clip_position = mul(float4(at, 1), light.projection);
@@ -201,7 +202,8 @@ float4 ps_march(ScreenOut input) : SV_Target {
   float3 result = 0;
   float t0, t1;
   [loop] for (int i = 0; i < (int)light_count.x; ++i) {
-    if (reach_span(dir, lights[i].position_range.xyz, lights[i].position_range.w, limit, t0, t1) &&
+    float reach = lights[i].position_range.w + length(spot_bar[i].xyz);
+    if (reach_span(dir, lights[i].position_range.xyz, reach, limit, t0, t1) &&
         cone_span(i, dir, t0, t1)) {
       result += lights[i].colour_inner.rgb * spot_scatter(i, dir, t0, t1, start);
     }

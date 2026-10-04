@@ -2,6 +2,7 @@
 
 #include "test_support.hpp"
 
+#include <array>
 #include <string>
 #include <vector>
 
@@ -121,6 +122,45 @@ TEST_CASE("the vibration box grows, answers on the current setting and sets it")
   CHECK((tap(menu, button::left) == Sounds{"cursor"}));
   static_cast<void>(tap(menu, button::a));
   CHECK(menu.options().vibration);
+}
+
+// The pointer over the middle of `sprite`.
+InputFrame pointing(const Sprite &sprite, const bool moved, const bool clicked) {
+  InputFrame input{0, 0, 1};
+  input.pointer = std::array<float, 2>{sprite.position[0] + (sprite.rect[2] - sprite.rect[0]) / 2,
+                                       sprite.position[1] + (sprite.rect[3] - sprite.rect[1]) / 2};
+  input.pointer_moved = moved;
+  input.clicked = clicked;
+  return input;
+}
+
+const Sprite &item_sprite(const OptionMenu &menu, const std::string &id) {
+  const auto &items = menu.script().items;
+  for (const auto &item : items) {
+    if (item.id == id) {
+      return item.normal;
+    }
+  }
+  return items.front().normal;
+}
+
+TEST_CASE("the mouse moves the cursor by hovering, confirms by clicking and answers the box") {
+  auto menu = shipped();
+  run(menu, 0.5);
+  menu.update(tick, pointing(item_sprite(menu, "exit"), true, false));
+  CHECK(item_id(menu) == "exit");
+  CHECK((menu.take_sounds() == Sounds{"cursor"}));
+  // Resting on another item without moving leaves the cursor.
+  menu.update(tick, pointing(item_sprite(menu, "default"), false, false));
+  CHECK(item_id(menu) == "exit");
+  menu.update(tick, pointing(item_sprite(menu, "vibration"), false, true));
+  CHECK(item_id(menu) == "vibration");
+  CHECK(menu.box().is_open());
+  run(menu, 6.0 / 60.0);
+  CHECK(menu.box().grown());
+  menu.update(tick, pointing(menu.box().style().no.normal, false, true));
+  CHECK(!menu.box().is_open());
+  CHECK(!menu.options().vibration);
 }
 
 TEST_CASE("DEFAULT asks, restores the defaults and says so") {

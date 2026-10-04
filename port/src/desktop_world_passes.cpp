@@ -314,7 +314,11 @@ void WorldRenderer::draw_one(const Draw &draw, const bool sky, const StageLighti
   constants.has_base = views[0] != nullptr ? 1.0F : 0.0F;
   constants.has_normal = views[1] != nullptr ? 1.0F : 0.0F;
   constants.alpha_test = material.alpha == AlphaMode::mask ? 1.0F : 0.0F;
-  constants.fogged = !sky && lighting.fog && draw.item->fogged ? 1.0F : 0.0F;
+  // Fog hides what is added (2: fade toward black) and turns the rest toward
+  // its colour (1); lerping an additive draw's black texels to the fog colour
+  // would add a flat box of it.
+  const bool adds = material.additive || draw.item->additive;
+  constants.fogged = !sky && lighting.fog && draw.item->fogged ? (adds ? 2.0F : 1.0F) : 0.0F;
   constants.item_alpha = draw.alpha;
   constants.flash = draw.flash;
   constants.local_light = post_process_.dynamic_lighting && !dynamic_failed_ && !sky && !overlay &&

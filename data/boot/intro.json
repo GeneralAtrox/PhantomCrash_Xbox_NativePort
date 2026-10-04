@@ -4,6 +4,7 @@
   "Times are seconds. skip.after is 0 in the port; the original ignored buttons for the first second of each movie (original_after).",
   "skip.buttons is any button in the port, so one tap skips one step; original_buttons is what the original accepted (confirm = A or START).",
   "first_boot_only steps are left out when the intro plays again after the title idle timeout.",
+  "A rotate step plays its files in turn, the first on boot. The original (0x1372a) plays movie 0xaebf6(n % 2) with n starting at 1 (0x1d6f6c), so phantomcrash.sfd comes first and opening.sfd on the next visit.",
   "Source: docs/OBJECTIVE_01_PLAN.md (scenes 158, 18, 45 and 2 of the original)."
  ],
  "steps": [
@@ -47,7 +48,7 @@
   {
    "id": "opening",
    "type": "movie",
-   "files": ["movie/opening.sfd", "movie/phantomcrash.sfd"],
+   "files": ["movie/phantomcrash.sfd", "movie/opening.sfd"],
    "rotate": true,
    "skip": { "buttons": "any", "after": 0.0, "original_after": 1.0 },
    "end_hold": 0.267,

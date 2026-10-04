@@ -24,7 +24,15 @@ struct WorldLight {
   // How far its beam carries before dimming in the air (0: the air's
   // beam_fade); a searchlight's narrow beam carries far.
   float air_fade{};
+  // Half the length of a strip lamp, from its position to one end (zero: a
+  // point lamp). Light leaves the strip's nearest point, so its beam is as
+  // wide as the strip; the gates' rows of panel lights.
+  Vec3 bar{};
 };
+
+// How far behind a spotlight's position a cone of its angle would have to
+// start to hold its whole strip's beam (0 for a point lamp).
+[[nodiscard]] float bar_setback(const WorldLight &light);
 
 // Whether a sphere can be lit by the light: inside its range and cone.
 [[nodiscard]] bool light_reaches(const WorldLight &light, Vec3 centre, float radius);

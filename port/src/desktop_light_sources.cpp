@@ -33,6 +33,9 @@ std::vector<AttachedLight> light_sources(const DataRoots &roots, const char *gro
     light.near_plane = static_cast<float>(entry.number_or("near", light.near_plane));
     light.air = static_cast<float>(entry.number_or("air", light.air));
     light.air_fade = static_cast<float>(entry.number_or("air_fade", light.air_fade));
+    if (entry.find("bar")) {
+      light.bar = vector("bar");
+    }
     if (!std::isfinite(light.intensity) || light.intensity < 0 || !std::isfinite(light.range) ||
         light.range <= 0.5F || !(light.near_plane >= 0.05F && light.near_plane < light.range) ||
         !(light.inner_degrees >= 0 && light.inner_degrees < light.outer_degrees &&

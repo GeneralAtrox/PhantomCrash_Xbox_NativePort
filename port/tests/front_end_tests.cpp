@@ -2,6 +2,7 @@
 
 #include "test_support.hpp"
 
+#include <array>
 #include <string>
 #include <vector>
 
@@ -128,6 +129,37 @@ TEST_CASE("quest mode opens its submenu, and B steps back out") {
   tap(front_end, button::a);
   run(front_end, 0.5);
   CHECK(front_end.next() == "new_game");
+}
+
+TEST_CASE("the mouse opens the title, moves the cursor by hovering and confirms by clicking") {
+  auto front_end = shipped();
+  run(front_end, 0.5);
+  InputFrame click = idle();
+  click.pointer = std::array<float, 2>{10.0F, 10.0F};
+  click.clicked = true;
+  front_end.update(tick, click);
+  CHECK(front_end.mode() == FrontEnd::Mode::menu);
+  static_cast<void>(front_end.take_sounds());
+  // Hovering moves the cursor; a pointer resting on an item does not.
+  InputFrame hover = idle();
+  hover.pointer = std::array<float, 2>{0.0F, 0.0F};
+  hover.pointer_moved = true;
+  front_end.update(tick, hover, 2);
+  CHECK(item_id(front_end) == "option");
+  CHECK(front_end.take_sounds() == std::vector<std::string>{"cursor"});
+  hover.pointer_moved = false;
+  front_end.update(tick, hover, 0);
+  CHECK(item_id(front_end) == "option");
+  // A click off every item does nothing; on one it confirms.
+  front_end.update(tick, click);
+  CHECK(item_id(front_end) == "option");
+  CHECK(front_end.take_sounds().empty());
+  front_end.update(tick, click, 0);
+  CHECK(front_end.menu()->items.size() == 2); // the quest submenu
+  front_end.update(tick, click, 1);
+  run(front_end, 1.0);
+  CHECK(front_end.done());
+  CHECK(front_end.next() == "load_game");
 }
 
 TEST_CASE("the menu returns to the title 75 s after opening") {

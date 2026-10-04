@@ -244,7 +244,8 @@ int run(const Options &options) {
       rate.vsync = false; // as fast as it goes
       rate.cap_enabled = false;
     }
-    host.set_vsync(rate.vsync);
+    // The menu bar and its tooltip repaint cleanly only without tearing.
+    host.set_vsync(rate.vsync || menu.frame_active());
     if (menu.take_interaction()) {
       // Time spent in the menu or the dialog is not game time.
       step.reset();

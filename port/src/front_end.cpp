@@ -94,7 +94,8 @@ void FrontEnd::leave(const std::string &target, const double fade_out) {
   phase_elapsed_ = 0.0;
 }
 
-void FrontEnd::update(const double tick_seconds, const InputFrame &input) {
+void FrontEnd::update(const double tick_seconds, const InputFrame &input,
+                      const std::optional<int> pointed) {
   if (done()) {
     return;
   }
@@ -119,13 +120,13 @@ void FrontEnd::update(const double tick_seconds, const InputFrame &input) {
   if (mode_ == Mode::title) {
     update_title(input);
   } else {
-    update_menu(tick_seconds, input);
+    update_menu(tick_seconds, input, pointed);
   }
   idle_ -= tick_seconds;
 }
 
 void FrontEnd::update_title(const InputFrame &input) {
-  if (input.any_pressed(title_.start_buttons)) {
+  if (input.any_pressed(title_.start_buttons) || input.clicked) {
     sound(title_.start_sound);
     enter(Mode::menu, 0.0);
     cursor_repeat_.reset();
@@ -136,21 +137,29 @@ void FrontEnd::update_title(const InputFrame &input) {
   }
 }
 
-void FrontEnd::update_menu(const double tick_seconds, const InputFrame &input) {
+void FrontEnd::update_menu(const double tick_seconds, const InputFrame &input,
+                           std::optional<int> pointed) {
   const Menu &level = *menu();
   int &cursor = submenu_.empty() ? main_cursor_ : sub_cursor_;
   const int count = static_cast<int>(level.items.size());
+  if (pointed && (*pointed < 0 || *pointed >= count)) {
+    pointed.reset();
+  }
   bool fresh = false;
   const int step = cursor_repeat_.step(tick_seconds, input, button::up, button::down, fresh);
-  if (const int moved = move_cursor(cursor, step, fresh, count); moved != cursor) {
+  int moved = move_cursor(cursor, step, fresh, count);
+  if (pointed && (input.pointer_moved || input.clicked)) {
+    moved = *pointed;
+  }
+  if (moved != cursor) {
     cursor = moved;
     sound(menu_.move_sound);
   }
-  if (menu_.idle_resets_on_input && input.pressed != 0) {
+  if (menu_.idle_resets_on_input && (input.pressed != 0 || input.clicked || input.pointer_moved)) {
     idle_ = menu_.idle_seconds;
   }
 
-  if (input.any_pressed(menu_.confirm_buttons)) {
+  if (input.any_pressed(menu_.confirm_buttons) || (input.clicked && pointed)) {
     const MenuItem &item = level.items[static_cast<std::size_t>(cursor)];
     if (!available(item)) {
       sound(menu_.unavailable_sound);

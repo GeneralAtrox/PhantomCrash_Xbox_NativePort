@@ -1,7 +1,7 @@
 {
   "notes": [
     "Optional native enhancement, disabled by default in Settings > Visuals. These are port-authored lights, not a reconstruction of Xbox local lighting.",
-    "The night video ship (models/binlink/211.gltf) carries four searchlight beams, meshes 0-3, each turned at its rotor pivot (tables/arena_monitor.json spinners; 0x06a5ac). Its lamps follow them: 'mesh' puts a light in that mesh's frame, where the beam's axis runs from the mesh origin along 'direction' (port model space: the loader mirrors the glTF's Z) (measured from the beam geometry: 128 units to a disc 8.8 across, about 4 degrees each side). Each lamp starts 22.5 units down its beam, below the hull, which would otherwise shadow it. The night supply carrier (208.gltf) has one beam on its spinner, mesh 5: from (0, -0.64, -0.08) along (0, -0.81, 0.59), its glow fanning about 33 degrees each side; its lamp starts 2 units down it, below the body, with a 14 degree cone so its pool stays near the carrier. The day models have no beams. Night entrance lights are authored above the gate approaches.",
+    "The night video ship (models/binlink/211.gltf) carries four searchlight beams, meshes 0-3, each turned at its rotor pivot (tables/arena_monitor.json spinners; 0x06a5ac). Its lamps follow them: 'mesh' puts a light in that mesh's frame, where the beam's axis runs from the mesh origin along 'direction' (port model space: the loader mirrors the glTF's Z) (measured from the beam geometry: 128 units to a disc 8.8 across, about 4 degrees each side). Each lamp starts 22.5 units down its beam, below the hull, which would otherwise shadow it. The night supply carrier (208.gltf) has one beam on its spinner, mesh 5: from (0, -0.64, -0.08) along (0, -0.81, 0.59), its glow fanning about 33 degrees each side; its lamp starts 2 units down it, below the body, with a 14 degree cone so its pool stays near the carrier. The day models have no beams. Night entrance lights are authored above the gate approaches. 'bar' makes a lamp a strip: half its length, from 'position' (world units, or the mesh's) to one end; light leaves the strip's nearest point, so its pool and beam are as wide as the strip. Stage 1's gate lamps are the rows of three panels across each gate's top (models/stages/187.gltf, texture 1559/6), their positions 0.6 units in front of the panels' middle. Their air (0.7, fading from 16 units) keeps the haze a glow along the panels rather than a cone filling the view.",
     "Maximum eight spotlights per frame (stage lights first, then the video ship's, then the carrier's), each with a 1024px shadow map. Cone angles are half-angles in degrees; positions/ranges use world units. 'near' is the shadow map's near plane (default 0.5); lights thrown far need a farther one to keep their shadows' contact. Ship and supply coordinates are the model's or the named mesh's, stage coordinates world.",
     "light_pools lists, per scene stage, the base texture of the original's painted entrance light pools (blended, unlit stage layers drawn as a white radial sprite). While dynamic lighting is on they are not drawn and the entrance spotlights, aimed at each pool's centre with a cone its size, light the ground, the robots and cast shadows instead. With it off the original pools are drawn as before.",
     "point_lights (port addition, drawn while Dynamic lighting is on): unshadowed point lights, up to max_lights a frame, kept by how much they light near the camera. effects: every playing effect with additive particles or flashes glows (port/src/effect_glow.cpp); its energy sums each particle's alpha times its brightest colour channel times its half-size, and each flash's alpha times its scale times flash_weight. The light sits lift above the glow's centre in the particles' average colour, with intensity intensity_per_root * sqrt(energy) (at most max_intensity) and range range_base + range_per_root * sqrt(energy) (at most max_range); a burning wreck reaches energy 17-47 for its 6.45 s, a blast about 11 for half a second, a bullet's impact about 1. group_scales multiplies an effect group's energy (0: unlit). fireball: each blast and exploding wreck flashes, its range range_per_radius times the blast's radius (at least 'range'), fading over the blast's life. muzzle: a flash where each round leaves, by HUD kind, for 'seconds'. projectile: a light riding each round in flight. beam: lights along a held beam every 'spacing' units (at most 'points'), brightening over 'seconds' held. day_scale scales them on day stages. shadowed: while the stage and ships leave shadow maps free, this many of the strongest blasts and fires (intensity times range at least shadow_min) cast shadows instead, as a light shadow_lift above them looking down, shadow_degrees each side.",
@@ -112,66 +112,87 @@
     "1": [
       {
         "position": [
-          112.148,
-          18.32,
-          -145.4
+          111.906,
+          22.82,
+          -145.649
         ],
         "direction": [
-          0.1386,
-          -0.8507,
-          0.507
+          0.1259,
+          -0.8911,
+          0.4361
+        ],
+        "bar": [
+          4.815,
+          0,
+          -0.545
         ],
         "colour": [
           0.8,
           0.9,
           1
         ],
-        "range": 55,
+        "range": 65,
         "intensity": 2.5,
-        "inner_degrees": 17.0,
-        "outer_degrees": 34.1
+        "inner_degrees": 14.4,
+        "outer_degrees": 29.7,
+        "air": 0.7,
+        "air_fade": 16
       },
       {
         "position": [
-          181.644,
-          15.35,
-          -5.754
+          181.845,
+          19.85,
+          -6.0
         ],
         "direction": [
-          -0.6466,
-          -0.7473,
-          0.153
+          -0.556,
+          -0.819,
+          0.14
+        ],
+        "bar": [
+          1.735,
+          0,
+          4.525
         ],
         "colour": [
           0.8,
           0.9,
           1
         ],
-        "range": 55,
+        "range": 65,
         "intensity": 2.5,
-        "inner_degrees": 15.5,
-        "outer_degrees": 31.1
+        "inner_degrees": 13.2,
+        "outer_degrees": 27.1,
+        "air": 0.7,
+        "air_fade": 16
       },
       {
         "position": [
-          -22.33,
-          14.72,
-          55.27
+          -22.265,
+          19.22,
+          55.545
         ],
         "direction": [
-          -0.1041,
-          -0.7062,
-          -0.7003
+          -0.0916,
+          -0.7874,
+          -0.6094
+        ],
+        "bar": [
+          4.845,
+          0,
+          0
         ],
         "colour": [
           0.8,
           0.9,
           1
         ],
-        "range": 55,
+        "range": 65,
         "intensity": 2.5,
-        "inner_degrees": 16.9,
-        "outer_degrees": 33.7
+        "inner_degrees": 14.6,
+        "outer_degrees": 29.7,
+        "air": 0.7,
+        "air_fade": 16
       }
     ],
     "3": [

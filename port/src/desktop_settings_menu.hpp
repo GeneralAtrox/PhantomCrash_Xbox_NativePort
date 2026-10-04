@@ -33,6 +33,10 @@ public:
   // True once after the user interacts with the menu, so the loop can drop
   // the time spent inside the menu instead of catching up.
   bool take_interaction();
+  // True while the pointer is on the title or menu bar or a menu is open.
+  // Windows draws those with GDI; a tearing flip-model present beside them
+  // lets the frame flicker unless something (a recording) forces composition.
+  [[nodiscard]] bool frame_active() const;
   [[nodiscard]] bool visuals_open() const;
   // Tools > Level Select's entries, in order.
   void set_levels(const std::vector<std::string> &labels);

@@ -28,7 +28,17 @@ FrontEndScreen::FrontEndScreen(TextureCache &textures, TitleScript title, MainMe
 }
 
 void FrontEndScreen::tick(const InputFrame &input, const double tick_seconds) {
-  front_end_.update(tick_seconds, input);
+  std::optional<int> pointed;
+  const Menu *menu = front_end_.menu();
+  for (std::size_t i = 0; menu && input.pointer && i < menu->items.size(); ++i) {
+    const MenuItem &item = menu->items[i];
+    if (item.label.empty() ? textures_.hit(item.normal, *input.pointer)
+                           : buttons_.contains(item.normal.position, *input.pointer)) {
+      pointed = static_cast<int>(i);
+      break;
+    }
+  }
+  front_end_.update(tick_seconds, input, pointed);
 }
 
 void FrontEndScreen::draw(const Viewport &viewport) {

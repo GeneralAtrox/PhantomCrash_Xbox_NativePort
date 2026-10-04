@@ -78,7 +78,10 @@ public:
   FrontEnd(TitleScript title, MainMenuScript menu);
   void open_menu_from(const std::string &screen);
 
-  void update(double tick_seconds, const InputFrame &input);
+  // `pointed` is the menu item under the mouse, if any (a port addition): the
+  // pointer moving onto an item moves the cursor there, and a click confirms
+  // it; a click anywhere on the title opens the menu, as START does.
+  void update(double tick_seconds, const InputFrame &input, std::optional<int> pointed = {});
 
   [[nodiscard]] bool done() const noexcept {
     return next_.has_value();
@@ -116,7 +119,7 @@ private:
 
   void enter(Mode mode, double fade_in);
   void update_title(const InputFrame &input);
-  void update_menu(double tick_seconds, const InputFrame &input);
+  void update_menu(double tick_seconds, const InputFrame &input, std::optional<int> pointed);
   void leave(const std::string &target, double fade_out);
   void sound(const std::string &name);
 

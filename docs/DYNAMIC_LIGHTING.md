@@ -54,6 +54,13 @@ Data keys in `data/world/dynamic_lighting.json`:
 - `colour` is linear RGB, `intensity` a multiplier, and `range` world units.
 - `inner_degrees`/`outer_degrees` are cone half-angles, with a smooth edge.
 - Range attenuation falls to zero at `range`.
+- `bar` (optional) makes a spotlight a strip lamp: half its length, from
+  `position` to one end. Surfaces and air take their light from the strip's
+  nearest point, so the pool and beam are as wide as the strip; the shadow map
+  is seen from behind the strip (the cone that holds its whole beam), with its
+  near plane just past it. Stage 1's entrance lamps are the rows of three
+  panels across each gate's top, placed 0.6 units in front of the panels and
+  aimed at the pools the earlier point lamps lit.
 - `light_pools` keys are scene-stage numbers, each listing the base texture of
   the original's painted entrance light pools (blended, unlit stage layers that
   draw a white radial sprite). While the option is on those materials are not
@@ -142,7 +149,9 @@ shader `desktop_volumetric_light_shader.hpp`). Only the stages listed under
   `height_falloff` units, so the ships' beams strengthen toward the ground. A
   beam dims as 1/(1 + (d/fade)²) with distance from its lamp; `beam_fade` is
   the default fade, and a light's own `air_fade` overrides it (the ships'
-  narrow searchlights carry 250 units, the supply carrier's 80).
+  narrow searchlights carry 250 units, the supply carrier's 80, stage 1's
+  gate strips 16, with `air` 0.7, so they read as a glow along the panels
+  rather than a cone filling the view when looking up at them).
 - **Per light.** Each stage, ship or supply light's `air` scales how strongly
   it lights the air (default 1). `point_lights.air` sets it for every effect
   light, including fires and blasts promoted to shadowed spotlights.

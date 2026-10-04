@@ -40,6 +40,10 @@ public:
   std::string music() const override {
     return watching_ ? watching_->music() : music_;
   }
+  // While the replay plays, right-click is its camera's, not BACK.
+  [[nodiscard]] bool mouse_menu_back() const override {
+    return watching_ ? watching_->mouse_menu_back() : Screen::mouse_menu_back();
+  }
   [[nodiscard]] bool day_clicked(const InputFrame &input) const override {
     return !watching_ && frame_.day_clicked(input, quest_);
   }

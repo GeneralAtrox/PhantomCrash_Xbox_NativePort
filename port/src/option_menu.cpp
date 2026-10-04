@@ -1,5 +1,7 @@
 #include "phantomcrash/option_menu.hpp"
+#include "phantomcrash/shop_pointer.hpp"
 
+#include <optional>
 #include <utility>
 
 namespace phantomcrash {
@@ -70,16 +72,29 @@ void OptionMenu::update(const double tick_seconds, const InputFrame &input) {
 
 void OptionMenu::update_list(const double tick_seconds, const InputFrame &input) {
   const int count = static_cast<int>(script_.items.size());
+  // The mouse (a port addition): moving onto an item moves the cursor there,
+  // and a click on one confirms it.
+  std::optional<int> pointed;
+  for (int i = 0; input.pointer && i < count; ++i) {
+    if (shop_hit(input, script_.items[static_cast<std::size_t>(i)].normal)) {
+      pointed = i;
+      break;
+    }
+  }
   bool fresh = false;
   const int step = repeat_.step(tick_seconds, input, button::up, button::down, fresh);
-  if (const int moved = move_cursor(cursor_, step, fresh, count); moved != cursor_) {
+  int moved = move_cursor(cursor_, step, fresh, count);
+  if (pointed && (input.pointer_moved || input.clicked)) {
+    moved = *pointed;
+  }
+  if (moved != cursor_) {
     cursor_ = moved;
     // The new item's help line starts again from the right.
     help_.restart(cursor_);
     sound(script_.move_sound);
   }
 
-  if (input.any_pressed(script_.confirm_buttons)) {
+  if (input.any_pressed(script_.confirm_buttons) || (input.clicked && pointed)) {
     sound(script_.select_sound);
     const OptionItem &item = script_.items[static_cast<std::size_t>(cursor_)];
     switch (item.action) {
@@ -112,16 +127,31 @@ void OptionMenu::update_list(const double tick_seconds, const InputFrame &input)
 
 void OptionMenu::update_box(const double tick_seconds, const InputFrame &input) {
   const bool question = phase_ == Phase::question;
+  // A click on the grown box's YES or NO answers with it; on OK it closes.
+  const MessageBoxStyle &style = box_.style();
+  bool clicked = false;
   if (question) {
     bool fresh = false;
     const int step = repeat_.step(tick_seconds, input, button::left, button::right, fresh);
-    if (const int moved = move_cursor(box_.choice(), step, fresh, 2); moved != box_.choice()) {
+    int moved = move_cursor(box_.choice(), step, fresh, 2);
+    if (input.clicked && box_.grown()) {
+      if (shop_hit(input, style.yes.normal)) {
+        moved = 0;
+        clicked = true;
+      } else if (shop_hit(input, style.no.normal)) {
+        moved = 1;
+        clicked = true;
+      }
+    }
+    if (moved != box_.choice()) {
       box_.set_choice(moved);
       sound(script_.move_sound);
     }
+  } else {
+    clicked = input.clicked && box_.grown() && shop_hit(input, style.ok.normal);
   }
 
-  if (input.any_pressed(script_.confirm_buttons)) {
+  if (input.any_pressed(script_.confirm_buttons) || clicked) {
     sound(script_.select_sound);
     const OptionItem &item = script_.items[static_cast<std::size_t>(cursor_)];
     const bool yes = box_.choice() == 0;

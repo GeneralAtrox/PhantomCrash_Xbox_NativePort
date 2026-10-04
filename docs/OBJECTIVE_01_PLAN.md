@@ -49,7 +49,7 @@ soft-reset table `0x255fb0` (always 40):
 ```
 158 phantagram.sfd ─► 18 logo screen ─┬─(first boot)──► 45 dolby.sfd ─► 2 attract movie
                                       └─(later loops)─────────────────► 2 attract movie
-2 attract movie (opening.sfd, then phantomcrash.sfd on the next visit) ─► 40 title
+2 attract movie (phantomcrash.sfd, then opening.sfd on the next visit) ─► 40 title
 40 title ─ START ─► 21 main menu        40 title ─ idle 30 s ─► 1 attract battle demo
 1 attract demo ─► 158 (loop the intro) or 40
 21 main menu ─ B or idle ─► 40 title (no fade, music continues)
@@ -61,7 +61,7 @@ soft-reset table `0x255fb0` (always 40):
 | 18 | `0xa1e90` / `0x291fa` | `logo_tex.bin` sprite `0x5f2`: Genki logo, 192×192, centred | Fade in 0.5 s, hold 2 s | After the fade-in, A or START | Fade out 0.5 s (skip: instant) |
 | 18 (first boot only) | `0x29046`, `0x28fc5` | sprite `0x5f3`: MPEG Sofdec + ADX licence screen, 640×480 | Fade in 0.5 s, hold 2 s | A or START, only in the last second | Fade out 0.5 s; then result 0 → Dolby |
 | 45 | `0xa67bd` / `0x1bf82` | `dolby.sfd` (movie 7) | Cut in | 1 s grace, A or START | Hard cut |
-| 2 | `0xa2b7b` / `0x1372a` | `opening.sfd` / `phantomcrash.sfd`, alternating via `0x1d6f6c` | Cut in | 1 s grace, **any** button on any pad | Holds 16 frames, cut to black |
+| 2 | `0xa2b7b` / `0x1372a` | `phantomcrash.sfd` / `opening.sfd`, alternating via `0x1d6f6c` (starts at 1; table `0x259524`: 0 opening, 1 phantomcrash) | Cut in | 1 s grace, **any** button on any pad | Holds 16 frames, cut to black |
 | 40 | `0xa1f3b` / `0x3e8f2` | Title: `title_tex.bin` + `scr_common_tex.bin` | Fade in 0.5 s | START (mask `0x10`) plays SFX 14 | To menu: no fade. Idle: fade out 0.5 s |
 | 21 | `0xa2222` / `0x2c460` | Main menu, same textures as title | No fade from title | — | Items fade out 0.5 s |
 
@@ -290,7 +290,11 @@ and Genki screens.
 
 The port opens a window at full pixel resolution over SDL3's D3D11 renderer.
 It runs 60 Hz logic ticks and interpolates between them for presentation,
-which is paced by VSync and/or the Lodoss frame-rate cap. The Lodoss Settings
+which is paced by VSync and/or the Lodoss frame-rate cap. While the pointer
+is on the title or menu bar, or a menu is open, it presents with VSync even
+when VSync is off: tearing flip-model presents leave the GDI menu bar and the
+copy icon's tooltip flickering unless something forces composition, such as a
+screen recording. The Lodoss Settings
 menu and dialog are reused, and settings are saved. The 640×480 canvas fills
 the window height, and the extra width is exposed as canvas x < 0 and > 640.
 Input maps the keyboard and gamepads to Xbox buttons, latching taps between

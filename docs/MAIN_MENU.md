@@ -18,3 +18,14 @@ Each label's three states are cached together, rebuilt only when the output
 scale changes, and released with the menu. No text shaping or texture upload
 runs during ordinary cursor movement. Menu actions and the co-op setting gate
 are unchanged.
+
+## Mouse
+
+A port addition: a left click anywhere on the title opens the menu, as START
+does. In the menu, moving the pointer onto a button moves the cursor there
+(with the cursor sound) and a click on it confirms it; a click off every
+button does nothing. Right-click is B (back), as in the other menus. A
+button's area is its drawn rectangle (`offset` and `size` in
+`main_menu_buttons.json`); an item that keeps its sprite artwork uses the
+sprite's own bounds. Pointer movement and clicks also reset the idle timer
+when `resets_on_input` is on.
