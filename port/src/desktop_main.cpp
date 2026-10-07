@@ -12,6 +12,7 @@
 #include <string>
 
 #include "desktop_host.hpp"
+#include "phangrade_desktop.hpp"
 #include "desktop_coop_storage.hpp"
 #include "desktop_frame_counter.hpp"
 #include "desktop_game_data.hpp"
@@ -131,9 +132,10 @@ int run(const Options &options) {
     initial.fullscreen = *options.fullscreen;
   }
 
-  DesktopHost host(initial.fullscreen, smoke, options.size);
+  DesktopHost host(phangrade::initial_fullscreen(initial.fullscreen), smoke, options.size);
   SettingsMenu menu(smoke ? nullptr : host.native_window(), initial);
   menu.set_visible(!initial.fullscreen);
+  phangrade::DesktopSession session(host, menu, smoke);
   DesktopInput input;
   FixedStep step(logic_tick_seconds);
   FramePacer pacer;
