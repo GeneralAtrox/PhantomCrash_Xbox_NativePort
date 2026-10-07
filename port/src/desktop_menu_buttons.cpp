@@ -76,7 +76,7 @@ struct MenuButtons::Impl {
   std::map<std::string, std::array<Texture, 3>> cache;
   std::array<float, 2> size, offset, text_offset;
   float radius, border, padding, font_size, tracking, word_spacing, text_scale;
-  Color background, outline, ink, selected_outline, selected_ink, highlight;
+  Color background, outline, ink, selected_background, selected_outline, selected_ink, highlight;
   Color disabled_outline, disabled_ink;
   int raster_scale{};
 
@@ -98,6 +98,8 @@ struct MenuButtons::Impl {
     background = colour(data, "background");
     outline = colour(data, "outline");
     ink = colour(data, "text");
+    selected_background =
+        Color(0xff000000U | parse_colour(data.string_or("selected_background", "#e8bd00")));
     selected_outline = colour(data, "selected_outline");
     selected_ink = colour(data, "selected_text");
     highlight = colour(data, "highlight");
@@ -132,7 +134,7 @@ struct MenuButtons::Impl {
       }
       rounded(graphics, box, radius, Color(0, 0, 0, 0), highlight, border * 2);
     }
-    rounded(graphics, box, radius, background,
+    rounded(graphics, box, radius, state == 1 ? selected_background : background,
             state == 2   ? disabled_outline
             : state == 1 ? selected_outline
                          : outline,
@@ -196,7 +198,8 @@ bool MenuButtons::contains(const std::array<float, 2> &position,
 }
 
 void MenuButtons::draw(const std::string &label, const std::array<float, 2> &position,
-                       const Viewport &viewport, bool selected, bool available) {
+                       const Viewport &viewport, bool selected, bool available,
+                       float selection_alpha) {
   auto &p = *impl_;
   const int scale = std::max(1, static_cast<int>(std::ceil(viewport.scale * 2)));
   if (scale != p.raster_scale) {
@@ -214,11 +217,11 @@ void MenuButtons::draw(const std::string &label, const std::array<float, 2> &pos
                          viewport.to_pixel_y(position[1] + p.offset[1] - p.padding),
                          (p.size[0] + 2 * p.padding) * viewport.scale,
                          (p.size[1] + 2 * p.padding) * viewport.scale};
-  SDL_RenderTexture(p.renderer,
-                    entry->second[!available ? 2
-                                  : selected ? 1
-                                             : 0]
-                        .get(),
-                    nullptr, &target);
+  SDL_RenderTexture(p.renderer, entry->second[available ? 0 : 2].get(), nullptr, &target);
+  if (selected && available) {
+    SDL_Texture *lit = entry->second[1].get();
+    SDL_SetTextureAlphaModFloat(lit, selection_alpha);
+    SDL_RenderTexture(p.renderer, lit, nullptr, &target);
+  }
 }
 } // namespace phantomcrash

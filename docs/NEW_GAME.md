@@ -32,7 +32,7 @@ result (`0xa1bf7`).
 | 28 (`0xa2a53`, task `0xb1af1`) | A wrapper with a 0x113cc-byte state. It stops the music and, after the fade-in, runs the scene whose id is at `0x25b48c` as its child (`0xa1ae8`); that id is 9 and nothing changes it. | 40 on quit |
 | 9 (`0x570c0`, `0x571a3`) | Save checks: an existing save (`0x6b040`), free space (`0x6b0cf`, `0x6b1ed`) and message boxes (strings at `0x21cc44`); a cancel goes back to the title. No music. | 0 → 46, 1 → 40 |
 | 46 (`0x9f250`, `0x9f381`) | Creates the save (0x5fea4-byte state, `0x6b99b`), with a free-blocks check (`0x6c3d6` < 0x1000) and messages (`0x2002cc`, `0x254dd0`). LOAD GAME (17) also comes here. | 0 → 25, 1 → 39 (garage) |
-| 25 (`0x2e692`, `0x2e663`) | Plays movie 0, `opening.sfd` (`0xaebf6(0)`), which can be skipped (`0x2e4fd`). Then points name entry at the player's name, save + 0x280c, mode 0 (`0x2c5b4`). | 0 → 22, 1 → 40 |
+| 25 (`0x2e692`, `0x2e663`) | Plays `opening.sfd` followed by `opening02.sfd` (also identified in `OBJECTIVE_01_PLAN.md`). Then points name entry at the player's name, save + 0x280c, mode 0 (`0x2c5b4`). | 0 → 22, 1 → 40 |
 | 22 (`0x2c614`) | NAME ENTRY (see below). Its result depends on the scene that opened it. | 0 → 8, 1 → 19, … (`0xa2e70`) |
 | 8 (`0x1bec1`, `0x1bd93`) | Club Wired's menu (`club_wird_tex`, 4TOWNMAP), with six help lines (`0x1db1c0`): Rumbling, "The shop guide, Pepper, will show you around", records, schedule, change alias (back to name entry), exit. | 3, 19, 29, 32, 22, 41 |
 | 19 (`0x299fe`) | Pepper's guide: a question menu ("What is Rumbling?", …) from the table at `0x1de070` (35 records of {short group, short id, char* title, int}). It returns to the scene that opened it. | caller |
@@ -43,7 +43,7 @@ Story events are not edges of the scene table. On a scene change,
 match, that is enabled, has not been seen, and whose required events have
 been; if one does, it plays first. So NEW GAME runs:
 
-movie (25) → **event 48** → NAME ENTRY (22) → **event 49** → Pepper's guide
+opening movies (25) → **event 48** → NAME ENTRY (22) → **event 49** → Pepper's guide
 (19) → event 50 (19 → 41, once 49 has played) …
 
 Event 48 (script `0xdb4a38`) is the first conversation, Salsa and Pepper:
@@ -165,8 +165,9 @@ Ported: the converter writes `tables/events.json` and `tables/talk.json`;
 `data/story/talk.json` holds the timings, buttons and sounds and
 `data/story/scenes.json` the scene ids of the ported screens. `EventPlayer`
 and `TalkScene` (core) play a script; `TalkScreen` draws it. NEW GAME now
-runs movie → event 48 → NAME ENTRY → event 49 → Pepper's guide, and the
-quest save records the events played.
+runs `opening.sfd` → `opening02.sfd` → event 48 → NAME ENTRY → event 49 →
+Pepper's guide, and the quest save records the events played. Both movies are
+listed in `data/story/new_game.json`; a button press skips one movie at a time.
 
 Event conditions (`0xd1861`) now use saved class/area-ranker wins, the
 selected contest and arena variant, and owned music. The earlier interpretation

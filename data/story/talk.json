@@ -1,6 +1,6 @@
 {
  "notes": [
-  "frame (a port change): the day, the money and the music meter are not drawn over the talk, which leaves the characters and their window alone on the screen; the original drew them (see below). \"hud\": true and \"meter\": [434, 315] restore them. The CURRENT MUSIC line still runs while a credited track plays.",
+  "frame: the music meter animates over the background strip's slots at [434, 315], and the CURRENT MUSIC line runs while a credited track plays. The day and money remain hidden during talk; \"hud\": true restores them.",
   "Talk scenes (story events, original scenes 48-157): the scripts come from tables/events.json, the backgrounds and characters from tables/talk.json.",
   "The scene fades in over fade_in seconds showing only the background, then the script plays; once it ends the scene fades out the same way to the next scene (0xd0ec8, 0xd0f3f).",
   "The script player (0xc5a1a) runs 60 frames a second. Each frame it re-runs the commands since the last finished wait, so the window, portraits and texts of a page are redrawn every frame, and it stops at the first command not done: a text still typing, a wait, or the wait for confirm.",
@@ -31,6 +31,7 @@
  "sounds": { "type": "talk_type", "page": "talk_page", "skip": "talk_skip" },
  "frame": {
   "hud": false,
+  "meter": [434, 315],
   "now_playing": { "format": "《 {title} : {artist} 》", "position": [0, 339], "clip": [0, 339, 396, 357], "colour": "#ffffff", "speed": 60, "trail": 45, "layer": 263 }
  }
 }

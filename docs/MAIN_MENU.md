@@ -1,7 +1,8 @@
 # Main menu buttons
 
 The main menu and Quest submenu use code-drawn rounded buttons and Century
-Gothic Bold Italic text, following the approved preview. Selection adds a pale
+Gothic Bold Italic text. Selection pulses a yellow fill with dark text over the
+black button, using the same animation as the options menu, with a pale
 yellow/white outline and halo; unavailable entries have dimmed text and borders.
 
 Labels live in `data/ui/main_menu.json`; the experimental Coop label lives in
@@ -9,6 +10,8 @@ Labels live in `data/ui/main_menu.json`; the experimental Coop label lives in
 in `data/ui/main_menu_buttons.json`, in the usual 640x480 UI coordinates. These
 documents support the normal mod overlay. Removing an item's label retains its
 original sprite rendering for existing mods.
+The selected fill and text use `selected_background` and `selected_text`;
+each item's selected sprite animation also controls its code-drawn pulse.
 
 The Windows renderer obtains the font from the installed system fonts; the
 proprietary font is not bundled. If Century Gothic Bold Italic is unavailable,

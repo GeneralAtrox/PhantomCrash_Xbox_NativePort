@@ -81,7 +81,8 @@ void FrontEndScreen::draw(const Viewport &viewport) {
         continue;
       }
       buttons_.draw(item.label, item.normal.position, viewport,
-                    static_cast<int>(i) == front_end_.cursor(), front_end_.available(item));
+                    static_cast<int>(i) == front_end_.cursor(), front_end_.available(item),
+                    animation_alpha(item.selected.animation, front_end_.seconds()));
     }
   }
 

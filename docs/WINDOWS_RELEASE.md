@@ -53,6 +53,14 @@ one); it uses and saves the current quest.
 
 ## Included changes
 
+0.5.1 fixes:
+
+- Selected main-menu and Quest-submenu buttons pulse yellow with dark text,
+  using the options menu's selection timing.
+- New Game plays the missing second cinematic, `opening02.sfd`, before the
+  opening conversation. Each cinematic can be skipped separately.
+- The CURRENT MUSIC meter animates during dialogue scenes.
+
 0.5.0 adds:
 
 - **Experimental online co-op.** Up to three players share deterministic combat

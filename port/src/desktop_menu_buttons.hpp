@@ -15,7 +15,7 @@ public:
   MenuButtons(SDL_Renderer *renderer, const json::JsonValue &style);
   ~MenuButtons();
   void draw(const std::string &label, const std::array<float, 2> &position,
-            const Viewport &viewport, bool selected, bool available);
+            const Viewport &viewport, bool selected, bool available, float selection_alpha);
   // Whether `point` (canvas units) is on the button drawn at `position`.
   [[nodiscard]] bool contains(const std::array<float, 2> &position,
                               const std::array<float, 2> &point) const;
