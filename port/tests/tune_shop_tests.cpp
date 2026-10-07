@@ -17,12 +17,12 @@ constexpr double tick = 1.0 / 60.0;
 
 TuneShopScript shipped_script() {
   return parse_tune_shop(
-      DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT).document("ui/customize.json"));
+      DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT).document("ui/customize.json"));
 }
 
 PartStatsTable shipped_table() {
   return parse_part_stats(
-      DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT).document("ui/part_stats.json"));
+      DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT).document("ui/part_stats.json"));
 }
 
 // Prices 100 NY a level from 1000 either way; 4 socket holes, one fewer a

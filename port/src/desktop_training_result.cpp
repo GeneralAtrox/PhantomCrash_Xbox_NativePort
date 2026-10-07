@@ -7,6 +7,10 @@
 namespace phantomcrash {
 
 void TrainingScreen::update_result(const double seconds) {
+  if (online()) {
+    play_seconds_ = coop_match_->players[coop_slot_].play_seconds;
+    return; // Shared simulation owns completion; only committed settlement ends this view.
+  }
   const bool death_pending = battle_ && battle_->player().dying;
   const bool death_finished = battle_ && !battle_->player().alive && !death_pending;
   if (!in_scene() && battle_ && battle_->player().alive) {
@@ -44,6 +48,12 @@ void TrainingScreen::update_result(const double seconds) {
 }
 
 MatchSummary TrainingScreen::match_summary() const {
+  if (online()) {
+    if (!online_result_ready()) {
+      throw std::runtime_error("Online result is not committed");
+    }
+    return coop_match_->settlements[coop_slot_]->summary;
+  }
   battle_->select_player(player_index_);
   MatchSummary result;
   result.outcome = outcome_;

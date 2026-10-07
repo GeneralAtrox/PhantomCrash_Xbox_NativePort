@@ -174,6 +174,10 @@ void VsMode::confirm_area() {
     }
     break;
   case VsAreaKind::area:
+    if (!item.text.empty() && item.stages[0] == item.stages[1]) {
+      start_battle(item.stages[0]);
+      break;
+    }
     zone_.open();
     zone_choice_ = day_choice;
     step_ = VsStep::zone;

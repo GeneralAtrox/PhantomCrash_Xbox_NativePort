@@ -16,7 +16,7 @@ namespace {
 constexpr double tick = 1.0 / 60.0;
 
 DealerScript shipped_script() {
-  return parse_dealer(DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT).document("ui/dealer.json"));
+  return parse_dealer(DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT).document("ui/dealer.json"));
 }
 
 struct Tables {

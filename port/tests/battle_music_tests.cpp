@@ -17,7 +17,7 @@ constexpr double tick = 1.0 / 60.0;
 
 BattleMusicScript shipped_script() {
   return parse_battle_music(
-      DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT).document("ui/battle_music.json"));
+      DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT).document("ui/battle_music.json"));
 }
 
 std::vector<MusicCredit> credits() {

@@ -35,19 +35,24 @@ class BattleScenePresenter final {
 public:
   BattleScenePresenter(TextureCache &textures, const GlyphFont &font, BattleScene scene,
                        BattleSceneStyle style);
-
-  [[nodiscard]] BattleScene &scene() noexcept {
+  BattleScenePresenter(TextureCache &textures, const GlyphFont &font,
+                       std::shared_ptr<BattleScene> scene, BattleSceneStyle style);
+  [[nodiscard]] std::shared_ptr<BattleScene> shared_scene() const {
     return scene_;
   }
+
+  [[nodiscard]] BattleScene &scene() noexcept {
+    return *scene_;
+  }
   [[nodiscard]] const BattleScene &scene() const noexcept {
-    return scene_;
+    return *scene_;
   }
   void draw(const Viewport &viewport) const;
 
 private:
   TextureCache &textures_;
   const GlyphFont &font_;
-  BattleScene scene_;
+  std::shared_ptr<BattleScene> scene_;
   BattleSceneStyle style_;
 };
 
@@ -56,6 +61,10 @@ private:
 [[nodiscard]] std::unique_ptr<BattleScenePresenter>
 load_battle_scene(TextureCache &textures, const GlyphFont &font, const DataRoots &roots,
                   const SceneTuning &tuning, std::uint32_t seed);
+
+[[nodiscard]] std::unique_ptr<BattleScenePresenter>
+present_battle_scene(TextureCache &textures, const GlyphFont &font, const DataRoots &roots,
+                     std::shared_ptr<BattleScene> scene);
 
 // Gives the battle the stage's gate doors (tables/battle_scenes.json) and
 // returns the model their leaves are drawn from, or -1 without one.

@@ -61,7 +61,7 @@ Result decode(const std::filesystem::path &path, const double limit_seconds,
 } // namespace
 
 int main() {
-  const auto roots = phantomcrash::DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT);
+  const auto roots = phantomcrash::DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT);
   const char *movies[] = {"phantagram", "dolby", "opening", "phantomcrash",
                           "opening02",  "cloud", "ending",  "epilogue",
                           "kudryavka",  "staff", "the_end"};

@@ -16,7 +16,7 @@ namespace {
 constexpr double tick = 1.0 / 60.0;
 
 UsedSvScript shipped_script() {
-  return parse_used_sv(DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT).document("ui/used_sv.json"));
+  return parse_used_sv(DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT).document("ui/used_sv.json"));
 }
 
 struct Tables {

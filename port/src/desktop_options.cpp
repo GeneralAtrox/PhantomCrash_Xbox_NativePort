@@ -2,17 +2,46 @@
 
 #include "phantomcrash/settings.hpp"
 
+#include <algorithm>
 #include <charconv>
 #include <stdexcept>
 #include <string>
 #include <string_view>
 
 namespace phantomcrash {
+namespace {
+
+// "<yaw>,<pitch>,<distance>,<height>[,<size>]" into `shot`.
+void parse_robot_view(const std::string_view text, Options::RobotShot &shot) {
+  float values[5] = {shot.yaw_degrees, shot.pitch_degrees, shot.distance, shot.height,
+                     static_cast<float>(shot.size)};
+  std::size_t count = 0;
+  for (std::size_t start = 0; start <= text.size() && count < 5; ++count) {
+    const auto comma = std::min(text.find(',', start), text.size());
+    const auto result = std::from_chars(text.data() + start, text.data() + comma, values[count]);
+    if (result.ec != std::errc{} || result.ptr != text.data() + comma) {
+      throw std::runtime_error("Invalid --robot-view: " + std::string(text));
+    }
+    start = comma + 1;
+  }
+  if (count < 4 || values[2] <= 0.0F || values[4] < 16.0F || values[4] > 8192.0F) {
+    throw std::runtime_error("Invalid --robot-view: " + std::string(text));
+  }
+  shot.yaw_degrees = values[0];
+  shot.pitch_degrees = values[1];
+  shot.distance = values[2];
+  shot.height = values[3];
+  shot.size = static_cast<int>(values[4]);
+}
+
+} // namespace
 
 const char *usage() {
   return "Usage: phantomcrash_port [--root <folder>] [--fullscreen | --windowed] "
          "[--size <width>x<height>] [--settings <file.json>] [--rumble-robots <0-16>] "
          "[--smoke-test [frames] [--capture <file.bmp>]] [--benchmark [seconds]]\n"
+         "[--online-resource-check]\n"
+         "[--online-host <port> | --online-join <IPv4:port>]\n"
          "\n"
          "The root folder holds data/, mods/ and artifacts/europe (the extracted and\n"
          "converted game files). No game files are bundled.\n";
@@ -20,6 +49,8 @@ const char *usage() {
 
 Options parse_options(const int argc, char **argv) {
   Options options;
+  Options::RobotShot robot_shot; // a --robot-view given before --render-robot
+  bool robot_view = false;
   for (int index = 1; index < argc; ++index) {
     const std::string_view argument = argv[index];
     if (argument == "--root") {
@@ -90,6 +121,29 @@ Options parse_options(const int argc, char **argv) {
         throw std::runtime_error("Invalid --rumble-robots: " + std::string(text));
       }
       options.rumble_robots = robots;
+    } else if (argument == "--online-host" || argument == "--online-join") {
+      if (options.online || ++index >= argc) {
+        throw std::runtime_error("Specify one --online-host <port> or --online-join <IPv4:port>");
+      }
+      Options::Online online;
+      online.host = argument == "--online-host";
+      const std::string value = argv[index];
+      const auto colon = value.rfind(':');
+      if (!online.host && colon == std::string::npos) {
+        throw std::runtime_error("--online-join requires IPv4:port");
+      }
+      online.address = online.host ? "0.0.0.0" : value.substr(0, colon);
+      const auto port = online.host ? value : value.substr(colon + 1);
+      unsigned number{};
+      const auto parsed = std::from_chars(port.data(), port.data() + port.size(), number);
+      if (parsed.ec != std::errc{} || parsed.ptr != port.data() + port.size() || !number ||
+          number > 65535) {
+        throw std::runtime_error("Online port must be from 1 to 65535");
+      }
+      online.port = static_cast<std::uint16_t>(number);
+      options.online = std::move(online);
+    } else if (argument == "--online-resource-check") {
+      options.online_resource_check = true;
     } else if (argument == "--start") {
       if (++index >= argc) {
         throw std::runtime_error("--start requires a screen name");
@@ -155,11 +209,33 @@ Options parse_options(const int argc, char **argv) {
         throw std::runtime_error("Invalid --mouse: " + std::string(text));
       }
       options.points.push_back(point);
+    } else if (argument == "--render-robot") {
+      if (index + 2 >= argc) {
+        throw std::runtime_error("--render-robot requires <record> <file.png>");
+      }
+      auto &shot = options.robot_shot.emplace(robot_shot);
+      const std::string_view text = argv[++index];
+      const auto result = std::from_chars(text.data(), text.data() + text.size(), shot.record);
+      if (result.ec != std::errc{} || result.ptr != text.data() + text.size() || shot.record < 0) {
+        throw std::runtime_error("Invalid --render-robot record: " + std::string(text));
+      }
+      shot.file = std::filesystem::path(argv[++index]);
+    } else if (argument == "--robot-view") {
+      if (++index >= argc) {
+        throw std::runtime_error(
+            "--robot-view requires <yaw>,<pitch>,<distance>,<height>[,<size>]");
+      }
+      auto &shot = options.robot_shot ? *options.robot_shot : robot_shot;
+      parse_robot_view(argv[index], shot);
+      robot_view = true;
     } else if (argument == "--help" || argument == "-h") {
       options.help = true;
     } else {
       throw std::runtime_error("Unknown argument: " + std::string(argument));
     }
+  }
+  if (robot_view && !options.robot_shot) {
+    throw std::runtime_error("--robot-view requires --render-robot");
   }
   if (options.capture && options.smoke_frames == 0) {
     throw std::runtime_error("--capture requires --smoke-test");

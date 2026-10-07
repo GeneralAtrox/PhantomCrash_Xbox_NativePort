@@ -40,6 +40,7 @@ void Battle::ai_route(Combatant &drone, const float seconds) {
         PathFollower follower;
       };
       std::vector<Candidate> candidates;
+      const std::vector<bool> *climbs = planned_climbs();
       for (std::size_t i = 0; i < path_.segments.size(); ++i) {
         const auto &segment = path_.segments[i];
         if (segment.kind == 0 || segment.kind == 7) {
@@ -47,7 +48,12 @@ void Battle::ai_route(Combatant &drone, const float seconds) {
         }
         PathFollower candidate;
         candidate.join(path_, static_cast<int>(i), at);
-        const auto point = candidate.update(path_, at, settings_.drone_reach, random_);
+        const auto point = candidate.update(path_, at, settings_.drone_reach, random_, climbs);
+        // Port navigation: a point it already stands at (a dead end) is no
+        // place to go.
+        if (climbs != nullptr && flat(point - at) < settings_.drone_reach) {
+          continue;
+        }
         candidates.push_back({length(point - at), point, candidate});
       }
       std::ranges::stable_sort(candidates, {}, &Candidate::distance);
@@ -75,6 +81,9 @@ void Battle::ai_route(Combatant &drone, const float seconds) {
       chosen = chosen != nullptr ? chosen : (planned ? nearest : nullptr);
       if (chosen != nullptr) {
         drone.path = chosen->follower;
+      } else if (planned) {
+        // Nowhere on the route it can reach (a pit): steer the original way.
+        s.nav.fallback_left = settings_.ai.navigation.fallback_seconds;
       }
     }
     s.route_rejoin = false;
@@ -83,7 +92,8 @@ void Battle::ai_route(Combatant &drone, const float seconds) {
   if (!drone.path.active()) {
     return;
   }
-  const Vec3 target = drone.path.update(path_, at, settings_.drone_reach, random_);
+  const Vec3 target =
+      drone.path.update(path_, at, settings_.drone_reach, random_, planned_climbs());
   if (length(target - s.route_target) > 0.001F ||
       flat(target - at) < flat(s.route_target - s.last_position)) {
     s.route_stalled = 0;
@@ -100,6 +110,7 @@ void Battle::ai_route(Combatant &drone, const float seconds) {
       kind == 2 && std::fmod(static_cast<float>(s.ticks) / data.value("tick_hz"),
                              data.value("route_pause_cycle")) < data.value("route_pause_seconds");
   if (ai_navigate(drone, target, seconds, speed)) {
+    s.nav.skips = 0;
     // The planned route replaces the straight line and the wall recovery.
     s.control.dash = kind == 5 && drone.mover.grounded() && !s.nav.lifting;
     if (pause && drone.mover.grounded() && !s.nav.lifting) {
@@ -111,7 +122,23 @@ void Battle::ai_route(Combatant &drone, const float seconds) {
     }
     return;
   }
-  if (settings_.ai.navigation.enabled && nav_graph() != nullptr) {
+  if (s.nav.dropped) {
+    // Escalated: skip the point it could not get to.
+    drone.path.update(path_, at, std::numeric_limits<float>::max(), random_);
+    return;
+  }
+  if (s.nav.unreachable) {
+    // No route there (another level it cannot get down to, or a ledge its
+    // jump does not reach): skip the point rather than walk straight at
+    // it, and after a few, rejoin the route elsewhere.
+    drone.path.update(path_, at, std::numeric_limits<float>::max(), random_, planned_climbs());
+    if (++s.nav.skips >= settings_.ai.navigation.route_skips) {
+      s.nav.skips = 0;
+      s.route_rejoin = true;
+    }
+    return;
+  }
+  if (settings_.ai.navigation.enabled && nav_graph() != nullptr && s.nav.fallback_left <= 0) {
     s.route_rejoin = true; // no route there: take another polyline
   }
   const float error = wrap_angle(heading_toward(target - at) - drone.mover.heading());
@@ -151,6 +178,11 @@ void Battle::ai_move(Combatant &drone, const float seconds) {
   const auto &motion = drone.mover.tuning();
   s.control = {};
   s.nav.active = false;
+  // Port navigation: headway is measured over unbroken navigation.
+  if (!s.nav.asked) {
+    s.nav.anchor_seconds = 0;
+  }
+  s.nav.asked = false;
   const bool ranker_entrant =
       std::ranges::find(data.ranker_entrants, s.entrant) != data.ranker_entrants.end();
   if (ranker_entrant) {

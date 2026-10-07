@@ -18,6 +18,7 @@ TEST_CASE("replay round trip preserves submitted world, HUD, monitor and sound s
   frame.player.transparent = true;
   frame.player.lighting.fog = true;
   frame.player.lighting.fog_end = 123;
+  frame.player.lighting.source_lights = {{{1, 2, 3}, {2, 1, .5F}, {4, 0, 0}, {}, 7}};
   frame.player.lighting.screen.depth_of_field = true;
   WorldItem item;
   item.robot = 3;
@@ -50,6 +51,11 @@ TEST_CASE("replay round trip preserves submitted world, HUD, monitor and sound s
   sprite.end = {8, 10, 12};
   sprite.size = 3;
   sprite.rotation = .3F;
+  sprite.subtractive = true;
+  sprite.depth_test = false;
+  sprite.fixed_plane = true;
+  sprite.plane_right = {0, 0, -1};
+  sprite.plane_up = {0, -1, 0};
   sprite.uv = {.2F, .3F, .8F, .9F};
   sprite.colour = {.4F, .5F, .6F, .7F};
   sprite.additive = true;
@@ -94,6 +100,11 @@ TEST_CASE("replay round trip preserves submitted world, HUD, monitor and sound s
   CHECK(out.player.lighting.fog_end == 123);
   CHECK(out.player.lighting.screen.depth_of_field);
   CHECK(out.player.shadow_length == 42);
+  REQUIRE(out.player.lighting.source_lights.size() == 1);
+  CHECK(out.player.lighting.source_lights[0].position.z == 3);
+  CHECK(out.player.lighting.source_lights[0].colour.x == 2);
+  CHECK(out.player.lighting.source_lights[0].half_x.x == 4);
+  CHECK(out.player.lighting.source_lights[0].radius == 7);
   CHECK(out.player.transparent);
   const auto &copy = out.player.items.at(0);
   CHECK(copy.robot == 3);
@@ -121,6 +132,11 @@ TEST_CASE("replay round trip preserves submitted world, HUD, monitor and sound s
   CHECK(out.player.overlay[0].model == 9);
   CHECK(out.hidden_player[0].robot == 3);
   CHECK(out.player.sprites[0].texture == 13);
+  CHECK(out.player.sprites[0].subtractive);
+  CHECK(!out.player.sprites[0].depth_test);
+  CHECK(out.player.sprites[0].fixed_plane);
+  CHECK(out.player.sprites[0].plane_right.z == -1);
+  CHECK(out.player.sprites[0].plane_up.y == -1);
   CHECK(out.player.sprites[0].uv == sprite.uv);
   CHECK(out.player.sprites[0].colour == sprite.colour);
   CHECK(out.player.sprites[0].particle_kind == 2);

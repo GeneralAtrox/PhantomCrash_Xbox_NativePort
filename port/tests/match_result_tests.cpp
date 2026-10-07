@@ -7,7 +7,7 @@
 using namespace phantomcrash;
 
 TEST_CASE("result replay has eight views and exits through next day to the garage") {
-  const auto roots = DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT);
+  const auto roots = DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT);
   const auto result = roots.document("ui/match_result.json");
   CHECK(result.string_or("exit_to", "") == "sleep");
   const auto &views = result.find("replay_settings")->find("views")->array();
@@ -97,9 +97,8 @@ TEST_CASE("repair combines base and current level prices before truncating") {
   match.robot.parts[static_cast<int>(PartSlot::right_arm)]->level = 99;
   const auto receipt = match_receipt(match, 20000, 0, parts, {}, {});
   CHECK(receipt.repairs[0] == 430);
-  const auto rules = parse_match_result_rules(*DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT)
-                                                   .document("ui/match_result.json")
-                                                   .find("rules"));
+  const auto rules = parse_match_result_rules(
+      *DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT).document("ui/match_result.json").find("rules"));
   CHECK(rules.base_repair_share == 0.2);
   CHECK(rules.level_repair_share == 0.01);
   CHECK(rules.rental_prize_divisor == 2);

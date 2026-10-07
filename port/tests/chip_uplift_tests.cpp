@@ -16,7 +16,7 @@ namespace {
 constexpr double tick = 1.0 / 60.0;
 
 ChipShopScript shipped_script() {
-  return parse_chip_shop(DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT).document("ui/uplift.json"),
+  return parse_chip_shop(DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT).document("ui/uplift.json"),
                          ChipShopMode::uplift);
 }
 

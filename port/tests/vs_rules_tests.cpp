@@ -124,7 +124,7 @@ TEST_CASE("EXIT asks first: cancel moves to EXIT, NO closes and YES leaves") {
 
 TEST_CASE("the shipped VS battle names the area stages and the menu's routes") {
   const VsBattle battle = parse_vs_battle(
-      DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT).document("world/vs_battle.json"));
+      DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT).document("world/vs_battle.json"));
   REQUIRE(battle.stages.size() == 8);
   CHECK(battle.stages[3] == "shibuya_night");
   CHECK(battle.stages[6] == "choco_day");

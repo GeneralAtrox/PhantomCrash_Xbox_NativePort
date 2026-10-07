@@ -50,12 +50,13 @@ struct BattleEvent {
   BattleEventKind kind{};
   int chatter{-1}; // the chatter event (chatter_event)
   float amount{};
-  int slot{-1}; // fired: the weapon's mount (WeaponSlot); supply: the pickup's type
+  int slot{-1}; // fired/impact: weapon mount (WeaponSlot); supply: pickup type
   const WeaponTuning *weapon{};
   Vec3 at;
   bool on_robot{}; // impact: it struck a robot
   std::optional<StageHit> surface;
   int object{-1}; // effect: scenery instance whose destruction changed collision
+  int target{-1}; // impact: struck robot; preserved for attached source effects
 };
 
 } // namespace phantomcrash

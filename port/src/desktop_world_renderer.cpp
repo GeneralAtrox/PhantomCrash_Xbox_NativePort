@@ -1,4 +1,5 @@
 #include "desktop_world_renderer.hpp"
+#include "desktop_world_constants.hpp"
 #include "desktop_smaa.hpp"
 
 #include <algorithm>
@@ -19,8 +20,9 @@ constexpr float layer_bias_clamp = -32.0F / 16777215.0F;
 constexpr int decal_depth_bias = 2 * layer_depth_bias;
 constexpr float decal_slope_bias = 2.0F * layer_slope_bias;
 constexpr float decal_bias_clamp = 2.0F * layer_bias_clamp;
-constexpr UINT frame_constant_bytes = 144; // desktop_world_shaders.cpp, cbuffer Frame
-constexpr UINT draw_constant_bytes = 224;  // cbuffer Draw
+constexpr UINT frame_constant_bytes =
+    sizeof(world_constants::FrameConstants); // desktop_world_shaders.cpp, cbuffer Frame
+constexpr UINT draw_constant_bytes = sizeof(world_constants::DrawConstants); // cbuffer Draw
 
 Com<ID3D11Buffer> constant_buffer(ID3D11Device *device, const UINT bytes) {
   D3D11_BUFFER_DESC desc{};

@@ -54,6 +54,30 @@ struct SupplyRoute {
 
 inline constexpr int supply_kind_count = 10;
 
+struct SupplyPickupPulse {
+  float frame_rate{};
+  float step{};
+  float fast_frames{};
+  float fast_rate{};
+  float life_numerator{};
+  float colour_base{};
+  float colour_steps{};
+  float colour_divisor{};
+};
+
+// Optional asset-only pickup presentation. Each kind selects its authored
+// texture, keeping the model's own UVs and samplers.
+struct SupplyPickupLook {
+  std::string model;
+  std::array<std::string, supply_kind_count> images;
+  float scale{2.5F};
+  std::string carrier_model;
+  std::string carrier_light_model;
+  float light_spin_per_second{};
+  std::optional<SupplyPickupPulse> pulse;
+};
+[[nodiscard]] SupplyPickupLook parse_supply_pickup_look(const json::JsonValue &value);
+
 // How the drops are drawn (0x0699d5 the carrier, 0x069d52 the pickups).
 // The carrier and its pickups share a model per stage parity (resources
 // 207 and 208; the tables at 0x21c298..0x21c2b8 pick model slots 0x49e..
@@ -74,6 +98,7 @@ struct SupplyModel {
 };
 
 struct SupplyLook {
+  std::optional<SupplyPickupLook> pickups;
   std::array<SupplyModel, 2> models{SupplyModel{"models/binlink/207.gltf", 0, -1, {2, 3}, 4, 1, 5},
                                     SupplyModel{"models/binlink/208.gltf", 0, 1, {3, 4}, 5, 2, 6}};
   // Each door turns about the carrier's z through its hinge by the hatch's
@@ -150,6 +175,7 @@ struct SupplySettings {
       SupplyKind{SupplyEffect::repair, 0.5F},   SupplyKind{SupplyEffect::ammo, 0.3F},
       SupplyKind{SupplyEffect::ammo, 0.5F},     SupplyKind{SupplyEffect::ammo, 1.0F}};
   std::vector<SupplyRoute> routes; // the stage's; none: no supply drops
+  bool stage_routes{};             // includes an explicitly empty imported stage route list
   SupplyLook look;
 };
 
@@ -159,6 +185,7 @@ struct SupplySettings {
 // tables/battle_scenes.json "supply_routes" of `stage`.
 [[nodiscard]] std::vector<SupplyRoute> parse_supply_routes(const json::JsonValue &document,
                                                            int stage);
+[[nodiscard]] std::vector<SupplyRoute> parse_supply_route_list(const json::JsonValue &value);
 // The point `along` (0..1) a cubic Bezier segment (0x067dd6).
 [[nodiscard]] Vec3 bezier_point(const std::array<Vec3, 4> &segment, float along);
 
@@ -184,6 +211,9 @@ struct SupplyCarrier {
 };
 
 class SupplyDrop final {
+  friend class StateInspector;
+  friend class Battle;
+
 public:
   SupplyDrop(SupplySettings settings, std::uint32_t seed);
 

@@ -22,7 +22,11 @@ constexpr float percent = 100.0F;
 // itself every tick (robot +0x27c4, 0x07c34e).
 constexpr float push_cap = 5.0F * battle_ticks_per_second;
 constexpr float push_fade_per_tick = 0.8F;
-constexpr float push_rest = 0.01F; // slower than this, it stops
+constexpr float push_step_share = 0.5F; // a push moves at most this share of the radius a step
+constexpr float push_rest = 0.01F;      // slower than this, it stops
+// A placed robot with no ground within its height above looks this many
+// heights up before it is left to fall (a port reading).
+constexpr float deep_placement_heights = 3.0F;
 
 } // namespace
 
@@ -220,8 +224,29 @@ void Battle::recover(Combatant &robot, const float seconds) const {
   if (speed > push_cap) {
     robot.push = robot.push * (push_cap / speed);
   }
-  robot.mover.set_position(robot.mover.position() + robot.push * seconds);
+  robot.mover.set_position(carried(robot, robot.mover.position(), robot.push * seconds));
   robot.push = robot.push * std::pow(push_fade_per_tick, seconds * battle_ticks_per_second);
+}
+
+// A hard hit carries a robot up to push_cap a tick, farther than its radius:
+// in one step it went past a thin wall's middle and the stage pushed it out
+// the far side (Shinjuku near (186, -3, 5) put a robot outside the arena for
+// 130 s). Two robots landing on each other part as far, and that put one
+// through Shibuya's pit wall into the solid under its ledge for 250 s. A long
+// move goes in steps of part of the radius, the stage pushing the robot out
+// of walls after each.
+Vec3 Battle::carried(const Combatant &robot, Vec3 at, const Vec3 carry) const {
+  const int steps =
+      std::max(1, static_cast<int>(std::ceil(length(carry) / (robot.radius * push_step_share))));
+  if (steps == 1) {
+    return at + carry; // collide() pushes it out of the walls this tick
+  }
+  for (int step = 0; step < steps; ++step) {
+    Vec3 foot = at + carry * (1.0F / static_cast<float>(steps)) + Vec3{0.0F, robot.radius, 0.0F};
+    stage_.push_sphere(foot, robot.radius);
+    at = foot - Vec3{0.0F, robot.radius, 0.0F};
+  }
+  return at;
 }
 
 // A port safety net. Inside a building's footprint the stage has no ground
@@ -233,7 +258,11 @@ float Battle::stage_floor(Combatant &robot) const {
   const float floor =
       stage_.ground_height(mover.position(), ground_snap, robot.radius, &robot.floor_surface);
   if (floor != no_ground) {
-    if (mover.grounded()) {
+    // Only a place it stands on that floor: propped on a wall's edge above
+    // it, it is grounded too, but put back there it falls past the edge
+    // again, never lands and so never jumps out (Shinjuku near
+    // (120, 1, -37) held a robot that way for 200 s).
+    if (mover.grounded() && mover.position().y <= floor + ground_snap) {
       robot.last_ground = mover.position();
     }
     return floor;
@@ -254,8 +283,13 @@ Vec3 Battle::placed(Vec3 position, const float radius, RobotMover &mover) const 
   // Enemy path points can lie a little under the street (ENPT heights of
   // -4.0 over ground at -3), so a placed robot stands on the highest
   // ground below its top (a port reading).
-  const float floor =
+  float floor =
       stage_.ground_height(position, std::max(settings_.robot_height, ground_snap), radius);
+  if (floor == no_ground) {
+    // Deeper still under a ramp (Shinjuku's ENPT -4.0 under a street rising
+    // to +1): look higher before letting it fall through the stage.
+    floor = stage_.ground_height(position, settings_.robot_height * deep_placement_heights, radius);
+  }
   mover.set_floor(floor);
   position.y = std::max(position.y, floor);
   return position;

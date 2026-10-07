@@ -16,7 +16,7 @@ bool near(const float a, const float b) {
 }
 
 RumbleTuning shipped() {
-  return parse_rumble(DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT).document("world/rumble.json"));
+  return parse_rumble(DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT).document("world/rumble.json"));
 }
 
 } // namespace

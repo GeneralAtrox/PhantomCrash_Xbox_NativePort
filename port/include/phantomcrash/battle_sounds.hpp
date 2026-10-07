@@ -6,8 +6,11 @@
 #include "phantomcrash/world_sound.hpp"
 
 #include <cstdint>
+#include <functional>
+#include <map>
 #include <string>
 #include <vector>
+#include <random>
 
 namespace phantomcrash {
 
@@ -18,6 +21,9 @@ namespace phantomcrash {
 struct SoundPair {
   std::string player;
   std::string computer;
+  bool loop{};            // repeat the authored sequence until its owner stops it
+  int trigger_policy{-1}; // -1 legacy, 0 shot, 1 held, 2 shared pair, 3 sustained beam
+  bool requires_free_arm_action{};
 
   [[nodiscard]] const std::string &pick(bool piloted) const noexcept {
     return piloted ? player : computer;
@@ -35,6 +41,18 @@ struct WeaponSoundRule {
   int hud_kind{-1};
   int flight{-1};
   SoundPair sound;
+  struct FireCycle {
+    int group{-1}; // recovered base cue; shared by all matching mounts on one robot
+    bool start_together{};
+    SoundPair secondary;
+    SoundPair ending;
+  } cycle;
+  int on_robot{-1};
+  struct Variant {
+    std::string sound;
+    double weight{1};
+  };
+  std::vector<Variant> variants;
 
   [[nodiscard]] bool matches(const WeaponTuning &weapon, int slot) const;
 };
@@ -96,7 +114,8 @@ struct BattleSoundTable {
 
 // The first rule's sound for a weapon on `slot`, or nullptr.
 [[nodiscard]] const SoundPair *weapon_sound(const std::vector<WeaponSoundRule> &rules,
-                                            const WeaponTuning &weapon, int slot);
+                                            const WeaponTuning &weapon, int slot,
+                                            std::optional<bool> on_robot = std::nullopt);
 
 // A sound for the runner, with where it is in the world.
 struct PlacedCue {
@@ -114,7 +133,9 @@ place_cues(const SoundFalloff &falloff, const SoundListener *listener, std::vect
 // hits, its end, and a player's low-armour alarm.
 class BattleSounds final {
 public:
-  explicit BattleSounds(BattleSoundTable table) : table_(std::move(table)) {}
+  using PlaybackQuery = std::function<bool(std::uint64_t)>;
+  explicit BattleSounds(BattleSoundTable table, PlaybackQuery playing = {})
+      : table_(std::move(table)), playing_(std::move(playing)) {}
 
   // After each Battle::tick.
   void observe(const Battle &battle, float seconds);
@@ -138,6 +159,22 @@ private:
     float alarm_left{};
     std::array<bool, weapon_slots> beams{};
     std::array<float, weapon_slots> beam_left{};
+    struct Sustained {
+      const WeaponTuning *weapon{};
+      bool submitted{};
+    };
+    std::array<Sustained, weapon_slots> sustained;
+    struct HeldImpact {
+      const WeaponTuning *weapon{};
+      std::string sound;
+      Vec3 at;
+    };
+    std::array<HeldImpact, weapon_slots> held_impacts;
+    struct FirePair {
+      const WeaponSoundRule *rule{};
+      std::array<bool, 2> submitted{};
+    };
+    std::map<int, FirePair> fire_pairs;
     bool twisting{};
     bool camouflaged{};
     bool locked{};
@@ -153,15 +190,20 @@ private:
   void observe_boost(std::size_t index, const Combatant &robot, Watch &watch);
   void observe_events(const Battle &battle);
   void observe_beams(const Battle &battle, float seconds);
+  void observe_sustained(const Battle &battle);
+  void observe_fire_pairs(const Battle &battle);
+  void held_impact(const BattleEvent &event, const std::string &name);
   void observe_pilot(const Battle &battle, std::size_t index, float seconds);
   void observe_carrier(const Battle &battle);
   void loop(bool on, bool was, const std::string &name, std::uint64_t key, Vec3 at, AudioBus bus);
   [[nodiscard]] static std::uint64_t boost_key(std::size_t index);
 
   BattleSoundTable table_;
+  PlaybackQuery playing_;
   std::vector<Watch> watch_;
   std::vector<PlacedCue> cues_;
   bool carrier_sounding_{};
+  std::mt19937 variant_random_{std::random_device{}()};
 };
 
 } // namespace phantomcrash

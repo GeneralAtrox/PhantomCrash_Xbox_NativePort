@@ -3,6 +3,7 @@
 #include "phantomcrash/robot_combat.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <stdexcept>
 
 namespace phantomcrash {
@@ -12,8 +13,6 @@ namespace {
 // Loops are keyed well away from other screens' keys; each robot has its
 // own run of them.
 constexpr std::uint64_t boost_key_base = 0xB5'0000;
-constexpr std::uint64_t beam_key_base = 0xB6'0000;
-constexpr int beam_sound_handler = 5;
 
 SoundPair parse_pair(const json::JsonValue *value) {
   SoundPair pair;
@@ -23,6 +22,18 @@ SoundPair parse_pair(const json::JsonValue *value) {
   const std::string both = value->string_or("sound", "");
   pair.player = value->string_or("player", both);
   pair.computer = value->string_or("computer", both);
+  pair.loop = value->boolean_or("loop", false);
+  pair.requires_free_arm_action = value->boolean_or("requires_free_arm_action", false);
+  const auto trigger = value->string_or("trigger_policy", "");
+  if (!trigger.empty()) {
+    if (trigger != "held" && trigger != "shot" && trigger != "paired" && trigger != "sustained") {
+      throw std::runtime_error("Unknown sound trigger policy");
+    }
+    pair.trigger_policy = trigger == "sustained" ? 3
+                          : trigger == "paired"  ? 2
+                          : trigger == "held"    ? 1
+                                                 : 0;
+  }
   return pair;
 }
 
@@ -57,6 +68,27 @@ std::vector<WeaponSoundRule> parse_rules(const json::JsonValue *value) {
       }
     }
     rule.sound = parse_pair(&item);
+    if (const auto *cycle = item.find("fire_cycle")) {
+      const double group = cycle->number_or("group", -1);
+      if (group < 0 || group > 255 || std::floor(group) != group ||
+          rule.sound.trigger_policy != 2) {
+        throw std::runtime_error("Invalid shared fire sound group");
+      }
+      rule.cycle.group = static_cast<int>(group);
+      rule.cycle.start_together = cycle->boolean_or("start_together", false);
+      rule.cycle.secondary = parse_pair(cycle->find("secondary"));
+      rule.cycle.ending = parse_pair(cycle->find("ending"));
+    } else if (rule.sound.trigger_policy == 2) {
+      throw std::runtime_error("Paired fire sound requires its source group");
+    }
+    if (const auto *target = item.find("on_robot")) {
+      rule.on_robot = target->boolean() ? 1 : 0;
+    }
+    if (const auto *variants = item.find("variants")) {
+      for (const auto &variant : variants->array()) {
+        rule.variants.push_back({variant.string_or("sound", ""), variant.number_or("weight", 1)});
+      }
+    }
     rules.push_back(std::move(rule));
   }
   return rules;
@@ -73,7 +105,9 @@ bool WeaponSoundRule::matches(const WeaponTuning &weapon, const int slot) const 
   if (style >= 0 && style != weapon.fire_sound) {
     return false;
   }
-  if (mount >= 0 && (mount == 1) != is_shoulder(slot)) {
+  const bool shoulder =
+      slot >= 0 ? is_shoulder(slot) : weapon.part && weapon.part->table == WeaponTable::shoulder;
+  if (mount >= 0 && (mount == 1) != shoulder) {
     return false;
   }
   if (hud_kind >= 0 && hud_kind != weapon.hud_kind) {
@@ -166,6 +200,11 @@ std::vector<std::string> sound_files(const BattleSoundTable &table) {
   for (const auto *rules : {&table.fire, &table.impact}) {
     for (const WeaponSoundRule &rule : *rules) {
       add(rule.sound);
+      add(rule.cycle.secondary);
+      add(rule.cycle.ending);
+      for (const auto &variant : rule.variants) {
+        add({variant.sound, variant.sound});
+      }
     }
   }
   return files;
@@ -183,9 +222,11 @@ const std::string &landing_sound(const BattleSoundTable &table, const Combatant 
 }
 
 const SoundPair *weapon_sound(const std::vector<WeaponSoundRule> &rules, const WeaponTuning &weapon,
-                              const int slot) {
-  const auto found = std::ranges::find_if(
-      rules, [&](const WeaponSoundRule &rule) { return rule.matches(weapon, slot); });
+                              const int slot, const std::optional<bool> on_robot) {
+  const auto found = std::ranges::find_if(rules, [&](const WeaponSoundRule &rule) {
+    return rule.matches(weapon, slot) &&
+           (rule.on_robot < 0 || (on_robot && rule.on_robot == static_cast<int>(*on_robot)));
+  });
   return found == rules.end() ? nullptr : &found->sound;
 }
 
@@ -231,6 +272,8 @@ void BattleSounds::observe(const Battle &battle, const float seconds) {
   }
   observe_events(battle);
   observe_beams(battle, seconds);
+  observe_sustained(battle);
+  observe_fire_pairs(battle);
   observe_carrier(battle);
 }
 
@@ -329,72 +372,6 @@ void BattleSounds::observe_boost(const std::size_t index, const Combatant &robot
     cues_.push_back({SoundCue{SoundCue::Action::stop, {}, {}, false, key}, at});
   }
   watch.boosting = boosting;
-}
-
-void BattleSounds::observe_events(const Battle &battle) {
-  const std::vector<Combatant> &robots = battle.robots();
-  for (const BattleEvent &event : battle.events()) {
-    const bool known = event.robot >= 0 && event.robot < static_cast<int>(robots.size());
-    const bool piloted = known && robots[static_cast<std::size_t>(event.robot)].piloted;
-    if (event.kind == BattleEventKind::destroyed) {
-      play(table_.shot_down.pick(piloted), event.at);
-    }
-    if (event.kind == BattleEventKind::wreck_destroyed) {
-      play(battle.settings().robot_wrecks.break_sound, event.at, AudioBus::robots);
-    }
-    if (event.weapon == nullptr) {
-      continue;
-    }
-    if (event.kind == BattleEventKind::fired) {
-      if (event.weapon->fire_sound == beam_sound_handler) {
-        continue; // started, moved and stopped by its held trigger below
-      }
-      const SoundPair *sound = weapon_sound(table_.fire, *event.weapon, event.slot);
-      if (sound == nullptr && event.weapon->fire_sound < 0) {
-        sound = &table_.fire_fallback;
-      }
-      if (sound != nullptr) {
-        play(sound->pick(piloted), event.at, AudioBus::weapons);
-      }
-    } else if (event.kind == BattleEventKind::impact) {
-      if (const SoundPair *sound = weapon_sound(table_.impact, *event.weapon, -1)) {
-        play(sound->pick(piloted), event.at, AudioBus::weapons);
-      }
-    }
-  }
-}
-
-void BattleSounds::observe_beams(const Battle &battle, const float seconds) {
-  for (std::size_t index = 0; index < battle.robots().size(); ++index) {
-    const Combatant &robot = battle.robots()[index];
-    Watch &watch = watch_[index];
-    for (std::size_t slot = 0; slot < weapon_slots; ++slot) {
-      const WeaponTuning *weapon = robot.weapons[slot];
-      const bool active = robot.alive && !robot.lost[slot] && robot.firing[slot] && weapon &&
-                          weapon->fire_sound == beam_sound_handler;
-      const std::uint64_t key = beam_key_base + index * weapon_slots + slot;
-      const Vec3 at = battle.muzzle(robot, static_cast<WeaponSlot>(slot));
-      if (active) {
-        watch.beam_left[slot] -= seconds;
-        if (!watch.beams[slot] || watch.beam_left[slot] <= 0) {
-          if (const auto *sound = weapon_sound(table_.fire, *weapon, static_cast<int>(slot))) {
-            const auto &name = sound->pick(robot.piloted);
-            if (!name.empty()) {
-              SoundCue cue{SoundCue::Action::play, name, {}, false, key};
-              cue.bus = AudioBus::weapons;
-              cues_.push_back({std::move(cue), at});
-            }
-          }
-          watch.beam_left[slot] = table_.beam_restart_seconds;
-        } else {
-          cues_.push_back({SoundCue{SoundCue::Action::move, {}, {}, false, key}, at});
-        }
-      } else if (watch.beams[slot]) {
-        cues_.push_back({SoundCue{SoundCue::Action::stop, {}, {}, false, key}, at});
-      }
-      watch.beams[slot] = active;
-    }
-  }
 }
 
 } // namespace phantomcrash

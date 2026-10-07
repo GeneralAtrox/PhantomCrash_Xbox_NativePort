@@ -1,5 +1,6 @@
 #pragma once
 
+#include "music_decoder.hpp"
 #include "phantomcrash/data_roots.hpp"
 #include "phantomcrash/effect_mixer.hpp"
 #include "phantomcrash/json.hpp"
@@ -17,7 +18,7 @@
 namespace phantomcrash {
 
 // Music and sound effects on SDL audio streams, which SDL mixes on one
-// device. Music streams from its WAV file and loops whole (the original's
+// device. Music streams through FFmpeg and loops whole (the original's
 // tracks have no loop points); effects are loaded once, at one rate, and
 // mixed on one stream by an EffectMixer, each voice with its own gain and
 // pan (the battle's placed sounds, world_sound.hpp). Names come from
@@ -30,7 +31,7 @@ public:
   AudioMixer &operator=(const AudioMixer &) = delete;
 
   // Starts a track, or stops the music for an empty name; a name with a '/'
-  // is a WAV file, which loops unless `loop` is false (the radio's songs).
+  // is an audio file, which loops unless `loop` is false (the radio's songs).
   // The same track carries on without a restart. `volume` scales the
   // track's own. A track that does not loop ends by itself; music() still
   // names it, and playing() is then false.
@@ -46,6 +47,7 @@ public:
   void stop_sound(const std::string &name);
   // Stops keyed and spatial sounds when their screen ends.
   void stop_keyed();
+  [[nodiscard]] bool sound_playing(std::uint64_t key) const;
   // The game's BGM and SE volumes as gains; they apply to what is playing.
   void set_volumes(float music, float effects);
   void set_audio_options(const AudioOptions &options);
@@ -82,6 +84,7 @@ private:
   // desktop_audio_effects.cpp
   void open_effects();
   Effect *effect(const std::string &name);
+  std::shared_ptr<const EffectSamples> source_sequence(const std::filesystem::path &path);
   // Keeps the music's samples as they are queued, for music_heard().
   void keep_heard(const std::uint8_t *bytes, std::size_t size);
   // SDL asks the effects stream for more: the mixer fills it.
@@ -96,7 +99,7 @@ private:
   std::map<std::string, std::pair<std::string, float>> effect_files_;
   std::string track_;
   SDL_AudioStream *music_{};
-  SDL_IOStream *music_file_{};
+  MusicDecoder music_decoder_;
   bool music_loop_{};
   float music_track_volume_{1.0F};
   float music_volume_{1.0F}; // the screen's scale of the track's volume
@@ -104,8 +107,6 @@ private:
   AudioOptions audio_options_;
   std::array<std::size_t, audio_bus_count> cue_counts_{};
   float effect_gain_{1.0F};
-  Sint64 data_start_{};
-  Sint64 data_end_{};
   int music_bytes_per_second_{};
   SDL_AudioSpec music_spec_{};
   std::vector<float> heard_;      // mono, a ring over the last few seconds queued

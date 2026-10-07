@@ -9,6 +9,7 @@ namespace phantomcrash {
 // the frames a tick, 2 at 30 ticks a second (0x075773). The gauges flash
 // while it is below the armour, as it fills (0x04aaed).
 class ShownArmour {
+  friend class StateInspector;
 public:
   // Follows `armour` of `max` by `seconds`.
   void tick(float armour, float max, float seconds);

@@ -482,9 +482,15 @@ code default is off.
     robots use the original steering.
 - **Following** (`battle_ai_steering.cpp`). A robot runs A* to its route
   point, string-pulls the walk legs, and steers waypoint to waypoint.
-  - On a jump link it faces the ledge, presses jump and holds it until it is
-    level with the landing. It lets go once, because a second press would
-    dive.
+  - On a jump link it stops and faces the ledge, then presses jump and walks
+    on in the same tick. It holds the jump until its feet are
+    `jump_hold_over` above the landing, so it has time to move over the
+    edge. It lets go once, because a second press would dive. It presses
+    only when the mover takes the press (`RobotMover::jump_ready`: on the
+    ground, jump released, not in the 0.25 s landing). Before, it walked
+    into the wall under the ledge, was lifted off the ground for a tick, and
+    each landing ignored the press: at Shinjuku (128.5, −1.4, −69) about
+    two thirds of its presses did nothing.
   - If it makes no progress for `stuck_seconds`, it hops.
   - After `give_up_seconds` it replans without shortcuts. If it is still
     stuck after that, it avoids the waypoint for `avoid_seconds`.
@@ -525,6 +531,148 @@ code default is off.
   - The robot climbs there, then fights from the spot without closing in.
   - It also uses the grid to chase a target it has lost sight of, or one on
     a different level.
+- **Room for the body** (`nav_graph_build.cpp`). A jump link needs the
+  robot's whole body (a sphere of `body_radius`) to rise clear above the
+  take-off, not just its middle. Before, take-offs beside an overhang (for
+  example Shinjuku near (112, −84) and Umihotaru's edge near (−144, −20))
+  hit the overhang's underside, rose 1.6–2.6 units and fell back, again and
+  again. A robot also walks to within `takeoff_reach` of a take-off before
+  jumping, and a route that starts with a jump first walks to the take-off.
+- **Authored climbs** (`battle_ai_steering.cpp`). ENPT climb segments
+  (kind 7) with a point no grid node lies within `point_rise` of are left
+  out of route following and rejoins while the grid is in use. Shinjuku's
+  segment 116 climbs to a roof at y 25.5 that no jump reaches. Robots
+  rejoined it, could not climb, and went back to it, near (9.4, 10, −5.9).
+  A rejoin also skips route points the robot already stands at, such as
+  single-point dead ends.
+- **Escalation**. A robot that is no more than `escalate_distance` from
+  where it started trying, after `escalate_seconds` or
+  `escalate_recoveries` give-ups, drops its goal. A high-ground spot is
+  avoided and another is picked. A route point is skipped for the next one.
+  If it is still stuck after the next escalation, it uses the original
+  steering for `fallback_seconds`.
+- **Crowds**. A robot stalled against another robot within `crowd_gap` ahead
+  of it sidesteps instead of hopping into it.
+- **Each robot's own jump** (`battle_ai_reach.cpp`). Legs and load set how
+  high a robot jumps (`movement.jump_height`), but the grid's jump links go
+  up to `jump_rise` for every robot. A robot plans, rejoins and picks high
+  ground only over jumps its own held jump (`held_jump_rise`) clears by
+  `jump_margin`. A robot that jumps and lands back below the ledge avoids
+  that landing for `failed_jump_seconds` and plans another way.
+- **Unreachable route points** (`battle_ai_navigation.cpp`). A route point
+  with no route to it (another level, or a ledge out of reach) is skipped
+  instead of walked at in a straight line. After `route_skips` in a row the
+  robot rejoins the route elsewhere. Before, robots on Shibuya's lower level
+  walked into the wall under route points on the street above.
+- **Placement**. A robot placed or respawned more than a robot's height
+  under the floor is lifted onto it. Some ENPT points lie under the street
+  (Shinjuku segment 68 at y −4, 5 units under the street), and robots
+  scattered or respawned there fell below the world.
+
+Two collision fixes in the same work apply to every robot, the player's too:
+
+- **Head bumps** (`battle.cpp`, `head_bump_drop`). The head sphere ended a
+  jump on any downward push. Rounding against a wall pushed it down by about
+  2e-6 units, so jumps beside a wall stopped dead at the bottom. A push under
+  0.01 units no longer counts.
+- **Return point** (`battle_damage.cpp`, `stage_floor`). A robot that steps
+  where the stage has no ground goes back to the last place it stood. That
+  place was recorded whenever it was grounded, also while propped on a
+  wall's edge above the floor. Put back there, it fell past the edge again
+  every few frames, never landed and so could never jump out: a robot hung
+  at Shinjuku (120.1, 0.9, −36.8) for 200 s. Only a place where it stands
+  on the floor is recorded now.
+- **Knockback through walls** (`battle_damage.cpp`, `recover`). Knockback
+  carries a robot up to 5 units an original tick, farther than its radius.
+  In one step it went past a thin wall's middle and came out the far side:
+  a hit put a robot outside the arena at Shinjuku (186, −3, 5) for 130 s.
+  It now moves in steps of half its radius, pushed out of walls after each.
+  Distance and fade are unchanged.
+- **Robots parting through walls** (`battle.cpp`, `separate`). Two robots
+  that overlap are pushed apart, each by up to its radius in one tick. A
+  robot landing on another at Shibuya's pit shoved it 1.5 units through the
+  pit wall into the solid under the ledge at (40.4, −68.4, 88.2), where it
+  stayed 250 s. The parting push now moves the same way as knockback
+  (`Battle::carried`).
+
+Drop links need the whole body to walk off the lip (`nav_graph_build.cpp`
+`drop_clear`): a line at head height (`headroom`), and a sweep of a
+`body_radius` sphere toward the landing that no wall may turn back. Shibuya's
+pit rim at (−69.6, −48, −32.5) hangs 2.5–4 units over the edge, and a wall
+beside the drop at (−35, 0.1, −15) left robots 0.6 short of it. The sweep
+adds 0.3–0.5 s to each stage's grid build.
+
+Neither trap left after the jump fixes was a hole in the stage. The robot
+in the Umihotaru hollow under the steps at (−152.7, −0.5, −13) had been
+knocked into the step slabs, and the knockback steps stopped it. The Shibuya
+pit pocket was the parting push above. After both fixes, no robot in the 7
+batches is blocked for 10 s or more at once; the longest is 8.5 s.
+
+**Level fixes.** A stage entry in `world/stages.json` can name
+`"collision_fixes"`, a data document in the collision files' layout
+(`{"floor": [...], "walls": [...]}`, each triangle
+`{"points": [[x, y, z] x3], "surface": n}`). Its triangles are added to the
+converted collision when the stage loads, in battle, rumbling and training
+alike (`stage_fixes.cpp`). The extraction is never edited, and a mod
+replaces or empties the file path for path. No stage needs one yet.
+
+**Trap scan.** `phantomcrash_ai_sim --areas N --trap-scan RISE` looks over a
+stage's whole grid at jump rise RISE (0: any rise the grid links). It lists
+the places with no route back to the main grid. A **dead end** is one the
+main grid's links lead into. An **island** is one no link leads into. Each
+one is tested by putting a robot down there, armoured against hits, and
+leaving it to the AI for 30 s. If it is still held, the scan lists which of
+16 directions are open at waist height. At any rise, and at 10.7, the
+lowest jump any robot has, no stage has a dead end. 41 islands, all
+tested:
+
+- Shinjuku 25, Shibuya 5, Umihotaru 11 (including Umihotaru's two
+  out-of-bounds ends).
+- 34 let the robot walk out, most within 2 s.
+- 7 held it 30 s: Shinjuku (−2.9, 0, −94.9), (106.5, 0.3, −157),
+  (114.5, 0.3, −158.1), (−25.6, −3.3, 68.2), (191.6, −2.7, −15.9) and
+  (−20, −3.3, 68.2), and Shibuya (55.4, 0.2, 18.3).
+- Of those 7, three are walled in on every side. The rest open only onto
+  each other or onto floor outside the arena. A robot cannot walk into any
+  of them, and none did in about 600 simulated battles. They need no fix.
+
+`--floor-map X,Y,Z,R` prints the highest floor at or under Y + 3 on a 1-unit
+grid around a spot, for writing fixes.
+
+`phantomcrash_ai_sim` runs headless battles at high speed (see
+`scripts/analyze_ai_sim.py`). `--watch X,Y,Z,R` writes every robot's
+navigation state near a spot each tick to `watch.csv`. `--nav-dump X,Y,Z,R`
+prints the grid nodes near a spot with their headroom and jump and drop
+links. Over the same 7 batches (126 runs of 300 s across Shinjuku, Shibuya
+and Umihotaru), the changes above measured:
+
+| | Before | After |
+| --- | --- | --- |
+| Stuck share | 6.0% | 3.1% |
+| Long stuck episodes per robot-minute | 0.32 | 0.20 |
+| Longest stuck episode (95th percentile / max) | 9 s / 130 s | 6 s / 35.5 s |
+| Stuck episodes of 30 s or more | 73 | 4 |
+| Shots per minute | 24.9 | 27.4 |
+
+Most of the stuck time left is in episodes under 6 s, in crowded fights.
+
+The sim also counts **blocked** time: the robot pushes its stick and does not
+move. Standing still to aim, shoot, turn or line up a jump is not blocked.
+The sim builds the grid before a battle starts. The game builds it on a
+worker thread and has it within a second; at 100–250× a battle could end
+first, so its robots never used the grid, and runs were not repeatable. The
+jump, reach, route-point and collision fixes above, over the same 7 batches:
+
+| | Before | After |
+| --- | --- | --- |
+| Blocked share | 2.1% | 1.0% |
+| Blocked episodes over 15 s per robot-minute | 0.132 | 0.014 |
+| Longest blocked episode, 95th percentile | 5.5 s | 4 s |
+| Robot lives blocked 10 s or more at once (of about 6,400) | 56 | 2 |
+| Moving share | 83.8% | 85.0% |
+| Shots / kills per minute | 27.4 / 1.26 | 25.8 / 1.27 |
+
+The "before" column was measured with the grid on a worker thread.
 
 Headless 9-robot runs (300 s, two seeds, handgun) measured the time robots
 spent trying to move without getting anywhere:
@@ -534,9 +682,63 @@ spent trying to move without getting anywhere:
 | Shinjuku and Shibuya | 20–47% | 1.1–6.5% | 11–30% | 1.5–7% |
 
 Most of the stuck time left is fight states such as hit stagger, turning and
-withdrawal. Shibuya's underground pit (y −65 to −75) has no exit, either on
-the grid or in the ENPT data. A robot that falls in stays on the original
-steering.
+withdrawal.
+
+### Behaviour scorecard (`phantomcrash_ai_sim` lives.jsonl and runs.jsonl)
+
+The sim also scores how robots fight, per life (`ai_sim_probe_behaviour.cpp`):
+
+- **Mounts:** shots by mount, seconds each mount could fire, and seconds
+  the target was in its reach.
+- **Camouflage:** seconds camouflaged, and how many times it was turned on,
+  in total and with a shot incoming.
+- **Dodges:** dodges taken, split into those with a shot incoming and the
+  rest. Also how often a heavy hit (20% of the armour within 1 s) or a
+  rival's fresh lock was followed by a dodge within 1.5 s.
+- **Being shot:** hits from a rival other than its target, with the robot
+  holding no target or another one, and whether it turned on the attacker
+  within 5 s.
+- **After a kill:** whether it held a live rival again within 30 s, and how
+  soon.
+- **No target:** how much of its time it moved while it had none.
+
+Each run also records, for the player and for computer robots, how many
+robots hold each one as their target over time, and how long three or more
+held it at once.
+
+Over the 7 batches (about 4,200 robot-minutes), with the robot changes
+above:
+
+| Measure | Free-for-all | With a player stand-in |
+| --- | --- | --- |
+| Time holding a target / in engage | 52% / 77% | 57% / 78% |
+| First shot (median) / reaction to a fresh sighting | 3.0 s / 1.0 s | 3.1 s / 1.0 s |
+| Rival in reach and clear sight but not targeted | 30% | 29% |
+| New target within 30 s of a kill / mean delay | 95% / 2.5 s | 95% / 2.4 s |
+| Moving while holding no target | 75% | 75% |
+| Shot holding no target: turns on attacker | 76% in 1.0 s | 74% |
+| Shot holding another target: switches | 54% | 51% |
+| Mounts fired, of lives with 10 s in reach | 92–97% | 94–98% |
+| Camouflage: uses per minute / share of time | 9.4 / 34% | 9.1 / 34% |
+| Dodges per minute / with a shot incoming | 4.3 / 93% | 4.2 / 93% |
+| Heavy hit / fresh lock followed by a dodge | 21% / 14% | 20% / 14% |
+| Any dodge in a random 1.5 s | 10% | 10% |
+| Robots on a target, when anyone is | 1.29 | player 1.25, others 1.29 |
+| Three or more on one target | 1.7% of the time | player 1.2%, others 1.6% |
+
+The computer robots spend 13.6% of their target time on the player, against
+a fair share of 12.6%; they do not gang up. Even so, 46% of their damage
+goes to the stand-in. It never dodges or camouflages, so they fire at it 2–3
+times as often as their target time suggests and do twice the damage per
+shot. A real player dodges and hides, so this is the sim's stand-in, not
+targeting.
+
+Dodging follows the original rule: a dodge against a visible incoming shot
+at a chance scaled by ability (13% of heavy hits dodged at ability under 20,
+29% at 40–59), plus random dodges. Nothing answers a lock or the damage
+itself, which is why the heavy-hit and lock rates sit near the 10% chance
+rate. The default profile (4, 96% of robots) engages whenever it is hurt,
+so withdrawal almost never happens (54 of about 250,000 robot-seconds).
 
 Set `live.ai.trace` in `world/rumbling.json` to true for per-opponent identity and
 periodic state/target/health/request/actual-attack/dodge/recovery diagnostics.

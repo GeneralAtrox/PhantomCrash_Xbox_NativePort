@@ -160,7 +160,7 @@ TEST_CASE("the finale's cameras and walks are in world coordinates, the z channe
 }
 
 TEST_CASE("the shipped finale names its stage, its ending and the original's timing") {
-  const auto roots = DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT);
+  const auto roots = DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT);
   const FinaleTuning tuning = parse_finale_tuning(roots.document("story/finale.json"));
   CHECK(tuning.stage == "umihotaru_day");
   CHECK(tuning.next == "ending");

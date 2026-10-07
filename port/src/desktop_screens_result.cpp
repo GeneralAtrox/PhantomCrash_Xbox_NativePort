@@ -84,9 +84,9 @@ std::unique_ptr<Screen> ScreenRunner::make_match_result() {
           summary.shootdowns, static_cast<long long>(receipt.prize),
           static_cast<long long>(receipt.repair_total),
           static_cast<long long>(receipt.total_money));
-  return std::make_unique<MatchResultScreen>(textures_, font_, frame_, credits_, data, receipt,
-                                             quest_, world_.get(), std::move(background), exit,
-                                             battle->replay(), first_win);
+  return std::make_unique<MatchResultScreen>(
+      textures_, font_, frame_, credits_, data, receipt, quest_, battle->result_renderer(),
+      std::move(background), exit, battle->replay(), first_win, battle->result_resources());
 }
 
 } // namespace phantomcrash

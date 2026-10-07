@@ -36,6 +36,11 @@ inline constexpr unsigned fence = 0x2000; // surface 8: the arena's fence (0x070
 // 0x2057d8.
 [[nodiscard]] unsigned surface_flags(int surface);
 
+// A robot's head pushed down at least this far has met a ceiling, which
+// stops its jump. Less is a near-vertical wall's rounding: a wall leaning
+// out by a hair pushes a rising robot down by about a millionth (port value).
+inline constexpr float head_bump_drop = 0.01F;
+
 // Normals with y above this can be stood on (0x054c45's 0.75).
 inline constexpr float ground_normal_y = 0.75F;
 // No ground under a point (0x053337 answers -1000).
@@ -54,6 +59,7 @@ struct ArenaBounds {
 // src/phantomcrash_research/collision.py), searched through a grid over x
 // and z.
 class StageCollision final {
+  friend class StateInspector;
 public:
   StageCollision() = default;
   StageCollision(std::vector<CollisionTriangle> walls, std::vector<CollisionTriangle> floor);

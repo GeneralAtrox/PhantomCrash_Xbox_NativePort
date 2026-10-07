@@ -5,6 +5,7 @@
 #include "desktop_game_screens.hpp"
 #include "desktop_screens.hpp"
 #include "desktop_coop_matches.hpp"
+#include "phantomcrash/stage_fixes.hpp"
 
 #include <algorithm>
 #include <random>
@@ -63,7 +64,10 @@ RumblingWorld *ScreenRunner::rumbling_world() {
     if (auto path = stage_file(roots_, stage->second.enemy_path, parse_enemy_path)) {
       stages[area].path = std::move(*path);
     }
-    if (auto ground = stage_file(roots_, stage->second.collision, parse_stage_collision)) {
+    const auto parse_ground = [&](const json::JsonValue &value) {
+      return fixed_stage_collision(roots_, stage->second, value);
+    };
+    if (auto ground = stage_file(roots_, stage->second.collision, parse_ground)) {
       stages[area].collision = std::move(*ground);
     }
     stages[area].objects = stage_file(roots_, "tables/stage_objects.json", [&](const auto &data) {

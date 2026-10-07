@@ -13,6 +13,8 @@
 #include <vector>
 
 namespace phantomcrash {
+class DesktopSourceParticles;
+class BattleView;
 
 // The battle's shots and what they set off, from the effect bank's tables
 // (effect_bank.hpp): each shot drawn with its look's model (0x09831e), a
@@ -27,10 +29,12 @@ class DesktopShots final {
 public:
   // `bank` must outlive this (DesktopEffects' system keeps it); `contact`
   // is how a robot's touch spreads over the force field.
-  DesktopShots(WorldRenderer &world, const EffectBank &bank, FenceContactLook contact = {});
+  DesktopShots(WorldRenderer &world, const EffectBank &bank, FenceContactLook contact = {},
+               DesktopSourceParticles *source_particles = nullptr);
 
   // Starts the effects of this tick's landings, wrecks and blasts.
-  void tick(const Battle &battle, EffectSystem &effects, float seconds);
+  void tick(const Battle &battle, EffectSystem &effects, float seconds,
+            const BattleView *view = nullptr);
   // Appends the shots' models; billboard looks face the camera of `view`.
   void add_items(const Battle &battle, const Mat4 &view, std::vector<WorldItem> &items);
   // Appends the sprite shots and the flashes in play.
@@ -62,6 +66,7 @@ private:
   std::map<int, Mesh> fence_meshes_;
   std::vector<std::vector<int>> flash_textures_;
   std::minstd_rand random_{0x5eed};
+  DesktopSourceParticles *source_particles_{};
 };
 
 } // namespace phantomcrash

@@ -17,7 +17,7 @@ bool near(const double a, const double b) {
 }
 
 RecordsScript shipped_records() {
-  return parse_records(DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT).document("ui/records.json"));
+  return parse_records(DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT).document("ui/records.json"));
 }
 
 ContestTables no_contests() {

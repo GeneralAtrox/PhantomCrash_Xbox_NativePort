@@ -108,6 +108,9 @@ MovementTuning loaded_movement(const PartTables &tables, const RobotLoadout &loa
                                const LoadStats &load, MovementTuning base) {
   const float speed = load.speed_factor;
   const ArmourRecord *legs = record(tables.legs, loadout.legs);
+  if (legs != nullptr) {
+    base.wheels = legs->wheels;
+  }
   if (legs == nullptr || !has_curve(legs->turn)) {
     base.turn_degrees_per_second *= speed;
     base.dash_turn_degrees_per_second *= speed;

@@ -3,6 +3,7 @@
 #include "desktop_world_renderer.hpp"
 #include "phantomcrash/data_roots.hpp"
 #include "phantomcrash/effect_system.hpp"
+#include "desktop_source_particles.hpp"
 
 #include <memory>
 #include <vector>
@@ -27,12 +28,16 @@ public:
   void tick(float seconds);
   // Appends every live particle, between its last two frames.
   void add_sprites(std::vector<WorldSprite> &sprites) const;
+  [[nodiscard]] DesktopSourceParticles *source_particles() {
+    return source_particles_.get();
+  }
 
 private:
   EffectSystem system_;
   int atlas_;
   float log_seconds_{};
   bool logged_active_{};
+  std::unique_ptr<DesktopSourceParticles> source_particles_;
 };
 
 } // namespace phantomcrash

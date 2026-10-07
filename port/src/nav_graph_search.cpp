@@ -118,7 +118,10 @@ int NavGraph::nearest(const Vec3 at) const {
         best = n;
       }
     }
-    if (best >= 0) {
+    // A node overhead (a slab the robot stands under) is a last resort: a
+    // node on its own level a little farther out is looked for first.
+    if (best >= 0 && (radius > cell_ * 1.5F ||
+                      nodes_[static_cast<std::size_t>(best)].position.y - at.y <= above_slack)) {
       return best;
     }
   }
@@ -127,7 +130,7 @@ int NavGraph::nearest(const Vec3 at) const {
 
 std::vector<NavWaypoint> NavGraph::path(const int from, const int to,
                                         const std::span<const NavAvoid> avoided,
-                                        const float avoid_cost) const {
+                                        const float avoid_cost, const float jump_rise) const {
   std::vector<NavWaypoint> route;
   if (from < 0 || to < 0 || from == to) {
     return route;
@@ -151,6 +154,9 @@ std::vector<NavWaypoint> NavGraph::path(const int from, const int to,
       continue; // a stale entry
     }
     for (const NavEdge &e : edges_of(node)) {
+      if (too_high(node, e, jump_rise)) {
+        continue;
+      }
       const int next = static_cast<int>(e.to);
       const float cost = here + e.cost + avoid_extra(avoided, node, next, avoid_cost);
       if (cost < scratch.at(next)) {
@@ -170,7 +176,8 @@ std::vector<NavWaypoint> NavGraph::path(const int from, const int to,
   return route;
 }
 
-std::vector<std::pair<int, float>> NavGraph::costs_from(const int from, const float limit) const {
+std::vector<std::pair<int, float>> NavGraph::costs_from(const int from, const float limit,
+                                                        const float jump_rise) const {
   std::vector<std::pair<int, float>> reached;
   if (from < 0) {
     return reached;
@@ -187,6 +194,9 @@ std::vector<std::pair<int, float>> NavGraph::costs_from(const int from, const fl
     }
     reached.emplace_back(node, cost);
     for (const NavEdge &e : edges_of(node)) {
+      if (too_high(node, e, jump_rise)) {
+        continue;
+      }
       const float next = cost + e.cost;
       if (next <= limit && next < scratch.at(static_cast<int>(e.to))) {
         scratch.set(static_cast<int>(e.to), next, node, e.link);
@@ -197,7 +207,7 @@ std::vector<std::pair<int, float>> NavGraph::costs_from(const int from, const fl
   return reached;
 }
 
-std::vector<bool> NavGraph::reachable_from(const int from) const {
+std::vector<bool> NavGraph::reachable_from(const int from, const float jump_rise) const {
   std::vector<bool> reached;
   if (from < 0 || from >= static_cast<int>(nodes_.size())) {
     return reached;
@@ -209,7 +219,7 @@ std::vector<bool> NavGraph::reachable_from(const int from) const {
     const int node = open.back();
     open.pop_back();
     for (const NavEdge &e : edges_of(node)) {
-      if (!reached[e.to]) {
+      if (!reached[e.to] && !too_high(node, e, jump_rise)) {
         reached[e.to] = true;
         open.push_back(static_cast<int>(e.to));
       }
@@ -235,8 +245,9 @@ std::uint64_t stage_key(const StageCollision &stage, const NavTuning &t) {
       }
     }
   }
-  for (const float value : {t.cell, t.step, t.jump_rise, static_cast<float>(t.jump_cells),
-                            t.headroom, t.wall_clearance, t.jump_cost, t.drop_cost}) {
+  for (const float value :
+       {t.cell, t.step, t.jump_rise, static_cast<float>(t.jump_cells), t.headroom, t.wall_clearance,
+        t.jump_cost, t.drop_cost, t.body_radius}) {
     hash = mix(hash, value);
   }
   return hash;

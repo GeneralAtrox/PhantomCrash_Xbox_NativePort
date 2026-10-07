@@ -21,6 +21,8 @@ public:
   // The layout of a source checkout or install rooted at `root`:
   // data/, mods/, artifacts/europe/assets/, artifacts/europe/files/Media/.
   [[nodiscard]] static DataRoots standard(const std::filesystem::path &root);
+  // As standard, without mods/: the shipped data and the converted assets.
+  [[nodiscard]] static DataRoots shipped(const std::filesystem::path &root);
 
   // First directory at or above one of `starts` that holds data/boot/intro.json.
   [[nodiscard]] static std::optional<std::filesystem::path>
@@ -32,7 +34,8 @@ public:
   // As find_asset, but throws naming the searched roots when it is missing.
   [[nodiscard]] std::filesystem::path asset(std::string_view relative) const;
 
-  // data/<relative> with mods/data/<relative> merged on top (json::merge).
+  // data/<relative> with mods/data/<relative> merged on top (json::merge),
+  // unless there is no mods folder.
   [[nodiscard]] json::JsonValue document(std::string_view relative) const;
 
   [[nodiscard]] const std::vector<std::filesystem::path> &asset_roots() const {

@@ -3,8 +3,9 @@
 This is a work-in-progress Windows x64 port. The ZIP includes
 `phantomcrash_port.exe`, the game data installer `phantomcrash_extract.exe`,
 their libraries and editable `data`. Extract the entire ZIP before running it.
-No game assets, executable, disc image or Xbox firmware are included; the
-game is installed from your own European Xbox disc image. Python is not
+No game assets, executable, disc image or Xbox firmware are included, apart
+from the executable icon, which contains a render of game artwork (see
+NOTICE.md); the game is installed from your own European Xbox disc image. Python is not
 needed.
 
 ## Setup
@@ -52,6 +53,46 @@ one); it uses and saves the current quest.
 
 ## Included changes
 
+0.5.0 adds:
+
+- **Experimental online co-op.** Up to three players share deterministic combat
+  with rollback prediction. Menus send player presence, and active matches support
+  late joining and recovery from a network outage while the games remain open.
+  Rollback does not replay confirmed sounds/effects or award results twice.
+- **Matching-content checks.** Peers must use the same executable, gameplay data,
+  extracted resources and mods, including external model buffers.
+- **S.L.A.I. import support.** Native support for the optional parts, stages,
+  animation, audio and effects overlay built from your own S.L.A.I. disc. Imported
+  content is not included in this ZIP; see `docs/SLAI_INTEGRATION.md`.
+- AI/navigation, robot motion and rendering updates from the current source,
+  bounded shop labels, and an executable icon.
+
+Online play is a prerelease feature. Local desktop gameplay passed 35â€“65 ms
+delay each way, 3% packet loss and a thirteen-second blackout; different-machine
+and Internet testing remains outstanding. Joining pauses the match while its
+history is reconstructed, and confirmed sounds/effects can be delayed by latency.
+Reconnection does not restore a closed game or migrate the host.
+
+### Starting online play
+
+Install the same release and matching content on each machine. From the extracted
+release directory, the host runs:
+
+```powershell
+.\phantomcrash_port.exe --root . --online-host 29641
+```
+
+Other players replace `HOST_IPV4` with the host's reachable address:
+
+```powershell
+.\phantomcrash_port.exe --root . --online-join HOST_IPV4:29641
+```
+
+Allow UDP 29641 to the host; Internet play needs a reachable route or port
+forwarding. Each player enters the same arena through the normal menus. Keep
+the games open when testing a brief network outage. More implementation and
+test details are in `docs/ONLINE_MULTIPLAYER_DETERMINISM.md`.
+
 0.4.1 adds:
 
 - **Smoother frames.** Removed the stutters seen in busy matches: replay
@@ -60,7 +101,7 @@ one); it uses and saves the current quest.
   they arrive; sharp text no longer stalls the frame its first text appears
   in; and a computer robot rejoining its route no longer runs over a hundred
   line-of-sight tests in one tick. In a ten-robot match the worst frames
-  fell from 27–76 ms to about 8–10 ms.
+  fell from 27ï¿½76 ms to about 8ï¿½10 ms.
 
 Existing users: copy your `artifacts` and `mods` folders into the new
 version. The converted assets are unchanged.

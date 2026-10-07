@@ -35,6 +35,7 @@ struct Combatant {
   // RUMBLING uses roster status independently of its free-for-all allegiance.
   int marker_colour{-1};
   std::array<bool, weapon_slots> firing{}; // accepted held triggers, for sustained weapon audio
+  std::array<bool, weapon_slots> trigger_held{}; // control input, independent of cooldown/bursts
   bool piloted{}; // a player controls it (robot +8 not -1): the first robot added
   bool rival{};   // on the side against the players (loadout +0x6c 2): the drones
   bool boss{};    // a boss (loadout +0x70 1): enters with its own scene (0x082cff)
@@ -68,6 +69,7 @@ struct Combatant {
   // The mount whose melee weapon is striking with its blade armed, or -1
   // (0x09c337; the attacker's +0x25a5).
   int strike_slot{-1};
+  bool source_free_arm_action{}; // S.L.A.I. actor +0x19c; completed-lock lunges do not set it
   // A homing missile's rounds leave one at a time (0x09b4ed): how many
   // are still to leave from each mount, and when the next one does.
   std::array<int, weapon_slots> queued_rounds{};

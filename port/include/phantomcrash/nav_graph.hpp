@@ -6,6 +6,7 @@
 
 #include <cstdint>
 #include <future>
+#include <limits>
 #include <memory>
 #include <span>
 #include <utility>
@@ -56,6 +57,34 @@ struct NavTuning {
   // none in sight the nearest reachable one is taken; a planned route gets
   // there all the same.
   int rejoin_sight_tests{12};
+  // The robots' collision sphere: a planned jump needs room for it to rise
+  // straight up from the take-off, where an overhang would stop it.
+  float body_radius{2.0F};
+  float takeoff_reach{1.0F}; // a jump's take-off counts as reached this close
+  // A route point counts as reachable over a node at most this far below or
+  // above it (ENPT points can lie a little under the street, or in the air).
+  float point_rise{4.0F};
+  // Escalation, when a robot makes no headway (moves no farther than
+  // escalate_distance) for escalate_seconds or through escalate_recoveries
+  // recoveries: first it drops its goal (the route point, high ground or
+  // approach); still stuck, it steers the original way for fallback_seconds.
+  float escalate_seconds{8.0F};
+  int escalate_recoveries{3};
+  float escalate_distance{3.0F};
+  float fallback_seconds{4.0F};
+  // Another robot this close beyond both bodies, in the way, is sidestepped.
+  float crowd_gap{1.5F};
+  // A robot plans only jumps its own held jump (movement.jump_height, its
+  // legs and load) clears by this much, and holds the jump until its feet
+  // are this far above the landing, so it has time to move over the edge.
+  float jump_margin{1.5F};
+  float jump_hold_over{1.5F};
+  // Route points with no route to them are skipped; after this many in a
+  // row the robot rejoins the route elsewhere.
+  int route_skips{4};
+  // A jump link taken that lands the robot back below the ledge is avoided
+  // by that robot this long.
+  float failed_jump_seconds{30.0F};
 };
 
 [[nodiscard]] NavTuning parse_nav_tuning(const json::JsonValue &value);
@@ -87,22 +116,27 @@ struct NavAvoid {
 };
 
 class NavGraph final {
+  friend class StateInspector;
 public:
   [[nodiscard]] static NavGraph build(const StageCollision &stage, const NavTuning &tuning);
 
   // The node a robot standing (or about to land) at `at` is on: the
   // nearest in the cell and its neighbours, preferring its own level.
   [[nodiscard]] int nearest(Vec3 at) const;
+  // The searches below leave out jump links that climb more than
+  // `jump_rise`: the robot's own jump does not reach so high.
+  static constexpr float any_rise = std::numeric_limits<float>::infinity();
   // A* over the links; avoided links cost `avoid_cost` more. The route
   // leaves out `from` and ends at `to`; empty when there is none.
   [[nodiscard]] std::vector<NavWaypoint> path(int from, int to, std::span<const NavAvoid> avoided,
-                                              float avoid_cost) const;
+                                              float avoid_cost, float jump_rise = any_rise) const;
   // Path costs from `from` to every node no costlier than `limit`.
-  [[nodiscard]] std::vector<std::pair<int, float>> costs_from(int from, float limit) const;
+  [[nodiscard]] std::vector<std::pair<int, float>> costs_from(int from, float limit,
+                                                              float jump_rise = any_rise) const;
   // Whether each node can be reached from `from` at all: a flood without
   // costs, far cheaper than costs_from over the whole graph. Empty when
   // `from` is no node.
-  [[nodiscard]] std::vector<bool> reachable_from(int from) const;
+  [[nodiscard]] std::vector<bool> reachable_from(int from, float jump_rise = any_rise) const;
   // Nodes whose cells lie within `radius` of (x, z).
   [[nodiscard]] std::vector<int> nodes_near(float x, float z, float radius) const;
 
@@ -119,6 +153,11 @@ public:
 
 private:
   friend class NavGraphBuilder;
+  [[nodiscard]] bool too_high(int from, const NavEdge &edge, float jump_rise) const {
+    return edge.link == NavLink::jump &&
+           nodes_[edge.to].position.y - nodes_[static_cast<std::size_t>(from)].position.y >
+               jump_rise;
+  }
   [[nodiscard]] int cell_of(float x, float z) const;
 
   float origin_x_{}, origin_z_{}, cell_{2.0F};
@@ -153,13 +192,25 @@ struct NavAgent {
   float lift_to{};     // ... until the feet are this high
   bool active{};       // following a route this AI tick
   bool rough{};        // plan without shortcuts (after getting stuck on one)
-  bool pressed{};      // the jump was pressed last AI tick on the ground
   float air_seconds{}; // how long it has been off the ground
   std::vector<NavAvoid> avoided;
   int vantage{-1}; // the node taken as high ground, or -1
   bool holding{};  // standing on it this AI tick
   int vantage_target{-1};
   float vantage_left{};
+  // Escalation (NavTuning::escalate_seconds): where headway is measured from.
+  Vec3 anchor;
+  float anchor_seconds{};
+  int strikes{};         // recoveries since the last headway
+  int escalation{};      // 0: none yet, 1: the goal was dropped
+  float fallback_left{}; // steering the original way this much longer
+  bool dropped{};        // the last ai_navigate dropped its goal
+  bool asked{};          // ai_navigate ran this AI tick
+  bool unreachable{};    // the last plan found no route to its goal
+  int skips{};           // route points skipped in a row for want of a route
+  int jump_to{-1};       // the landing node of the jump link taken ...
+  float jump_land{};     // ... its height
+  bool jumping{};        // ... and in the air on it
 };
 
 } // namespace phantomcrash

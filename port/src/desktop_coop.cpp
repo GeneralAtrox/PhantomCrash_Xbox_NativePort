@@ -1,5 +1,7 @@
 #include "desktop_coop.hpp"
 #include "desktop_coop_matches.hpp"
+#include "desktop_online_game.hpp"
+#include "phantomcrash/online_lobby.hpp"
 #include "phantomcrash/saved_time.hpp"
 #include <algorithm>
 
@@ -12,15 +14,24 @@ CoopScreen::CoopScreen(SDL_Renderer *renderer, const DataRoots &roots, const Gam
       map_(parse_town_map(roots.document("ui/town_map.json"))), roots_(roots), options_(options),
       imports_(std::move(imports)), current_(std::move(current)), state_(std::move(state)) {
   state_->matches = std::make_shared<CoopMatches>();
+  if (state_->open_online) {
+    state_->online = state_->open_online();
+    state_->online_game =
+        std::make_shared<OnlineGame>(state_->online->room(), renderer_, roots_, state_->matches,
+                                     state_->options, state_->robots);
+  }
   SDL_Log("Co-op: lobby opened; independent profiles, solo saves preserved");
 }
 
 CoopScreen::~CoopScreen() {
   for (int slot = 0; slot < 4; ++slot) {
     persist(slot);
+    players_[slot].runner.reset();
     SDL_DestroyTexture(players_[slot].target);
   }
+  state_->online_game.reset();
   state_->matches.reset();
+  state_->online.reset();
 }
 
 void CoopScreen::persist(const int slot) {
@@ -29,6 +40,9 @@ void CoopScreen::persist(const int slot) {
     auto save = player.runner->quest_save();
     save.saved = local_time_text();
     state_->profiles[slot] = std::move(save);
+    if (state_->online) {
+      state_->online_profile = state_->profiles[slot];
+    }
   }
 }
 
@@ -67,7 +81,7 @@ void CoopScreen::load_player(const int slot) {
   // Each slot imports into its own campaign. No shared save file is writable
   // from a player pane, so two imported copies cannot overwrite one another.
   AudioOptions audio = audio_;
-  if (slot != 0) {
+  if (slot != 0 && !state_->online) {
     audio.levels[static_cast<int>(AudioBus::music)] = 0;
   }
   player.runner = std::make_unique<ScreenRunner>(
@@ -100,6 +114,9 @@ void CoopScreen::ready_player(const int slot) {
   }
   player.save_error = false;
   player.ready = true;
+  if (state_->online) {
+    state_->online_profile = state_->profiles[slot];
+  }
 }
 
 void CoopScreen::lobby_input(const int slot, const InputFrame &input) {
@@ -137,6 +154,15 @@ void CoopScreen::lobby_input(const int slot, const InputFrame &input) {
 }
 
 void CoopScreen::tick(const InputFrame &input, const double seconds) {
+  if (state_->online) {
+    try {
+      tick_online(input, seconds);
+    } catch (const std::exception &error) {
+      online_error_ = error.what();
+      SDL_Log("Online error: %s", online_error_.c_str());
+    }
+    return;
+  }
   if (!playing_) {
     // BACK (Escape) leaves the lobby for the main menu whoever has joined;
     // the destructor keeps the ready players' checkpoints.
@@ -200,6 +226,9 @@ void CoopScreen::tick(const InputFrame &input, const double seconds) {
 }
 
 void CoopScreen::advance(const double seconds) {
+  if (state_->online) {
+    pump_online();
+  }
   for (auto &player : players_) {
     if (player.runner) {
       player.runner->advance(seconds);

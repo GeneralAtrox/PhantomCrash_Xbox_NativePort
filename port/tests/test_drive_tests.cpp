@@ -14,12 +14,12 @@ namespace {
 
 TestDriveScript shipped_script() {
   return parse_test_drive(
-      DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT).document("world/test_drive.json"));
+      DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT).document("world/test_drive.json"));
 }
 
 TrainingScript shipped_training() {
   return parse_training(
-      DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT).document("world/training.json"));
+      DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT).document("world/training.json"));
 }
 
 // A gun and a melee arm weapon, a lobbed backpack weapon.

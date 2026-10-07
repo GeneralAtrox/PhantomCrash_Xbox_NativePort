@@ -9,6 +9,9 @@
 /extracted/
 /research-output/
 
+# Local mods, built from the user's own discs (S.L.A.I., MechAssault).
+/mods/
+
 # Pinned external reverse-engineering checkouts and Ghidra project databases.
 /.tools/
 *.gpr

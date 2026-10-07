@@ -8,6 +8,7 @@
 #include "phantomcrash/robot.hpp"
 #include "phantomcrash/robot_mover.hpp"
 #include "phantomcrash/skeleton.hpp"
+#include "phantomcrash/source_leg_playback.hpp"
 
 #include <array>
 #include <map>
@@ -65,8 +66,11 @@ private:
 // arm banks play the same motion id beside it (0x08ddb2), and a change of
 // motion fades over a few frames.
 class RobotAnimator final {
+  friend class StateInspector;
 public:
   RobotAnimator(RobotLibrary &library, const RobotAssembly &assembly);
+  // Copies playback state while binding to the destination pose's assembly.
+  RobotAnimator(const RobotAnimator &source, const RobotAssembly &assembly);
 
   // Starts `motion` (a bank index) at `start_frame`, looping or holding its
   // last frame. Set restart for a fresh action even when its clip is unchanged.
@@ -82,6 +86,14 @@ public:
     speed_ = speed;
   }
   void tick(double seconds);
+  void reset_procedural_clock() noexcept {
+    procedural_seconds_ = 0;
+    source_roll_ = {};
+    if (assembly_.skeleton && !assembly_.source_transition_frames.empty()) {
+      source_legs_.reset(*assembly_.skeleton);
+    }
+  }
+  void advance_source_roll(const RobotMover &mover, float seconds);
   void set_auxiliary_frames(const std::array<float, 3> &frames) {
     auxiliary_frames_ = frames;
   }
@@ -130,6 +142,12 @@ private:
   };
   bool keep_sway_{true};
   float wheel_turn_{};
+  double procedural_seconds_{};
+  SourceRollState source_roll_;
+  SourceLegPlayback source_legs_;
+  bool source_transition_{};
+  bool source_actor_idle_{true};
+  bool has_source_roll_{};
   std::array<Layer, motion_layers> previous_{}; // what the motion blends from (MotionSource)
   std::size_t previous_count_{};
   float speed_{1.0F};

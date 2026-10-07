@@ -8,6 +8,9 @@
 #include "desktop_training_robots.hpp"
 #include "desktop_robot_preview.hpp"
 #include "desktop_world_renderer.hpp"
+#include "desktop_stage_select.hpp"
+#include "desktop_online_game.hpp"
+#include "desktop_online_factory.hpp"
 #include "phantomcrash/robot_library.hpp"
 
 #include <algorithm>
@@ -20,12 +23,44 @@ bool ScreenRunner::mouse_aim() const {
 }
 
 std::unique_ptr<Screen> ScreenRunner::make_battle(const std::string &name) {
+  if (name == "online_battle_ready") {
+    if (!coop_ || !coop_->online_game || !active_match_) {
+      throw std::runtime_error("Online battle entry has no agreed match");
+    }
+    const CoopMatches::Key key{quest_.day, active_match_->area, active_match_->contest};
+    auto match = coop_->online_game->match(key);
+    rumbling_world_ = match->world;
+    const float hold =
+        !quest_.cleared && active_match_->contest == game_->regulation_check().rules.first_ranker
+            ? story_rules_.clear_hold_frames / part_frames_per_second
+            : 0;
+    return make_online_battle_view(
+        match, coop_slot_, options_,
+        [this](std::uint64_t sound) { return audio_.sound_playing(sound); }, hold,
+        [owner = std::weak_ptr(coop_->online_game), key] {
+          if (const auto game = owner.lock()) {
+            game->request_exit(key);
+          } else {
+            throw std::runtime_error("Online session ended before exit");
+          }
+        });
+  }
   if (const auto lesson = training_.lessons.find(name); lesson != training_.lessons.end()) {
     return make_training(training_, lesson->second);
   }
-  if (name == "test_drive") {
+  if (name == "test_drive" && !test_drive_.stage_choices.empty()) {
+    return std::make_unique<StageSelectScreen>(textures_, font_, test_drive_.stage_choices,
+                                               test_drive_.return_to);
+  }
+  if (name == "test_drive" || name.starts_with("test_drive/")) {
     battle_training_ = test_drive_training(training_, test_drive_, quest_.garage,
                                            quest_.garage.riding, game_->part_tables());
+    if (name.starts_with("test_drive/")) {
+      const std::string chosen = name.substr(11);
+      if (stages_.contains(chosen)) {
+        battle_training_.stage = chosen;
+      }
+    }
     return make_training(battle_training_, test_drive_.lesson);
   }
   const QuickRental *preset = find_quick_rental(rumbling_battle_, name);
@@ -114,6 +149,9 @@ std::unique_ptr<Screen> ScreenRunner::make_training(const TrainingScript &script
   staged_training_ = script;
   if (stage != stages_.end()) {
     apply_stage(staged_training_.battle.scenes, stage->second);
+    if (stage->second.spawn) {
+      staged_training_.battle.player_start = *stage->second.spawn;
+    }
   }
   TrainingContext context{roots_,
                           world_.get(),
@@ -135,6 +173,7 @@ std::unique_ptr<Screen> ScreenRunner::make_training(const TrainingScript &script
                           vs == nullptr ? nullptr : &vs_battle_,
                           vs};
   context.beginner = options_.controls.beginner != 0;
+  context.sound_playing = [this](std::uint64_t key) { return audio_.sound_playing(key); };
   if (match_results && active_match_ && !quest_.cleared &&
       active_match_->contest == game_->regulation_check().rules.first_ranker) {
     context.victory_hold_seconds = story_rules_.clear_hold_frames / part_frames_per_second;

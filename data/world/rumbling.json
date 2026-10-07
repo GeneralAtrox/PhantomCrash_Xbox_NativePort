@@ -175,7 +175,7 @@
    "rivals_by_sight": false,
    "jump_any_floor": false,
    "navigation": {
-    "note": "Port addition. Computer robots plan routes over a grid built from the stage collision: they walk around walls, hold jumps up ledges and across gaps, and drop down, instead of the original's straight line to the next ENPT point. high_ground sends a robot in a fight to a spot above its target with a clear shot. A moved goal plans again no sooner than replan_min_seconds, and plans_per_tick caps the graph searches of all robots in one battle tick (0: no limit): route plans, high-ground searches and a rejoining robot's reach test. A robot over the limit searches in a later tick, so that many robots do not stall a frame. Rejoining its route, a robot tests the nearest rejoin_sight_tests reachable points for a clear line of sight and otherwise takes the nearest it can reach. Set enabled to false for the original routing.",
+    "note": "Port addition. Computer robots plan routes over a grid built from the stage collision: they walk around walls, hold jumps up ledges and across gaps, and drop down, instead of the original's straight line to the next ENPT point. high_ground sends a robot in a fight to a spot above its target with a clear shot. A moved goal plans again no sooner than replan_min_seconds, and plans_per_tick caps the graph searches of all robots in one battle tick (0: no limit): route plans, high-ground searches and a rejoining robot's reach test. A robot over the limit searches in a later tick, so that many robots do not stall a frame. Rejoining its route, a robot tests the nearest rejoin_sight_tests reachable points for a clear line of sight and otherwise takes the nearest it can reach. A planned jump needs room for a body of body_radius to rise straight up from its take-off, reached within takeoff_reach; a route point counts as reachable over a node within point_rise of it. A robot that makes no headway (moves no farther than escalate_distance) for escalate_seconds or through escalate_recoveries recoveries drops its goal (skips the route point, leaves the high ground or the approach); still stuck, it steers the original way for fallback_seconds. A stalled robot with another within crowd_gap in its way steps aside. A robot plans only jumps its own held jump (its legs and load) clears by jump_margin; it lines up standing, walks on only with the press that takes off, and holds the jump until its feet are jump_hold_over above the landing. A route point with no route to it is skipped; after route_skips in a row the robot rejoins the route elsewhere. A jump that lands the robot back below the ledge makes it avoid that landing for failed_jump_seconds. Set enabled to false for the original routing.",
     "enabled": true,
     "cell": 2.0,
     "step": 0.9,
@@ -203,7 +203,19 @@
     "vantage_seconds": 8.0,
     "vantage_chance": 0.6,
     "vantage_sight_tests": 48,
-    "rejoin_sight_tests": 12
+    "rejoin_sight_tests": 12,
+    "body_radius": 2.0,
+    "takeoff_reach": 1.0,
+    "point_rise": 4.0,
+    "escalate_seconds": 8.0,
+    "escalate_recoveries": 3,
+    "escalate_distance": 3.0,
+    "fallback_seconds": 4.0,
+    "crowd_gap": 1.5,
+    "jump_margin": 1.5,
+    "jump_hold_over": 1.5,
+    "route_skips": 4,
+    "failed_jump_seconds": 30.0
    }
   }
  }

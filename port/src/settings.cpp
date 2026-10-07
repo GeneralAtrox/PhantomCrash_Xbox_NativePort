@@ -188,6 +188,9 @@ Settings settings_from_json(const json::JsonValue &value) {
       }
     }
   }
+  if (const auto *profile = value.find("online_profile"); profile && profile->is_object()) {
+    settings.online_profile = quest_from_json(*profile);
+  }
   if (const auto *controls = value.find("host_controls")) {
     settings.host_controls = host_controls_from_json(*controls);
   }
@@ -273,6 +276,7 @@ json::JsonValue settings_to_json(const Settings &settings) {
            {"share_cash", JsonValue{settings.coop.share_cash}},
            {"share_boss_clears", JsonValue{settings.coop.share_boss_clears}}}}},
       {"coop_profiles", JsonValue{std::move(profiles)}},
+      {"online_profile", settings.online_profile ? quest_to_json(*settings.online_profile) : JsonValue{}},
       {"host_controls", host_controls_to_json(settings.host_controls)},
       {"rumble_robots", JsonValue{static_cast<std::int64_t>(settings.rumble_robots)}},
       {"cheats",

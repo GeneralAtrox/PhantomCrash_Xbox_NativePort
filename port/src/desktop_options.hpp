@@ -21,6 +21,14 @@ struct Options {
   std::optional<std::filesystem::path> settings;
   // Smoke test: load everything, run this many frames hidden, then exit.
   int smoke_frames{};
+  // Hidden desktop asset/rollback verification; never reads or writes profiles.
+  bool online_resource_check{};
+  struct Online {
+    bool host{};
+    std::string address;
+    std::uint16_t port{};
+  };
+  std::optional<Online> online;
   // Benchmark: run this many seconds in real time, uncapped and without
   // vsync, then print the frame times (--press frames count logic ticks).
   double benchmark_seconds{};
@@ -49,6 +57,21 @@ struct Options {
     bool click{};
   };
   std::vector<Point> points;
+  // Renders one garage robot record standing alone on a transparent
+  // background to a square PNG, then exits (an icon or a promotional shot).
+  // The camera orbits the robot: yaw turns it from straight ahead, pitch
+  // raises it, both in degrees; it looks at `height` above the ground from
+  // `distance` away.
+  struct RobotShot {
+    int record{};
+    std::filesystem::path file;
+    float yaw_degrees{-30.0F};
+    float pitch_degrees{-12.0F};
+    float distance{11.0F};
+    float height{2.4F};
+    int size{1024};
+  };
+  std::optional<RobotShot> robot_shot;
   bool help{};
 };
 

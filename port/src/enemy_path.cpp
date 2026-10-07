@@ -1,6 +1,7 @@
 #include "phantomcrash/enemy_path.hpp"
 
 #include <algorithm>
+#include <iterator>
 #include <limits>
 #include <stdexcept>
 #include <string>
@@ -91,7 +92,7 @@ void PathFollower::join(const EnemyPath &path, const int segment, const Vec3 pos
 }
 
 Vec3 PathFollower::update(const EnemyPath &path, const Vec3 position, const float reach,
-                          std::minstd_rand &random) {
+                          std::minstd_rand &random, const std::vector<bool> *blocked) {
   if (segment_ < 0) {
     return position;
   }
@@ -102,11 +103,19 @@ Vec3 PathFollower::update(const EnemyPath &path, const Vec3 position, const floa
   if (length(offset) > reach) {
     return target;
   }
+  std::vector<int> open;
+  if (blocked != nullptr) {
+    std::ranges::copy_if(segment->next, std::back_inserter(open), [&](const int next) {
+      return static_cast<std::size_t>(next) >= blocked->size() ||
+             !(*blocked)[static_cast<std::size_t>(next)];
+    });
+  }
+  const std::vector<int> &next = blocked != nullptr ? open : segment->next;
   if (point_ + 1 < segment->points.size()) {
     ++point_;
-  } else if (!segment->next.empty()) {
-    std::uniform_int_distribution<std::size_t> pick(0, segment->next.size() - 1);
-    segment_ = segment->next[pick(random)];
+  } else if (!next.empty()) {
+    std::uniform_int_distribution<std::size_t> pick(0, next.size() - 1);
+    segment_ = next[pick(random)];
     point_ = 0;
     segment = &path.segments[static_cast<std::size_t>(segment_)];
   } else {

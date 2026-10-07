@@ -23,10 +23,10 @@ void TrainingScreen::queue_dialogue(std::vector<std::string> sounds) {
   }
 }
 
-void TrainingScreen::load_sounds(const DataRoots &roots) {
+void TrainingScreen::load_sounds(const DataRoots &roots, BattleSounds::PlaybackQuery playing) {
   try {
-    battle_sounds_ =
-        std::make_unique<BattleSounds>(parse_battle_sounds(roots.document(battle_sounds_document)));
+    battle_sounds_ = std::make_unique<BattleSounds>(
+        parse_battle_sounds(roots.document(battle_sounds_document)), std::move(playing));
   } catch (const std::exception &error) {
     SDL_Log("%s: %s", battle_sounds_document, error.what());
   }

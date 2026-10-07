@@ -1,6 +1,7 @@
 #pragma once
 
 #include "phantomcrash/json.hpp"
+#include "phantomcrash/movement_tuning.hpp"
 #include "phantomcrash/sprite_layer.hpp"
 
 #include <array>
@@ -70,15 +71,16 @@ struct ChipRecord {
 struct WeaponRecord {
   int index{};
   std::string name;
-  int kind{};        // +0x1c: the HUD's weapon kind (see WeaponTuning::hud_kind)
-  int flight{};      // +0x1d: 0 straight, 1 lobbed, 2 missile
-  int maker{};       // +4 ("family"), as a body's (0x01ede8)
-  int model{-1};     // +8: its model, which some fire sounds go by
-  int fire_sound{};  // +0x21: its fire sound's handler (table 0x2537c0)
-  int look{-1};      // +0x22: how its shots are drawn (effects.json projectiles)
-  int surface_hit{}; // +0x1f: what a shot does on a wall or the floor (0x098eda)
-  int robot_hit{};   // +0x20: ... and on a robot
-  int impact{-1};    // +0x23: the impact it starts (effects.json impacts)
+  int kind{};                // +0x1c: the HUD's weapon kind (see WeaponTuning::hud_kind)
+  int source_melee_kind{-1}; // original S.L.A.I. arm-action family, separate from adapted HUD kind
+  int flight{};              // +0x1d: 0 straight, 1 lobbed, 2 missile
+  int maker{};               // +4 ("family"), as a body's (0x01ede8)
+  int model{-1};             // +8: its model, which some fire sounds go by
+  int fire_sound{};          // +0x21: its fire sound's handler (table 0x2537c0)
+  int look{-1};              // +0x22: how its shots are drawn (effects.json projectiles)
+  int surface_hit{};         // +0x1f: what a shot does on a wall or the floor (0x098eda)
+  int robot_hit{};           // +0x20: ... and on a robot
+  int impact{-1};            // +0x23: the impact it starts (effects.json impacts)
   int launch_degrees{};
   int fire_frames{}; // between shots
   int life_frames{}; // a projectile's lifetime
@@ -111,6 +113,7 @@ struct WeaponRecord {
 // below its floor, which differs for players' and computer robots
 // (0x076114).
 struct ArmourRecord {
+  std::optional<WheeledTuning> wheels;
   int index{};
   std::string name;
   // The maker (+4; a body's "class", legs' "maker"): 0 Holy, 1 Photon,

@@ -17,7 +17,7 @@ namespace {
 constexpr double tick = 1.0 / 60.0;
 
 DataRoots roots() {
-  return DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT);
+  return DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT);
 }
 
 LoadGame shipped(std::vector<SaveSlot> slots) {

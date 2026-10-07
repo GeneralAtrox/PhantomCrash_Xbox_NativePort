@@ -53,11 +53,23 @@ struct BattleCheats {
 // A battle on one stage: robot 0 is the player; the others are drones
 // walking the stage's enemy path, respawning when destroyed.
 class Battle final {
+  friend class StateInspector;
 public:
   Battle(BattleSettings settings, EnemyPath path, std::uint32_t seed = 1);
   // Robots point into the settings' weapons: no copies.
-  Battle(const Battle &) = delete;
   Battle &operator=(const Battle &) = delete;
+
+  // Local rollback checkpoints own mutable state and rebind internal pointers.
+  // RobotLibrary assets must outlive the battle and its checkpoints.
+  [[nodiscard]] std::shared_ptr<const Battle> checkpoint() const;
+  void restore_checkpoint(const Battle &checkpoint);
+  // Presentation caches must rebuild after rewind, even if object counts match.
+  // This counter does not participate in gameplay or deterministic state hashes.
+  [[nodiscard]] std::uint64_t restore_generation() const {
+    return restore_generation_;
+  }
+  // Online startup only: do not let worker completion change AI on a local tick.
+  void prepare_deterministic();
 
   // Adds a robot; `weapons` names entries of the settings' weapons (empty
   // for none). Returns its index.
@@ -221,10 +233,24 @@ public:
   void set_player_target_view(std::optional<TargetView> view) {
     target_views_[player_index_] = std::move(view);
   }
+  [[nodiscard]] std::optional<TargetView> player_target_view() const {
+    const auto found = target_views_.find(player_index_);
+    return found == target_views_.end() ? std::nullopt : found->second;
+  }
+  // Online simulation owns poses even when a newly arrived actor is not drawn.
+  void own_simulation_poses() {
+    simulation_poses_ = true;
+  }
+  [[nodiscard]] bool simulation_poses() const {
+    return simulation_poses_;
+  }
   // Shared by the tracking reticle and weapon acquisition/lock maintenance.
   [[nodiscard]] bool target_visible(const Combatant &observer, const Combatant &target) const;
 
 private:
+  Battle(const Battle &) = default;
+  Battle &operator=(Battle &&) = default;
+  [[nodiscard]] std::unique_ptr<Battle> clone_state() const;
   [[nodiscard]] bool clear_target_sight(Vec3 from, Vec3 to) const;
   [[nodiscard]] std::vector<Target> targets() const;
   // Where the robot locks: the drawn reticle's boxes, or boxes around its
@@ -250,15 +276,25 @@ private:
   [[nodiscard]] const NavGraph *nav_graph();
   // Spends one of this tick's graph searches; false once they are spent.
   [[nodiscard]] bool take_nav_search();
+  // Port navigation: no headway, it drops its goal or steers the original
+  // way (NavTuning::escalate_seconds); true when it has just escalated.
+  bool ai_escalate(Combatant &drone, float seconds);
+  // Another robot stands in the way toward `to` (an offset from `drone`).
+  [[nodiscard]] bool crowded(const Combatant &drone, Vec3 to) const;
+  // With the grid ready, the authored climbs it cannot follow; else null.
+  [[nodiscard]] const std::vector<bool> *planned_climbs();
   bool ai_plan(Combatant &drone, Vec3 goal);
   bool ai_navigate(Combatant &drone, Vec3 goal, float seconds, float speed);
   [[nodiscard]] int ai_vantage(const Combatant &drone);
   bool ai_high_ground(Combatant &drone, float seconds);
   [[nodiscard]] std::vector<bool> nav_reach(const Combatant &drone); // empty: not known
+  // The highest ledge this robot's own jump climbs (battle_ai_reach.cpp).
+  [[nodiscard]] float jump_reach(const Combatant &drone) const;
   [[nodiscard]] bool nav_reaches(const std::vector<bool> &reach, Vec3 point) const;
   void fire_drones(float seconds);
   void update_lock(Combatant &robot, std::size_t slot, float seconds);
   void fire_weapons(int index, const FireControl &fire, float seconds);
+  static void reset_fire_inputs(Combatant &robot);
   void fired(int index, std::size_t slot, const WeaponTuning &weapon);
   void apply_hits(const std::vector<WeaponHit> &hits);
   // The rules of 0x0988e1: a hit's damage after dodges, criticals and
@@ -273,6 +309,8 @@ private:
   void watch_idle(Combatant &robot, const RobotControl &control, const FireControl &fire,
                   float seconds);
   void recover(Combatant &robot, float seconds) const;
+  // `at` moved by `carry` without passing through the stage's walls.
+  [[nodiscard]] Vec3 carried(const Combatant &robot, Vec3 at, Vec3 carry) const;
   float stage_floor(Combatant &robot) const;
   // `position` raised onto the ground under a robot standing there, which
   // becomes `mover`'s floor.
@@ -300,14 +338,18 @@ private:
   bool hit_supply(const WeaponHit &hit);
 
   BattleSettings settings_;
+  std::uint64_t restore_generation_{};
   int player_index_{};
   bool cooperative_{};
+  bool simulation_poses_{};
   bool versus_{};
   std::map<int, std::pair<RobotControl, FireControl>> controls_;
   std::map<int, std::optional<TargetView>> target_views_;
   StageCollision stage_;
   NavGraphFuture nav_future_; // the stage's navigation grid, while it builds
   std::shared_ptr<const NavGraph> nav_;
+  // Authored climbs (kind 7 segments) the grid cannot follow, by segment.
+  std::vector<bool> nav_climbs_;
   int nav_plans_left_{}; // route searches left this tick (NavTuning::plans_per_tick)
   std::optional<StageDoors> doors_;
   std::optional<StageObjects> objects_;

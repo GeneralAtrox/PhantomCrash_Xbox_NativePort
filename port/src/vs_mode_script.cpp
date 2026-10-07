@@ -148,6 +148,7 @@ VsAreaKind kind_named(const std::string &name) {
 VsAreaItem parse_item(const json::JsonValue &value) {
   VsAreaItem item;
   item.id = required(value, "id").string();
+  item.text = value.string_or("text", "");
   item.kind = kind_named(required(value, "kind").string());
   item.picture = member(value, "picture", parse_sprite);
   item.night_picture = member(value, "night_picture", parse_sprite);

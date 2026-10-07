@@ -7,6 +7,7 @@
 #include <SDL3/SDL.h>
 
 #include <algorithm>
+#include <cmath>
 #include <exception>
 
 namespace phantomcrash {
@@ -19,7 +20,9 @@ constexpr int colour_levels = 256;
 
 DesktopSupply::DesktopSupply(WorldRenderer &world, const SupplyLook &look, const int stage)
     : look_(look), parts_(look.models[static_cast<std::size_t>(stage & 1)]) {
-  model_ = world.model(parts_.model);
+  model_ = world.model(look_.pickups && !look_.pickups->carrier_model.empty()
+                           ? look_.pickups->carrier_model
+                           : parts_.model);
   const ModelData *data = world.model_data(model_);
   if (data == nullptr) {
     model_ = -1;
@@ -32,6 +35,20 @@ DesktopSupply::DesktopSupply(WorldRenderer &world, const SupplyLook &look, const
     if (const ModelData *other = world.model_data(model)) {
       pickup_models_[parity] = model;
       pickup_nodes_[parity] = converter_mesh_nodes(*other);
+    }
+  }
+  counter_images_.fill(-1);
+  if (look_.pickups) {
+    counter_model_ = world.model(look_.pickups->model);
+    if (!look_.pickups->carrier_light_model.empty()) {
+      carrier_light_model_ = world.model(look_.pickups->carrier_light_model);
+    }
+    for (std::size_t kind = 0; kind < counter_images_.size(); ++kind) {
+      counter_images_[kind] = world.texture(look_.pickups->images[kind]);
+    }
+    if (!look_.pickups->carrier_model.empty()) {
+      SDL_Log("S.L.A.I. supply assets: carrier=%d light=%d crate=%d pulse=%d", model_,
+              carrier_light_model_, counter_model_, look_.pickups->pulse.has_value());
     }
   }
 }
@@ -78,6 +95,22 @@ void DesktopSupply::add_pickup_mesh(const std::size_t parity, const int mesh, co
 // The carrier: its body, the night shell's random colour, the hatch's doors
 // and the spinning part, or the wreck alone (0x0699d5).
 void DesktopSupply::add_carrier(const SupplyCarrier &carrier, std::vector<WorldItem> &items) {
+  if (look_.pickups && !look_.pickups->carrier_model.empty()) {
+    if (model_ >= 0 && !carrier.parked) {
+      WorldItem item;
+      item.model = model_;
+      item.world = rotation_y(carrier.heading) * translation(carrier.position);
+      items.push_back(std::move(item));
+      if (carrier_light_model_ >= 0 && !carrier.wrecked) {
+        WorldItem light;
+        light.model = carrier_light_model_;
+        light.world =
+            rotation_y(-carrier.spin) * rotation_y(carrier.heading) * translation(carrier.position);
+        items.push_back(std::move(light));
+      }
+    }
+    return;
+  }
   if (!ready()) {
     return;
   }
@@ -121,6 +154,9 @@ Mat4 DesktopSupply::mesh_world(const SupplyCarrier &carrier, const int mesh) con
 }
 
 void DesktopSupply::add_lights(const SupplyDrop &drop, std::vector<WorldLight> &lights) const {
+  if (look_.pickups && !look_.pickups->carrier_model.empty()) {
+    return; // The native carrier's mesh-owned lamps do not belong to JET01.
+  }
   const SupplyCarrier &carrier = drop.carrier();
   if (!ready() || !drop.active() || carrier.wrecked || carrier.parked) {
     return;
@@ -151,10 +187,34 @@ void DesktopSupply::add_items(const SupplyDrop &drop, std::vector<WorldItem> &it
     // 0x069d52 takes the crate from the day or the night model at random
     // every frame.
     const std::size_t first = items.size();
-    const auto parity = static_cast<std::size_t>(random_() & 1U);
-    add_pickup_mesh(parity, look_.models[parity].first_pickup + pickup.kind,
-                    scaling(Vec3{scale, scale, scale}) * translation(pickup.position), items);
-    if (!split_screen) {
+    if (counter_model_ >= 0 && pickup.kind >= 0 && pickup.kind < supply_kind_count &&
+        counter_images_[static_cast<std::size_t>(pickup.kind)] >= 0) {
+      WorldItem item;
+      item.model = counter_model_;
+      item.paint = counter_images_[static_cast<std::size_t>(pickup.kind)];
+      const float source_scale = look_.pickups->scale;
+      item.world =
+          scaling({source_scale, source_scale, source_scale}) * translation(pickup.position);
+      if (look_.pickups->pulse) {
+        const auto &pulse = *look_.pickups->pulse;
+        const float colour =
+            pulse.colour_base +
+            std::floor(pulse.colour_steps * SupplyDrop::blink(pickup)) / pulse.colour_divisor;
+        item.colour = std::array<float, 4>{colour, colour, colour, 1};
+      }
+      items.push_back(std::move(item));
+      const unsigned bit = 1U << pickup.kind;
+      if (!(counter_seen_ & bit)) {
+        counter_seen_ |= bit;
+        SDL_Log("Supply pickup image: kind=%d asset=%s", pickup.kind,
+                look_.pickups->images[static_cast<std::size_t>(pickup.kind)].c_str());
+      }
+    } else {
+      const auto parity = static_cast<std::size_t>(random_() & 1U);
+      add_pickup_mesh(parity, look_.models[parity].first_pickup + pickup.kind,
+                      scaling(Vec3{scale, scale, scale}) * translation(pickup.position), items);
+    }
+    if (!split_screen || (look_.pickups && look_.pickups->pulse)) {
       continue;
     }
     const float pulse = SupplyDrop::blink(pickup) * look_.tint_pulse + look_.tint_base;
@@ -167,6 +227,9 @@ void DesktopSupply::add_items(const SupplyDrop &drop, std::vector<WorldItem> &it
 
 void DesktopSupply::add_sprites(const SupplyDrop &drop, const Vec3 eye,
                                 std::vector<WorldSprite> &sprites) const {
+  if (look_.pickups && look_.pickups->pulse) {
+    return;
+  }
   if (!ready() || !drop.active() || glow_texture_ < 0) {
     return;
   }
@@ -231,7 +294,7 @@ void DesktopSupply::tick(const Battle &battle, EffectSystem *effects) {
 std::unique_ptr<DesktopSupply> load_supply(WorldRenderer *world, const DataRoots &roots,
                                            const SceneTuning &tuning, SupplySettings settings,
                                            Battle &battle) {
-  if (const auto file = roots.find_asset(tuning.tables)) {
+  if (const auto file = roots.find_asset(tuning.tables); file && !settings.stage_routes) {
     try {
       settings.routes = parse_supply_routes(json::read_file(*file), tuning.stage);
     } catch (const std::exception &error) {
@@ -241,6 +304,8 @@ std::unique_ptr<DesktopSupply> load_supply(WorldRenderer *world, const DataRoots
   if (settings.routes.empty()) {
     return nullptr;
   }
+  SDL_Log("Supply routes: stage=%d routes=%zu imported=%d", tuning.stage, settings.routes.size(),
+          settings.stage_routes);
   const SupplyLook look = settings.look;
   if (!battle.cooperative() || !battle.supply()) {
     battle.set_supply(std::move(settings));

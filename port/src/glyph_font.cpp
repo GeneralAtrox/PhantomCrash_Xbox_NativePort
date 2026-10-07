@@ -115,6 +115,27 @@ std::vector<GlyphQuad> layout_run(const GlyphFont &font, const std::vector<int> 
   return quads;
 }
 
+std::vector<GlyphQuad> layout_label(const GlyphFont &font, const std::string_view text,
+                                    const float x, const float y, const float width) {
+  auto run = glyph_run(font, text);
+  if (width <= 0) {
+    return {};
+  }
+  if (run_width(font, run) > width) {
+    const auto dots = glyph_run(font, "...");
+    const float tail = run_width(font, dots);
+    float used = run_width(font, run);
+    while (!run.empty() && used + tail > width) {
+      used -= run_width(font, {run.back()});
+      run.pop_back();
+    }
+    if (tail <= width) {
+      run.insert(run.end(), dots.begin(), dots.end());
+    }
+  }
+  return layout_run(font, run, x, y);
+}
+
 GlyphQuad glyph_cell(const GlyphFont &font, const int glyph, const float x, const float y) {
   const float u = static_cast<float>(glyph % font.columns) * font.cell;
   const float v = static_cast<float>(glyph / font.columns) * font.cell;

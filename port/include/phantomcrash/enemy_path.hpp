@@ -30,6 +30,7 @@ struct EnemyPath {
 // Walks a robot along an EnemyPath: the current target point, and at a
 // segment's end a random next segment.
 class PathFollower final {
+  friend class StateInspector;
 public:
   PathFollower() = default;
   // Starts at the first point of `segment`.
@@ -37,8 +38,10 @@ public:
   // Join the nearest portion of a segment, continuing toward its next point.
   void join(const EnemyPath &path, int segment, Vec3 position);
   // Moves on to the next point when `position` is within `reach` of the
-  // target. Returns the target to steer toward.
-  Vec3 update(const EnemyPath &path, Vec3 position, float reach, std::minstd_rand &random);
+  // target. Returns the target to steer toward. `blocked` (by segment) rules
+  // out next segments; with all of them ruled out, the segment is a dead end.
+  Vec3 update(const EnemyPath &path, Vec3 position, float reach, std::minstd_rand &random,
+              const std::vector<bool> *blocked = nullptr);
 
   [[nodiscard]] int segment() const noexcept {
     return segment_;

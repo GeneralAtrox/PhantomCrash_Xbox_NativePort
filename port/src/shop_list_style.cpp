@@ -112,6 +112,7 @@ ShopGoodsList parse_goods_list(const json::JsonValue &value) {
   list.row_step = number_of(value, "row_step");
   const auto &name = required(value, "name");
   list.name_at = numbers<2>(required(name, "position"), "position");
+  list.name_width = static_cast<float>(name.number_or("width", 0));
   list.name_colour = parse_colour(required(name, "colour").string());
   list.name_layer = integer_of(name, "layer");
   list.maker_icons = member(value, "maker_icons", parse_sprites);
@@ -123,6 +124,30 @@ ShopGoodsList parse_goods_list(const json::JsonValue &value) {
     throw std::runtime_error("list: rows must be above 0");
   }
   return list;
+}
+
+float goods_name_width(const ShopGoodsList &list, const float padding) {
+  const auto &window = list.window.sprite;
+  const float panel_width = window.size ? (*window.size)[0] : window.rect[2] - window.rect[0];
+  float right = window.position[0] + panel_width * (window.centered ? .5F : 1.0F);
+  const auto reserve = [&](const Sprite &sprite) {
+    const float width = sprite.size ? (*sprite.size)[0] : sprite.rect[2] - sprite.rect[0];
+    const float left = sprite.position[0] - (sprite.centered ? width * .5F : 0);
+    if (width > 0 && left > list.name_at[0]) {
+      right = std::min(right, left);
+    }
+  };
+  for (const auto *badges : {&list.hangar_badges, &list.side_marks, &list.lit_side_marks}) {
+    for (const auto &badge : *badges) {
+      reserve(badge);
+    }
+  }
+  if (list.badge_base) {
+    reserve(*list.badge_base);
+  }
+  reserve(list.in_use);
+  const float available = std::max(0.0F, right - list.name_at[0] - padding);
+  return list.name_width > 0 ? std::min(list.name_width, available) : available;
 }
 
 } // namespace phantomcrash

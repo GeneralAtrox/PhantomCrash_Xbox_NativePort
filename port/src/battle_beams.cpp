@@ -53,6 +53,7 @@ void Armory::tick_beams(const float seconds, const std::vector<Target> &targets,
     Projectile shot;
     shot.weapon = &weapon;
     shot.owner = beam.owner;
+    shot.slot = beam.slot;
     shot.team = beam.team;
     // 0x098eda case 1: a robot the tip reaches takes the hit and the ray is
     // gone; 0x09b9fe starts it again from the muzzle the next tick.
@@ -91,7 +92,7 @@ void Armory::tick_beams(const float seconds, const std::vector<Target> &targets,
     hits.push_back({victim, beam.owner, weapon.damage, weapon.stagger_seconds, *contact, &weapon,
                     beam.direction, true});
     const std::size_t first = hits.size();
-    detonate(shot, *contact, targets, hits, body.on_robot);
+    detonate(shot, *contact, targets, hits, body.on_robot, std::nullopt, victim);
     for (std::size_t index = first; index < hits.size(); ++index) {
       hits[index].direct = hits[index].direct || hits[index].victim == victim;
     }

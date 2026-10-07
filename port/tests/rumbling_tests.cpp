@@ -16,12 +16,12 @@ namespace {
 constexpr double tick = 1.0 / 60.0;
 
 RumblingScript shipped_script() {
-  return parse_rumbling(DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT).document("ui/rumbling.json"));
+  return parse_rumbling(DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT).document("ui/rumbling.json"));
 }
 
 RumblingRules shipped_rules() {
   return parse_rumbling_rules(
-      DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT).document("world/rumbling.json"));
+      DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT).document("world/rumbling.json"));
 }
 
 // Day 0: Shinjuku holds an open contest (class 0, fee 1000), Shibuya a
@@ -108,7 +108,7 @@ TEST_CASE("rumbling.json parses with EXIT last and the sub-menu's six items") {
   CHECK(script.menu.items.back().action == RumblingAction::back);
   CHECK(script.messages.contains("regulation"));
   const RumblingBattle battle = parse_rumbling_battle(
-      DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT).document("world/rumbling.json"));
+      DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT).document("world/rumbling.json"));
   CHECK(battle.return_to == "club_wired");
 }
 
@@ -253,7 +253,7 @@ TEST_CASE("the quick rental restarts its contest while preserving the player's g
   Fixture fixture;
   const QuickRental preset =
       parse_rumbling_battle(
-          DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT).document("world/rumbling.json"))
+          DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT).document("world/rumbling.json"))
           .quick_rentals.front();
   CHECK(preset.screen == "rumbling_d_rental");
   fixture.garage.robots.resize(static_cast<std::size_t>(preset.robot + 1));
@@ -289,7 +289,7 @@ TEST_CASE("the quick rental restarts its contest while preserving the player's g
 
 TEST_CASE("the level select offers a night rental match under its own screen") {
   const auto battle = parse_rumbling_battle(
-      DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT).document("world/rumbling.json"));
+      DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT).document("world/rumbling.json"));
   REQUIRE(battle.quick_rentals.size() == 2);
   const QuickRental *night = find_quick_rental(battle, "rumbling_d_night_rental");
   REQUIRE(night != nullptr);
@@ -303,7 +303,7 @@ TEST_CASE("an unavailable quick rental leaves the saved quest untouched") {
   const Fixture fixture;
   const QuickRental preset =
       parse_rumbling_battle(
-          DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT).document("world/rumbling.json"))
+          DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT).document("world/rumbling.json"))
           .quick_rentals.front();
   QuestSave quest = riding_quest();
   const QuestSave before = quest;

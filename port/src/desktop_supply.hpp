@@ -67,6 +67,10 @@ private:
   // Both parities' models for the pickups, -1 where one did not load.
   std::array<int, 2> pickup_models_{-1, -1};
   std::array<std::vector<std::vector<int>>, 2> pickup_nodes_;
+  int counter_model_{-1};
+  int carrier_light_model_{-1};
+  std::array<int, supply_kind_count> counter_images_{};
+  unsigned counter_seen_{};
   int glow_texture_{-1};
   std::vector<Burst> bursts_;
   std::vector<AttachedLight> lights_;

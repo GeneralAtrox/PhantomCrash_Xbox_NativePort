@@ -79,8 +79,9 @@ void draw_goods_rows(DrawList &list, const GlyphFont &font, const ShopGoodsList 
 
 void draw_goods_row(DrawList &list, const GlyphFont &font, const ShopGoodsList &style,
                     const ShopGoods &line, const GoodsRowLook *look, const float dy) {
+  const float width = goods_name_width(style, font.cell);
   list.text(style.name_layer,
-            layout_run(font, glyph_run(font, line.name), style.name_at[0], style.name_at[1] + dy),
+            layout_label(font, line.name, style.name_at[0], style.name_at[1] + dy, width),
             look != nullptr ? look->name : style.name_colour);
   draw_indexed(list, style.maker_icons, line.maker, dy);
   if (line.in_use && look == nullptr) {

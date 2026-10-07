@@ -1,4 +1,5 @@
 #include "desktop_world_renderer.hpp"
+#include "desktop_world_constants.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -7,53 +8,7 @@
 namespace phantomcrash {
 namespace {
 
-// Byte-for-byte the HLSL constant buffers (desktop_world_shaders.cpp).
-struct FrameConstants {
-  Mat4 view_projection;
-  Vec3 eye;
-  float fog_start;
-  Vec3 ambient;
-  float fog_end;
-  Vec3 sun_direction;
-  float fog_enabled;
-  Vec3 sun_colour;
-  float shadow_length;
-  Vec3 fog_colour;
-  float pad1;
-};
-static_assert(sizeof(FrameConstants) == 144);
-
-struct DrawConstants {
-  Mat4 world;
-  std::array<float, 4> base_colour;
-  float alpha_cutoff;
-  float unlit;
-  float has_base;
-  float has_normal;
-  float alpha_test;
-  float fogged;
-  float item_alpha;
-  float flash;
-  std::array<float, 2> uv_offset;
-  float optical;
-  float local_light;
-  std::array<float, 4> optical_sphere;
-  std::array<float, 4> optical_shape;
-  std::array<float, 4> uv_transform{1, 1, 0, 0};
-  std::array<float, 4> rainbow{};        // phase, scroll, enabled, unused
-  std::array<float, 4> material_light{}; // ambient RGB, specular power
-  std::array<float, 4> material_modes{}; // specular, texture add, texture alpha, original
-};
-static_assert(sizeof(DrawConstants) == 224);
-
-template <typename T>
-void upload(ID3D11DeviceContext *context, ID3D11Buffer *buffer, const T &data) {
-  D3D11_MAPPED_SUBRESOURCE mapped{};
-  if (SUCCEEDED(context->Map(buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped))) {
-    std::memcpy(mapped.pData, &data, sizeof(T));
-    context->Unmap(buffer, 0);
-  }
-}
+using namespace world_constants;
 
 bool blended(const ModelMaterial &material) {
   return material.alpha == AlphaMode::blend || material.additive;
@@ -244,7 +199,14 @@ void WorldRenderer::item_draws(const WorldItem &item, const int index, const Vec
     const float distance = length(transform_point(draw.centre, world) - eye);
     const bool blend = blended(model.data.materials[static_cast<std::size_t>(draw.material)]);
     const bool faded = item.alpha < 1.0F;
-    out.push_back({&model, &draw, world, distance, paint, item.alpha, item.flash,
+    const auto &material = model.data.materials[static_cast<std::size_t>(draw.material)];
+    ID3D11ShaderResourceView *atlas =
+        material.part_paint
+            ? (item.part_paint >= 0 && item.part_paint < static_cast<int>(textures_.size())
+                   ? textures_[static_cast<std::size_t>(item.part_paint)].Get()
+                   : nullptr)
+            : paint;
+    out.push_back({&model, &draw, world, distance, atlas, item.alpha, item.flash,
                    faded && !blend ? index : -1, &item, sky, blend,
                    std::ranges::find(item.monitor_nodes, node.name) != item.monitor_nodes.end(),
                    uv_offset});
@@ -298,8 +260,9 @@ void WorldRenderer::draw_one(const Draw &draw, const bool sky, const StageLighti
   const auto sampler_of = [&](const int texture) -> ID3D11SamplerState * {
     return texture >= 0 ? model.samplers[static_cast<std::size_t>(texture)].Get() : nullptr;
   };
-  const bool painted = draw.paint != nullptr && material.base_texture >= 0 &&
-                       model.paintable[static_cast<std::size_t>(material.base_texture)];
+  const bool painted =
+      draw.paint != nullptr && material.base_texture >= 0 &&
+      (material.part_paint || model.paintable[static_cast<std::size_t>(material.base_texture)]);
   ID3D11ShaderResourceView *views[] = {painted ? draw.paint : view_of(material.base_texture),
                                        view_of(material.normal_texture)};
   ID3D11SamplerState *samplers[] = {sampler_of(material.base_texture),
@@ -311,6 +274,15 @@ void WorldRenderer::draw_one(const Draw &draw, const bool sky, const StageLighti
   constants.uv_offset = draw.uv_offset;
   constants.alpha_cutoff = material.alpha_cutoff;
   constants.unlit = material.unlit ? 1.0F : 0.0F;
+  if (!sky && !overlay && !material.unlit && !draw.item->ground_shadow && !draw.item->rainbow) {
+    const auto source =
+        sample_source_lights(lighting.source_lights, transform_point({}, draw.item->world));
+    for (std::size_t i = 0; i < source.size(); ++i) {
+      const auto &s = source[i];
+      constants.source_directions[i] = {s.toward.x, s.toward.y, s.toward.z, 0};
+      constants.source_colours[i] = {s.colour.x, s.colour.y, s.colour.z, 0};
+    }
+  }
   constants.has_base = views[0] != nullptr ? 1.0F : 0.0F;
   constants.has_normal = views[1] != nullptr ? 1.0F : 0.0F;
   constants.alpha_test = material.alpha == AlphaMode::mask ? 1.0F : 0.0F;

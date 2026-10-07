@@ -16,12 +16,12 @@ namespace {
 constexpr double tick = 1.0 / 60.0;
 
 AssembleScript shipped_script() {
-  return parse_assemble(DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT).document("ui/assemble.json"));
+  return parse_assemble(DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT).document("ui/assemble.json"));
 }
 
 PartStatsTable shipped_table() {
   return parse_part_stats(
-      DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT).document("ui/part_stats.json"));
+      DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT).document("ui/part_stats.json"));
 }
 
 // Body 0 (maker 2, four sockets), body 1 (maker 2, two sockets), body 2

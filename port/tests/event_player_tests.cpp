@@ -325,7 +325,7 @@ TEST_CASE("an event with a check the port lacks does not play") {
 }
 
 TEST_CASE("the shipped talk tuning and tables parse") {
-  const auto roots = DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT);
+  const auto roots = DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT);
   const auto tuning = parse_event_tuning(roots.document("story/talk.json"));
   CHECK(tuning.character_fade_frames == 30);
   CHECK(tuning.confirm_buttons == button::confirm);

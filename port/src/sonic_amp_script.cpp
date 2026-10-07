@@ -73,6 +73,12 @@ SonicAmpGrid parse_grid(const json::JsonValue &value) {
     grid.category_pages.push_back(static_cast<int>(pages.number()));
   }
   grid.catalogue_tracks = static_cast<int>(required(catalogue, "tracks").number());
+  if (const auto *ids = catalogue.find("credit_ids")) {
+    for (const auto &id : ids->array()) {
+      grid.catalogue_ids.push_back(static_cast<int>(id.number()));
+    }
+    grid.catalogue_tracks = static_cast<int>(grid.catalogue_ids.size());
+  }
   grid.short_page_offset = number_of(catalogue, "short_page_offset");
   grid.page_box = member(catalogue, "page_box", parse_sprite);
   grid.page_slash = member(catalogue, "page_slash", parse_sprite);

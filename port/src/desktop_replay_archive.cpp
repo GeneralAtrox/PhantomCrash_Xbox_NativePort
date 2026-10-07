@@ -72,12 +72,17 @@ public:
   void value(WorldItem &v) {
     fields(v.robot, v.model, v.world, v.sky_nodes, v.shadow_nodes, v.two_sided_materials,
            v.lit_hidden_materials, v.sky_motion, v.sky_seconds, v.monitor_nodes, v.node_worlds,
-           v.paint, v.alpha, v.flash, v.node, v.colour, v.uv_offset, v.scale_x, v.additive,
-           v.optical, v.casts_shadow, v.ground_shadow, v.double_sided, v.fogged, v.rainbow);
+           v.paint, v.part_paint, v.alpha, v.flash, v.node, v.colour, v.uv_offset, v.scale_x,
+           v.additive, v.optical, v.casts_shadow, v.ground_shadow, v.double_sided, v.fogged,
+           v.rainbow);
   }
   void value(WorldFrame &v) {
     fields(v.width, v.height, v.view, v.projection, v.eye, v.lighting, v.items, v.overlay,
            v.sprites, v.lights, v.air, v.shadow_length, v.transparent);
+  }
+  void value(StageLighting &v) {
+    fields(v.ambient, v.sun_direction, v.sun_colour, v.fog, v.fog_colour, v.fog_start, v.fog_end,
+           v.clear_colour, v.source_lights, v.shadow_colour, v.screen);
   }
   void value(ReplaySubject &v) {
     fields(v.camera, v.cockpit, v.name, v.alive, v.in_play);

@@ -16,12 +16,12 @@ namespace {
 constexpr double tick = 1.0 / 60.0;
 
 SvSpecScript shipped_script() {
-  return parse_sv_spec(DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT).document("ui/sv_spec.json"));
+  return parse_sv_spec(DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT).document("ui/sv_spec.json"));
 }
 
 PartStatsTable shipped_table() {
   return parse_part_stats(
-      DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT).document("ui/part_stats.json"));
+      DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT).document("ui/part_stats.json"));
 }
 
 // A body of maker 1 and legs light enough not to slow it; an arm weapon.

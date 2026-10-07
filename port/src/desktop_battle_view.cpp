@@ -150,7 +150,7 @@ void BattleView::bind(Battle &battle) {
     if (battle.cooperative() && robot.pose) {
       visuals_[i]->combat = robot.pose;
     }
-    if (robot.pose != visuals_[i]->combat) {
+    if (!battle.simulation_poses() && robot.pose != visuals_[i]->combat) {
       robot.pose = visuals_[i]->combat;
       std::array<Vec3, 4> targets;
       targets.fill(robot.aim_origin() +
@@ -188,7 +188,78 @@ void BattleView::tick(Battle &battle, const float seconds) {
       visuals_[index]->dying = robots[index].dying;
     }
     visuals_[index]->pose = visuals_[index]->combat->pose();
+    std::array<bool, 4> fired{};
+    for (const auto &event : battle.events()) {
+      if (event.kind == BattleEventKind::fired && event.robot == static_cast<int>(index) &&
+          event.slot >= 0 && event.slot < 4) {
+        fired[static_cast<std::size_t>(event.slot)] = true;
+      }
+    }
+    visual.parts->animate(robot.mover.motion(), visual.combat->motion_frame(),
+                          robot.mover.motion_loops(), seconds, fired, robot.mover.motion_revision(),
+                          robot.mover.motion_speed());
   }
+}
+
+std::optional<Mat4> BattleView::source_weapon_frame(const Battle &battle, const int owner,
+                                                    const int slot, const int node) const {
+  if (owner < 0 || owner >= static_cast<int>(visuals_.size()) ||
+      owner >= static_cast<int>(battle.robots().size())) {
+    return std::nullopt;
+  }
+  const auto &robot = battle.robots()[static_cast<std::size_t>(owner)];
+  const auto &visual = *visuals_[static_cast<std::size_t>(owner)];
+  const Mat4 root = rotation_y(robot.mover.heading()) * translation(robot.mover.position());
+  return visual.parts->source_weapon_frame(visual.pose, root, visual.combat->shoulders(), slot,
+                                           node);
+}
+
+SourceMotionClock BattleView::source_motion_clock(const std::size_t owner) const {
+  if (owner >= visuals_.size() || !visuals_[owner]->combat) {
+    return {};
+  }
+  const auto &visual = *visuals_[owner];
+  const int motion = visual.combat->motion();
+  const auto &actions = visual.assembly.source_motion_actions;
+  if (motion < 0 || motion >= static_cast<int>(actions.size()) ||
+      motion >= static_cast<int>(visual.assembly.timings.size())) {
+    return {};
+  }
+  return {actions[motion], visual.combat->motion_frame(), visual.assembly.timings[motion].last, 0};
+}
+
+std::optional<Mat4> BattleView::source_model_frame(const Battle &battle, const int owner,
+                                                   const int part, const int node) const {
+  if (owner < 0 || owner >= static_cast<int>(visuals_.size()) ||
+      owner >= static_cast<int>(battle.robots().size()) || node < 0) {
+    return std::nullopt;
+  }
+  const auto &visual = *visuals_[owner];
+  if (part == 0) {
+    const auto &controls = visual.pose[0].source_controls;
+    return node < static_cast<int>(controls.size()) ? controls[node] : std::nullopt;
+  }
+  if (part == 1) {
+    const auto &robot = battle.robots()[static_cast<std::size_t>(owner)];
+    return visual.parts->source_body_frame(
+        visual.pose, rotation_y(robot.mover.heading()) * translation(robot.mover.position()), node);
+  }
+  return std::nullopt;
+}
+
+std::optional<Mat4> BattleView::source_impact_frame(const Battle &battle, const int owner) const {
+  if (owner < 0 || owner >= static_cast<int>(visuals_.size()) ||
+      owner >= static_cast<int>(battle.robots().size())) {
+    return std::nullopt;
+  }
+  const auto &pose = visuals_[static_cast<std::size_t>(owner)]->pose[0];
+  if (pose.source_model_root) {
+    return pose.source_model_root;
+  }
+  // Phantom Crash targets have no S.L.A.I. control zero. Their actor root is
+  // the mixed-game attachment adapter; the torso is a separate aiming frame.
+  const auto &robot = battle.robots()[static_cast<std::size_t>(owner)];
+  return rotation_y(robot.mover.heading()) * translation(robot.mover.position());
 }
 
 void BattleView::add_items(const Battle &battle, std::vector<WorldItem> &items, const int hidden,

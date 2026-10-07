@@ -4,11 +4,13 @@
 
 #include <cstdint>
 #include <filesystem>
+#include <memory>
 #include <string>
 #include <string_view>
 #include <vector>
 
 namespace phantomcrash {
+struct RigidRig;
 
 // A static 3D model loaded from glTF 2.0 (the converter writes every game
 // model as .gltf + .bin; anything authored in a standard tool loads the same
@@ -47,6 +49,7 @@ struct ModelMaterial {
   bool texture_add{};           // stage flag 1: ADD instead of MODULATE
   bool texture_alpha{true};     // stage flag 0x40; generic glTF multiplies alpha
   bool original_material{};
+  bool part_paint{}; // a part-specific atlas, independent of the robot's shared atlas
 };
 
 struct ModelDraw {
@@ -63,6 +66,7 @@ struct ModelNode {
   std::string name;
   Mat4 world; // model space
   Mat4 local; // relative to its parent
+  int rig_node{-1};
 };
 
 struct ModelData {
@@ -72,6 +76,7 @@ struct ModelData {
   std::vector<ModelMaterial> materials;
   std::vector<ModelNode> nodes;
   std::vector<ModelDraw> draws;
+  std::shared_ptr<const RigidRig> rig;
   Vec3 bounds_min{};
   Vec3 bounds_max{};
 };

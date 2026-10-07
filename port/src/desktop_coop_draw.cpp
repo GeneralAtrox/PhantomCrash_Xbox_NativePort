@@ -71,13 +71,14 @@ InputFrame CoopScreen::player_input(const InputFrame &input, const int slot) con
   // The keyboard/mouse belongs to its joined port. Controllers never inherit
   // another player's analog axes or a global mouse click.
   if (players_[slot].port == 0 && input.pointer) {
-    const int count = playing_ ? static_cast<int>(std::ranges::count_if(
-                                     players_, [](const Player &p) { return p.port >= 0; }))
-                               : 4;
+    const int count = state_->online ? 1
+                      : playing_     ? static_cast<int>(std::ranges::count_if(
+                                       players_, [](const Player &p) { return p.port >= 0; }))
+                                     : 4;
     const auto panes = coop_panes(count, viewport_.pixel_width, viewport_.pixel_height);
     int pane = 0;
     for (int i = 0; i < slot; ++i) {
-      if (!playing_ || players_[i].port >= 0) {
+      if (!state_->online && (!playing_ || players_[i].port >= 0)) {
         ++pane;
       }
     }
@@ -118,6 +119,10 @@ void CoopScreen::draw_presence(const int slot, const Viewport &v) {
   text(header, "P" + std::to_string(slot + 1) + (self.connected ? "" : " CONTROLLER DISCONNECTED"),
        8, 1, 10, {255, 230, 80, 255});
   float y = 14;
+  if (state_->online) {
+    draw_online_presence(header);
+    return;
+  }
   for (int other = 0; other < 4; ++other) {
     const auto &peer = players_[other];
     if (other == slot || !peer.runner) {
@@ -167,9 +172,13 @@ void CoopScreen::draw_presence(const int slot, const Viewport &v) {
 
 void CoopScreen::draw(const Viewport &viewport) {
   viewport_ = viewport;
-  const int count = playing_ ? static_cast<int>(std::ranges::count_if(
-                                   players_, [](const Player &p) { return p.port >= 0; }))
-                             : 4;
+  if (draw_online_wait(viewport)) {
+    return;
+  }
+  const int count = state_->online ? 1
+                    : playing_     ? static_cast<int>(std::ranges::count_if(
+                                     players_, [](const Player &p) { return p.port >= 0; }))
+                                   : 4;
   if (!count) {
     return;
   }
@@ -178,7 +187,8 @@ void CoopScreen::draw(const Viewport &viewport) {
   int pane = 0;
   for (int slot = 0; slot < 4; ++slot) {
     auto &player = players_[slot];
-    if (playing_ && player.port < 0) {
+    if ((state_->online && slot != online_slot_) ||
+        (!state_->online && playing_ && player.port < 0)) {
       continue;
     }
     const auto &rect = panes.at(pane++).rect;
@@ -206,7 +216,10 @@ void CoopScreen::draw(const Viewport &viewport) {
         draw_presence(slot, local);
       }
     } else {
-      text(local, "CO-OP / PLAYER " + std::to_string(slot + 1), 48, 65, 22);
+      text(local,
+           std::string(state_->online ? "ONLINE / PLAYER " : "CO-OP / PLAYER ") +
+               std::to_string(slot + 1),
+           48, 65, 22);
       if (player.port < 0) {
         text(local, "Press START to join", 48, 165);
         text(local, "BACK (Esc): main menu", 48, 230, 11);
@@ -217,7 +230,10 @@ void CoopScreen::draw(const Viewport &viewport) {
         const auto &save = player.runner->quest_save();
         text(local, save.player_name + " - DAY " + std::to_string(save.day + 1), 48, 165);
         text(local, "READY", 48, 210, 20, {100, 230, 150, 255});
-        text(local, slot == 0 ? "START: start game when everyone is ready" : "Waiting for Player 1",
+        text(local,
+             state_->online ? "START: enter city"
+             : slot == 0    ? "START: start game when everyone is ready"
+                            : "Waiting for Player 1",
              48, 270, 11);
         text(local, "B: change save", 48, 305, 11);
       } else {

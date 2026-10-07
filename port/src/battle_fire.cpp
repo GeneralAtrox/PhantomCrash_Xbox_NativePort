@@ -48,6 +48,15 @@ StrikeStart strike_start(const Combatant &robot, const WeaponTuning &weapon, con
   StrikeStart start;
   start.motion =
       strike_motion(weapon.model, slot < 2 ? static_cast<int>(slot) : 0, robot.mover.grounded());
+  start.lunge_at = lunge_target(robot, slot, robots);
+  if (slot < 2 && (weapon.source_melee_kind == 6 || weapon.source_melee_kind == 7)) {
+    start.source_free_arm_action = !start.lunge_at;
+    if (robot.pose && robot.pose->assembly().source_melee_motions.size() == 8) {
+      const int action = (weapon.source_melee_kind == 6 ? 39 : 35) + (start.lunge_at ? 2 : 0) +
+                         static_cast<int>(slot);
+      start.motion = robot.pose->assembly().source_melee_motions[action - 35];
+    }
+  }
   start.armed_frames = fallback_strike_armed_frames;
   start.last_frames = fallback_strike_last_frames;
   if (robot.pose) {
@@ -60,7 +69,6 @@ StrikeStart strike_start(const Combatant &robot, const WeaponTuning &weapon, con
       }
     }
   }
-  start.lunge_at = lunge_target(robot, slot, robots);
   start.piloted = robot.piloted;
   return start;
 }
@@ -153,6 +161,11 @@ void Battle::update_lock(Combatant &robot, const std::size_t slot, const float s
   }
 }
 
+void Battle::reset_fire_inputs(Combatant &robot) {
+  robot.firing.fill(false);
+  robot.trigger_held.fill(false);
+}
+
 // The muzzle's flash and sound (0x098bb7, 0x099c02): once a trigger pull,
 // and once more for each round of a missile volley.
 void Battle::fired(const int index, const std::size_t slot, const WeaponTuning &weapon) {
@@ -171,6 +184,9 @@ void Battle::fired(const int index, const std::size_t slot, const WeaponTuning &
 
 void Battle::fire_weapons(const int index, const FireControl &fire, const float seconds) {
   Combatant &robot = robots_[static_cast<std::size_t>(index)];
+  if (!robot.mover.striking()) {
+    robot.source_free_arm_action = false;
+  }
   const std::vector<Target> bodies = targets();
   std::vector<WeaponHit> hits;
   for (std::size_t slot = 0; slot < weapon_slots; ++slot) {
@@ -185,6 +201,7 @@ void Battle::fire_weapons(const int index, const FireControl &fire, const float 
     }
     update_lock(robot, slot, seconds);
     const bool allowed = index != 0 || (allowed_weapons_ & (1U << slot)) != 0;
+    robot.trigger_held[slot] = weapon_on(robot, slot) != nullptr && allowed && fire.fire[slot];
     robot.firing[slot] = weapon_on(robot, slot) != nullptr && allowed &&
                          ((fire.fire[slot] && !magazine.empty()) || robot.queued_rounds[slot] > 0);
   }
@@ -204,7 +221,8 @@ void Battle::fire_weapons(const int index, const FireControl &fire, const float 
           break;
         }
         armory_.fire(*weapon, index, robot.team, muzzle(robot, mount),
-                     muzzle_direction(robot, mount), robot.locks[slot], bodies);
+                     muzzle_direction(robot, mount), robot.locks[slot], bodies, 1,
+                     static_cast<int>(slot));
         fired(index, slot, *weapon);
         if (robot.pose) {
           robot.pose->advance_muzzle(slot);
@@ -246,17 +264,19 @@ void Battle::fire_weapons(const int index, const FireControl &fire, const float 
       armory_.hold_beam(*weapon, index, static_cast<int>(slot), robot.team, muzzle(robot, mount),
                         muzzle_direction(robot, mount));
     } else if (weapon->kind == WeaponKind::melee) {
-      if (robot.mover.strike(strike_start(robot, *weapon, slot, robots_))) {
+      const auto start = strike_start(robot, *weapon, slot, robots_);
+      if (robot.mover.strike(start)) {
         robot.strike_slot = static_cast<int>(slot);
+        robot.source_free_arm_action |= start.source_free_arm_action;
       }
     } else if (fires_one_at_a_time(*weapon) && rounds > 1) {
       armory_.fire(*weapon, index, robot.team, muzzle(robot, mount), muzzle_direction(robot, mount),
-                   robot.locks[slot], bodies);
+                   robot.locks[slot], bodies, 1, static_cast<int>(slot));
       robot.queued_rounds[slot] = rounds - 1;
       robot.queue_left[slot] = missile_round_seconds;
     } else {
       armory_.fire(*weapon, index, robot.team, muzzle(robot, mount), muzzle_direction(robot, mount),
-                   robot.locks[slot], bodies, rounds);
+                   robot.locks[slot], bodies, rounds, static_cast<int>(slot));
     }
     if (robot.pose) {
       robot.pose->advance_muzzle(slot);

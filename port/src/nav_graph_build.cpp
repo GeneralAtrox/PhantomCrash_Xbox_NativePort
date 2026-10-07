@@ -22,6 +22,11 @@ constexpr float climb_cost_share = 0.5F; // a jump costs this much a unit climbe
 constexpr int drop_cells = 2;            // drops land this many cells away at most
 constexpr float enclosure_reach = 80.0F; // how far the enclosure test looks
 constexpr int enclosed_ways = 3;         // of four level looks, this many meet a wall's back
+constexpr float sweep_start = 0.5F;      // the body sweep starts this far up (clear of the ground)
+constexpr float sweep_step = 0.5F;       // and rises this much a test
+constexpr float sweep_pushed = head_bump_drop; // pushed down this far, the body has met an overhang
+constexpr float body_step = 0.5F;              // the drop sweep moves the body this far a test
+constexpr float body_turned = 0.1F;            // pushed back this far, the body has met a wall
 
 Vec3 up(const float height) {
   return {0.0F, height, 0.0F};
@@ -32,44 +37,6 @@ float flat_distance(const Vec3 a, const Vec3 b) {
 }
 
 } // namespace
-
-NavTuning parse_nav_tuning(const json::JsonValue &value) {
-  NavTuning t;
-  const auto number = [&](const char *key, const float fallback) {
-    return static_cast<float>(value.number_or(key, fallback));
-  };
-  t.enabled = value.boolean_or("enabled", t.enabled);
-  t.cell = std::max(0.5F, number("cell", t.cell));
-  t.step = number("step", t.step);
-  t.jump_rise = number("jump_rise", t.jump_rise);
-  t.jump_cells = std::clamp(static_cast<int>(number("jump_cells", 3.0F)), 1, 8);
-  t.headroom = number("headroom", t.headroom);
-  t.wall_clearance = number("wall_clearance", t.wall_clearance);
-  t.jump_cost = number("jump_cost", t.jump_cost);
-  t.drop_cost = number("drop_cost", t.drop_cost);
-  t.waypoint_reach = number("waypoint_reach", t.waypoint_reach);
-  t.replan_seconds = number("replan_seconds", t.replan_seconds);
-  t.stuck_seconds = number("stuck_seconds", t.stuck_seconds);
-  t.give_up_seconds = number("give_up_seconds", t.give_up_seconds);
-  t.avoid_seconds = number("avoid_seconds", t.avoid_seconds);
-  t.avoid_cost = number("avoid_cost", t.avoid_cost);
-  t.goal_moved = number("goal_moved", t.goal_moved);
-  t.replan_min_seconds = number("replan_min_seconds", t.replan_min_seconds);
-  t.plans_per_tick =
-      std::max(0, static_cast<int>(number("plans_per_tick", static_cast<float>(t.plans_per_tick))));
-  t.high_ground = value.boolean_or("high_ground", t.high_ground);
-  t.vantage_rise = number("vantage_rise", t.vantage_rise);
-  t.vantage_radius = number("vantage_radius", t.vantage_radius);
-  t.vantage_nearest = number("vantage_nearest", t.vantage_nearest);
-  t.vantage_range_share = number("vantage_range_share", t.vantage_range_share);
-  t.vantage_path_limit = number("vantage_path_limit", t.vantage_path_limit);
-  t.vantage_seconds = number("vantage_seconds", t.vantage_seconds);
-  t.vantage_chance = number("vantage_chance", t.vantage_chance);
-  t.vantage_sight_tests = static_cast<int>(number("vantage_sight_tests", 48.0F));
-  t.rejoin_sight_tests = std::max(
-      1, static_cast<int>(number("rejoin_sight_tests", static_cast<float>(t.rejoin_sight_tests))));
-  return t;
-}
 
 bool nav_walkable(const StageCollision &stage, const Vec3 from, const Vec3 to, const float step,
                   const float half_width) {
@@ -275,6 +242,7 @@ private:
   void link_air(const int a, std::vector<NavEdge> &edges) {
     const auto [i, j] = cell_xy(a);
     const Vec3 from = pos(a);
+    const float room = rise_room(from);
     const int reach = tuning_.jump_cells;
     for (int dj = -reach; dj <= reach; ++dj) {
       for (int di = -reach; di <= reach; ++di) {
@@ -293,13 +261,14 @@ private:
           const float distance = flat_distance(from, to);
           const bool ledge = graph_.nodes_[static_cast<std::size_t>(b)].ledge;
           if (ledge && rise > tuning_.step && rise <= tuning_.jump_rise) {
-            if (jump_clear(from, to)) {
+            if (rise + lip_clearance <= room && jump_clear(from, to)) {
               edges.push_back({static_cast<std::uint32_t>(b),
                                distance + rise * climb_cost_share + tuning_.jump_cost,
                                NavLink::jump});
             }
           } else if (ledge && std::abs(rise) <= tuning_.step && cells >= 2) {
-            if (gap_between(from, to) && jump_clear(from, to)) {
+            if (std::max(rise, 0.0F) + lip_clearance <= room && gap_between(from, to) &&
+                jump_clear(from, to)) {
               edges.push_back(
                   {static_cast<std::uint32_t>(b), distance + tuning_.jump_cost, NavLink::jump});
             }
@@ -310,6 +279,22 @@ private:
         });
       }
     }
+  }
+
+  // How high a robot's feet rise straight up from `feet` before its body
+  // (a sphere of body_radius, as the mover pushes it) meets an overhang.
+  float rise_room(const Vec3 feet) const {
+    const float r = tuning_.body_radius;
+    const float limit = tuning_.jump_rise + lip_clearance;
+    for (float rise = sweep_start; rise <= limit; rise += sweep_step) {
+      Vec3 centre = feet + up(r + rise);
+      const float level = centre.y;
+      stage_.push_sphere(centre, r);
+      if (centre.y < level - sweep_pushed) {
+        return rise;
+      }
+    }
+    return limit;
   }
 
   // Straight up from the take-off, then across above the higher end.
@@ -324,12 +309,36 @@ private:
            !stage_.segment_hit(rise_to, over + up(chest_height));
   }
 
-  // Off the lip, then straight down.
+  // Off the lip, then straight down. The whole robot walks off: a beam over
+  // the lip above its chest stops it too (Shibuya's pit rim at (-69.6, -48,
+  // -32.5) hangs 2.5-4 units over the edge, and robots walked into it).
   bool drop_clear(const Vec3 from, const Vec3 to) const {
     const Vec3 out{to.x, from.y + knee_height, to.z};
+    const float head = tuning_.headroom - headroom_start;
     return !stage_.segment_hit(from + up(knee_height), out) &&
            !stage_.segment_hit(from + up(chest_height), out + up(chest_height - knee_height)) &&
-           !stage_.segment_hit(out, to + up(headroom_start));
+           !stage_.segment_hit(from + up(head), out + up(head - knee_height)) &&
+           !stage_.segment_hit(out, to + up(headroom_start)) && body_clears(from, to);
+  }
+
+  // The body (a sphere of body_radius) walked level off the lip toward the
+  // landing: a wall that turns it back keeps it on the ledge. The line tests
+  // above are thin; a wall beside the landing stopped robots at Shibuya
+  // (-35, 0.1, -15), 0.6 short of a drop.
+  bool body_clears(const Vec3 from, const Vec3 to) const {
+    const float r = tuning_.body_radius;
+    const Vec3 across{to.x - from.x, 0.0F, to.z - from.z};
+    const float span = std::hypot(across.x, across.z);
+    for (float along = std::min(body_step, span); along <= span; along += body_step) {
+      const Vec3 start = from + across * (along / span) + up(r + sweep_start);
+      Vec3 centre = start;
+      stage_.push_sphere(centre, r);
+      const Vec3 back = centre - start;
+      if (back.x * across.x + back.z * across.z < -body_turned * span) {
+        return false;
+      }
+    }
+    return true;
   }
 
   // No ground within a step of the line between two level ledges.

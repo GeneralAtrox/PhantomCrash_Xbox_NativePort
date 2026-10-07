@@ -1,5 +1,7 @@
 #include "desktop_training_robots.hpp"
 
+#include "phantomcrash/stage_fixes.hpp"
+
 #include <SDL3/SDL.h>
 
 namespace phantomcrash {
@@ -58,14 +60,15 @@ CombatStats robot_combat(const TrainingScript &script, const std::optional<PartT
   return combat;
 }
 
-void load_stage_collision(const DataRoots &roots, const std::string &asset, Battle &battle) {
+void load_stage_collision(const DataRoots &roots, const StageDefinition &stage, Battle &battle) {
+  const std::string &asset = stage.collision;
   const auto file = roots.find_asset(asset);
   if (!file) {
     SDL_Log("Stage collision %s is missing; convert the robots again", asset.c_str());
     return;
   }
   try {
-    battle.set_stage(parse_stage_collision(json::read_file(*file)));
+    battle.set_stage(fixed_stage_collision(roots, stage, json::read_file(*file)));
   } catch (const std::exception &error) {
     SDL_Log("%s: %s", asset.c_str(), error.what());
   }

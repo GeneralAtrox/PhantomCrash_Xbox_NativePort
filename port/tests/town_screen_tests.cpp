@@ -34,7 +34,7 @@ ContestTables tables() {
 }
 
 ScheduleScript shipped_schedule() {
-  return parse_schedule(DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT).document("ui/schedule.json"));
+  return parse_schedule(DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT).document("ui/schedule.json"));
 }
 
 InputFrame press(const Buttons buttons) {

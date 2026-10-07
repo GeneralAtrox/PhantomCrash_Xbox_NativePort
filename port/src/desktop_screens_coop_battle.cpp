@@ -3,10 +3,17 @@
 #include "desktop_game_screens.hpp"
 #include "desktop_training.hpp"
 #include "desktop_world_renderer.hpp"
+#include "desktop_online_wait.hpp"
 
 namespace phantomcrash {
 
 std::unique_ptr<Screen> ScreenRunner::make_coop_battle(const RumblingEntry &entry) {
+  if (coop_->online_game) {
+    coop_->online_game->request_entry(quest_, entry);
+    return std::make_unique<OnlineWaitScreen>(
+        textures_, font_, coop_->online_game,
+        CoopMatches::Key{quest_.day, entry.area, entry.contest}, coop_slot_);
+  }
   if (!coop_->matches) {
     coop_->matches = std::make_shared<CoopMatches>();
   }

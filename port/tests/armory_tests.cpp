@@ -141,10 +141,41 @@ TEST_CASE("a landing says whether it struck a robot, which picks the impact case
   const auto landings = armory.take_landings();
   REQUIRE(landings.size() == 1);
   CHECK(landings[0].on_robot);
+  CHECK(landings[0].target == 0);
   CHECK(!starts_impact(gun, true)); // 0x098eda case 0: gone without one
   CHECK(starts_impact(gun, false)); // case 1 on a wall
   gun.robot_hit = shot_hit::explode_quiet;
   CHECK(!starts_impact(gun, true));
   gun.robot_hit = shot_hit::pierce;
   CHECK(starts_impact(gun, true));
+}
+
+TEST_CASE("attached impact ownership identifies the struck body for strikes and beams") {
+  const std::vector<Target> targets{{{0, 0, 0}, 1, 0, true}, {{0, 0, -4}, 1, 1, true}};
+  WeaponTuning blade;
+  blade.kind = WeaponKind::melee;
+  Armory strike;
+  std::vector<WeaponHit> hits;
+  CHECK(strike.strike(blade, 0, 0, {0, 0, -4}, targets, hits));
+  auto landings = strike.take_landings();
+  REQUIRE(landings.size() == 1);
+  CHECK(landings[0].target == 1);
+  WeaponTuning ray;
+  ray.kind = WeaponKind::gun;
+  ray.speed = 120;
+  ray.range = 100;
+  Armory beam;
+  beam.hold_beam(ray, 0, 0, 0, {}, {0, 0, -1});
+  run(beam, targets, .1F);
+  landings = beam.take_landings();
+  REQUIRE(!landings.empty());
+  CHECK(landings[0].on_robot && landings[0].target == 1);
+  Target scenery = targets[1];
+  scenery.on_robot = false;
+  Armory wall;
+  wall.fire(ray, 0, 0, {}, {0, 0, -1}, -1, {scenery});
+  run(wall, {scenery}, .1F);
+  landings = wall.take_landings();
+  REQUIRE(!landings.empty());
+  CHECK(!landings[0].on_robot && landings[0].target == -1);
 }

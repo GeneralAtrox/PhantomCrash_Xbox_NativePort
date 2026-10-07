@@ -51,6 +51,10 @@ const MotionBank *RobotLibrary::bank(const std::string &asset_path) {
 RobotAnimator::RobotAnimator(RobotLibrary &library, const RobotAssembly &assembly)
     : assembly_(assembly), legs_(library.bank(assembly.leg_motions)),
       body_(library.bank(assembly.body_motions)) {
+  has_source_roll_ = assembly.skeleton && has_source_roll(*assembly.skeleton);
+  if (assembly.skeleton && !assembly.source_transition_frames.empty()) {
+    source_legs_.reset(*assembly.skeleton);
+  }
   for (std::size_t side = 0; side < 2; ++side) {
     arms_[side] = library.bank(assembly.arm_motions[side]);
   }
@@ -67,9 +71,32 @@ MotionTiming RobotAnimator::timing(const int motion) const {
 
 void RobotAnimator::play(const int motion, const bool loop, const float fade_frames,
                          const float start_frame, const bool restart) {
+  const bool mapped = motion >= 0 &&
+                      motion < static_cast<int>(assembly_.source_motion_actions.size()) &&
+                      assembly_.source_motion_actions[static_cast<std::size_t>(motion)] >= 0;
+  if ((mapped || std::ranges::find(assembly_.source_melee_motions, motion) !=
+                     assembly_.source_melee_motions.end()) &&
+      legs_ && !legs_->motion(motion)) {
+    return; // a disabled source action leaves this model's current playback intact
+  }
   if (motion == motion_ && !restart) {
     loop_ = loop;
     return;
+  }
+  source_transition_ = mapped && !assembly_.source_transition_frames.empty();
+  int duration =
+      source_transition_ && motion < static_cast<int>(assembly_.source_transition_frames.size())
+          ? assembly_.source_transition_frames[static_cast<std::size_t>(motion)]
+          : 0;
+  if ((motion == 8 || motion == 9) && assembly_.source_turn_frames[0] >= 0) {
+    duration = assembly_.source_turn_frames[source_actor_idle_ ? 0 : 1];
+  }
+  // Zero-duration secondary/queued actions still use their existing adapter
+  // until the source completion/promotion producer is connected.
+  source_transition_ = source_transition_ && duration > 0;
+  source_legs_.play(duration, start_frame, legs_ ? legs_->motion(motion) : nullptr, loop);
+  if (motion < 37 || motion > 44) {
+    source_actor_idle_ = motion == 28;
   }
   // What shows now is frozen to blend from: the motion alone, or, when a
   // change interrupts a blend, that blend whole, so the pose does not jump.
@@ -95,6 +122,7 @@ void RobotAnimator::play(const int motion, const bool loop, const float fade_fra
 }
 
 void RobotAnimator::tick(const double seconds) {
+  procedural_seconds_ += std::max(seconds, 0.0);
   const auto frames = static_cast<float>(seconds) * motion_frames_per_second * speed_;
   const MotionTiming t = timing(motion_);
   frame_ += frames;
@@ -108,6 +136,8 @@ void RobotAnimator::tick(const double seconds) {
   if (fade_ < 1.0F) {
     fade_ = std::min(1.0F, fade_ + frames / std::max(fade_frames_, 1e-3F));
   }
+  source_legs_.advance(source(legs_), static_cast<float>(seconds), source_transition_, loop_,
+                       speed_);
 }
 
 bool RobotAnimator::finished() const noexcept {
@@ -160,7 +190,20 @@ void RobotAnimator::pose(const Mat4 &root, const float aim_yaw, const float aim_
   input.forearm_turn = assembly_.forearm_turn;
   input.keep_sway = keep_sway;
   input.wheel_turn = wheel_turn_;
+  input.procedural_seconds = procedural_seconds_;
+  input.source_roll_angles = &source_roll_.angles();
+  input.source_roll_frames = &source_roll_.frames();
+  input.source_leg_locals = &source_legs_.locals();
   build_pose(*assembly_.skeleton, input, out);
+}
+
+void RobotAnimator::advance_source_roll(const RobotMover &mover, const float seconds) {
+  if (!has_source_roll_) {
+    return;
+  }
+  Pose unrolled;
+  pose(rotation_y(mover.heading()) * translation(mover.position()), 0, 0, keep_sway_, unrolled);
+  source_roll_.advance(*assembly_.skeleton, unrolled[0].bones, unrolled[0].set, mover, seconds);
 }
 
 namespace {

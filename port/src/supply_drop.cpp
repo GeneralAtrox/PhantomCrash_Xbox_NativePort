@@ -76,7 +76,10 @@ void SupplyDrop::tick(const float seconds, const std::function<float(Vec3)> &gro
     return;
   }
   const float ticks = seconds * settings_.tick_rate;
-  carrier_.spin = std::fmod(carrier_.spin + settings_.spin_speed * ticks, 2.0F * pi);
+  const float spin = settings_.look.pickups && !settings_.look.pickups->carrier_model.empty()
+                         ? settings_.look.pickups->light_spin_per_second * seconds
+                         : settings_.spin_speed * ticks;
+  carrier_.spin = std::fmod(carrier_.spin + spin, 2.0F * pi);
   if (phase_ == Phase::wreck) {
     fall(ticks, ground, contact);
   } else if (phase_ != Phase::parked) {
@@ -257,6 +260,15 @@ void SupplyDrop::tick_pickups(const float ticks, const std::function<float(Vec3)
       break;
     }
     if (pickup.state == SupplyState::falling || pickup.state == SupplyState::landed) {
+      if (settings_.look.pickups && settings_.look.pickups->pulse) {
+        const auto &pulse = *settings_.look.pickups->pulse;
+        const float frames = pickup.life * pulse.frame_rate / settings_.tick_rate;
+        const float rate =
+            frames <= pulse.fast_frames ? pulse.fast_rate : pulse.life_numerator / frames;
+        pickup.blink = std::fmod(
+            pickup.blink + pulse.step * rate * ticks * pulse.frame_rate / settings_.tick_rate, pi);
+        continue;
+      }
       const float rate = pickup.life <= settings_.blink_fast_ticks
                              ? settings_.blink_fast
                              : settings_.lifetime_ticks / pickup.life;

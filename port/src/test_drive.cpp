@@ -69,6 +69,12 @@ TestDriveScript parse_test_drive(const json::JsonValue &document) {
     for (const auto &[kind, name] : json::required(document, "weapon_templates").object()) {
       script.templates[kind_named(kind)] = name.string();
     }
+    if (const auto *choices = document.find("stage_choices")) {
+      for (const auto &choice : choices->array()) {
+        script.stage_choices.emplace_back(json::required(choice, "stage").string(),
+                                          json::required(choice, "label").string());
+      }
+    }
     return script;
   } catch (const std::exception &error) {
     throw std::runtime_error(std::string("test_drive.json: ") + error.what());
@@ -104,6 +110,7 @@ std::optional<WeaponTuning> record_weapon(const TestDriveScript &drive,
   tuning.label = record->name;
   tuning.kind = kind;
   tuning.part = ref;
+  tuning.source_melee_kind = record->source_melee_kind;
   apply_weapon_stats(tuning, weapon_stats(*record, ref.level));
   return tuning;
 }

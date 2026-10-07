@@ -237,7 +237,7 @@ void Battle::collide(const int index, const float seconds) {
   if ((foot_contact & stage_contact::ground) != 0) {
     robot.mover.land(at.y);
   }
-  if (drop > 0.0F) {
+  if (drop >= head_bump_drop) {
     robot.mover.bump_head();
   }
   robot.stage_contact = foot_contact | head_contact;
@@ -270,8 +270,8 @@ void Battle::separate() {
       }
       const Vec3 push = (distance > 1e-4F ? offset * (1.0F / distance) : Vec3{1.0F, 0.0F, 0.0F}) *
                         ((gap - distance) * 0.5F);
-      robots_[a].mover.set_position(pa - push);
-      robots_[b].mover.set_position(pb + push);
+      robots_[a].mover.set_position(carried(robots_[a], pa, push * -1.0F));
+      robots_[b].mover.set_position(carried(robots_[b], pb, push));
     }
   }
 }
@@ -289,7 +289,7 @@ void Battle::tick(const RobotControl &player, const FireControl &fire, const flo
   }
   for (std::size_t index = 0; index < robots_.size(); ++index) {
     Combatant &robot = robots_[index];
-    robot.firing.fill(false);
+    reset_fire_inputs(robot);
     robot.pose_updated = false;
     robot.hit_flash = std::max(0.0F, robot.hit_flash - seconds);
     robot.shown_armour.tick(robot.hp, robot.max_hp, seconds);
@@ -388,9 +388,11 @@ void Battle::tick(const RobotControl &player, const FireControl &fire, const flo
   for (const Landing &landing : armory_.take_landings()) {
     BattleEvent impact{landing.owner, BattleEventKind::impact};
     impact.weapon = landing.weapon;
+    impact.slot = landing.slot;
     impact.at = landing.at;
     impact.on_robot = landing.on_robot;
     impact.surface = landing.surface;
+    impact.target = landing.target;
     events_.push_back(impact);
   }
 }

@@ -64,7 +64,7 @@ void Battle::respawn(Combatant &drone) {
   const auto &segment = path_.segments[static_cast<std::size_t>(best)];
   const Vec3 start = segment.points.front();
   const Vec3 onward = segment.points.size() > 1 ? segment.points[1] : Vec3{};
-  drone.mover.place(start, heading_toward(onward - start));
+  drone.mover.place(placed(start, drone.radius, drone.mover), heading_toward(onward - start));
   drone.path.start(path_, best);
   events_.push_back({static_cast<int>(&drone - robots_.data()), BattleEventKind::respawned});
 }
@@ -129,6 +129,9 @@ void Battle::set_identity(const int index, const std::string &name, const int te
   robot.ai.reset();
   robot.name = name;
   if (cooperative_) {
+    // The mover borrows these from the pose. A replacement must not retain
+    // a freed animation table until its simulation-owned pose is installed.
+    robot.mover.set_timings(nullptr);
     robot.pose.reset();
   }
   robot.team = team;

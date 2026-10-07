@@ -17,6 +17,7 @@ void TrainingScreen::load_stage_art(const StageDefinition *stage, const DataRoot
     return;
   }
   lighting_ = stage->lighting;
+  SDL_Log("Stage %d: %zu source light volumes", stage->scene_stage, lighting_.source_lights.size());
   local_lights_.clear();
   for (const AttachedLight &source : light_sources(roots, "stages", stage->scene_stage)) {
     local_lights_.push_back(source.light);

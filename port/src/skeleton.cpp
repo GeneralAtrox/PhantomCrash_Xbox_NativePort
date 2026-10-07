@@ -1,5 +1,6 @@
 #include "phantomcrash/skeleton.hpp"
 #include "phantomcrash/weapon_mounts.hpp"
+#include "phantomcrash/source_leg_playback.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -84,6 +85,17 @@ struct Context {
 void visit(const SkeletonNode &node, const Mat4 &parent, Context &context);
 
 void store(Context &context, const SkeletonNode &node, const Mat4 &world) {
+  if (node.source_model_root) {
+    context.pose[static_cast<std::size_t>(context.part)].source_model_root = world;
+  }
+  if (context.part == 0 && context.pose[0].source_model_root && node.track >= 0) {
+    auto &controls = context.pose[0].source_controls;
+    const auto index = static_cast<std::size_t>(node.track);
+    if (controls.size() <= index) {
+      controls.resize(index + 1);
+    }
+    controls[index] = world;
+  }
   // 0x0acd11 registers the high-flag attachment matrices, separately from feet.
   for (std::size_t slot = 0; slot < 14; ++slot) {
     if ((node.flags & (std::uint32_t{0x40000} << slot)) != 0) {
@@ -109,6 +121,9 @@ void visit_children(const SkeletonNode &node, const std::size_t first, const Mat
 }
 
 Mat4 animated_transform(const SkeletonNode &node, Context &context) {
+  if (const auto source = source_leg_transform(node, context.input, context.part)) {
+    return *source;
+  }
   TrackSample sample = node.track >= 0 ? context.source->sample(node.track) : TrackSample{};
   if (node.track < 0) {
     // 0x0ad51c samples track zero of a separate body-bank entry. These
@@ -122,6 +137,12 @@ Mat4 animated_transform(const SkeletonNode &node, Context &context) {
     }
   }
   Transform t = node_transform(node, sample);
+  if (node.source_model_root) {
+    // S.L.A.I. excludes root-key travel from the control matrix (0x19f480).
+    // Gameplay moves the actor; applying the same travel here displaces the
+    // visible assembly and its attachments again when a walk clip loops.
+    t.translation = node_transform(node, {}).translation;
+  }
   const Vec3 sampled_rotation = t.rotation;
   if (node.flags == node_root_motion && node.track >= 0) {
     // The walk's forward (and, outside idle and walking, sideways) body
@@ -138,8 +159,10 @@ Mat4 animated_transform(const SkeletonNode &node, Context &context) {
   if ((node.flags & node_turns_with_aim) != 0) {
     t.rotation.y += context.input.aim_yaw;
   }
-  if ((node.flags & node_wheel) != 0) {
-    t.rotation.x += context.input.wheel_turn;
+  if ((node.flags & node_wheel) != 0 && !(node.source_roll && node.source_roll->spherical)) {
+    t.rotation.x += node.source_roll && context.input.source_roll_angles
+                        ? (*context.input.source_roll_angles)[static_cast<std::size_t>(node.track)]
+                        : context.input.wheel_turn;
   } else if ((node.flags & node_pitches_with_aim) != 0) {
     t.rotation.x += std::clamp(context.input.aim_pitch, -aim_pitch_limit, aim_pitch_limit);
   } else if ((node.flags & node_forearm) != 0) {
@@ -258,6 +281,8 @@ void visit(const SkeletonNode &node, const Mat4 &parent, Context &context) {
     return;
   }
   Mat4 world = animated_transform(node, context) * parent;
+  apply_source_spherical_roll(world, node, context.input.root, context.input.source_roll_frames);
+  apply_source_suspension(world, node.source_suspension, context.input.procedural_seconds);
   if (context.part > 0 && node.track >= 0) {
     const auto side = static_cast<std::size_t>(context.part - 1);
     const auto &aim = context.input.arm_aim[side];
@@ -307,6 +332,9 @@ SkeletonNode parse_node(const json::JsonValue &value, const int depth) {
   node.translation = vec3_of(value.find("translation"));
   node.rotation = vec3_of(value.find("rotation"));
   node.bone = static_cast<int>(value.number_or("bone", -1));
+  node.source_model_root = value.boolean_or("source_model_root", false);
+  node.source_suspension = parse_source_suspension(value);
+  node.source_roll = parse_source_roll(value);
   if (const json::JsonValue *children = value.find("children"); children && children->is_array()) {
     for (const json::JsonValue &child : children->array()) {
       node.children.push_back(parse_node(child, depth + 1));
@@ -332,39 +360,6 @@ std::vector<std::optional<SkeletonNode>> parse_list(const json::JsonValue *array
 
 } // namespace
 
-Mat4 rotation_x(const float angle) {
-  Mat4 m;
-  const float c = std::cos(angle);
-  const float s = std::sin(angle);
-  m.at(1, 1) = c;
-  m.at(1, 2) = s;
-  m.at(2, 1) = -s;
-  m.at(2, 2) = c;
-  return m;
-}
-
-Mat4 rotation_y(const float angle) {
-  Mat4 m;
-  const float c = std::cos(angle);
-  const float s = std::sin(angle);
-  m.at(0, 0) = c;
-  m.at(0, 2) = -s;
-  m.at(2, 0) = s;
-  m.at(2, 2) = c;
-  return m;
-}
-
-Mat4 rotation_z(const float angle) {
-  Mat4 m;
-  const float c = std::cos(angle);
-  const float s = std::sin(angle);
-  m.at(0, 0) = c;
-  m.at(0, 1) = s;
-  m.at(1, 0) = -s;
-  m.at(1, 1) = c;
-  return m;
-}
-
 SkeletonNode parse_skeleton_node(const json::JsonValue &value) {
   return parse_node(value, 0);
 }
@@ -385,6 +380,8 @@ void build_pose(const SkeletonNode &root, const PoseInput &input, Pose &pose) {
     part.set.fill(false);
     part.contacts.clear();
     part.mount.reset();
+    part.source_model_root.reset();
+    part.source_controls.clear();
     part.movement_mounts.fill(std::nullopt);
   }
   Context context{input, pose, 0, &input.legs, {}};

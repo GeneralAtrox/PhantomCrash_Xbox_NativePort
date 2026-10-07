@@ -58,7 +58,7 @@ float climb(const bool navigation) {
       parse_battle_settings(json::parse(R"({"arena": {"half_size": 100, "blocks": []}})"));
   settings.ai.fight = true;
   settings.ai.original = parse_original_ai(
-      DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT).document("world/robot_ai.json"));
+      DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT).document("world/robot_ai.json"));
   settings.ai.navigation = tuning();
   settings.ai.navigation.enabled = navigation;
   const EnemyPath path = parse_enemy_path(json::parse(R"({"segments": [

@@ -54,6 +54,16 @@ AudioMixer::Effect *AudioMixer::effect(const std::string &name) {
     return &loaded;
   }
   const auto path = roots_.find_asset(source.first);
+  if (path && path->extension() == ".json") {
+    try {
+      loaded.samples = source_sequence(*path);
+      sample_files_[source.first] = loaded.samples;
+      return &loaded;
+    } catch (const std::exception &error) {
+      SDL_Log("Source sound %s could not be loaded: %s", source.first.c_str(), error.what());
+      return nullptr;
+    }
+  }
   SDL_AudioSpec spec{};
   Uint8 *samples = nullptr;
   Uint32 length = 0;
@@ -137,7 +147,7 @@ void AudioMixer::play_cue(const SoundCue &cue) {
     mixer_.set_mix(cue.key, cue.mix, cue.position);
     break;
   case SoundCue::Action::stop:
-    mixer_.stop_key(cue.key);
+    mixer_.release_key(cue.key);
     std::erase(keys_, cue.key);
     break;
   case SoundCue::Action::listener:
@@ -157,6 +167,16 @@ void AudioMixer::stop_sound(const std::string &name) {
   SDL_LockAudioStream(effects_stream_);
   mixer_.stop_name(name);
   SDL_UnlockAudioStream(effects_stream_);
+}
+
+bool AudioMixer::sound_playing(const std::uint64_t key) const {
+  if (effects_stream_ == nullptr) {
+    return false;
+  }
+  SDL_LockAudioStream(effects_stream_);
+  const bool result = mixer_.playing(key);
+  SDL_UnlockAudioStream(effects_stream_);
+  return result;
 }
 
 void AudioMixer::stop_keyed() {

@@ -18,7 +18,7 @@ constexpr double tick = 1.0 / 60.0;
 const std::string space = "\xe3\x80\x80";
 
 json::JsonValue shipped_document(const char *relative) {
-  return DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT).document(relative);
+  return DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT).document(relative);
 }
 
 NameEntry make_entry(const std::string &name = "") {

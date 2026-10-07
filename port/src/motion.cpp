@@ -194,6 +194,9 @@ MotionBank parse_motion_bank(const json::JsonValue &document) {
       entry.rotation = parse_group(track, "rotation");
       entry.translation = parse_group(track, "translation");
       entry.scale = parse_group(track, "scale");
+      if (const auto *pmt = track.find("source_pmt")) {
+        entry.source_pmt = parse_source_pmt(*pmt);
+      }
       motion.tracks.push_back(std::move(entry));
     }
     bank.motions.emplace_back(std::move(motion));

@@ -1,4 +1,5 @@
 #include "desktop_shots.hpp"
+#include "desktop_source_particles.hpp"
 
 #include "desktop_cockpit.hpp"
 #include "phantomcrash/skeleton.hpp"
@@ -82,8 +83,9 @@ FenceContactLook load_fence_contact(const DataRoots &roots) {
 }
 
 DesktopShots::DesktopShots(WorldRenderer &world, const EffectBank &bank,
-                           const FenceContactLook contact)
-    : bank_(&bank), residue_(world, bank), fence_(bank.fence, contact) {
+                           const FenceContactLook contact, DesktopSourceParticles *source_particles)
+    : bank_(&bank), residue_(world, bank), fence_(bank.fence, contact),
+      source_particles_(source_particles) {
   for (const int mesh : bank.fence.meshes) {
     fence_meshes_.emplace(mesh, load_mesh(world, EffectPicture{bank.fence.model, mesh}));
   }
@@ -132,7 +134,14 @@ void DesktopShots::add_mesh(const Mesh &mesh, const Mat4 &world, std::vector<Wor
   }
 }
 
-void DesktopShots::tick(const Battle &battle, EffectSystem &effects, const float seconds) {
+void DesktopShots::tick(const Battle &battle, EffectSystem &effects, const float seconds,
+                        const BattleView *view) {
+  if (source_particles_) {
+    source_particles_->observe(battle, view);
+    if (view) {
+      source_particles_->observe_actions(battle, *view, seconds);
+    }
+  }
   movement_.tick(battle, effects, seconds);
   mounts_.tick(battle, effects, seconds);
   fence_.tick(seconds);
@@ -150,6 +159,9 @@ void DesktopShots::tick(const Battle &battle, EffectSystem &effects, const float
         ++fence_contact_starts_;
       }
     } else if (event.kind == BattleEventKind::impact && event.weapon != nullptr) {
+      if (source_particles_ && source_particles_->impact(event, battle, view)) {
+        continue;
+      }
       if (event.surface && starts_impact(*event.weapon, event.on_robot)) {
         fence_.start(*event.surface);
       }
@@ -207,6 +219,9 @@ void DesktopShots::add_items(const Battle &battle, const Mat4 &view,
   std::uniform_real_distribution<float> roll(0.0F, 2.0F * std::numbers::pi_v<float>);
   add_beams(battle, camera, items);
   for (const Projectile &shot : battle.armory().projectiles()) {
+    if (source_particles_ && source_particles_->add_projectile(shot, items)) {
+      continue;
+    }
     const int look = shot.weapon->look;
     if (look < 0 || look >= static_cast<int>(looks_.size())) {
       continue;
@@ -263,6 +278,9 @@ void DesktopShots::add_sprites(const Battle &battle, const EffectSystem &effects
                                std::vector<WorldSprite> &sprites) const {
   residue_.add_sprites(sprites);
   for (const Projectile &shot : battle.armory().projectiles()) {
+    if (source_particles_ && source_particles_->has_projectile(*shot.weapon)) {
+      continue;
+    }
     const int look = shot.weapon->look;
     if (look < 0 || look >= static_cast<int>(look_sprites_.size()) ||
         look_sprites_[static_cast<std::size_t>(look)] < 0) {

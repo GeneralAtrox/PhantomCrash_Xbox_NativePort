@@ -27,6 +27,19 @@ std::shared_ptr<Battle> TrainingScreen::stand_up_backdrop(RumblingWorld *world,
     return nullptr;
   }
   if (coop_match_) {
+    if (online()) {
+      // Standing up the result battle consumes the world's random stream.
+      // Its local presentation must not advance the still-running shared world.
+      const auto saved = coop_match_->checkpoint();
+      try {
+        auto fresh = coop_match_->world->stand_up(area, coop_match_->simulation_save);
+        coop_match_->restore_checkpoint(*saved);
+        return fresh;
+      } catch (...) {
+        coop_match_->restore_checkpoint(*saved);
+        throw;
+      }
+    }
     return coop_match_->world->stand_up(area, coop_match_->simulation_save);
   }
   return world != nullptr ? world->stand_up(area, quest) : nullptr;
@@ -41,7 +54,9 @@ bool TrainingScreen::start_backdrop(std::shared_ptr<Battle> fresh,
   if (const StageDoors *doors = battle_->doors()) {
     fresh->set_doors(*doors);
   }
-  battle_->set_player_target_view(std::nullopt); // as the destructor leaves it
+  if (!online()) {
+    battle_->set_player_target_view(std::nullopt); // as the destructor leaves it
+  }
   battle_ = std::move(fresh);
   player_index_ = 0;
   battle_->select_player(player_index_);
@@ -93,7 +108,7 @@ void TrainingScreen::tick_backdrop(const float seconds) {
   battle_->tick({}, {}, seconds);
   view_->tick(*battle_, seconds);
   if (shots_) {
-    shots_->tick(*battle_, effects_->system(), seconds);
+    shots_->tick(*battle_, effects_->system(), seconds, view_.get());
   }
   if (point_lights_) {
     point_lights_->tick(*battle_, seconds);

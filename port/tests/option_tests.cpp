@@ -17,7 +17,7 @@ namespace {
 constexpr double tick = 1.0 / 60.0;
 
 OptionMenu shipped(const GameOptions options = {}, const std::string &from = {}) {
-  const auto roots = DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT);
+  const auto roots = DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT);
   return OptionMenu(parse_option(roots.document("ui/option.json")),
                     parse_message_box(roots.document("ui/message_box.json")), options, from);
 }
@@ -236,7 +236,7 @@ TEST_CASE("the music credit line fills the format") {
 }
 
 TEST_CASE("option parsing names the entry at fault") {
-  const auto roots = DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT);
+  const auto roots = DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT);
   auto document = roots.document("ui/option.json");
   json::merge(document, json::parse(R"({"cancel_cursor": "missing"})"));
   CHECK_THROWS(parse_option(document));

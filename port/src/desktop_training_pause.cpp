@@ -9,6 +9,9 @@ void TrainingScreen::load_pause(const DataRoots &roots) {
 }
 
 bool TrainingScreen::tick_pause(const InputFrame &input) {
+  if (online_exit_requested_) {
+    return true;
+  }
   if (!paused_) {
     if (done_ || !input.any_pressed(pause_menu_.pause_buttons())) {
       return false;
@@ -27,7 +30,15 @@ bool TrainingScreen::tick_pause(const InputFrame &input) {
     break;
   case PauseMenu::Choice::exit:
     paused_ = false;
-    done_ = true;
+    if (online()) {
+      if (!online_exit_) {
+        throw std::runtime_error("Online exit is not connected to its session");
+      }
+      online_exit_();
+      online_exit_requested_ = true;
+    } else {
+      done_ = true;
+    }
     SDL_Log("Battle pause EXIT: clock=%.3f play=%.3f destination=%s", clock_, play_seconds_,
             next().c_str());
     break;

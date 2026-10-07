@@ -56,6 +56,7 @@ struct DoorTuning {
 // that walks into a shut door opens it unless it is locked, and an open
 // door closes by itself. Closed leaves are walls; open ones let robots by.
 class StageDoors final {
+  friend class StateInspector;
 public:
   StageDoors() = default;
   StageDoors(std::vector<DoorFrame> doors, DoorTuning tuning);

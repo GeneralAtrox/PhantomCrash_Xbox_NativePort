@@ -47,6 +47,7 @@ struct WorldItem {
   std::vector<std::string> monitor_nodes;
   std::vector<Mat4> node_worlds;
   int paint{-1};
+  int part_paint{-1};
   float alpha{1.0F}; // below 1 the item is drawn see-through
   float flash{};     // 0..1 toward white (a hit)
   int node{-1};      // draws only this node of the model, when set
@@ -97,10 +98,19 @@ struct WorldSprite {
   // 1 is a world-space centre; 2 is a child relative to cluster_centre.
   int particle_kind{};
   Vec3 cluster_centre;
-  Vec3 surface_normal;   // nonzero fixes this sprite to a surface instead of facing the eye
+  Vec3 surface_normal; // nonzero fixes this sprite to a surface instead of facing the eye
+  bool fixed_plane{};
+  Vec3 plane_right, plane_up;
   float end_size{-1.0F}; // streak's far radius; negative keeps the same width
   float end_alpha{1.0F}; // multiplier at a streak's far end
   bool transpose_uv{};   // ribbon textures whose transparent cross-section runs along V
+  bool opaque{};
+  bool subtractive{};
+  bool depth_test{true};
+  float aspect_ratio{1};
+  bool source_particle_orientation{};
+  bool velocity_aligned{};
+  Vec3 orientation_velocity; // PTK +0xf0, converted axes in source distance units
 };
 
 struct WorldFrame {
@@ -259,7 +269,8 @@ private:
   Com<ID3D11VertexShader> sprite_vertex_;
   Com<ID3D11PixelShader> sprite_pixel_;
   Com<ID3D11InputLayout> sprite_layout_;
-  Com<ID3D11BlendState> premultiplied_; // ONE, INVSRCALPHA
+  Com<ID3D11BlendState> premultiplied_;      // ONE, INVSRCALPHA
+  Com<ID3D11BlendState> sprite_subtractive_; // destination minus premultiplied source
   Com<ID3D11SamplerState> sprite_sampler_;
   Com<ID3D11Buffer> sprite_vertices_;
   UINT sprite_capacity_{}; // sprites the buffer holds

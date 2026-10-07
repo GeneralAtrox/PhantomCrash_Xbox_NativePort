@@ -72,6 +72,7 @@ struct WeaponTuning {
   float recharge_seconds{};        // a beam recharges from empty to full in this long
   std::optional<PartRef> part;     // the original record it is
   int hud_kind{hud_kind::cannon};
+  int source_melee_kind{-1};
   int model{-1};      // its record's model (+8), which some fire sounds go by
   int fire_sound{-1}; // its record's fire sound (+0x21, battle_sounds.hpp); -1: none
   int flight{-1};     // its record's flight (+0x1d)
@@ -152,6 +153,7 @@ struct Projectile {
   float travelled{};
   float age{};
   std::uint64_t id{}; // stable across vector compaction; identifies persistent smoke trails
+  int slot{-1};
 };
 
 // A beam held on its muzzle (0x09b9fe, battle_beams.cpp): its tip runs out
@@ -198,6 +200,8 @@ struct Landing {
   Vec3 at;
   bool on_robot{}; // a body, so the weapon's robot_hit applies, not its surface_hit
   std::optional<StageHit> surface;
+  int slot{-1};
+  int target{-1};
 };
 
 // Whether a landing starts the weapon's impact effect (0x098eda).
@@ -218,12 +222,15 @@ struct WeaponHit {
 // Every projectile and blast in flight. Battle fires the weapons and
 // applies the hits this returns.
 class Armory final {
+  friend class StateInspector;
+  friend class Battle;
+
 public:
   // Fires `rounds` of `weapon` from `muzzle` along `aim` (a unit vector),
   // toward `target` when one is locked (-1 otherwise). Rounds after the
   // first scatter by up to the weapon's spread.
   void fire(const WeaponTuning &weapon, int owner, int team, Vec3 muzzle, Vec3 aim, int target,
-            const std::vector<Target> &targets, int rounds = 1);
+            const std::vector<Target> &targets, int rounds = 1, int slot = -1);
   // A melee strike's armed blade at `blade` this tick (0x09c9c2): the
   // first robot of another team whose centre lies within its radius times
   // melee_contact_scale takes the weapon's damage. Returns whether it
@@ -263,7 +270,7 @@ private:
   [[nodiscard]] Vec3 scatter(Vec3 direction, float degrees);
   void detonate(const Projectile &shot, Vec3 at, const std::vector<Target> &targets,
                 std::vector<WeaponHit> &hits, bool on_robot = false,
-                std::optional<StageHit> surface = std::nullopt);
+                std::optional<StageHit> surface = std::nullopt, int target = -1);
   void tick_beams(float seconds, const std::vector<Target> &targets, const StageCollision &stage,
                   std::vector<WeaponHit> &hits, const StageDoors *doors);
   void spread_blasts(float seconds, const std::vector<Target> &targets,

@@ -12,7 +12,7 @@ using namespace phantomcrash;
 namespace {
 
 json::JsonValue shipped(const char *relative) {
-  return DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT).document(relative);
+  return DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT).document(relative);
 }
 
 } // namespace

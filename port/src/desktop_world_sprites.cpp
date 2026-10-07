@@ -8,6 +8,7 @@
 // both kinds of sprite share the one state, in the order given.
 
 #include "desktop_world_renderer.hpp"
+#include "desktop_sprite_vertices.hpp"
 #include "phantomcrash/effect_sprite.hpp"
 
 #include <algorithm>
@@ -54,6 +55,11 @@ Corner vs_sprite(float3 position : POSITION, float2 uv : TEXCOORD0, float4 colou
 
 float4 ps_sprite(Corner corner) : SV_Target {
   float4 texel = picture.Sample(picture_sampler, corner.uv);
+  clip(texel.a - 0.0000001);
+  if (corner.colour.a < 0) {
+    clip(texel.a * max(-corner.colour.a - 2, 0) - 0.0000001);
+    return float4(lerp(texel.rgb * corner.colour.rgb, fog_colour, corner.fog), 1);
+  }
   float4 colour = float4(texel.rgb * texel.a, texel.a) * corner.colour;
   // Fog hides what is added, and turns what is laid over toward its colour.
   float3 fogged = corner.colour.a > 0.0 ? lerp(colour.rgb, fog_colour * colour.a, corner.fog)
@@ -61,64 +67,6 @@ float4 ps_sprite(Corner corner) : SV_Target {
   return float4(fogged, colour.a);
 }
 )hlsl";
-
-struct SpriteVertex {
-  Vec3 position;
-  float u, v;
-  std::array<float, 4> colour;
-};
-static_assert(sizeof(SpriteVertex) == 36, "the sprite layout expects 36-byte vertices");
-
-constexpr UINT corners_per_sprite = 6;
-
-// The six corners of `sprite`, facing along the view's `right` and `up`.
-void corners(const WorldSprite &sprite, Vec3 right, Vec3 up, const Vec3 eye, SpriteVertex *out) {
-  if (length(sprite.surface_normal) > 0.0F) {
-    const Vec3 normal = normalize(sprite.surface_normal);
-    const Vec3 helper = std::fabs(normal.y) < 0.99F ? Vec3{0, 1, 0} : Vec3{1, 0, 0};
-    right = normalize(cross(helper, normal));
-    up = cross(normal, right);
-  }
-  const float alpha = sprite.colour[3];
-  const std::array<float, 4> colour{sprite.colour[0] * alpha, sprite.colour[1] * alpha,
-                                    sprite.colour[2] * alpha, sprite.additive ? 0.0F : alpha};
-  Vec3 a, b, c, d; // left-top, right-top, right-bottom, left-bottom
-  if (sprite.streak) {
-    const Vec3 along = sprite.end - sprite.position;
-    Vec3 side = cross(along, eye - (sprite.position + sprite.end) * 0.5F);
-    side = length(side) > 0.0F ? normalize(side) : right;
-    const float end_size = sprite.end_size >= 0.0F ? sprite.end_size : sprite.size;
-    a = sprite.position - side * sprite.size;
-    b = sprite.position + side * sprite.size;
-    c = sprite.end + side * end_size;
-    d = sprite.end - side * end_size;
-  } else {
-    const float cs = std::cos(sprite.rotation) * sprite.size;
-    const float sn = std::sin(sprite.rotation) * sprite.size;
-    const Vec3 x = right * cs + up * sn;
-    const Vec3 y = up * cs - right * sn;
-    a = sprite.position - x + y;
-    b = sprite.position + x + y;
-    c = sprite.position + x - y;
-    d = sprite.position - x - y;
-  }
-  const auto &uv = sprite.uv;
-  auto end_colour = colour;
-  if (sprite.streak) {
-    for (float &channel : end_colour) {
-      channel *= sprite.end_alpha;
-    }
-  }
-  const SpriteVertex quad[4] = {
-      {a, uv[0], uv[1], colour},
-      {b, sprite.transpose_uv ? uv[0] : uv[2], sprite.transpose_uv ? uv[3] : uv[1], colour},
-      {c, uv[2], uv[3], end_colour},
-      {d, sprite.transpose_uv ? uv[2] : uv[0], sprite.transpose_uv ? uv[1] : uv[3], end_colour}};
-  const int order[corners_per_sprite] = {0, 1, 2, 0, 2, 3};
-  for (UINT i = 0; i < corners_per_sprite; ++i) {
-    out[i] = quad[order[i]];
-  }
-}
 
 } // namespace
 
@@ -149,6 +97,11 @@ void WorldRenderer::create_sprite_states() {
   target.BlendOpAlpha = D3D11_BLEND_OP_ADD;
   target.RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
   ok = ok && SUCCEEDED(device_->CreateBlendState(&blend, &premultiplied_));
+  target.DestBlend = D3D11_BLEND_ONE;
+  target.BlendOp = D3D11_BLEND_OP_REV_SUBTRACT;
+  target.SrcBlendAlpha = D3D11_BLEND_ZERO;
+  target.DestBlendAlpha = D3D11_BLEND_ONE;
+  ok = ok && SUCCEEDED(device_->CreateBlendState(&blend, &sprite_subtractive_));
   D3D11_SAMPLER_DESC sampler{};
   sampler.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
   sampler.AddressU = sampler.AddressV = sampler.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
@@ -200,7 +153,7 @@ void WorldRenderer::render_sprites(const WorldFrame &frame) {
                                                  sprite.cluster_centre, sprite.size, view);
     sprite.position = geometry.position;
     sprite.size = geometry.half_extent;
-    corners(sprite, right, up, frame.eye, out + i * corners_per_sprite);
+    sprite_vertices(sprite, right, up, frame.eye, out + i * corners_per_sprite);
   }
   context_->Unmap(sprite_vertices_.Get(), 0);
 
@@ -221,13 +174,22 @@ void WorldRenderer::render_sprites(const WorldFrame &frame) {
   UINT first = 0;
   while (first < count) {
     const int texture = frame.sprites[order[first]].texture;
+    const bool subtractive = frame.sprites[order[first]].subtractive;
+    const bool depth_test = frame.sprites[order[first]].depth_test;
     UINT end = first + 1;
-    while (end < count && frame.sprites[order[end]].texture == texture) {
+    while (end < count && frame.sprites[order[end]].texture == texture &&
+           frame.sprites[order[end]].subtractive == subtractive) {
+      if (frame.sprites[order[end]].depth_test != depth_test) {
+        break;
+      }
       ++end;
     }
     if (texture >= 0 && texture < static_cast<int>(textures_.size()) && textures_[texture]) {
       ID3D11ShaderResourceView *view_of = textures_[static_cast<std::size_t>(texture)].Get();
       context_->PSSetShaderResources(0, 1, &view_of);
+      context_->OMSetBlendState(subtractive ? sprite_subtractive_.Get() : premultiplied_.Get(),
+                                nullptr, 0xffffffff);
+      context_->OMSetDepthStencilState(depth_test ? depth_read_.Get() : depth_off_.Get(), 0);
       context_->Draw((end - first) * corners_per_sprite, first * corners_per_sprite);
     }
     first = end;

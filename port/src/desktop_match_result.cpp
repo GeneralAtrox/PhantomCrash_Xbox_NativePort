@@ -24,8 +24,8 @@ MatchResultScreen::MatchResultScreen(TextureCache &textures, const GlyphFont &fo
                                      const json::JsonValue &data, MatchReceipt receipt,
                                      QuestSave quest, WorldRenderer *world, WorldFrame background,
                                      std::string next, std::shared_ptr<ReplayArchive> replay,
-                                     const int first_win)
-    : textures_(textures), font_(font),
+                                     const int first_win, std::shared_ptr<void> resources)
+    : resources_(std::move(resources)), textures_(textures), font_(font),
       frame_(font, frame, credits, parse_frame_placement(required(data, "frame"))),
       receipt_(std::move(receipt)), presentation_(receipt_, required(data, "presentation")),
       quest_(std::move(quest)), world_(world), backdrop_(replay, std::move(background)),

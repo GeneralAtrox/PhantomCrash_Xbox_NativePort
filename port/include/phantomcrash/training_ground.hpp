@@ -7,6 +7,7 @@
 #include "phantomcrash/robot.hpp"
 #include "phantomcrash/robot_load.hpp"
 #include "phantomcrash/training_battle.hpp"
+#include "phantomcrash/source_lighting.hpp"
 
 #include <array>
 #include <map>
@@ -27,6 +28,7 @@ struct StageLighting {
   float fog_start{300.0F};
   float fog_end{2500.0F};
   Vec3 clear_colour{0.0F, 0.0F, 0.0F};
+  std::vector<SourceLightVolume> source_lights;
   // What the robots' shadow volumes lay over the stage (0x0b6b80, the
   // colour table at 0x2014e8 per stage): 0x70030303 on most stages.
   std::array<float, 4> shadow_colour{3 / 255.0F, 3 / 255.0F, 3 / 255.0F, 0x70 / 255.0F};
@@ -46,6 +48,7 @@ struct StageDefinition {
   std::string name;
   std::string model;                     // asset path of its glTF, empty until converted
   std::string collision;                 // asset path of its converted collision, or empty
+  std::string collision_fixes;           // data document of port collision fixes, or empty
   std::string enemy_path;                // asset path of its drones' path (enepath/), or empty
   std::vector<std::string> sky_nodes;    // drawn around the camera, behind everything
   std::vector<std::string> shadow_nodes; // authored layer-7 stencil volumes
@@ -54,9 +57,13 @@ struct StageDefinition {
   std::vector<std::string> monitor_nodes; // live arena TV surfaces, never the shared sky texture
   BattleMonitorSettings monitor;
   StageLighting lighting;
-  int scene_stage{-1};     // its number in the original's tables (0x2212ac), -1 for the script's
-  std::string door_model;  // the effect model of its gate doors, empty for the script's
-  std::string props_model; // placed city scenery, separate from the moving gate leaves
+  int scene_stage{-1};       // its number in the original's tables (0x2212ac), -1 for the script's
+  std::string door_model;    // the effect model of its gate doors, empty for the script's
+  std::string props_model;   // placed city scenery, separate from the moving gate leaves
+  std::optional<Vec3> spawn; // imported arenas' adapter-selected standing point
+  std::vector<Vec3> player_spawns;
+  std::optional<SupplyPickupLook> supply_pickups;
+  std::optional<std::vector<SupplyRoute>> supply_routes;
 };
 
 [[nodiscard]] std::map<std::string, StageDefinition> parse_stages(const json::JsonValue &document);

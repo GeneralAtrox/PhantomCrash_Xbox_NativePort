@@ -27,18 +27,34 @@ void VsModeScreen::draw_area_items(DrawList &list) const {
   const bool crowd = items.size() < area.items.size() && items.size() == area.crowd.xs.size();
   const float slide = logic_.slide_along();
   float exit_x = 0.0F;
+  const int first =
+      items.size() > 6 ? std::clamp(logic_.area_cursor() - 2, 0, static_cast<int>(items.size()) - 6)
+                       : 0;
   for (std::size_t shown = 0; shown < items.size(); ++shown) {
+    if (items.size() > 6 &&
+        (static_cast<int>(shown) < first || static_cast<int>(shown) >= first + 6)) {
+      continue;
+    }
     const VsAreaItem &item = area.items[static_cast<std::size_t>(items[shown])];
-    const float to = crowd ? area.crowd.xs[shown] : item.item.normal.position[0];
+    const float to = items.size() > 6 ? 42.F + (shown - first) * 64.F
+                     : crowd          ? area.crowd.xs[shown]
+                                      : item.item.normal.position[0];
     const float from = crowd ? area.crowd.from_xs[shown] : item.from_x;
     const float x = from + (to - from) * slide;
     Sprite normal = item.item.normal;
     normal.position[0] = x;
-    list.sprite(normal);
+    if (item.text.empty()) {
+      list.sprite(normal);
+    } else {
+      list.text(270, layout_run(font_, glyph_run(font_, "SLAI"), x, 371),
+                static_cast<int>(shown) == logic_.area_cursor() ? 0xfeb000 : 0xffffff);
+    }
     if (static_cast<int>(shown) == logic_.area_cursor()) {
       Sprite lit = item.item.selected;
       lit.position[0] = x;
-      list.sprite(lit);
+      if (item.text.empty()) {
+        list.sprite(lit);
+      }
     }
     if (item.kind == VsAreaKind::exit) {
       exit_x = x;
@@ -60,6 +76,11 @@ void VsModeScreen::draw_pictures(DrawList &list) const {
       return;
     }
     const VsAreaItem &item = area.items[static_cast<std::size_t>(picture.item)];
+    if (!item.text.empty()) {
+      list.text(270, layout_run(font_, glyph_run(font_, item.text), 75, 170), 0xffffff,
+                std::nullopt, alpha);
+      return;
+    }
     const Sprite *shown = picture.night ? &item.night_picture : &item.picture;
     if (item.kind == VsAreaKind::random && !area.random_pictures.empty()) {
       const int stage =

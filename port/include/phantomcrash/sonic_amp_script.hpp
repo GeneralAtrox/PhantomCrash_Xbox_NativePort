@@ -64,6 +64,7 @@ struct SonicAmpGrid {
   int catalogue_rows{};
   std::vector<int> category_pages; // pages of each catalogue, in order
   int catalogue_tracks{};          // the credits sold, from the first
+  std::vector<int> catalogue_ids;  // optional explicit credits, including mod songs
   float short_page_offset{};       // a page with fewer rows sits this lower
   Sprite page_box;
   Sprite page_slash;

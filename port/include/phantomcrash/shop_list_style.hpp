@@ -36,6 +36,7 @@ struct ShopGoodsList {
   int rows{4};
   float row_step{};
   std::array<float, 2> name_at{};
+  float name_width{}; // optional column width, bounded by the panel and row badges
   std::uint32_t name_colour{0xffffff};
   int name_layer{};
   std::vector<Sprite> maker_icons; // by maker, at the first row
@@ -70,5 +71,8 @@ struct ShopGoodsList {
 // A goods list's look, without its stats style (the caller's). Throws
 // std::runtime_error naming the member at fault.
 [[nodiscard]] ShopGoodsList parse_goods_list(const json::JsonValue &value);
+
+// Reserve the right-hand row badges as well as the window's edge.
+[[nodiscard]] float goods_name_width(const ShopGoodsList &list, float padding);
 
 } // namespace phantomcrash

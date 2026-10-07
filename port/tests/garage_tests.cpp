@@ -70,7 +70,7 @@ TEST_CASE("sleep waits four seconds with its sound, or less on a confirm press")
 
 TEST_CASE("the shipped sleep script waits four seconds and returns to the garage") {
   const SleepScript script =
-      parse_sleep_script(DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT).document("ui/sleep.json"));
+      parse_sleep_script(DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT).document("ui/sleep.json"));
   CHECK(script.seconds == 4.0);
   CHECK(script.exit_to == "garage");
   CHECK(script.sound == "sleep");

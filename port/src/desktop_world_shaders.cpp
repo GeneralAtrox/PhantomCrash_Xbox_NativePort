@@ -50,6 +50,8 @@ cbuffer Draw : register(b1) {
   float4 rainbow;        // phase, UV scroll, enabled, unused
   float4 material_light; // ambient RGB, specular power
   float4 material_modes; // specular, texture add, texture alpha, original
+  float4 source_directions[2];
+  float4 source_colours[2];
 };
 
 struct VertexIn {
@@ -135,7 +137,11 @@ float4 ps_main(VertexOut input, bool front : SV_IsFrontFace) : SV_Target {
   }
   if (unlit < 0.5 && rainbow.z < 0.5) {
     float diffuse = saturate(dot(n, -sun_direction));
-    colour.rgb *= saturate(ambient * material_light.rgb + sun_colour * diffuse);
+    float3 source_light = 0;
+    [unroll] for (int i = 0; i < 2; ++i) {
+      source_light += source_colours[i].rgb * saturate(dot(n, source_directions[i].xyz));
+    }
+    colour.rgb *= saturate(ambient * material_light.rgb + sun_colour * diffuse + source_light);
     if (material_modes.x > 0.5 && diffuse > 0.0) {
       float3 toward_eye = normalize(eye - input.world_position);
       float3 halfway = normalize(toward_eye - sun_direction);

@@ -16,7 +16,7 @@ namespace {
 constexpr double tick = 1.0 / 60.0;
 
 FrontEnd shipped() {
-  const auto roots = DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT);
+  const auto roots = DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT);
   return FrontEnd(parse_title(roots.document("ui/title.json")),
                   parse_main_menu(roots.document("ui/main_menu.json")));
 }

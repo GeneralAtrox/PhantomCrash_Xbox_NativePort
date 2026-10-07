@@ -163,7 +163,7 @@ Vec3 Armory::launch_velocity(const WeaponTuning &weapon, const Vec3 muzzle, cons
 
 void Armory::fire(const WeaponTuning &weapon, const int owner, const int team, const Vec3 muzzle,
                   const Vec3 aim, const int target, const std::vector<Target> &targets,
-                  const int rounds) {
+                  const int rounds, const int slot) {
   if (weapon.kind == WeaponKind::melee) {
     return;
   }
@@ -179,6 +179,7 @@ void Armory::fire(const WeaponTuning &weapon, const int owner, const int team, c
     shot.id = next_projectile_id_++;
     shot.weapon = &weapon;
     shot.owner = owner;
+    shot.slot = slot;
     shot.team = team;
     shot.position = muzzle;
     shot.target = weapon.kind == WeaponKind::missile && weapon.homing && valid ? target : -1;
@@ -210,7 +211,7 @@ bool Armory::strike(const WeaponTuning &weapon, const int owner, const int team,
     hits.push_back({target, owner, weapon.damage, weapon.stagger_seconds, blade, &weapon,
                     push_direction(from, victim.centre), true});
     explosions_.push_back({blade, strike_radius, 0.0F, strike_seconds});
-    landings_.push_back({&weapon, owner, blade, true});
+    landings_.push_back({&weapon, owner, blade, true, std::nullopt, -1, target});
     return true;
   }
   return false;
@@ -218,9 +219,10 @@ bool Armory::strike(const WeaponTuning &weapon, const int owner, const int team,
 
 void Armory::detonate(const Projectile &shot, const Vec3 at, const std::vector<Target> &targets,
                       std::vector<WeaponHit> &hits, const bool on_robot,
-                      std::optional<StageHit> surface) {
+                      std::optional<StageHit> surface, const int target) {
   const WeaponTuning &weapon = *shot.weapon;
-  landings_.push_back({&weapon, shot.owner, at, on_robot, surface});
+  landings_.push_back(
+      {&weapon, shot.owner, at, on_robot, surface, shot.slot, on_robot ? target : -1});
   if (weapon.blast_radius <= 0.0F) {
     explosions_.push_back({at, impact_radius, 0.0F, impact_seconds});
     return;
@@ -342,7 +344,7 @@ void Armory::tick(const float seconds, const std::vector<Target> &targets,
         }
       }
       const std::size_t before = hits.size();
-      detonate(shot, *impact, targets, hits, on_robot, victim < 0 ? surface : std::nullopt);
+      detonate(shot, *impact, targets, hits, on_robot, victim < 0 ? surface : std::nullopt, victim);
       for (std::size_t index = before; victim >= 0 && index < hits.size(); ++index) {
         hits[index].direct = hits[index].direct || hits[index].victim == victim;
       }

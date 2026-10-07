@@ -17,7 +17,7 @@ namespace {
 constexpr double tick = 1.0 / 60.0;
 
 VsModeScript shipped_script() {
-  return parse_vs_mode(DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT).document("ui/vs_mode.json"));
+  return parse_vs_mode(DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT).document("ui/vs_mode.json"));
 }
 
 // The three presets' robots, 1081 to 1083.

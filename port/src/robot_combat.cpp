@@ -54,6 +54,7 @@ std::optional<MovementPoint> RobotCombat::movement_point(const std::size_t slot)
 }
 
 void RobotCombat::reset() {
+  animator_.reset_procedural_clock();
   animator_.play(robot_motion::stand, true, 0.0F, 0.0F, true);
   motion_revision_.reset();
   weights_.fill(0);
@@ -95,6 +96,7 @@ void RobotCombat::tick(const RobotMover &mover, const std::array<bool, 4> &firin
   animator_.set_auxiliary_frames(auxiliary_);
   advance_wheels(mover, seconds);
   animator_.set_wheel_turn(wheel_turn_);
+  animator_.advance_source_roll(mover, seconds);
   std::array<ArmAim, 2> arms;
   for (std::size_t side = 0; side < 2; ++side) {
     // A strike lowers the aim so the arms play their strike motions.
@@ -147,6 +149,11 @@ void RobotCombat::tick(const RobotMover &mover, const std::array<bool, 4> &firin
 // turning on the spot rolls them by a fifth of the steering stick, and one
 // in the air by the forward stick.
 void RobotCombat::advance_wheels(const RobotMover &mover, const float seconds) {
+  if (const auto &wheels = mover.tuning().wheels; wheels && mover.grounded()) {
+    wheel_turn_ = std::remainder(wheel_turn_ + mover.local_velocity().z * seconds / wheels->radius,
+                                 2.0F * pi);
+    return;
+  }
   constexpr float still_speed = 0.01F;   // 0x199f78
   constexpr float steer_roll = 0.2F;     // per tick, of the steering stick
   constexpr float max_roll = 3.1677728F; // radians a tick

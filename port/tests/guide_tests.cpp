@@ -16,7 +16,7 @@ constexpr double tick = 1.0 / 60.0;
 
 PepperGuideScript shipped_guide() {
   return parse_pepper_guide(
-      DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT).document("ui/pepper_guide.json"));
+      DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT).document("ui/pepper_guide.json"));
 }
 
 void run(PepperGuide &guide, const double seconds) {

@@ -5,6 +5,27 @@
 
 namespace phantomcrash {
 
+float held_jump_rise(const MovementTuning &tuning) {
+  // tick_air's held lift, a battle tick at a time, until the rise stops.
+  const JumpTakeoff takeoff = jump_takeoff(tuning.jump_height, tuning.gravity);
+  const float seconds = 1.0F / battle_tick_rate;
+  const float keep = 1.0F - jump_lift_ease;
+  float speed = takeoff.speed;
+  float lift_left = takeoff.lift_seconds;
+  float rise = speed * seconds; // the take-off tick moves it already
+  while (speed > 0.0F) {
+    float lifted = 0.0F;
+    if (lift_left > 0.0F) {
+      speed = takeoff.speed + (speed - takeoff.speed) * keep;
+      lifted = std::min(lift_left, seconds);
+      lift_left -= lifted;
+    }
+    speed += tuning.gravity * (lifted - seconds);
+    rise += std::max(speed, 0.0F) * seconds;
+  }
+  return rise;
+}
+
 void RobotMover::tick_air(const RobotControl &control, const float seconds) {
   if (mode_ == MoveMode::hit) {
     stagger_left_ -= seconds;

@@ -42,6 +42,7 @@ struct ObjectBreak {
 };
 
 class StageObjects {
+  friend class StateInspector;
 public:
   explicit StageObjects(std::vector<StageObject> objects = {}) : objects_(std::move(objects)) {}
   void tick(float seconds);

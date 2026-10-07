@@ -16,8 +16,7 @@ namespace {
 constexpr double tick = 1.0 / 60.0;
 
 HangarMenuScript shipped_script() {
-  return parse_hangar_menu(
-      DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT).document("ui/hangar.json"));
+  return parse_hangar_menu(DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT).document("ui/hangar.json"));
 }
 
 // A body of maker 2 heavier than its legs carry, the legs and a CHIP.

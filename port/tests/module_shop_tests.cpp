@@ -17,12 +17,12 @@ constexpr double tick = 1.0 / 60.0;
 
 ModuleShopScript shipped_script(const ModuleShopMode mode) {
   return parse_module_shop(
-      DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT).document("ui/module_shop.json"), mode);
+      DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT).document("ui/module_shop.json"), mode);
 }
 
 PartStatsTable shipped_table() {
   return parse_part_stats(
-      DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT).document("ui/part_stats.json"));
+      DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT).document("ui/part_stats.json"));
 }
 
 PartTables tables() {

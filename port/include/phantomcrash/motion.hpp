@@ -2,6 +2,7 @@
 
 #include "phantomcrash/json.hpp"
 #include "phantomcrash/math3d.hpp"
+#include "phantomcrash/source_pmt.hpp"
 
 #include <array>
 #include <cstdint>
@@ -44,6 +45,7 @@ struct MotionTrack {
   std::optional<std::array<MotionChannel, 3>> rotation;
   std::optional<std::array<MotionChannel, 3>> translation;
   std::optional<std::array<MotionChannel, 3>> scale;
+  std::optional<SourcePmtTrack> source_pmt;
 };
 
 // A track sampled at one frame, as the file stores it. The skeleton applies

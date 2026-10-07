@@ -42,6 +42,9 @@ struct GlyphQuad {
 // A run left to right from (x, y), each glyph advancing by its width.
 [[nodiscard]] std::vector<GlyphQuad> layout_run(const GlyphFont &font, const std::vector<int> &run,
                                                 float x, float y);
+// Keep a label within its column, ending long labels with an ellipsis.
+[[nodiscard]] std::vector<GlyphQuad> layout_label(const GlyphFont &font, std::string_view text,
+                                                  float x, float y, float width);
 
 // A glyph's whole cell at (x, y), as the original draws text in fixed
 // 18 x 18 cells (0xbdc9b), and a run of them `advance` apart (0xbd720).

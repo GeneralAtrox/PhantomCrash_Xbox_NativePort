@@ -21,7 +21,7 @@ constexpr double tick = 1.0 / 60.0;
 using Sounds = std::vector<std::string>;
 
 json::JsonValue shipped_document(const char *relative) {
-  return DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT).document(relative);
+  return DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT).document(relative);
 }
 
 template <typename Menu> void run(Menu &menu, double seconds, Buttons held = 0) {

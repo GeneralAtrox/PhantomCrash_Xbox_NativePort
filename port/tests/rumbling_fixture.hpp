@@ -65,7 +65,7 @@ inline ContestTables contests() {
 
 struct Fixture {
   RumblingRules rules = parse_rumbling_rules(
-      DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT).document("world/rumbling.json"));
+      DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT).document("world/rumbling.json"));
   PartTables parts;
   GarageTables garage;
   PartStatsTable stats;

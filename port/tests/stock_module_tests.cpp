@@ -15,7 +15,7 @@ namespace {
 constexpr double tick = 1.0 / 60.0;
 
 ModuleShopScript shipped_script() {
-  const DataRoots roots = DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT);
+  const DataRoots roots = DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT);
   const ModuleShopScript shop =
       parse_module_shop(roots.document("ui/module_shop.json"), ModuleShopMode::sell);
   return parse_stock_module(roots.document("ui/stock_module.json"), shop);
@@ -23,7 +23,7 @@ ModuleShopScript shipped_script() {
 
 PartStatsTable shipped_table() {
   return parse_part_stats(
-      DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT).document("ui/part_stats.json"));
+      DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT).document("ui/part_stats.json"));
 }
 
 void settle(ModuleShop &logic, const double seconds = 2.0) {

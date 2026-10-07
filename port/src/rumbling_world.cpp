@@ -101,7 +101,8 @@ void RumblingWorld::update(QuestSave &quest, const double seconds) {
       area.clock += seconds;
       int steps = 0;
       for (; area.clock >= step_seconds && steps < max_catch_up_steps; ++steps) {
-        step(index, quest, static_cast<float>(step_seconds), index != lent_);
+        step(index, quest, static_cast<float>(step_seconds),
+             index != lent_ && (background_ || lent_ < 0));
         area.clock -= step_seconds;
       }
       if (steps == max_catch_up_steps) {
@@ -133,6 +134,9 @@ void RumblingWorld::build(const int index, const QuestSave &quest) {
   battle.set_stage(stage.collision);
   if (stage.objects) {
     battle.set_objects(*stage.objects);
+  }
+  if (deterministic_) {
+    battle.prepare_deterministic();
   }
   // The player's place, empty until they come in (robot 0 is the player's).
   battle.add_robot("player", 0, {}, 0.0F, {}, 1.0F);

@@ -138,7 +138,7 @@ TEST_CASE("intro parsing reports the step at fault") {
 
 TEST_CASE("the shipped intro parses") {
   const auto shipped =
-      parse_intro(DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT).document("boot/intro.json"));
+      parse_intro(DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT).document("boot/intro.json"));
   CHECK(shipped.steps.size() == 5);
   CHECK(shipped.steps.front().id == "phantagram");
   CHECK(shipped.steps.back().rotate);
@@ -186,7 +186,7 @@ namespace {
 
 IntroScript staff_roll() {
   return parse_intro(
-      DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT).document("story/staff_roll.json"));
+      DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT).document("story/staff_roll.json"));
 }
 
 // Plays the staff and epilogue movies to their ends and the fade after them.

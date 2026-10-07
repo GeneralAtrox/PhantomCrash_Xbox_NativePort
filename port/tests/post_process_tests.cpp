@@ -102,7 +102,7 @@ TEST_CASE("offset map advances on source ticks and repeats without presentation 
 
 TEST_CASE("only daytime Shinjuku selects the shipped distortion") {
   const auto stages =
-      parse_stages(DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT).document("world/stages.json"));
+      parse_stages(DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT).document("world/stages.json"));
   for (const auto &[name, stage] : stages) {
     CHECK(stage.lighting.screen.distortion == (name == "shinjuku_day"));
     CHECK(stage.lighting.screen.focus == 80.0F);

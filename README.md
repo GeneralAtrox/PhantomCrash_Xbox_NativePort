@@ -173,6 +173,12 @@ its last frame. A smoke run steps one 60 Hz logic tick per frame, so
 (20 by default) runs visibly without vsync or the frame cap, and prints
 the frame times once done; its `--press` frames are game ticks too
 (docs/TRAINING_GROUND.md, Performance).
+`--render-robot <record> <file.png> [--robot-view <yaw>,<pitch>,<distance>,<height>[,<size>]]`
+stands one garage robot record alone on a transparent background and saves
+a square PNG, then exits; the camera orbits the robot (degrees, yaw 0 facing
+it, pitch above 0 looking down) at `height` above the ground. The executable
+icon (`port/res`) is the Plain Holy (record 0) from
+`--robot-view -35,-10,8,1.9,2048`, laid out by `tools/make_icon.py`.
 
 The port boots into the intro from `data\boot\intro.json`: Phantagram,
 Genki, the Sofdec/ADX screen and Dolby (first boot only), then an attract

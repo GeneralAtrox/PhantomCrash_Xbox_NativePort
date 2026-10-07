@@ -41,6 +41,12 @@ BattleSceneStyle parse_battle_scene_style(const json::JsonValue &value) {
 
 BattleScenePresenter::BattleScenePresenter(TextureCache &textures, const GlyphFont &font,
                                            BattleScene scene, BattleSceneStyle style)
+    : BattleScenePresenter(textures, font, std::make_shared<BattleScene>(std::move(scene)),
+                           std::move(style)) {}
+
+BattleScenePresenter::BattleScenePresenter(TextureCache &textures, const GlyphFont &font,
+                                           std::shared_ptr<BattleScene> scene,
+                                           BattleSceneStyle style)
     : textures_(textures), font_(font), scene_(std::move(scene)), style_(std::move(style)) {
   for (const auto &sprite : {style_.ready, style_.go}) {
     if (sprite) {
@@ -50,7 +56,7 @@ BattleScenePresenter::BattleScenePresenter(TextureCache &textures, const GlyphFo
 }
 
 void BattleScenePresenter::draw(const Viewport &viewport) const {
-  if (const float bars = scene_.letterbox(); bars > 0.0F) {
+  if (const float bars = scene_->letterbox(); bars > 0.0F) {
     // 0x049080 slides the bars in from `slide` units further out.
     const float out = style_.slide * (1.0F - bars);
     const float top = std::max(viewport.to_pixel_y(style_.inner_top - out), viewport.origin_y);
@@ -66,7 +72,7 @@ void BattleScenePresenter::draw(const Viewport &viewport) const {
     SDL_RenderFillRect(renderer, &upper);
     SDL_RenderFillRect(renderer, &lower);
   }
-  const SceneCue cue = scene_.cue();
+  const SceneCue cue = scene_->cue();
   const std::optional<Sprite> *sprite = cue == SceneCue::ready ? &style_.ready
                                         : cue == SceneCue::go  ? &style_.go
                                                                : nullptr;
@@ -90,21 +96,31 @@ load_battle_scene(TextureCache &textures, const GlyphFont &font, const DataRoots
     return nullptr;
   }
   try {
-    BattleScene scene(parse_battle_scenes(json::read_file(*file)), tuning, seed);
-    BattleSceneStyle style;
-    try {
-      const json::JsonValue document = roots.document(style_document);
-      style = parse_battle_scene_style(document);
-      textures.preload(document);
-    } catch (const std::exception &error) {
-      SDL_Log("%s: %s", style_document, error.what());
-    }
-    return std::make_unique<BattleScenePresenter>(textures, font, std::move(scene),
-                                                  std::move(style));
+    return present_battle_scene(
+        textures, font, roots,
+        std::make_shared<BattleScene>(parse_battle_scenes(json::read_file(*file)), tuning, seed));
   } catch (const std::exception &error) {
     SDL_Log("%s: %s", tuning.tables.c_str(), error.what());
   }
   return nullptr;
+}
+
+std::unique_ptr<BattleScenePresenter> present_battle_scene(TextureCache &textures,
+                                                           const GlyphFont &font,
+                                                           const DataRoots &roots,
+                                                           std::shared_ptr<BattleScene> scene) {
+  if (!scene) {
+    return nullptr;
+  }
+  BattleSceneStyle style;
+  try {
+    const auto document = roots.document(style_document);
+    style = parse_battle_scene_style(document);
+    textures.preload(document);
+  } catch (const std::exception &error) {
+    SDL_Log("%s: %s", style_document, error.what());
+  }
+  return std::make_unique<BattleScenePresenter>(textures, font, std::move(scene), std::move(style));
 }
 
 int load_stage_doors(WorldRenderer *world, const DataRoots &roots, const SceneTuning &tuning,

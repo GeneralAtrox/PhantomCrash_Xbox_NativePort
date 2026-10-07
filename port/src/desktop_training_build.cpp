@@ -50,21 +50,32 @@ void TrainingScreen::build_battle(const TrainingContext &context) {
   if (live_world_ != nullptr) {
     battle_ = context.live_battle;
     battle_->select_player(player_index_);
-    seat_player(settings, player_hp);
+    if (!online()) {
+      seat_player(settings, player_hp);
+    }
   } else {
     battle_ = std::make_shared<Battle>(std::move(settings), std::move(path));
     if (context.stage != nullptr && !context.stage->collision.empty()) {
-      load_stage_collision(context.roots, context.stage->collision, *battle_);
+      load_stage_collision(context.roots, *context.stage, *battle_);
     }
     battle_->add_robot("player", 0, setup.player_start, setup.player_heading, setup.player.weapons,
                        player_hp);
     if (vs_) {
       seat_riders(parts, garage);
+      if (context.stage && !context.stage->player_spawns.empty()) {
+        const auto &spawns = context.stage->player_spawns;
+        for (std::size_t i = 0; i < setup.riders.size(); ++i) {
+          battle_->place(static_cast<int>(i), spawns[i % spawns.size()], setup.player_heading);
+        }
+      }
     }
   }
-  battle_->set_tag(player_index_,
-                   coop_match_ ? context.player_name : pilot_tag(parts, setup.player.pilot));
-  battle_->set_combat(player_index_, robot_combat(script_, parts, garage, "player", setup.player));
+  if (!online()) {
+    battle_->set_tag(player_index_,
+                     coop_match_ ? context.player_name : pilot_tag(parts, setup.player.pilot));
+    battle_->set_combat(player_index_,
+                        robot_combat(script_, parts, garage, "player", setup.player));
+  }
   const float drone_hp = robot_hp(script_, parts, "drone", setup.drone, false);
   const CombatStats drone_combat = robot_combat(script_, parts, garage, "drone", setup.drone);
   std::vector<std::pair<int, const TrainingRobot *>> chips{{player_index_, &setup.player}};
@@ -83,6 +94,9 @@ void TrainingScreen::build_battle(const TrainingContext &context) {
     chips.emplace_back(static_cast<int>(rider), &setup.riders[rider].robot);
   }
   for (const auto &[index, robot] : chips) {
+    if (online()) {
+      continue;
+    }
     if (const ChipRecord *chip = parts ? parts->chip(robot->chip) : nullptr) {
       const ChipStats stats = chip_stats(*chip, robot->chip_level);
       battle_->set_lock_seconds(index, stats.lock_frames / part_frames_per_second);
@@ -131,6 +145,9 @@ void TrainingScreen::build_battle(const TrainingContext &context) {
     return;
   }
   // Apply stride speed and load; live opponents already have theirs.
+  if (online()) {
+    return;
+  }
   for (std::size_t index = 0; index < view_->size(); ++index) {
     battle_->set_radius(static_cast<int>(index), view_->radius(index, setup.settings.robot_radius));
     if (index != static_cast<std::size_t>(player_index_) && live_world_ != nullptr) {

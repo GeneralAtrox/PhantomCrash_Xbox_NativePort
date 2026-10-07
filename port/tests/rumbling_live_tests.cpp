@@ -155,7 +155,7 @@ TEST_CASE("live NPC nameplate colours follow saved roster status, not combat all
   REQUIRE(battle != nullptr);
   REQUIRE(battle->robots().size() == 6);
   const auto style = parse_battle_hud_style(
-      DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT).document("ui/battle_hud.json"));
+      DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT).document("ui/battle_hud.json"));
   const std::array<std::uint32_t, 5> expected{0xff8080, 0xffff00, 0x8080ff, 0x00e100, 0xffff00};
   for (int index = 1; index <= 5; ++index) {
     const Combatant &robot = battle->robots()[static_cast<std::size_t>(index)];

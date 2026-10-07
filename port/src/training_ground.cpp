@@ -60,6 +60,7 @@ StageLighting parse_lighting(const json::JsonValue &value) {
     lighting.sun_direction = normalize(vec3_or(*light, "sun_direction", lighting.sun_direction));
     lighting.sun_colour = vec3_or(*light, "sun_colour", lighting.sun_colour);
     lighting.clear_colour = vec3_or(*light, "clear_colour", lighting.clear_colour);
+    lighting.source_lights = parse_source_lights(*light);
     if (const json::JsonValue *shadow = light->find("shadow_colour")) {
       lighting.shadow_colour = json::numbers<4>(*shadow, "shadow_colour");
     }
@@ -86,6 +87,7 @@ std::map<std::string, StageDefinition> parse_stages(const json::JsonValue &docum
       stage.name = name;
       stage.model = value.string_or("model", "");
       stage.collision = value.string_or("collision", "");
+      stage.collision_fixes = value.string_or("collision_fixes", "");
       stage.enemy_path = value.string_or("enemy_path", "");
       if (const auto *textures = value.find("two_sided_textures")) {
         for (const auto &texture : textures->array()) {
@@ -131,6 +133,21 @@ std::map<std::string, StageDefinition> parse_stages(const json::JsonValue &docum
       stage.scene_stage = static_cast<int>(value.number_or("scene_stage", -1.0));
       stage.door_model = value.string_or("door_model", "");
       stage.props_model = value.string_or("props_model", "");
+      if (const auto *pickups = value.find("supply_pickups")) {
+        stage.supply_pickups = parse_supply_pickup_look(*pickups);
+      }
+      if (const auto *routes = value.find("supply_routes")) {
+        stage.supply_routes = parse_supply_route_list(*routes);
+      }
+      if (value.find("spawn")) {
+        stage.spawn = vec3_or(value, "spawn", {});
+      }
+      if (const auto *spawns = value.find("player_spawns")) {
+        for (const auto &point : spawns->array()) {
+          const auto xyz = json::numbers<3>(point, "player spawn");
+          stage.player_spawns.push_back({xyz[0], xyz[1], xyz[2]});
+        }
+      }
       stages.emplace(name, std::move(stage));
     } catch (const std::exception &error) {
       throw std::runtime_error("stages.json, stage " + name + ": " + error.what());

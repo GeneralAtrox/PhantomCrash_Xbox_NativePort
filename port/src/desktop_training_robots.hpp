@@ -34,6 +34,6 @@ inline constexpr const char *part_tables_asset = "tables/parts.json";
 [[nodiscard]] std::string pilot_tag(const std::optional<PartTables> &parts, int pilot);
 
 // Gives the battle the stage's collision (converted), logging a problem.
-void load_stage_collision(const DataRoots &roots, const std::string &asset, Battle &battle);
+void load_stage_collision(const DataRoots &roots, const StageDefinition &stage, Battle &battle);
 
 } // namespace phantomcrash

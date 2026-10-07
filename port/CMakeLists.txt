@@ -37,9 +37,13 @@ add_library(phantomcrash_core
   src/robot_wrecks.cpp
   src/entry_shield.cpp
   src/effect_mixer.cpp
+  src/source_sound.cpp
   src/world_sound.cpp
   src/frame_stats.cpp
   src/battle_sounds.cpp
+  src/battle_sounds_weapons.cpp
+  src/battle_sounds_pairs.cpp
+  src/battle_sounds_sustained.cpp
   src/battle_sounds_pilot.cpp
   src/battle_chatter.cpp
   src/battle_scene.cpp
@@ -51,6 +55,8 @@ add_library(phantomcrash_core
   src/battle_ai_pickups.cpp
   src/battle_ai_navigation.cpp
   src/battle_ai_steering.cpp
+  src/battle_ai_vantage.cpp
+  src/battle_ai_reach.cpp
   src/battle_ai_jump.cpp
   src/battle_ai_weapons.cpp
   src/battle_ai_reactions.cpp
@@ -65,8 +71,10 @@ add_library(phantomcrash_core
   src/fence_impacts.cpp
   src/collision_geometry.cpp
   src/nav_graph_build.cpp
+  src/nav_tuning.cpp
   src/nav_graph_search.cpp
   src/stage_collision.cpp
+  src/stage_fixes.cpp
     src/stage_play_area.cpp
   src/stage_doors.cpp
   src/stage_objects.cpp
@@ -189,8 +197,11 @@ add_library(phantomcrash_core
   src/town_map.cpp
   src/town_map_script.cpp
   src/robot.cpp
+  src/robot_body_models.cpp
   src/robot_library.cpp
   src/robot_mover.cpp
+  src/movement_tuning.cpp
+  src/robot_wheels.cpp
   src/robot_air.cpp
   src/robot_strike.cpp
   src/robot_dodge.cpp
@@ -199,6 +210,7 @@ add_library(phantomcrash_core
   src/movement_mounts.cpp
   src/pose_contacts.cpp
   src/robot_parts.cpp
+  src/robot_armour.cpp
   src/weapon_reach.cpp
   src/screen_adjust.cpp
   src/post_process.cpp
@@ -206,6 +218,7 @@ add_library(phantomcrash_core
   src/host_controls.cpp
   src/quest_json.cpp
   src/skeleton.cpp
+  src/math_rotations.cpp
   src/motion_source.cpp
   src/sound_config.cpp
   src/sprite_layer.cpp
@@ -216,6 +229,20 @@ add_library(phantomcrash_core
   src/tutorial.cpp
   src/version.cpp
   src/world_model.cpp
+  src/rigid_animation.cpp
+  src/rigid_playback.cpp
+  src/rigid_source_playback.cpp
+  src/source_leg_playback.cpp
+  src/source_pmt.cpp
+  src/source_suspension.cpp
+  src/source_roll.cpp
+  src/source_lighting.cpp
+  src/source_particles.cpp
+  src/source_impact_attachment.cpp
+  src/source_effect_slots.cpp
+  src/source_weapon_actions.cpp
+  src/source_motion_actions.cpp
+  src/source_particle_birth.cpp
 )
 
 # cgltf (header only) reads the converted glTF models.
@@ -242,6 +269,8 @@ if(MSVC)
 else()
   target_compile_options(phantomcrash_core PRIVATE -Wall -Wextra -Wpedantic)
 endif()
+
+include(online.cmake)
 
 if(BUILD_TESTING)
   add_executable(phantomcrash_core_tests
@@ -273,8 +302,10 @@ if(BUILD_TESTING)
     tests/world_sound_tests.cpp
     tests/battle_sounds_tests.cpp
     tests/robot_load_tests.cpp
+    tests/robot_wheels_tests.cpp
     tests/stage_collision_tests.cpp
     tests/nav_graph_tests.cpp
+    tests/nav_recovery_tests.cpp
     tests/stage_doors_tests.cpp
     tests/stage_objects_tests.cpp
     tests/fence_impacts_tests.cpp
@@ -290,6 +321,7 @@ if(BUILD_TESTING)
     tests/records_tests.cpp
     tests/battle_music_tests.cpp
     tests/sonic_amp_tests.cpp
+    tests/sonic_amp_import_tests.cpp
     tests/garage_stock_tests.cpp
     tests/cheats_tests.cpp
     tests/dealer_tests.cpp
@@ -331,6 +363,44 @@ if(BUILD_TESTING)
     target_compile_options(phantomcrash_core_tests PRIVATE /W4 /permissive-)
   endif()
   add_test(NAME phantomcrash_core_tests COMMAND phantomcrash_core_tests)
+
+  add_executable(phantomcrash_slai_tests tests/core_tests.cpp tests/slai_native_tests.cpp tests/slai_playback_tests.cpp
+    tests/robot_wheels_tests.cpp tests/sonic_amp_import_tests.cpp tests/slai_assembly_tests.cpp
+    tests/slai_lighting_tests.cpp tests/slai_body_bank_tests.cpp tests/source_sound_tests.cpp
+    tests/source_particle_atlas_tests.cpp tests/source_particle_motion_tests.cpp tests/source_particle_birth_tests.cpp tests/source_particle_parent_tests.cpp tests/source_fire_pair_tests.cpp tests/source_sustained_sound_tests.cpp tests/source_melee_tests.cpp
+    tests/source_weapon_actions_tests.cpp
+    tests/source_motion_actions_tests.cpp
+    tests/source_rigid_transition_tests.cpp
+    tests/source_leg_playback_tests.cpp
+    tests/source_pmt_tests.cpp
+    tests/rigid_source_playback_tests.cpp
+    tests/source_effect_slots_tests.cpp
+    tests/slai_supply_tests.cpp
+    tests/slai_leg_mount_tests.cpp
+    tests/source_suspension_tests.cpp
+    tests/source_roll_tests.cpp
+    tests/world_sound_tests.cpp tests/battle_sounds_tests.cpp tests/armory_tests.cpp tests/shop_label_tests.cpp)
+  target_link_libraries(phantomcrash_slai_tests PRIVATE phantomcrash_core)
+  target_compile_definitions(phantomcrash_slai_tests
+    PRIVATE PHANTOMCRASH_SOURCE_ROOT="${PROJECT_SOURCE_DIR}")
+  add_test(NAME phantomcrash_slai_tests COMMAND phantomcrash_slai_tests)
+endif()
+
+# Headless AI battle simulator: a research tool that runs the live RUMBLING's
+# computer robots without a window and records what their AI does.
+add_executable(phantomcrash_ai_sim
+  src/ai_sim/ai_sim_main.cpp
+  src/ai_sim/ai_sim_navdump.cpp
+  src/ai_sim/ai_sim_traps.cpp
+  src/ai_sim/ai_sim_output.cpp
+  src/ai_sim/ai_sim_probe.cpp
+  src/ai_sim/ai_sim_probe_combat.cpp
+  src/ai_sim/ai_sim_probe_behaviour.cpp
+  src/ai_sim/ai_sim_watch.cpp
+  src/ai_sim/ai_sim_world.cpp)
+target_link_libraries(phantomcrash_ai_sim PRIVATE phantomcrash_core)
+if(MSVC)
+  target_compile_options(phantomcrash_ai_sim PRIVATE /W4 /permissive-)
 endif()
 
 if(PHANTOMCRASH_BUILD_DESKTOP)
@@ -348,11 +418,21 @@ if(PHANTOMCRASH_BUILD_DESKTOP)
   )
 
   # FFmpeg movie decoding without SDL, shared by the port and the media test.
-  add_library(phantomcrash_media STATIC src/movie_decoder.cpp)
+  add_library(phantomcrash_media STATIC src/movie_decoder.cpp src/music_decoder.cpp)
   target_include_directories(phantomcrash_media PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
   target_link_libraries(phantomcrash_media PUBLIC phantomcrash_core PkgConfig::FFMPEG)
   if(MSVC)
     target_compile_options(phantomcrash_media PRIVATE /W4 /permissive-)
+  endif()
+
+  add_executable(phantomcrash_slai_audio src/slai_audio_convert.cpp)
+  target_link_libraries(phantomcrash_slai_audio PRIVATE PkgConfig::FFMPEG)
+  target_compile_features(phantomcrash_slai_audio PRIVATE cxx_std_20)
+
+  if(BUILD_TESTING)
+    add_executable(phantomcrash_music_tests tests/core_tests.cpp tests/music_decoder_tests.cpp)
+    target_link_libraries(phantomcrash_music_tests PRIVATE phantomcrash_media)
+    add_test(NAME phantomcrash_music_tests COMMAND phantomcrash_music_tests)
   endif()
 
   # Disc extraction and asset conversion (the C++ form of the Python
@@ -410,6 +490,7 @@ if(PHANTOMCRASH_BUILD_DESKTOP)
   if(MSVC)
     target_compile_options(phantomcrash_extract PRIVATE /W4 /permissive-)
   endif()
+
   if(BUILD_TESTING)
     add_executable(phantomcrash_extract_tests tests/core_tests.cpp tests/extract_tests.cpp)
     target_link_libraries(phantomcrash_extract_tests PRIVATE phantomcrash_extractor)
@@ -423,6 +504,7 @@ if(PHANTOMCRASH_BUILD_DESKTOP)
   add_executable(phantomcrash_port WIN32
     src/desktop_audio.cpp
     src/desktop_audio_effects.cpp
+    src/desktop_source_audio.cpp
     src/desktop_battle_hud.cpp
     src/desktop_battle_sights.cpp
     src/desktop_battle_panels.cpp
@@ -430,6 +512,7 @@ if(PHANTOMCRASH_BUILD_DESKTOP)
     src/desktop_battle_scene.cpp
     src/desktop_battle_view.cpp
     src/desktop_battle_wrecks.cpp
+    src/desktop_wreck_collision.cpp
     src/desktop_location_menu.cpp
     src/desktop_location_pointer.cpp
     src/desktop_texture_hit.cpp
@@ -463,9 +546,31 @@ if(PHANTOMCRASH_BUILD_DESKTOP)
     src/desktop_screens_coop_battle.cpp
     src/desktop_screens_coop_save.cpp
     src/desktop_coop.cpp
+    src/desktop_coop_storage.cpp
+    src/desktop_coop_online.cpp
     src/desktop_coop_draw.cpp
     src/desktop_coop_cursors.cpp
     src/desktop_coop_matches.cpp
+    src/desktop_coop_checkpoint.cpp
+    src/desktop_online_match.cpp
+    src/desktop_online_session.cpp
+    src/desktop_online_presentation.cpp src/desktop_training_presentation.cpp
+    src/desktop_online_change.cpp src/desktop_online_exit.cpp
+    src/desktop_online_resources.cpp
+    src/desktop_online_factory.cpp
+    src/desktop_online_join.cpp
+    src/desktop_online_game.cpp
+    src/desktop_online_barrier.cpp
+    src/desktop_online_history.cpp src/desktop_online_recovery.cpp
+    src/desktop_online_factory_check.cpp
+    src/desktop_online_game_check.cpp
+    src/desktop_online_recovery_check.cpp
+    src/desktop_online_state.cpp
+    src/desktop_online_player.cpp
+    src/desktop_training_online.cpp
+    src/desktop_online_input_check.cpp
+    src/desktop_training_tick.cpp
+    src/desktop_online_assets.cpp
     src/desktop_training_coop.cpp
     src/desktop_training_backdrop.cpp
     src/desktop_training_build.cpp
@@ -523,6 +628,9 @@ if(PHANTOMCRASH_BUILD_DESKTOP)
     src/desktop_assemble.cpp
     src/desktop_assemble_list.cpp
     src/desktop_robot_preview.cpp
+    src/desktop_robot_shot.cpp
+    src/desktop_tools.cpp
+    src/desktop_online_resource_check.cpp
     src/desktop_sv_spec.cpp
     src/desktop_part_stats.cpp
     src/desktop_chip_dialog.cpp
@@ -539,6 +647,10 @@ if(PHANTOMCRASH_BUILD_DESKTOP)
     src/desktop_cockpit.cpp
     src/desktop_supply.cpp
     src/desktop_effects.cpp
+    src/desktop_source_particles.cpp
+    src/desktop_source_projectiles.cpp
+    src/desktop_source_weapon_actions.cpp
+    src/desktop_source_model_actions.cpp
     src/desktop_shots.cpp
     src/desktop_mech_vfx.cpp
     src/mech_vfx_data.cpp
@@ -564,6 +676,7 @@ if(PHANTOMCRASH_BUILD_DESKTOP)
     src/desktop_sharp_text.cpp
     src/desktop_smaa.cpp
     src/desktop_world_sprites.cpp
+    src/desktop_sprite_vertices.cpp
     src/desktop_world_renderer.cpp
     src/desktop_world_shaders.cpp
     src/movie_audio_output.cpp
@@ -577,11 +690,15 @@ if(PHANTOMCRASH_BUILD_DESKTOP)
   configure_file(src/desktop_smaa_shaders.hpp.in generated/desktop_smaa_shaders.hpp @ONLY)
   target_include_directories(phantomcrash_port PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
   target_link_libraries(phantomcrash_port PRIVATE
-    phantomcrash_core phantomcrash_media SDL3::SDL3 SDL3_image::SDL3_image ZLIB::ZLIB)
+    phantomcrash_online phantomcrash_media SDL3::SDL3 SDL3_image::SDL3_image ZLIB::ZLIB)
   # The port runs the extractor beside it to install or update the game data.
   add_dependencies(phantomcrash_port phantomcrash_extract)
   if(WIN32)
     target_link_libraries(phantomcrash_port PRIVATE comctl32 d3d11 dxgi d3dcompiler gdiplus)
+
+    # The executable icon (port/res, built by tools/make_icon.py).
+    enable_language(RC)
+    target_sources(phantomcrash_port PRIVATE res/phantomcrash_port.rc)
   endif()
   if(MSVC)
     target_compile_options(phantomcrash_port PRIVATE /W4 /permissive-)
@@ -589,13 +706,18 @@ if(PHANTOMCRASH_BUILD_DESKTOP)
 
   if(BUILD_TESTING)
     add_executable(phantomcrash_coop_tests tests/core_tests.cpp tests/coop_settings_tests.cpp
-      src/desktop_coop_matches.cpp src/desktop_coop_rewards.cpp)
-    target_link_libraries(phantomcrash_coop_tests PRIVATE phantomcrash_core SDL3::SDL3)
+      tests/online_local_input_tests.cpp tests/online_result_tests.cpp
+      tests/coop_checkpoint_tests.cpp
+      src/desktop_coop_matches.cpp src/desktop_coop_rewards.cpp src/desktop_coop_checkpoint.cpp
+      src/desktop_online_match.cpp src/desktop_online_session.cpp src/desktop_online_state.cpp
+      src/desktop_online_presentation.cpp)
+    target_link_libraries(phantomcrash_coop_tests PRIVATE phantomcrash_online SDL3::SDL3)
     target_compile_definitions(phantomcrash_coop_tests PRIVATE
       PHANTOMCRASH_SOURCE_ROOT="${PROJECT_SOURCE_DIR}")
     add_test(NAME phantomcrash_coop_tests COMMAND phantomcrash_coop_tests)
     add_executable(phantomcrash_input_tests tests/core_tests.cpp tests/desktop_input_tests.cpp
-      tests/desktop_replay_archive_tests.cpp src/desktop_replay_archive.cpp
+      tests/desktop_replay_archive_tests.cpp tests/desktop_sprite_vertices_tests.cpp
+      src/desktop_replay_archive.cpp src/desktop_sprite_vertices.cpp
       src/desktop_input.cpp src/desktop_input_bindings.cpp)
     target_link_libraries(phantomcrash_input_tests PRIVATE phantomcrash_core SDL3::SDL3 ZLIB::ZLIB)
     add_test(NAME phantomcrash_input_tests COMMAND phantomcrash_input_tests)

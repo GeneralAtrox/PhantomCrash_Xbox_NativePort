@@ -71,6 +71,22 @@ TEST_CASE("co-op preferences round trip without changing player saves") {
   CHECK(bounded.coop.kill_ny_percent == 0);
 }
 
+TEST_CASE("online profile round trips independently of solo and local co-op") {
+  Settings settings;
+  settings.quest.money = 111;
+  settings.coop_profiles[0] = QuestSave{};
+  settings.coop_profiles[0]->money = 222;
+  settings.online_profile = QuestSave{};
+  settings.online_profile->money = 333;
+  settings.online_profile->player_name = "Online";
+  const auto loaded = settings_from_json(settings_to_json(settings));
+  CHECK(loaded.quest.money == 111);
+  CHECK(loaded.coop_profiles[0]->money == 222);
+  CHECK(loaded.online_profile->money == 333);
+  CHECK(loaded.online_profile->player_name == "Online");
+  CHECK(!settings_from_json(json::parse("{}")).online_profile);
+}
+
 TEST_CASE("shared boss awards pay both players in full and settle only once") {
   MatchFixture f;
   f.match.options = {0, 100, true, true, true};

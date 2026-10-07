@@ -69,6 +69,12 @@ DataRoots DataRoots::standard(const std::filesystem::path &root) {
                     root / "artifacts" / "europe" / "files" / "Media"});
 }
 
+DataRoots DataRoots::shipped(const std::filesystem::path &root) {
+  return DataRoots(root / "data", {},
+                   {root / "artifacts" / "europe" / "assets",
+                    root / "artifacts" / "europe" / "files" / "Media"});
+}
+
 std::optional<std::filesystem::path>
 DataRoots::find_root(const std::vector<std::filesystem::path> &starts) {
   std::error_code error;
@@ -114,6 +120,9 @@ std::filesystem::path DataRoots::asset(std::string_view relative) const {
 json::JsonValue DataRoots::document(std::string_view relative) const {
   const auto path = checked_relative(relative);
   auto result = json::read_file(data_ / path);
+  if (mods_.empty()) {
+    return result;
+  }
   if (auto overlay = locate(mods_ / "data", path)) {
     json::merge(result, json::read_file(*overlay));
   }

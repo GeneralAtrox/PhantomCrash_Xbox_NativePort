@@ -7,6 +7,7 @@
 
 #include <array>
 #include <memory>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -32,6 +33,8 @@ struct RobotCatalogue {
     int emblem_model{-1};
     int motions{-1};
     float forearm_turn{}; // radians about x on the forearms (0x0aa499)
+    std::vector<std::string> paint_images;
+    std::map<int, int> models_by_leg_type;
   };
   struct LegType {
     int model{-1};
@@ -39,15 +42,22 @@ struct RobotCatalogue {
     std::array<std::array<int, 2>, 2> arm_motions{}; // [side][arm class]
     std::vector<int> paints;                         // by colour
     std::vector<MotionTiming> timings;               // by motion id
-    float radius{};                                  // collision radius, 0 if unknown
+    std::vector<int> source_melee_motions; // source actions 35..42; disabled clips retain playback
+    std::vector<int> source_motion_actions;
+    std::array<int, 2> source_turn_frames{-1, -1}; // from idle / another actor state
+    std::vector<int> source_transition_frames;
+    float radius{};      // collision radius, 0 if unknown
     int shadow_mesh{-1}; // its flat shadow: a mesh of resource 184 (0x242750), -1 for none
+    std::vector<std::string> paint_images;
   };
   struct ArmType {
     std::array<int, 2> models{-1, -1}; // [side]
     int arm_class{};
+    std::vector<std::string> paint_images;
   };
   struct ShoulderType {
     std::array<int, 2> models{-1, -1};
+    std::vector<std::string> paint_images;
   };
 
   std::vector<int> body_parts; // part id -> type
@@ -59,6 +69,7 @@ struct RobotCatalogue {
   std::vector<ArmType> arm_types;
   std::vector<ShoulderType> shoulder_types;
   std::vector<int> emblems;
+  std::vector<std::string> emblem_images;
   // The leg type each body type stands as (0x082d3d, robot_preview.json):
   // its maker's first. Each maker's leg types follow its first in order.
   std::vector<int> body_leg_types;
@@ -72,6 +83,8 @@ struct RobotCatalogue {
 };
 
 [[nodiscard]] RobotCatalogue parse_robot_catalogue(const json::JsonValue &document);
+void read_body_model_variants(const json::JsonValue &value, RobotCatalogue::BodyType &body);
+[[nodiscard]] int body_model_for_legs(const RobotCatalogue::BodyType &body, int leg_type);
 
 // A robot as the save's robot record names it: part ids, -1 for an empty
 // arm or shoulder, and its colour (paint) and emblem.
@@ -97,13 +110,18 @@ struct RobotAssembly {
   int leg_type{-1};
   int body_type{-1};
   std::vector<MotionTiming> timings;
+  std::vector<int> source_melee_motions;
+  std::vector<int> source_motion_actions;
+  std::array<int, 2> source_turn_frames{-1, -1};
+  std::vector<int> source_transition_frames;
   float radius{};      // the leg type's collision radius, clamped; 0 if unknown
   int shadow_mesh{-1}; // the leg type's flat shadow (RobotCatalogue::LegType)
   std::string body_model;
   std::string legs_model;
   std::array<std::string, 2> arm_models;
   std::array<std::string, 2> shoulder_models;
-  std::string paint; // texture every part draws with
+  std::string paint;                      // texture every part draws with
+  std::array<std::string, 6> part_paints; // body, legs, arms, shoulders
   std::string leg_motions;
   std::string body_motions;
   std::array<std::string, 2> arm_motions;
@@ -117,6 +135,8 @@ struct RobotAssembly {
   // A port addition: moves another maker's shoulder weapon, in the upper
   // body's space, from its maker's mount to the body's maker's.
   std::array<Vec3, 2> shoulder_shifts{};
+  std::string emblem_model;
+  std::string emblem_image;
 };
 
 [[nodiscard]] std::string robot_model_path(int resource);

@@ -136,6 +136,9 @@ void RobotPreview::tick(const double seconds) {
     model_->animator->tick(seconds);
   }
   model_->animator->pose(root, 0.0F, 0.0F, true, model_->pose);
+  model_->visual->animate(model_->animator->motion(), model_->animator->frame(),
+                          model_->animator->looping(),
+                          script_.animate ? static_cast<float>(seconds) : 0.0F);
   model_->visual->add_items(model_->pose, root, model_->items);
 }
 

@@ -24,6 +24,7 @@ struct TestDriveScript {
   // The training weapon (training.json battle.weapons) whose tuning a
   // record of each kind starts from; the record then gives its stats.
   std::map<WeaponKind, std::string> templates;
+  std::vector<std::pair<std::string, std::string>> stage_choices; // stage, label
 };
 
 // Throws std::runtime_error naming the member at fault.

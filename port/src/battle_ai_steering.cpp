@@ -13,14 +13,13 @@ namespace {
 
 constexpr float facing_jump = 0.35F;      // radians: a jump link is taken facing this close
 constexpr float facing_walk = 1.0F;       // walk on while the waypoint is this close ahead
-constexpr float lift_margin = 1.0F;       // let go this far under the landing; the throw clears it
 constexpr float hop_rise = 3.5F;          // a stuck robot's hop holds the jump this far up
 constexpr float progress_epsilon = 0.25F; // nearer by this much counts as progress
 constexpr float level_slack = 0.5F;       // a waypoint is reached within a step plus this
 constexpr float goal_snap_cells = 1.5F;   // a goal this near its node is walked to exactly
-constexpr float vantage_rise_weight = 1.5F; // each unit higher is worth this much path
-constexpr float overshoot = 0.5F;           // in the air, stop pushing on this close
-constexpr int smooth_lookahead = 8;         // waypoints a straight walk may skip at once
+constexpr float overshoot = 0.5F;         // in the air, stop pushing on this close
+constexpr int smooth_lookahead = 8;       // waypoints a straight walk may skip at once
+constexpr int climb_kind = 7;             // ENPT segments that climb (never rejoined)
 
 float flat(Vec3 v) {
   v.y = 0;
@@ -29,6 +28,22 @@ float flat(Vec3 v) {
 
 float stick(const float error, const float speed, const float seconds) {
   return speed > 0 ? std::clamp(error / (speed * seconds), -1.0F, 1.0F) : 0;
+}
+
+// Authored climbs (kind 7 segments) with a point no grid node lies near:
+// planned routes cannot follow them.
+std::vector<bool> blocked_climbs(const NavGraph &graph, const EnemyPath &path, const float rise) {
+  std::vector<bool> blocked(path.segments.size());
+  for (std::size_t i = 0; i < path.segments.size(); ++i) {
+    const auto &segment = path.segments[i];
+    blocked[i] =
+        segment.kind == climb_kind && std::ranges::any_of(segment.points, [&](const Vec3 p) {
+          const int node = graph.nearest(p);
+          return node < 0 ||
+                 std::abs(graph.nodes()[static_cast<std::size_t>(node)].position.y - p.y) > rise;
+        });
+  }
+  return blocked;
 }
 
 // Drops walk waypoints that a straight walk can skip.
@@ -63,6 +78,7 @@ std::vector<NavWaypoint> smooth(const StageCollision &stage, const std::vector<N
 void Battle::set_stage(StageCollision stage) {
   stage_ = std::move(stage);
   nav_.reset();
+  nav_climbs_.clear();
   nav_future_ = settings_.ai.navigation.enabled ? shared_nav_graph(stage_, settings_.ai.navigation)
                                                 : NavGraphFuture{};
 }
@@ -71,6 +87,7 @@ const NavGraph *Battle::nav_graph() {
   if (!nav_ && nav_future_.valid() &&
       nav_future_.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
     nav_ = nav_future_.get();
+    nav_climbs_ = blocked_climbs(*nav_, path_, settings_.ai.navigation.point_rise);
   }
   return nav_.get();
 }
@@ -95,13 +112,21 @@ bool Battle::ai_plan(Combatant &drone, const Vec3 goal) {
   n.since_plan = 0;
   n.goal = goal;
   n.goal_node = goal_node;
+  n.unreachable = n.goal_node < 0;
   if (start < 0 || n.goal_node < 0) {
     return false;
   }
   if (start != n.goal_node) {
-    n.route = graph.path(start, n.goal_node, n.avoided, t.avoid_cost);
+    n.route = graph.path(start, n.goal_node, n.avoided, t.avoid_cost, jump_reach(drone));
     if (n.route.empty()) {
+      n.unreachable = true;
       return false;
+    }
+    // Aside from its start node (pushed off it, or on ground with no node of
+    // its own), it walks there first: a jump is taken from its take-off.
+    const Vec3 first = graph.nodes()[static_cast<std::size_t>(start)].position;
+    if (n.route.front().link != NavLink::walk && flat(first - at) > t.takeoff_reach) {
+      n.route.insert(n.route.begin(), {first, NavLink::walk, start});
     }
   }
   // Finish at the goal itself, at its node's height: ENPT points can lie
@@ -124,15 +149,37 @@ bool Battle::ai_navigate(Combatant &drone, const Vec3 goal, const float seconds,
   }
   auto &s = drone.ai;
   NavAgent &n = s.nav;
+  n.dropped = false;
+  n.unreachable = false;
+  n.asked = true;
+  if (n.fallback_left > 0) {
+    n.fallback_left -= seconds;
+    return false; // escalated: steering the original way for now
+  }
   for (NavAvoid &a : n.avoided) {
     a.seconds -= seconds;
   }
   std::erase_if(n.avoided, [](const NavAvoid &a) { return a.seconds <= 0; });
   const Vec3 at = drone.mover.position();
+  if (ai_escalate(drone, seconds)) {
+    return false;
+  }
   const bool grounded = drone.mover.grounded();
   n.replan_left -= seconds;
   n.since_plan += seconds;
   n.air_seconds = grounded ? 0.0F : n.air_seconds + seconds;
+  if (grounded && n.jumping) {
+    n.jumping = false;
+    if (at.y < n.jump_land - t.step - level_slack) {
+      // Back down below the ledge: this robot does not get up there (an
+      // edge it cannot get over). It plans another way for a while.
+      n.avoided.push_back({-1, n.jump_to, t.failed_jump_seconds});
+      n.route.clear();
+      ++n.strikes;
+      ++s.recoveries;
+    }
+    n.jump_to = -1;
+  }
   // Wedged in the air on geometry, it plans from where it hangs.
   const bool settled = grounded || n.air_seconds > t.give_up_seconds;
   const bool arrived = !n.route.empty() && n.next >= n.route.size();
@@ -145,7 +192,9 @@ bool Battle::ai_navigate(Combatant &drone, const Vec3 goal, const float seconds,
   }
   while (n.next < n.route.size()) {
     const NavWaypoint &w = n.route[n.next];
-    if (!grounded || flat(w.position - at) >= t.waypoint_reach ||
+    const bool takeoff = n.next + 1 < n.route.size() && n.route[n.next + 1].link == NavLink::jump;
+    const float reach = takeoff ? std::min(t.waypoint_reach, t.takeoff_reach) : t.waypoint_reach;
+    if (!grounded || flat(w.position - at) >= reach ||
         std::abs(w.position.y - at.y) > t.step + level_slack) {
       break;
     }
@@ -167,28 +216,32 @@ bool Battle::ai_navigate(Combatant &drone, const Vec3 goal, const float seconds,
   const float error = wrap_angle(heading_toward(to) - drone.mover.heading());
   s.control.move[0] = stick(error, radians(drone.mover.tuning().turn_degrees_per_second), seconds);
   const auto press = [&](const float lift_to) {
-    // A press needs the jump released first: alternate while it has not
-    // taken (the landing ignores the jump for a moment).
-    s.control.jump = !n.pressed;
-    n.pressed = !n.pressed;
-    n.lifting = true;
+    // Only a press the robot takes: while it would be ignored (landing, the
+    // jump still held) the jump stays released.
+    s.control.jump = drone.mover.jump_ready();
+    n.lifting = s.control.jump;
     n.lift_to = lift_to;
+    return s.control.jump;
   };
   if (grounded) {
     n.lifting = false;
     if (jump) {
+      // Line up standing: face the ledge, and walk on only with the press
+      // that takes off. Shoving into the wall below the ledge lifts the
+      // robot off the ground for a tick, and each landing ignores the jump.
       const bool facing = std::abs(error) < facing_jump;
-      s.control.move[1] = facing ? 1.0F : 0.0F;
-      if (facing) {
-        press(w.position.y - lift_margin);
+      const bool takes_off = facing && press(w.position.y + t.jump_hold_over);
+      s.control.move[1] = takes_off ? 1.0F : 0.0F;
+      if (takes_off) {
+        n.jump_to = w.node;
+        n.jump_land = w.position.y;
       }
     } else {
-      n.pressed = false;
       s.control.move[1] = std::abs(error) < facing_walk ? speed : 0.0F;
     }
   } else {
-    n.pressed = false;
     s.control.move[1] = flat(to) > overshoot ? 1.0F : 0.0F;
+    n.jumping = n.jumping || n.jump_to >= 0;
     if (n.lifting && at.y < n.lift_to) {
       s.control.jump = true;
     } else {
@@ -203,7 +256,11 @@ bool Battle::ai_navigate(Combatant &drone, const Vec3 goal, const float seconds,
     n.stall += seconds;
   }
   if (grounded && !jump && n.stall > t.stuck_seconds) {
-    press(at.y + hop_rise);
+    if (crowded(drone, to)) {
+      s.control.strafe = static_cast<float>(s.dodge_side); // step out of its way
+    } else {
+      press(at.y + hop_rise);
+    }
   }
   if (n.stall > t.give_up_seconds) {
     // First plan again without shortcuts; stuck again, avoid the waypoint.
@@ -216,107 +273,41 @@ bool Battle::ai_navigate(Combatant &drone, const Vec3 goal, const float seconds,
     n.stall = 0;
     n.best = std::numeric_limits<float>::max();
     n.lifting = false;
+    ++n.strikes;
     ++s.recoveries;
   }
   return true;
 }
 
-std::vector<bool> Battle::nav_reach(const Combatant &drone) {
-  std::vector<bool> reach;
-  if (!settings_.ai.navigation.enabled || nav_graph() == nullptr) {
-    return reach;
-  }
-  return nav_->reachable_from(nav_->nearest(drone.mover.position()));
-}
-
-bool Battle::take_nav_search() {
-  if (nav_plans_left_ <= 0) {
-    return false;
-  }
-  --nav_plans_left_;
-  return true;
-}
-
-bool Battle::nav_reaches(const std::vector<bool> &reach, const Vec3 point) const {
-  if (reach.empty()) {
-    return true;
-  }
-  const int node = nav_->nearest(point);
-  return node >= 0 && reach[static_cast<std::size_t>(node)];
-}
-
-int Battle::ai_vantage(const Combatant &drone) {
-  const auto &t = settings_.ai.navigation;
-  const auto &s = drone.ai;
-  const NavGraph &graph = *nav_;
-  const Combatant &enemy = robots_.at(static_cast<std::size_t>(s.target));
-  float range = 0;
-  for (std::size_t slot = 0; slot < weapon_slots; ++slot) {
-    const WeaponTuning *weapon = drone.weapons[slot];
-    if (weapon && !drone.lost[slot] && weapon->kind != WeaponKind::melee) {
-      range = std::max(range, weapon->range);
-    }
-  }
-  const float reach = std::min(t.vantage_radius, range * t.vantage_range_share);
-  if (reach <= t.vantage_nearest) {
-    return -1;
-  }
-  const Vec3 feet = enemy.mover.position();
-  const Vec3 aim = enemy.aim_origin();
-  std::vector<std::pair<float, int>> candidates;
-  for (const auto &[node, cost] :
-       graph.costs_from(graph.nearest(drone.mover.position()), t.vantage_path_limit)) {
-    const Vec3 p = graph.nodes()[static_cast<std::size_t>(node)].position;
-    const float rise = p.y - feet.y;
-    const float distance = flat(p - feet);
-    if (rise >= t.vantage_rise && distance >= t.vantage_nearest && distance <= reach) {
-      candidates.emplace_back(cost - std::min(rise, t.jump_rise) * vantage_rise_weight, node);
-    }
-  }
-  std::ranges::sort(candidates);
-  const auto tests = std::min(candidates.size(), static_cast<std::size_t>(t.vantage_sight_tests));
-  for (std::size_t k = 0; k < tests; ++k) {
-    const int node = candidates[k].second;
-    const Vec3 eye =
-        graph.nodes()[static_cast<std::size_t>(node)].position + Vec3{0.0F, drone.radius, 0.0F};
-    if (clear_target_sight(eye, aim)) {
-      return node;
-    }
-  }
-  return -1;
-}
-
-bool Battle::ai_high_ground(Combatant &drone, const float seconds) {
+bool Battle::ai_escalate(Combatant &drone, const float seconds) {
   const auto &t = settings_.ai.navigation;
   auto &s = drone.ai;
   NavAgent &n = s.nav;
-  n.holding = false;
-  if (!t.enabled || !t.high_ground || s.target < 0 || nav_graph() == nullptr) {
-    return false;
-  }
-  if (n.vantage_target != s.target) {
-    n.vantage_target = s.target;
-    n.vantage = -1;
-    n.vantage_left = 0;
-  }
-  n.vantage_left -= seconds;
-  // The search waits for a tick with a graph search to spare.
-  if (n.vantage_left <= 0 && drone.mover.grounded() && take_nav_search()) {
-    n.vantage_left = t.vantage_seconds;
-    n.vantage = ai_random(random_) < t.vantage_chance ? ai_vantage(drone) : -1;
-  }
-  if (n.vantage < 0) {
-    return false;
-  }
-  const Vec3 spot = nav_->nodes()[static_cast<std::size_t>(n.vantage)].position;
   const Vec3 at = drone.mover.position();
-  if (flat(spot - at) < t.waypoint_reach * 2.0F && std::abs(spot.y - at.y) < t.step + level_slack) {
-    n.holding = true;
-    return false; // holding it: fight as usual, without closing in
-  }
-  if (!ai_navigate(drone, spot, seconds, 1.0F)) {
-    n.vantage = -1;
+  if (length(at - n.anchor) > t.escalate_distance) {
+    n.anchor = at; // headway
+    n.anchor_seconds = 0;
+    n.strikes = 0;
+    n.escalation = 0;
     return false;
+  }
+  n.anchor_seconds += seconds;
+  if (n.anchor_seconds < t.escalate_seconds && n.strikes < t.escalate_recoveries) {
+    return false;
+  }
+  n.anchor_seconds = 0;
+  n.strikes = 0;
+  n.route.clear();
+  n.stall = 0;
+  n.best = std::numeric_limits<float>::max();
+  n.lifting = false;
+  ++s.recoveries;
+  if (n.escalation == 0) {
+    n.escalation = 1;
+    n.dropped = true; // the caller gives up its goal
+  } else {
+    n.escalation = 0;
+    n.fallback_left = t.fallback_seconds;
   }
   return true;
 }

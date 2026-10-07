@@ -123,7 +123,7 @@ TEST_CASE("a card's bounty grows with the level and a cleared game raises the le
 TEST_CASE("CHARACTER INFO steps through the day's opponents and B goes back") {
   const Fixture fixture;
   const RumblingScript script =
-      parse_rumbling(DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT).document("ui/rumbling.json"));
+      parse_rumbling(DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT).document("ui/rumbling.json"));
   QuestSave quest;
   quest.money = 5000;
   Rumbling rumbling(script, fixture.tables, fixture.check(), quest, 0);

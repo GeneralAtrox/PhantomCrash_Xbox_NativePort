@@ -129,9 +129,11 @@ def main() -> None:
         for dll in runtime:
             add(z, dll, f"{stem}/{dll.name}")
         z.writestr(f"{stem}/licenses/microsoft-visual-cpp-runtime.txt", runtime_notice)
-        for file in files + ["LICENSE", "docs/REPLAY.md", "docs/MATCH_RESULT.md",
+        for file in files + ["LICENSE", "NOTICE.md", "docs/REPLAY.md", "docs/MATCH_RESULT.md",
                              "docs/ENTRY_SHIELD_RENDERING.md", "docs/CHEATS.md",
-                             "docs/ORIGINAL_ROBOT_AI.md"]:
+                             "docs/ORIGINAL_ROBOT_AI.md",
+                             "docs/ONLINE_MULTIPLAYER_DETERMINISM.md", "docs/SLAI.md",
+                             "docs/SLAI_INTEGRATION.md"]:
             add(z, ROOT / file, f"{stem}/{file}")
         add(z, ROOT / "docs/WINDOWS_RELEASE.md", f"{stem}/README.md")
         for library in LIBRARIES:

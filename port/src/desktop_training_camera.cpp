@@ -25,13 +25,17 @@ constexpr float cockpit_share = 0.5F;
 TrainingScreen::~TrainingScreen() {
   battle_->select_player(player_index_);
   // A live area's battle outlives this screen; do not leave its camera attached.
-  battle_->set_player_target_view(std::nullopt);
+  if (!online()) {
+    battle_->set_player_target_view(std::nullopt);
+  }
 }
 
 void TrainingScreen::update_target_view() {
-  battle_->set_player_target_view(TargetView{camera_.view() * camera_.projection(target_aspect_),
-                                             camera_.eye(),
-                                             hud_ ? hud_->lock_boxes() : std::nullopt});
+  local_target_view_ = TargetView{camera_.view() * camera_.projection(target_aspect_),
+                                  camera_.eye(), hud_ ? hud_->lock_boxes() : std::nullopt};
+  if (!online()) {
+    battle_->set_player_target_view(local_target_view_);
+  }
   const auto &candidates = battle_->player().lock_candidates;
   for (std::size_t slot = 0; slot < candidates.size(); ++slot) {
     if (target_candidates_[slot] != candidates[slot]) {

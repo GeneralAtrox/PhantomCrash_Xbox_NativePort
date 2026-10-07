@@ -12,10 +12,12 @@
 #include <string>
 
 #include "desktop_host.hpp"
+#include "desktop_coop_storage.hpp"
 #include "desktop_frame_counter.hpp"
 #include "desktop_game_data.hpp"
 #include "desktop_input.hpp"
 #include "desktop_options.hpp"
+#include "desktop_tools.hpp"
 #include "desktop_scene_dump.hpp"
 #include "desktop_screens.hpp"
 #include "desktop_settings_menu.hpp"
@@ -99,12 +101,16 @@ void apply_fullscreen(DesktopHost &host, SettingsMenu &menu) {
 
 int run(const Options &options) {
   const auto root = find_root(options);
-  const bool smoke = options.smoke_frames > 0;
+  const bool smoke =
+      options.smoke_frames > 0 || options.robot_shot || options.online_resource_check;
   const bool benchmark = options.benchmark_seconds > 0.0;
   if (!prepare_game_data(root, !smoke && !benchmark)) {
     return 0;
   }
   const auto roots = DataRoots::standard(root);
+  if (const auto result = run_desktop_tool(options, roots)) {
+    return *result;
+  }
   for (const char *document : documents) {
     static_cast<void>(roots.document(document));
   }
@@ -123,29 +129,9 @@ int run(const Options &options) {
   FramePacer pacer;
   FrameCounter counter;
   SDL_Log("Data root: %s", root.string().c_str());
-  auto coop = std::make_shared<CoopState>();
-  coop->enabled = saved.experimental_coop;
-  coop->options = saved.coop;
-  coop->profiles = saved.coop_profiles;
-  coop->saved_profiles = saved.coop_profiles;
-  coop->save_profile = [preferences, smoke](const int slot, const QuestSave &profile) {
-    if (smoke || slot < 0 || slot >= 4) {
-      return false;
-    }
-    auto disk = load_settings(preferences);
-    if (disk.save_slots_unreadable) {
-      SDL_Log("Co-op save failed: player=%d settings unreadable", slot + 1);
-      return false;
-    }
-    // Merge only the requesting player's checkpoint into the latest disk state.
-    disk.coop_profiles[slot] = profile;
-    const bool written = save_settings(preferences, disk);
-    SDL_Log("Co-op save %s: player=%d day=%d", written ? "written" : "failed", slot + 1,
-            profile.day + 1);
-    return written;
-  };
-  ScreenRunner screens(host.renderer(), roots, options.start, saved.game, saved.quest,
-                       saved.vs_scoobees, saved.audio, coop);
+  auto coop = make_coop_state(options, saved, preferences, root, smoke);
+  ScreenRunner screens(host.renderer(), roots, options.online ? "coop" : options.start, saved.game,
+                       saved.quest, saved.vs_scoobees, saved.audio, coop);
   screens.set_save_slots(saved.save_slots, saved.save_slots_unreadable);
   screens.set_rumble_robots(options.rumble_robots.value_or(saved.rumble_robots));
   const std::vector<ScreenRunner::Level> levels = screens.levels();
@@ -200,7 +186,7 @@ int run(const Options &options) {
       input.handle(event);
     }
     const Settings &settings = menu.settings();
-    screens.set_coop_enabled(settings.experimental_coop);
+    screens.set_coop_enabled(settings.experimental_coop || bool(coop->open_online));
     coop->options = settings.coop;
     screens.set_post_process(settings.post_process);
     screens.set_audio_options(settings.audio);
@@ -260,8 +246,8 @@ int run(const Options &options) {
       screens.cheat(*cheat);
     }
     dump_requested = (menu.take_copy() && !smoke) || dump_requested;
-    const bool pause =
-        !smoke && !benchmark && settings.pause_unfocused && !host.focused() && !menu.visuals_open();
+    const bool pause = !smoke && !benchmark && !coop->online && settings.pause_unfocused &&
+                       !host.focused() && !menu.visuals_open();
     if (pause != paused) {
       paused = pause;
       screens.set_paused(paused);
@@ -347,7 +333,7 @@ int run(const Options &options) {
     return 0;
   }
   Settings to_save = menu.settings();
-  to_save.coop_profiles = coop->profiles;
+  copy_coop_profiles(*coop, to_save);
   to_save.game = screens.game_options();
   to_save.quest = screens.quest_save();
   to_save.vs_scoobees = screens.vs_scoobees();
@@ -373,7 +359,9 @@ int main(int argc, char *argv[]) {
   bool interactive = true;
   for (int index = 1; index < argc; ++index) {
     interactive = interactive && std::string(argv[index]) != "--smoke-test" &&
-                  std::string(argv[index]) != "--benchmark";
+                  std::string(argv[index]) != "--benchmark" &&
+                  std::string(argv[index]) != "--online-resource-check" &&
+                  std::string(argv[index]) != "--render-robot";
   }
   try {
     const auto options = phantomcrash::parse_options(argc, argv);

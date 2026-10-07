@@ -104,6 +104,7 @@ struct VsAreaItem {
   ChoiceSprites item;
   float from_x{};
   std::array<int, 2> stages{}; // day, night
+  std::string text;            // optional mod arena label instead of atlas artwork
 };
 
 struct VsCrowd {

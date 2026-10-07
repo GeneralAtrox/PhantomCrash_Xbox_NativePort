@@ -37,7 +37,9 @@ std::unique_ptr<DesktopEffects> DesktopEffects::load(WorldRenderer *world, const
       SDL_Log("The effect atlas %s is missing", bank->atlas.texture.c_str());
       return nullptr;
     }
-    return std::make_unique<DesktopEffects>(std::move(bank), atlas);
+    auto result = std::make_unique<DesktopEffects>(std::move(bank), atlas);
+    result->source_particles_ = DesktopSourceParticles::load(*world, roots);
+    return result;
   } catch (const std::exception &error) {
     SDL_Log("%s: %s", bank_asset, error.what());
     return nullptr;
@@ -49,6 +51,9 @@ DesktopEffects::DesktopEffects(std::shared_ptr<const EffectBank> bank, const int
 
 void DesktopEffects::tick(const float seconds) {
   system_.tick(seconds);
+  if (source_particles_) {
+    source_particles_->tick(seconds);
+  }
   log_seconds_ += seconds;
   constexpr float log_interval = 2.0F;
   if (log_seconds_ < log_interval) {
@@ -82,6 +87,9 @@ void DesktopEffects::tick(const float seconds) {
 }
 
 void DesktopEffects::add_sprites(std::vector<WorldSprite> &sprites) const {
+  if (source_particles_) {
+    source_particles_->add_sprites(sprites);
+  }
   const EffectBank &bank = system_.bank();
   const float t = system_.between();
   const auto cells = static_cast<int>(bank.atlas.cells.size());

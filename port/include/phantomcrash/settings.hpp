@@ -183,6 +183,7 @@ struct Settings {
   CoopOptions coop;
   // Independent experimental campaigns; importing a solo slot never overwrites it.
   std::array<std::optional<QuestSave>, 4> coop_profiles{};
+  std::optional<QuestSave> online_profile;
   // The live RUMBLING's robots in each area, the player's place among them
   // (data/world/rumbling.json roster "live_size"); 0 keeps the original's
   // roster size. A port addition.

@@ -132,6 +132,7 @@ enum class SceneCue { none, ready, go };
 // shot-down one does). Robots are shielded while they walk in or out.
 // Entrances open the gates' doors.
 class BattleScene final {
+  friend class StateInspector;
 public:
   BattleScene(BattleSceneTables tables, SceneTuning tuning, std::uint32_t seed = 1);
 

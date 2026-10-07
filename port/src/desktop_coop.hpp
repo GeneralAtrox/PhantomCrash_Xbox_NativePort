@@ -49,6 +49,13 @@ private:
             SDL_Color colour = {255, 255, 255, 255});
   InputFrame player_input(const InputFrame &input, int slot) const;
   void draw_presence(int slot, const Viewport &viewport);
+  void tick_online(const InputFrame &input, double seconds);
+  void pump_online();
+  bool draw_online_wait(const Viewport &viewport);
+  void draw_online_presence(const Viewport &viewport);
+  int online_slot_{-1};
+  std::string online_error_;
+  std::array<std::string, 4> online_presence_log_;
   SDL_Renderer *renderer_;
   TextureCache textures_;
   const GlyphFont &font_;

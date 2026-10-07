@@ -48,7 +48,9 @@ void ScreenRunner::configure_coop_menu() {
   if (!coop_ || !coop_->enabled || cooperative()) {
     return;
   }
-  const auto coop_label = roots_.document("ui/coop.json").string_or("menu_label", "COOP");
+  const auto coop_label = coop_->open_online
+                              ? std::string("ONLINE")
+                              : roots_.document("ui/coop.json").string_or("menu_label", "COOP");
   const auto insert = [&coop_label](Menu &menu, const std::string &after) {
     const auto found = std::ranges::find(menu.items, after, &MenuItem::id);
     if (found == menu.items.end()) {

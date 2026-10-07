@@ -17,6 +17,7 @@
 #include "desktop_replay_archive.hpp"
 #include "desktop_result_backdrop.hpp"
 #include "desktop_world_renderer.hpp"
+#include "desktop_online_input.hpp"
 #include "phantomcrash/shop_dialog.hpp"
 #include "phantomcrash/battle.hpp"
 #include "phantomcrash/match_result.hpp"
@@ -45,6 +46,9 @@ namespace phantomcrash {
 struct CoopMatch;
 struct TrainingFinale;
 struct TrainingVs;
+namespace online {
+class Presentation;
+}
 
 // Everything the tutorial battle reads that outlives the screen.
 struct TrainingContext {
@@ -82,6 +86,10 @@ struct TrainingContext {
   float victory_hold_seconds{};
   std::array<bool, weapon_slots> finale_lost{};
   bool beginner{}; // BUTTON CONFIG's BEGINNER MODE
+  BattleSounds::PlaybackQuery sound_playing;
+  std::function<void()> online_exit;
+  std::optional<std::uint32_t>
+      scene_seed; // agreed online entrance seed; offline keeps its clock seed
 };
 
 // The tutorial battle (scene 42) on the training ground, opened by one of
@@ -103,6 +111,8 @@ public:
   ~TrainingScreen() override;
 
   void tick(const InputFrame &input, double tick_seconds) override;
+  // Register the existing entrance scene before creating the agreed timeline.
+  void prepare_online();
   void draw(const Viewport &viewport) override;
   // An entrance's jingle plays in place of the battle's music until it ends.
   [[nodiscard]] std::string music() const override {
@@ -136,7 +146,7 @@ public:
   [[nodiscard]] json::JsonValue scene_details() const override;
   [[nodiscard]] std::optional<SceneProgress> scene_progress() const override;
   void set_cheats(const CheatOptions &cheats) override {
-    if (battle_) {
+    if (battle_ && !online()) {
       battle_->set_cheats({cheats.never_die, cheats.infinite_ammo});
     }
   }
@@ -144,6 +154,10 @@ public:
   std::int64_t settle_coop(QuestSave &save);
   [[nodiscard]] bool coop_contest_won() const;
   [[nodiscard]] WorldFrame result_background();
+  [[nodiscard]] WorldRenderer *result_renderer() const {
+    return world_;
+  }
+  [[nodiscard]] std::shared_ptr<void> result_resources() const;
   std::shared_ptr<ReplayArchive> replay() const {
     return replay_;
   }
@@ -172,6 +186,16 @@ public:
                                           int height) override;
 
 private:
+  bool online() const;
+  void capture_online(const RobotControl &control, const FireControl &fire);
+  bool online_result_ready() const;
+  void present_online();
+  void tick_effects(double seconds);
+  std::shared_ptr<online::Presentation> online_presentation_;
+  std::function<void()> online_exit_;
+  bool online_exit_requested_{}, online_settled_{};
+  online::PendingInput pending_online_input_;
+  std::optional<TargetView> local_target_view_;
   std::shared_ptr<CoopMatch> coop_match_;
   int coop_slot_{-1};
   int player_index_{};
@@ -225,7 +249,7 @@ private:
   void load_messages(const DataRoots &roots, bool standard_controls);
   void update_message(const InputFrame &input, double tick_seconds);
   void tick_battle(const InputFrame &input, float seconds);
-  void load_sounds(const DataRoots &roots);
+  void load_sounds(const DataRoots &roots, BattleSounds::PlaybackQuery playing);
   // The robots', doors' and pickups' sounds of the tick just run.
   void gather_sounds(float seconds);
   void queue_dialogue(std::vector<std::string> sounds);

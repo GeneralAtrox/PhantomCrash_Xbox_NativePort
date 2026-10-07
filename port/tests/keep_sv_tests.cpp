@@ -16,7 +16,7 @@ namespace {
 constexpr double tick = 1.0 / 60.0;
 
 KeepSvScript shipped_script() {
-  return parse_keep_sv(DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT).document("ui/keep_sv.json"));
+  return parse_keep_sv(DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT).document("ui/keep_sv.json"));
 }
 
 // Makers 0 and 3 for bodies 0 and 1.

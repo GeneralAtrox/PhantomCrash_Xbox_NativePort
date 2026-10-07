@@ -51,7 +51,15 @@ struct RumblingStage {
 };
 
 class RumblingWorld final {
+  friend class StateInspector;
 public:
+  struct Checkpoint;
+  // In-memory rollback for this world, including every arena and RNG stream.
+  // Static tables and RobotLibrary resources still belong to the session.
+  [[nodiscard]] std::shared_ptr<const Checkpoint> checkpoint() const;
+  void restore_checkpoint(const Checkpoint &state);
+  void prepare_deterministic();
+
   // `settings` are the battle's (the training ground's, whose weapons the
   // opponents' start from); the tables `check` and `tables` refer to must
   // outlive the world.
@@ -91,6 +99,11 @@ public:
   void set_coop_level_offset(int area, int offset, const QuestSave &quest);
   [[nodiscard]] int lent() const noexcept {
     return lent_;
+  }
+  // Whether the areas other than the lent one go on fighting (the game's
+  // default). The headless AI simulator watches only the lent area's battle.
+  void set_background(const bool run) noexcept {
+    background_ = run;
   }
   // Battle robot `index`'s opponent at `area` (roster place index - 1), or null.
   [[nodiscard]] const RumblingRobot *robot(int area, int index) const;
@@ -142,6 +155,8 @@ private:
   std::int64_t epoch_{};
   std::array<Area, roster_areas> areas_{};
   int lent_{-1};
+  bool background_{true};
+  bool deterministic_{}; // online worlds prepare navigation before any arena starts
   std::vector<RobotParts> lent_looks_;
 };
 

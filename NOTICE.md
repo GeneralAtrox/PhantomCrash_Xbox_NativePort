@@ -22,6 +22,17 @@ XDVDFS and XBE layouts are implemented from their publicly documented
 structures (see the [Xbox Dev Wiki](https://xboxdevwiki.net)). No game assets
 from any of these projects are included.
 
+## Executable icon
+
+The executable icon (`port/res/phantomcrash.ico`, with its preview
+`phantomcrash.png`) contains a render of game artwork: the Plain Holy robot's
+model and textures from Phantom Crash, rendered by the port from an extracted
+disc (`--render-robot`) and laid out by `tools/make_icon.py`. That artwork
+belongs to the game's rights holders. The tile, the "PC" lettering and the
+layout are this project's. It is the only game-derived content in the
+repository and in release builds; all other game data is installed from the
+player's own disc.
+
 ## Included rendering library
 
 [SMAA](https://github.com/iryoku/smaa), by Jorge Jimenez, Jose I. Echevarria,

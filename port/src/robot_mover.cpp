@@ -7,10 +7,6 @@
 namespace phantomcrash {
 namespace {
 
-float number(const json::JsonValue &value, const char *key, const float fallback) {
-  return static_cast<float>(value.number_or(key, fallback));
-}
-
 constexpr float motion_frames_a_second = 60.0F; // as RobotAnimator plays them
 
 // How long a leg motion takes to play to its last frame at its own pace.
@@ -30,71 +26,6 @@ float approach(const float value, const float target, const float step) {
 }
 
 } // namespace
-
-MovementTuning parse_movement_tuning(const json::JsonValue &value) {
-  MovementTuning t;
-  t.walk_speed = number(value, "walk_speed", t.walk_speed);
-  t.back_speed = number(value, "back_speed", t.back_speed);
-  t.walk_accel = number(value, "walk_accel", t.walk_accel);
-  t.dash_speed = number(value, "dash_speed", t.dash_speed);
-  t.dash_back_speed = number(value, "dash_back_speed", t.dash_back_speed);
-  t.turn_degrees_per_second = number(value, "turn_degrees_per_second", t.turn_degrees_per_second);
-  t.dash_turn_degrees_per_second =
-      number(value, "dash_turn_degrees_per_second", t.dash_turn_degrees_per_second);
-  t.air_turn_degrees_per_second =
-      number(value, "air_turn_degrees_per_second", t.air_turn_degrees_per_second);
-  t.stick_threshold = number(value, "stick_threshold", t.stick_threshold);
-  t.dash_stick = number(value, "dash_stick", t.dash_stick);
-  t.dash_hold_seconds = number(value, "dash_hold_seconds", t.dash_hold_seconds);
-  t.brake_cut_seconds = number(value, "brake_cut_seconds", t.brake_cut_seconds);
-  if (const auto *legs = value.find("dash_turn_legs")) {
-    t.dash_turn_legs.clear();
-    for (const auto &leg : legs->array()) {
-      t.dash_turn_legs.push_back(static_cast<int>(leg.number()));
-    }
-  }
-  t.dash_turn_stick = number(value, "dash_turn_stick", t.dash_turn_stick);
-  t.dash_turn_ease_ticks =
-      std::max(1.0F, number(value, "dash_turn_ease_ticks", t.dash_turn_ease_ticks));
-  t.flick_stick = number(value, "flick_stick", t.flick_stick);
-  t.flick_seconds = number(value, "flick_seconds", t.flick_seconds);
-  t.standard_air_turn_stick = number(value, "standard_air_turn_stick", t.standard_air_turn_stick);
-  t.quick_turn_stick = number(value, "quick_turn_stick", t.quick_turn_stick);
-  t.quick_turn_degrees = number(value, "quick_turn_degrees", t.quick_turn_degrees);
-  t.quick_turn_share = number(value, "quick_turn_share", t.quick_turn_share);
-  t.quick_turn_cooldown_seconds =
-      number(value, "quick_turn_cooldown_seconds", t.quick_turn_cooldown_seconds);
-  t.hit_seconds = number(value, "hit_seconds", t.hit_seconds);
-  t.jump_height = std::max(0.0F, number(value, "jump_height", t.jump_height));
-  t.down_boost_acceleration =
-      std::max(0.0F, number(value, "down_boost_acceleration", t.down_boost_acceleration));
-  t.gravity = number(value, "gravity", t.gravity);
-  t.air_control = number(value, "air_control", t.air_control);
-  t.dodge_speed = number(value, "dodge_speed", t.dodge_speed);
-  t.air_dodge_speed = number(value, "air_dodge_speed", t.dodge_speed);
-  t.dodge_keep = number(value, "dodge_keep", t.dodge_keep);
-  t.dodge_ease = number(value, "dodge_ease", t.dodge_ease);
-  t.air_dodge_keep = number(value, "air_dodge_keep", t.air_dodge_keep);
-  t.dodge_seconds = number(value, "dodge_seconds", t.dodge_seconds);
-  t.strike_speed = number(value, "strike_speed", t.strike_speed);
-  t.lunge_rate_speed = number(value, "lunge_rate_speed", t.lunge_rate_speed);
-  t.computer_lunge_rate_speed =
-      number(value, "computer_lunge_rate_speed", t.computer_lunge_rate_speed);
-  t.lunge_turn_degrees = number(value, "lunge_turn_degrees", t.lunge_turn_degrees);
-  t.computer_lunge_turn_degrees =
-      number(value, "computer_lunge_turn_degrees", t.computer_lunge_turn_degrees);
-  t.lunge_cone_degrees = number(value, "lunge_cone_degrees", t.lunge_cone_degrees);
-  t.lunge_climb_rate = number(value, "lunge_climb_rate", t.lunge_climb_rate);
-  t.twist_degrees_per_second =
-      number(value, "twist_degrees_per_second", t.twist_degrees_per_second);
-  t.twist_limit_degrees = number(value, "twist_limit_degrees", t.twist_limit_degrees);
-  t.twist_stretch_degrees = number(value, "twist_stretch_degrees", t.twist_stretch_degrees);
-  t.twist_stick_keep = number(value, "twist_stick_keep", t.twist_stick_keep);
-  t.twist_reset_seconds = number(value, "twist_reset_seconds", t.twist_reset_seconds);
-  t.pitch_limit = number(value, "pitch_limit", t.pitch_limit);
-  t.pitch_per_second = number(value, "pitch_per_second", t.pitch_per_second);
-  return t;
-}
 
 JumpTakeoff jump_takeoff(const float height, const float gravity) {
   if (height <= 0.0F || gravity <= 0.0F) {
@@ -131,6 +62,7 @@ float wrap_angle(float angle) {
 void RobotMover::place(const Vec3 position, const float heading) {
   position_ = position;
   heading_ = wrap_angle(heading);
+  rolling_steer_ = 0;
   twist_ = mouse_yaw_ = 0.0F;
   twist_stick_ = 0.0F;
   twist_reset_left_ = 0.0F;
@@ -262,6 +194,8 @@ void RobotMover::tick(const RobotControl &input, const float seconds) {
   }
   jump_was_held_ = control.jump;
   stick_ = control.move;
+  rolling_steer_ =
+      tuning_.wheels ? std::clamp(control.move[0] + control.strafe, -1.0F, 1.0F) : control.move[0];
 }
 
 void RobotMover::land(const float height) {
@@ -281,6 +215,14 @@ void RobotMover::land(const float height) {
     loops_ = false; // the jump motion plays its landing
     mode_seconds_ = 0.0F;
   }
+}
+
+bool RobotMover::jump_ready() const noexcept {
+  const bool landing = mode_ == MoveMode::jump && !loops_ && mode_seconds_ < landing_seconds;
+  const bool busy = mode_ == MoveMode::hit || mode_ == MoveMode::dodge ||
+                    mode_ == MoveMode::strike || mode_ == MoveMode::scripted ||
+                    mode_ == MoveMode::destroyed;
+  return grounded_ && !jump_was_held_ && !landing && !busy;
 }
 
 void RobotMover::bump_head() {
@@ -309,7 +251,7 @@ void RobotMover::tick_ground(const RobotControl &control, const float seconds) {
     }
     set_mode(MoveMode::stand, robot_motion::stand, true);
   }
-  if (mode_ == MoveMode::jump && !loops_ && mode_seconds_ < 0.25F) {
+  if (mode_ == MoveMode::jump && !loops_ && mode_seconds_ < landing_seconds) {
     local_velocity_ = local_velocity_ * std::max(0.0F, 1.0F - 8.0F * seconds);
     return; // landing
   }
@@ -325,6 +267,11 @@ void RobotMover::tick_ground(const RobotControl &control, const float seconds) {
     lift_left_ = takeoff.lift_seconds;
     lift_spent_ = 0.0F;
     set_mode(MoveMode::jump, robot_motion::jump, true, true);
+    return;
+  }
+
+  if (tuning_.wheels) {
+    tick_wheels(control, seconds);
     return;
   }
 

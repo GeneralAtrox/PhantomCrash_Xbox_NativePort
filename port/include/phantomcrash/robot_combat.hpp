@@ -7,8 +7,10 @@
 namespace phantomcrash {
 // Simulation-owned pose and firing attachments. Render views only sample it.
 class RobotCombat final {
+  friend class StateInspector;
 public:
   RobotCombat(RobotLibrary &library, RobotAssembly assembly);
+  RobotCombat(const RobotCombat &source);
   void tick(const RobotMover &mover, const std::array<bool, 4> &firing,
             const std::array<bool, 4> &lost, const std::array<Vec3, 4> &targets, float seconds,
             const std::array<int, 4> &aim_modes = {-1, -1, -1, -1}, bool piloted = false);
@@ -40,6 +42,9 @@ public:
   }
   [[nodiscard]] float motion_frame() const {
     return animator_.frame();
+  }
+  [[nodiscard]] int motion() const {
+    return animator_.motion();
   }
 
 private:

@@ -14,7 +14,8 @@ float pan_right(const float pan) noexcept {
   return std::clamp(1.0F + pan, 0.0F, 1.0F);
 }
 
-EffectMixer::EffectMixer(const std::size_t voices) : voices_(std::max<std::size_t>(voices, 1)) {}
+EffectMixer::EffectMixer(const std::size_t voices, int output_rate)
+    : voices_(std::max<std::size_t>(voices, 1)), output_rate_(output_rate) {}
 
 EffectMixer::Voice &EffectMixer::free_voice() {
   Voice *oldest = nullptr;
@@ -36,7 +37,7 @@ void EffectMixer::play(std::shared_ptr<const EffectSamples> samples, const std::
                        const float volume, const SoundMix mix, const bool loop,
                        const std::uint64_t key, const std::optional<Vec3> position,
                        const AudioBus bus) {
-  if (samples == nullptr || samples->frames() == 0) {
+  if (samples == nullptr || (samples->frames() == 0 && !samples->sequence)) {
     return;
   }
   Voice *voice = nullptr;
@@ -65,6 +66,9 @@ void EffectMixer::play(std::shared_ptr<const EffectSamples> samples, const std::
     voice = &free_voice();
   }
   *voice = Voice{std::move(samples), name, volume, mix, loop, key, 0, ++count_, position, bus};
+  if (voice->samples->sequence) {
+    voice->sequence.emplace(voice->samples->sequence, output_rate_, loop);
+  }
 }
 
 void EffectMixer::set_mix(const std::uint64_t key, const SoundMix mix,
@@ -97,6 +101,20 @@ void EffectMixer::stop_key(const std::uint64_t key) {
   for (Voice &voice : voices_) {
     if (key != 0 && voice.key == key) {
       voice = Voice{};
+    }
+  }
+}
+
+void EffectMixer::release_key(const std::uint64_t key) {
+  for (Voice &voice : voices_) {
+    if (key != 0 && voice.key == key) {
+      if (voice.sequence) {
+        voice.sequence->release();
+        voice.key = 0;
+        voice.loop = false;
+      } else {
+        voice = Voice{};
+      }
     }
   }
 }
@@ -136,6 +154,18 @@ void EffectMixer::mix(float *out, const std::size_t frames) {
     const float level = voice.volume * voice.mix.gain * gain_ * audio_.gain(voice.bus);
     const float left = level * pan_left(voice.mix.pan);
     const float right = level * pan_right(voice.mix.pan);
+    if (voice.sequence) {
+      for (std::size_t frame = 0; frame < frames; ++frame) {
+        const auto sample = voice.sequence->sample();
+        out[frame * 2] += sample[0] * left;
+        out[frame * 2 + 1] += sample[1] * right;
+        if (voice.sequence->finished()) {
+          voice = Voice{};
+          break;
+        }
+      }
+      continue;
+    }
     for (std::size_t frame = 0; frame < frames; ++frame) {
       if (voice.at >= length) {
         if (!voice.loop) {

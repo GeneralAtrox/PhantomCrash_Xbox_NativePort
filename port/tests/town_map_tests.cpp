@@ -19,7 +19,7 @@ namespace {
 constexpr double tick = 1.0 / 60.0;
 
 TownMapScript shipped() {
-  return parse_town_map(DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT).document("ui/town_map.json"));
+  return parse_town_map(DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT).document("ui/town_map.json"));
 }
 
 TownMap town(const std::string &from, QuestSave quest = {}) {

@@ -1,4 +1,5 @@
 #include "phantomcrash/robot_parts.hpp"
+#include "robot_armour.hpp"
 
 #include "phantomcrash/battle_weapons.hpp"
 #include "phantomcrash/json_fields.hpp"
@@ -20,24 +21,14 @@ int integer(const json::JsonValue &value, const char *key) {
   return static_cast<int>(json::required(value, key).number());
 }
 
-LevelCurve curve_entry(const json::JsonValue &entry) {
-  LevelCurve out;
-  out.base = static_cast<float>(json::required(entry, "base").number());
-  out.mid = static_cast<float>(json::required(entry, "mid").number());
-  out.top = static_cast<float>(json::required(entry, "top").number());
-  out.knee = integer(entry, "knee");
-  out.low_scale = integer(entry, "low_scale");
-  return out;
-}
-
 LevelCurve curve(const json::JsonValue &value, const char *key) {
-  return curve_entry(json::required(value, key));
+  return parse_level_curve(json::required(value, key));
 }
 
 // Fields older extractions lack read as zero.
 LevelCurve optional_curve(const json::JsonValue &value, const char *key) {
   const json::JsonValue *entry = value.find(key);
-  return entry != nullptr ? curve_entry(*entry) : LevelCurve{};
+  return entry != nullptr ? parse_level_curve(*entry) : LevelCurve{};
 }
 
 int optional_int(const json::JsonValue &value, const char *key, const int fallback = 0) {
@@ -81,6 +72,7 @@ WeaponRecord weapon_record(const json::JsonValue &value) {
   out.index = integer(value, "index");
   out.name = value.string_or("name", "");
   out.kind = integer(value, "kind");
+  out.source_melee_kind = optional_int(value, "source_melee_kind", -1);
   out.flight = optional_int(value, "flight");
   out.aim_mode = optional_int(value, "aim_mode", -1);
   out.maker = optional_int(value, "family");
@@ -115,29 +107,6 @@ WeaponRecord weapon_record(const json::JsonValue &value) {
   out.knockdown = optional_curve(value, "knockdown");
   out.price = optional_curve(value, "price");
   out.weight = optional_curve(value, "weight");
-  return out;
-}
-
-ArmourRecord armour_record(const json::JsonValue &value) {
-  ArmourRecord out;
-  out.index = integer(value, "index");
-  out.name = value.string_or("name", "");
-  out.maker = static_cast<int>(value.number_or("class", value.number_or("maker", 0)));
-  out.armour = curve(value, "armour");
-  const json::JsonValue &floor = json::required(value, "armour_floor");
-  out.player_floor = static_cast<float>(json::required(floor, "player").number());
-  out.computer_floor = static_cast<float>(json::required(floor, "computer").number());
-  out.knockback_resistance = optional_curve(value, "knockback_resistance");
-  out.weight = optional_curve(value, "weight");
-  out.price = optional_curve(value, "price");
-  out.model = static_cast<int>(value.number_or("model", -1));
-  out.capacity = optional_curve(value, "capacity");
-  out.sockets = optional_curve(value, "sockets");
-  out.speed = optional_curve(value, "speed");
-  out.jump = optional_curve(value, "jump");
-  out.turn = optional_curve(value, "turn");
-  out.dodge = optional_curve(value, "dodge");
-  out.air_dodge = optional_curve(value, "air_dodge");
   return out;
 }
 
@@ -254,8 +223,8 @@ PartTables parse_part_tables(const json::JsonValue &document) {
   out.chips = records<ChipRecord>(document, "chips", chip_record);
   out.arm_weapons = records<WeaponRecord>(document, "arm_weapons", weapon_record);
   out.shoulder_weapons = records<WeaponRecord>(document, "shoulder_weapons", weapon_record);
-  out.bodies = records<ArmourRecord>(document, "bodies", armour_record);
-  out.legs = records<ArmourRecord>(document, "legs", armour_record);
+  out.bodies = records<ArmourRecord>(document, "bodies", parse_armour_record);
+  out.legs = records<ArmourRecord>(document, "legs", parse_armour_record);
   out.pilots = records<PilotRecord>(document, "pilots", pilot_record);
   if (const json::JsonValue *speeds = document.find("leg_motion_speeds")) {
     for (const json::JsonValue &model : speeds->array()) {
@@ -393,6 +362,7 @@ std::vector<std::string> apply_weapon_records(std::map<std::string, WeaponTuning
       continue;
     }
     apply_weapon_stats(weapon, weapon_stats(*record, weapon.part->level));
+    weapon.source_melee_kind = record->source_melee_kind;
   }
   return missing;
 }

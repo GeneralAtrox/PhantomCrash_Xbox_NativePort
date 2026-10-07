@@ -120,6 +120,18 @@ TEST_CASE("assets resolve through mods first, ignoring case") {
   CHECK(replaced.parent_path().parent_path() == root.path() / "mods");
 }
 
+TEST_CASE("shipped roots leave out the mod folder") {
+  TempFolder root;
+  root.write("data/ui/title.json", R"({"idle": {"seconds": 30.0}})");
+  root.write("mods/data/ui/title.json", R"({"idle": {"seconds": 5.0}})");
+  root.write("artifacts/europe/files/Media/sound/AWAKETO1.WAV", "media");
+  root.write("mods/sound/AWAKETO1.WAV", "mod");
+  const auto roots = DataRoots::shipped(root.path());
+  CHECK(roots.document("ui/title.json").find("idle")->number_or("seconds", 0) == 30.0);
+  CHECK(roots.asset("sound/AWAKETO1.WAV").parent_path().parent_path() ==
+        root.path() / "artifacts" / "europe" / "files" / "Media");
+}
+
 TEST_CASE("the data root is found from a folder inside it") {
   TempFolder root;
   root.write("data/boot/intro.json", "{}");
@@ -130,7 +142,7 @@ TEST_CASE("the data root is found from a folder inside it") {
 }
 
 TEST_CASE("the shipped data documents load and name known buttons") {
-  const auto roots = DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT);
+  const auto roots = DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT);
   for (const char *name : {"boot/intro.json", "ui/title.json", "ui/main_menu.json",
                            "audio/music.json", "audio/sfx.json"}) {
     CHECK(roots.document(name).find("notes") != nullptr);

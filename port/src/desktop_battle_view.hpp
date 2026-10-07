@@ -7,6 +7,7 @@
 #include "phantomcrash/battle.hpp"
 #include "phantomcrash/robot_shadow.hpp"
 #include "phantomcrash/robot_library.hpp"
+#include "phantomcrash/source_motion_actions.hpp"
 
 #include <SDL3/SDL.h>
 
@@ -57,6 +58,12 @@ public:
   void bind(Battle &battle);
   // Copies simulation poses and advances the shared shield clock once per tick.
   void tick(Battle &battle, float seconds);
+  [[nodiscard]] std::optional<Mat4> source_weapon_frame(const Battle &battle, int robot, int slot,
+                                                        int node) const;
+  [[nodiscard]] std::optional<Mat4> source_impact_frame(const Battle &battle, int robot) const;
+  [[nodiscard]] SourceMotionClock source_motion_clock(std::size_t robot) const;
+  [[nodiscard]] std::optional<Mat4> source_model_frame(const Battle &battle, int robot, int part,
+                                                       int node) const;
   // Appends the robots' parts to `items`, all but robot `hidden`'s (the
   // one the camera sits in). `hidden_shield` suppresses only that robot's
   // shield visual during its entrance, without changing damage protection.
@@ -70,6 +77,8 @@ private:
   void add_wreck_items(const Battle &battle, std::vector<WorldItem> &items) const;
   std::vector<std::vector<WorldItem>> wreck_items_;
   std::vector<bool> wreck_solid_;
+  const Battle *wreck_battle_{};
+  std::uint64_t wreck_generation_{};
 
   void add_shield(const Combatant &robot, std::vector<WorldItem> &items) const;
   void advance_shield(const Battle &battle, float seconds);

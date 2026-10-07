@@ -86,7 +86,12 @@ int SonicAmp::slot_track(const int row, const int column) const {
   const int track =
       (first_page() + page_) * per_page + row * script_.grid.catalogue_columns + column;
   const int sold = std::min(script_.grid.catalogue_tracks, static_cast<int>(credits_.size()));
-  return track < sold ? track : -1;
+  if (track >= sold) {
+    return -1;
+  }
+  const auto &ids = script_.grid.catalogue_ids;
+  const int credit = ids.empty() ? track : ids[static_cast<std::size_t>(track)];
+  return credit >= 0 && credit < static_cast<int>(credits_.size()) ? credit : -1;
 }
 
 void SonicAmp::restart_help() {

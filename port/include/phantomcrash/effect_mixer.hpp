@@ -1,5 +1,6 @@
 #pragma once
 #include "phantomcrash/audio_options.hpp"
+#include "phantomcrash/source_sound.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -26,6 +27,7 @@ struct EffectSamples {
   std::vector<float> samples;
   int channels{1};
   std::size_t voice_limit{}; // SE BIN byte +2; zero leaves custom sounds unrestricted
+  std::shared_ptr<const SourceSound> sequence;
   [[nodiscard]] std::size_t frames() const noexcept {
     return channels > 0 ? samples.size() / static_cast<std::size_t>(channels) : 0;
   }
@@ -37,7 +39,7 @@ struct EffectSamples {
 // not loop is taken. Not thread-safe: the caller locks around it.
 class EffectMixer final {
 public:
-  explicit EffectMixer(std::size_t voices = 24);
+  explicit EffectMixer(std::size_t voices = 24, int output_rate = 44100);
 
   // Starts `samples` (kept alive while it plays) at `volume` times `mix`.
   // A key already playing restarts.
@@ -48,6 +50,9 @@ public:
   void set_listener(const SoundFalloff &falloff, const SoundListener &listener);
   void stop_spatial();
   void stop_key(std::uint64_t key);
+  // Source sample sequences key off their live envelopes. Their detached
+  // release tails can coexist with a new keyed trigger; PCM effects stop.
+  void release_key(std::uint64_t key);
   void stop_name(const std::string &name);
   void stop_all();
   // The SE volume, over every voice.
@@ -74,6 +79,7 @@ private:
     std::uint64_t started{};
     std::optional<Vec3> position;
     AudioBus bus{AudioBus::ui};
+    std::optional<SourceSoundPlayback> sequence;
   };
 
   Voice &free_voice();
@@ -82,6 +88,7 @@ private:
   float gain_{1.0F};
   AudioOptions audio_;
   std::uint64_t count_{};
+  int output_rate_;
 };
 
 // Left and right gains for `pan`: the far side falls away, the near one

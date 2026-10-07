@@ -66,7 +66,7 @@ InputFrame practice_input(const LessonStep &step, const int tick, const BattleBu
 } // namespace
 
 TEST_CASE("the shipped basic and camouflage courses can be finished with their controls") {
-  const auto roots = DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT);
+  const auto roots = DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT);
   const TrainingScript script = parse_training(roots.document("world/training.json"));
   const TrainingBattle &setup = script.battle;
   for (const int mode : {0, 2}) {
@@ -98,7 +98,7 @@ TEST_CASE("the shipped basic and camouflage courses can be finished with their c
 }
 
 TEST_CASE("the shipped attack course can be finished with each weapon") {
-  const auto roots = DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT);
+  const auto roots = DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT);
   const TrainingScript script = parse_training(roots.document("world/training.json"));
   const TrainingBattle &setup = script.battle;
   // Without a path the drone respawns at the middle, straight ahead.

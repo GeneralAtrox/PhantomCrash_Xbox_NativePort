@@ -230,7 +230,7 @@ TEST_CASE("the battle raises chatter for rounds running low, firing and standing
 }
 
 TEST_CASE("the converted chatter reads, when the game files are converted") {
-  const auto file = DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT).find_asset("tables/chatter.json");
+  const auto file = DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT).find_asset("tables/chatter.json");
   if (!file) {
     return; // not converted here
   }

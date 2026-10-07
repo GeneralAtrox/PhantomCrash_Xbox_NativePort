@@ -12,6 +12,13 @@ from .convert import convert, update_robots, update_town
 from .extract import extract
 from .mechassault import arm_swap as mechassault_arm
 from .mechassault import export as mechassault_export
+from .slai import arm_weapon as slai_arm_weapon
+from .slai.music import convert_music
+from .slai.wheels import import_wheels
+from .slai.assets import convert_assets
+from .slai.native_parts import register_parts
+from .slai.native_stages import register_stages
+from .slai.native_cosmetics import register_cosmetics
 from .xdvdfs import XdvdfsImage
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
@@ -105,6 +112,18 @@ def _command_swap_mechassault_arm(arguments: argparse.Namespace) -> int:
     return 0
 
 
+def _command_add_slai_arm_weapon(arguments: argparse.Namespace) -> int:
+    summary = slai_arm_weapon.add_arm_weapon(
+        Path(arguments.disc), Path(arguments.assets), Path(arguments.data), Path(arguments.output),
+        Path(arguments.spec),
+    )
+    print(
+        f"Added arm weapon {summary['part']} '{summary['name']}' (arm type {summary['arm_type']}, "
+        f"{summary['triangles']} triangles) to {arguments.output}"
+    )
+    return 0
+
+
 def _command_export_stats(arguments: argparse.Namespace) -> int:
     counts = stats_csv.export(Path(arguments.assets), Path(arguments.output))
     print(f"Wrote {len(counts)} tables ({sum(counts.values())} rows) to {arguments.output}")
@@ -117,6 +136,40 @@ def _command_convert_town(arguments: argparse.Namespace) -> int:
         f"Converted {len(town['contests'])} contests, {len(town['classes'])} classes and "
         f"{len(town['calendar'])} calendar days to {arguments.output}"
     )
+    return 0
+
+
+def _command_slai_wheels(arguments: argparse.Namespace) -> int:
+    result = import_wheels(Path(arguments.disc), Path(arguments.assets), Path(arguments.data),
+                           Path(arguments.output), Path(arguments.spec))
+    print(f"Imported {result['wheels']} wheeled legs; deliveries on {result['shop_days']} days")
+    return 0
+
+
+def _command_slai_assets(arguments: argparse.Namespace) -> int:
+    result = convert_assets(Path(arguments.disc), Path(arguments.output), sound=not arguments.no_sound)
+    print(json.dumps(result))
+    return 0
+
+
+def _command_register_slai_assets(arguments: argparse.Namespace) -> int:
+    from .slai.native_sound import register_sound
+    from .slai.native_particles import register_particles
+
+    disc, output = Path(arguments.disc), Path(arguments.output)
+    result = register_parts(disc, Path(arguments.assets), Path(arguments.data), output)
+    result.update(register_stages(disc, Path(arguments.data), output))
+    result.update(register_cosmetics(disc, Path(arguments.assets), Path(arguments.data), output))
+    result.update(register_sound(disc, Path(arguments.data), output))
+    result.update(register_particles(disc, output))
+    print(json.dumps(result))
+    return 0
+
+
+def _command_slai_music(arguments: argparse.Namespace) -> int:
+    result = convert_music(Path(arguments.disc), Path(arguments.assets), Path(arguments.data),
+                           Path(arguments.output), Path(arguments.converter))
+    print(f"Imported {result['songs']} songs ({result['bytes'] / 1048576:.1f} MiB), sold in Sonic Amp")
     return 0
 
 
@@ -187,6 +240,45 @@ def build_parser() -> argparse.ArgumentParser:
     arm.add_argument("--assets", default=str(DEFAULT_ASSETS))
     arm.add_argument("--output", default=str(DEFAULT_MODS))
     arm.set_defaults(handler=_command_swap_mechassault_arm)
+
+    slai = commands.add_parser(
+        "add-slai-arm-weapon",
+        help="Add an S.L.A.I. (PS2) arm weapon to the port as a new part (a mod)",
+    )
+    slai.add_argument("disc", help="S.L.A.I. .iso")
+    slai.add_argument("--spec", default=str(slai_arm_weapon.SPEC), help="the weapon's definition")
+    slai.add_argument("--assets", default=str(DEFAULT_ASSETS))
+    slai.add_argument("--data", default=str(REPOSITORY_ROOT / "data"))
+    slai.add_argument("--output", default=str(DEFAULT_MODS))
+    slai.set_defaults(handler=_command_add_slai_arm_weapon)
+
+    music = commands.add_parser("convert-slai-music", help="Import named S.L.A.I. songs as Ogg, sold in Sonic Amp")
+    music.add_argument("disc")
+    music.add_argument("--assets", default=str(DEFAULT_ASSETS))
+    music.add_argument("--data", default=str(REPOSITORY_ROOT / "data"))
+    music.add_argument("--output", default=str(DEFAULT_MODS))
+    music.add_argument("--converter", default=str(REPOSITORY_ROOT / "build/port/port/Release/phantomcrash_slai_audio.exe"))
+    music.set_defaults(handler=_command_slai_music)
+
+    wheels = commands.add_parser("convert-slai-wheels", help="Import S.L.A.I. wheels and rotating shop deliveries")
+    wheels.add_argument("disc")
+    wheels.add_argument("--assets", default=str(DEFAULT_ASSETS))
+    wheels.add_argument("--data", default=str(REPOSITORY_ROOT / "data"))
+    wheels.add_argument("--output", default=str(DEFAULT_MODS))
+    wheels.add_argument("--spec", default=str(Path(__file__).parent / "slai/wheels.json"))
+    wheels.set_defaults(handler=_command_slai_wheels)
+
+    slai_assets = commands.add_parser("convert-slai-assets", help="Export S.L.A.I. models, paints, rigs, motions, stages and sound assets")
+    slai_assets.add_argument("disc")
+    slai_assets.add_argument("--output", default=str(DEFAULT_MODS))
+    slai_assets.add_argument("--no-sound", action="store_true", help="Skip sound bank conversion")
+    slai_assets.set_defaults(handler=_command_slai_assets)
+    native = commands.add_parser("register-slai-assets", help="Make converted S.L.A.I. parts and stages selectable")
+    native.add_argument("disc")
+    native.add_argument("--assets", default=str(DEFAULT_ASSETS))
+    native.add_argument("--data", default=str(REPOSITORY_ROOT / "data"))
+    native.add_argument("--output", default=str(DEFAULT_MODS))
+    native.set_defaults(handler=_command_register_slai_assets)
 
     stats_export = commands.add_parser(
         "export-stats", help="Write every part, item and opponent's stats as CSV files"

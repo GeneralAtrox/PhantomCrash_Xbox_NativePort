@@ -1,6 +1,7 @@
 #include "phantomcrash/world_model.hpp"
 
 #include "phantomcrash/json.hpp"
+#include "phantomcrash/rigid_animation.hpp"
 
 #ifdef _MSC_VER
 #pragma warning(push, 0)
@@ -83,6 +84,10 @@ public:
         add_node(node);
       }
     }
+    const auto metadata = extras(data_, data_->asset.extras);
+    if (metadata.boolean_or("rigid_animation", false)) {
+      read_rigid_animation(*data_, model_, metadata.string_or("animation_prefix", ""));
+    }
     return std::move(model_);
   }
 
@@ -125,6 +130,7 @@ private:
       entry.double_sided = source->double_sided != 0;
       entry.unlit = source->unlit != 0;
       const auto metadata = extras(data_, source->extras);
+      entry.part_paint = metadata.boolean_or("part_paint", false);
       const double source_flags = game_extra(metadata, "flags", -1.0);
       const auto flags = source_flags >= 0 ? static_cast<unsigned>(source_flags) : 0U;
       entry.additive = (flags & batch_additive) != 0;
@@ -177,6 +183,7 @@ private:
     entry.name = node.name != nullptr ? node.name : "";
     entry.world = mirrored(world);
     entry.local = mirrored(local);
+    entry.rig_node = static_cast<int>(&node - data_->nodes);
     model_.nodes.push_back(std::move(entry));
     const int node_index = static_cast<int>(model_.nodes.size() - 1);
     for (cgltf_size index = 0; index < node.mesh->primitives_count; ++index) {

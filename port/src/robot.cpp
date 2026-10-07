@@ -1,4 +1,5 @@
 #include "phantomcrash/robot.hpp"
+#include "phantomcrash/garage.hpp"
 
 #include <algorithm>
 #include <stdexcept>
@@ -124,6 +125,24 @@ std::array<int, 2> pair_of(const json::JsonValue *array) {
   return {values.size() > 0 ? values[0] : -1, values.size() > 1 ? values[1] : -1};
 }
 
+std::vector<std::string> paint_images(const json::JsonValue &value) {
+  std::vector<std::string> out;
+  if (const auto *images = value.find("paint_images")) {
+    for (const auto &image : images->array()) {
+      out.push_back(image.string());
+    }
+  }
+  return out;
+}
+
+std::string part_paint(const std::vector<std::string> &images, int colour) {
+  if (images.empty()) {
+    return {};
+  }
+  return images[static_cast<std::size_t>(
+      colour >= 0 && colour < static_cast<int>(images.size()) ? colour : 0)];
+}
+
 const json::JsonValue::Array &list(const json::JsonValue &document, const char *key) {
   const json::JsonValue *value = document.find(key);
   if (value == nullptr || !value->is_array()) {
@@ -157,7 +176,9 @@ RobotCatalogue parse_robot_catalogue(const json::JsonValue &document) {
     catalogue.body_types.push_back({static_cast<int>(value.number_or("model", -1)),
                                     static_cast<int>(value.number_or("emblem_model", -1)),
                                     static_cast<int>(value.number_or("motions", -1)),
-                                    static_cast<float>(value.number_or("forearm_turn", 0.0))});
+                                    static_cast<float>(value.number_or("forearm_turn", 0.0)),
+                                    paint_images(value)});
+    read_body_model_variants(value, catalogue.body_types.back());
   }
   for (const json::JsonValue &value : list(document, "leg_types")) {
     RobotCatalogue::LegType legs;
@@ -169,6 +190,11 @@ RobotCatalogue parse_robot_catalogue(const json::JsonValue &document) {
       }
     }
     legs.paints = integers(value.find("paints"));
+    legs.paint_images = paint_images(value);
+    legs.source_melee_motions = integers(value.find("source_melee_motions"));
+    legs.source_motion_actions = integers(value.find("source_motion_actions"));
+    legs.source_turn_frames = pair_of(value.find("source_turn_frames"));
+    legs.source_transition_frames = integers(value.find("source_transition_frames"));
     if (const json::JsonValue *timings = value.find("timings"); timings && timings->is_array()) {
       for (const json::JsonValue &entry : timings->array()) {
         const auto &f = entry.array();
@@ -184,13 +210,19 @@ RobotCatalogue parse_robot_catalogue(const json::JsonValue &document) {
     catalogue.leg_types.push_back(std::move(legs));
   }
   for (const json::JsonValue &value : list(document, "arm_types")) {
-    catalogue.arm_types.push_back(
-        {pair_of(value.find("models")), static_cast<int>(value.number_or("class", 0))});
+    catalogue.arm_types.push_back({pair_of(value.find("models")),
+                                   static_cast<int>(value.number_or("class", 0)),
+                                   paint_images(value)});
   }
   for (const json::JsonValue &value : list(document, "shoulder_types")) {
-    catalogue.shoulder_types.push_back({pair_of(value.find("models"))});
+    catalogue.shoulder_types.push_back({pair_of(value.find("models")), paint_images(value)});
   }
   catalogue.emblems = integers(document.find("emblems"));
+  if (const auto *images = document.find("emblem_images")) {
+    for (const auto &image : images->array()) {
+      catalogue.emblem_images.push_back(image.string());
+    }
+  }
   return catalogue;
 }
 
@@ -206,15 +238,15 @@ RobotParts parse_robot_parts(const json::JsonValue &value) {
 }
 
 std::string robot_model_path(const int resource) {
-  return "models/binlink/" + std::to_string(resource) + ".gltf";
+  return resource < 0 ? "" : "models/binlink/" + std::to_string(resource) + ".gltf";
 }
 
 std::string robot_texture_path(const int resource) {
-  return "textures/binlink/" + std::to_string(resource) + ".png";
+  return resource < 0 ? "" : "textures/binlink/" + std::to_string(resource) + ".png";
 }
 
 std::string motion_bank_path(const int resource) {
-  return "motions/" + std::to_string(resource) + ".json";
+  return resource < 0 ? "" : "motions/" + std::to_string(resource) + ".json";
 }
 
 void read_maker_tables(const json::JsonValue &document, RobotCatalogue &catalogue) {
@@ -262,12 +294,28 @@ RobotAssembly assemble_robot(const RobotCatalogue &catalogue, const RobotSkeleto
   const auto &body = pick(catalogue.body_types, body_type, "body type");
   robot.leg_type = pick(catalogue.leg_parts, parts.legs, "leg part");
   const auto &legs = pick(catalogue.leg_types, robot.leg_type, "leg type");
-  robot.body_model = robot_model_path(body.model);
+  robot.body_model = robot_model_path(body_model_for_legs(body, robot.leg_type));
+  if (parts.emblem >= 0 && parts.emblem != emblem_none) {
+    robot.emblem_model = robot_model_path(body.emblem_model);
+    if (parts.emblem < static_cast<int>(catalogue.emblem_images.size())) {
+      robot.emblem_image = catalogue.emblem_images[static_cast<std::size_t>(parts.emblem)];
+    }
+    if (robot.emblem_image.empty() && parts.emblem < static_cast<int>(catalogue.emblems.size())) {
+      robot.emblem_image =
+          robot_texture_path(catalogue.emblems[static_cast<std::size_t>(parts.emblem)]);
+    }
+  }
+  robot.part_paints[0] = part_paint(body.paint_images, parts.colour);
   robot.body_motions = motion_bank_path(body.motions);
   robot.forearm_turn = body.forearm_turn;
   robot.legs_model = robot_model_path(legs.model);
+  robot.part_paints[1] = part_paint(legs.paint_images, parts.colour);
   robot.leg_motions = motion_bank_path(legs.motions);
   robot.timings = legs.timings;
+  robot.source_melee_motions = legs.source_melee_motions;
+  robot.source_motion_actions = legs.source_motion_actions;
+  robot.source_turn_frames = legs.source_turn_frames;
+  robot.source_transition_frames = legs.source_transition_frames;
   // 0x080e41 keeps the radius within 0..2.
   robot.radius = std::clamp(legs.radius, 0.0F, max_robot_radius);
   robot.shadow_mesh = legs.shadow_mesh;
@@ -306,6 +354,7 @@ RobotAssembly assemble_robot(const RobotCatalogue &catalogue, const RobotSkeleto
       const int arm_type = pick(catalogue.arm_parts, parts.arms[side], "arm part");
       const auto &arm = pick(catalogue.arm_types, arm_type, "arm type");
       robot.arm_models[side] = robot_model_path(arm.models[side]);
+      robot.part_paints[side + 2] = part_paint(arm.paint_images, parts.colour);
       const int bank = arm_legs->arm_motions[side][arm.arm_class == 0 ? 0 : 1];
       robot.arm_motions[side] = motion_bank_path(bank);
       const int skeleton_type = body_arm_type(catalogue, skeletons, side, arm_type, body_type);
@@ -317,6 +366,7 @@ RobotAssembly assemble_robot(const RobotCatalogue &catalogue, const RobotSkeleto
       if (type >= 0) {
         const auto &shoulder = pick(catalogue.shoulder_types, type, "shoulder type");
         robot.shoulder_models[side] = robot_model_path(shoulder.models[side]);
+        robot.part_paints[side + 4] = part_paint(shoulder.paint_images, parts.colour);
         robot.shoulder_shifts[side] = shoulder_shift(catalogue, side, type, body_type);
       }
     }

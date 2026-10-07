@@ -15,7 +15,7 @@ constexpr float tick = 1.0F / 60.0F;
 
 OriginalAiData shipped_ai() {
   return *parse_original_ai(
-      DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT).document("world/robot_ai.json"));
+      DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT).document("world/robot_ai.json"));
 }
 
 BattleSettings ai_settings(OriginalAiData data) {

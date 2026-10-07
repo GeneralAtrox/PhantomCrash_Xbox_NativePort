@@ -23,7 +23,7 @@ namespace {
 constexpr double tick = 1.0 / 60.0;
 
 json::JsonValue shipped_document(const char *relative) {
-  return DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT).document(relative);
+  return DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT).document(relative);
 }
 
 FrameStyle shipped_frame() {

@@ -24,7 +24,20 @@ void RobotWrecks::add(RobotWreck wreck) {
   items_.push_back(std::move(wreck));
 }
 
+void RobotWrecks::prepare_collision() {
+  if (!collision_builder_) {
+    return;
+  }
+  for (std::size_t index = 0; index < items_.size(); ++index) {
+    const auto &wreck = items_[index];
+    if (!wreck.removed && !wreck.collision_prepared) {
+      set_collision(index, collision_builder_(wreck));
+    }
+  }
+}
+
 void RobotWrecks::tick(const float seconds) {
+  prepare_collision();
   for (auto &wreck : items_) {
     wreck.burn_left = std::max(0.0F, wreck.burn_left - seconds);
   }
@@ -32,6 +45,7 @@ void RobotWrecks::tick(const float seconds) {
 
 void RobotWrecks::set_collision(const std::size_t index, StageCollision collision) {
   auto &wreck = items_.at(index);
+  wreck.collision_prepared = true;
   if (wreck.removed || collision.walls().empty()) {
     return;
   }

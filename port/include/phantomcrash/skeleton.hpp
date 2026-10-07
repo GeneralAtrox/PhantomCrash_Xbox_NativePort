@@ -3,6 +3,8 @@
 #include "phantomcrash/json.hpp"
 #include "phantomcrash/math3d.hpp"
 #include "phantomcrash/motion.hpp"
+#include "phantomcrash/source_suspension.hpp"
+#include "phantomcrash/source_roll.hpp"
 
 #include <array>
 #include <cstdint>
@@ -39,7 +41,10 @@ struct SkeletonNode {
   Vec3 translation{}; // as stored; the evaluator mirrors it into game space
   Vec3 rotation{};
   int bone{-1};
+  std::optional<SourceSuspension> source_suspension;
+  std::optional<SourceRollControl> source_roll;
   std::vector<SkeletonNode> children;
+  bool source_model_root{}; // control zero of the imported leg model, including non-drawing nodes
 };
 
 struct RobotSkeletons {
@@ -101,8 +106,8 @@ struct MotionSource {
   }
 };
 
-inline constexpr int bone_slots = 20;
-inline constexpr int pose_parts = 3; // 0: body and legs, 1: left arm, 2: right arm
+inline constexpr int bone_slots = 64; // includes imported part rigs
+inline constexpr int pose_parts = 3;  // 0: body and legs, 1: left arm, 2: right arm
 
 struct PoseContact {
   Vec3 position;
@@ -121,6 +126,8 @@ struct PosePart {
   std::array<bool, bone_slots> set{};
   std::optional<Mat4> mount;
   std::array<std::optional<Mat4>, 14> movement_mounts;
+  std::optional<Mat4> source_model_root;
+  std::vector<std::optional<Mat4>> source_controls;
 };
 
 using Pose = std::array<PosePart, pose_parts>;
@@ -139,11 +146,15 @@ struct PoseInput {
   std::array<MotionSource, 7> body_auxiliary;
   std::array<ArmAim, 2> arm_aim;
   std::array<const SkeletonNode *, 2> arm_skeletons{};
-  float aim_yaw{};      // turns the nodes flagged 0x4 (the upper body)
-  float aim_pitch{};    // pitches the nodes flagged 0x100, within +-0.4 rad
-  float forearm_turn{}; // added about x to the forearms (node_forearm) otherwise
-  float wheel_turn{};   // added about x to the wheels (node_wheel) instead of both
-  bool keep_sway{};     // idle and walking keep the body's sideways sway
+  float aim_yaw{};             // turns the nodes flagged 0x4 (the upper body)
+  float aim_pitch{};           // pitches the nodes flagged 0x100, within +-0.4 rad
+  float forearm_turn{};        // added about x to the forearms (node_forearm) otherwise
+  float wheel_turn{};          // added about x to the wheels (node_wheel) instead of both
+  double procedural_seconds{}; // independent of clip speed, looping and transitions
+  const std::array<float, 64> *source_roll_angles{};
+  const std::array<std::optional<Mat4>, 64> *source_roll_frames{};
+  const std::vector<std::optional<Mat4>> *source_leg_locals{};
+  bool keep_sway{}; // idle and walking keep the body's sideways sway
 };
 
 // Poses the body-and-legs skeleton `root` (and the arms under it) into

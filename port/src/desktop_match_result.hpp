@@ -24,7 +24,7 @@ public:
                     const std::vector<MusicCredit> &credits, const json::JsonValue &data,
                     MatchReceipt receipt, QuestSave quest, WorldRenderer *world,
                     WorldFrame background, std::string next, std::shared_ptr<ReplayArchive> replay,
-                    int first_win = -1);
+                    int first_win = -1, std::shared_ptr<void> resources = {});
   void tick(const InputFrame &input, double seconds) override;
   void draw(const Viewport &viewport) override;
   // The battle behind the receipt from now on (ScreenRunner::adopt_backdrop).
@@ -56,6 +56,7 @@ public:
   std::vector<SoundCue> take_sound_cues() override;
 
 private:
+  std::shared_ptr<void> resources_; // outlives renderer-dependent backdrop/replay/trophy
   void draw_counters(DrawList &list) const;
   void sound(const std::string &name);
   [[nodiscard]] bool replay_available() const;
