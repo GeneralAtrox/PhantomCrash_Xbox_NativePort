@@ -1,6 +1,7 @@
 #pragma once
 
 #include "phantomcrash/garage.hpp"
+#include "phantomcrash/hangar_labels.hpp"
 #include "phantomcrash/glyph_font.hpp"
 #include "phantomcrash/input.hpp"
 #include "phantomcrash/json.hpp"
@@ -30,7 +31,7 @@ struct HangarCards {
   Sprite card;
   std::uint32_t colour{0xf0f0f0};
   std::uint32_t riding_colour{0xff9400};
-  std::vector<Sprite> numbers; // hangars 1 to 10
+  std::vector<HangarLabel> numbers; // one label per hangar
   Sprite for_sale;
   NumberStyle price; // `right` from the card's top-left
   int price_layer{};
@@ -63,8 +64,8 @@ struct HangarRobots {
 // The numbers' plates along the bottom (0x06c530), sliding in with the line
 // and EXIT, the ridden hangar's and the chosen one's drawn again over them.
 struct HangarPlates {
-  std::vector<Sprite> plates;
-  std::vector<Sprite> marks;
+  std::vector<HangarLabel> plates;
+  std::vector<HangarLabel> marks;
   std::vector<float> from_x;
   std::vector<float> to_x;
   float y{};

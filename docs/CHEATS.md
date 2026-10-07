@@ -34,6 +34,16 @@ cannot write over them. They are not available in co-op.
   hangar already holds, so your current robot counts. The bosses' robots
   (SPUTNIK, SNOWHITE, MUTOS, GOU) are not in the list: their bodies are
   enemy copies of the Holy, Charga, Tolomeo and Tolomeo R models.
+  With the S.L.A.I. asset mod installed, the list continues with all ten
+  imported body types: PROTON-K7P2, HARTMAN-IP1, CARRO-H8/6, KHT-O.279,
+  ZWERG-EV.3, ELINT-Re-K9E2, MOLNIYA-O.476, ARDITO-H8M, DUSTER and SWEEPER.
+  Their starter loadouts use matching source-family legs and weapons, plus
+  a Phantom Crash CHIP. Phantom Crash comes first, followed by S.L.A.I.;
+  existing robots count toward their body type and are kept. The garage
+  has twelve hangars, enough for the seven Phantom Crash types and the five
+  main S.L.A.I. manufacturers. Each use stops when the empty hangars are filled.
+  Older saves keep their existing ten hangars and gain two unowned slots that
+  can be purchased normally or filled by the cheat.
 - **Add All Items, Chips and Music** puts one of each distinct part in the
   parts stock: each body, legs and weapon model, and each CHIP and module
   name (7 bodies, 21 legs, 34 arm and 30 shoulder weapons, 32 CHIPs and 106
@@ -60,3 +70,6 @@ cannot write over them. They are not available in co-op.
 `data/debug/cheats.json` sets the hangar robots (robot record indices in
 `tables/garage.json`; add 7, 6, 9 and 8 for the bosses' robots), the
 copies kept of each part and the raised stock size. A mod folder can override it like any other data file.
+S.L.A.I. registration appends its starter records to `mods/tables/garage.json`
+and writes the extended list to `mods/data/debug/cheats.json`. Re-registering
+updates these records and keeps the Phantom Crash entries first.

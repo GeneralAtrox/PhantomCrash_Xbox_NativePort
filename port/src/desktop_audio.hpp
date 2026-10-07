@@ -54,6 +54,8 @@ public:
   // Keeps the music queue topped up, and notices a track's end; once per frame.
   void update();
   void set_paused(bool paused);
+  // Freeze battle/music playback while keeping pause-menu effects audible.
+  void set_gameplay_paused(bool paused);
 
   [[nodiscard]] const std::string &music() const noexcept {
     return track_;
@@ -101,6 +103,7 @@ private:
   SDL_AudioStream *music_{};
   MusicDecoder music_decoder_;
   bool music_loop_{};
+  bool gameplay_paused_{};
   float music_track_volume_{1.0F};
   float music_volume_{1.0F}; // the screen's scale of the track's volume
   float music_gain_{1.0F};

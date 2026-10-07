@@ -160,8 +160,9 @@ void HangarMenuScreen::draw_card(DrawList &list, const int card) const {
   }
   const std::uint32_t colour = logic_.status(card).riding ? cards.riding_colour : cards.colour;
   list.sprite(coloured(on_card(cards.card, x, cards.y), colour), canvas_clip);
-  list.sprite(coloured(on_card(cards.numbers[static_cast<std::size_t>(card)], x, cards.y), colour),
-              canvas_clip);
+  for (const Sprite &number : cards.numbers[static_cast<std::size_t>(card)]) {
+    list.sprite(coloured(on_card(number, x, cards.y), colour), canvas_clip);
+  }
   draw_hangar(list, card, x);
 }
 
@@ -174,25 +175,26 @@ void HangarMenuScreen::draw_plates(DrawList &list) const {
   for (std::size_t index = 0; index < plates.plates.size(); ++index) {
     const float x = plates.from_x[index] + (plates.to_x[index] - plates.from_x[index]) * slide;
     xs.push_back(x);
-    Sprite plate = plates.plates[index];
-    plate.position = {x, plates.y};
-    list.sprite(plate);
+    for (const Sprite &plate : plates.plates[index]) {
+      list.sprite(shifted(plate, x, plates.y));
+    }
   }
   const float offset = xs.back() - plates.to_x.back();
   list.sprite(shifted(plates.line, offset, 0.0F));
   list.sprite(shifted(plates.exit, offset, 0.0F));
   const auto mark = [&](const int hangar, const std::uint32_t colour, const int layer,
                         const bool pulse) {
-    Sprite sprite = plates.marks[static_cast<std::size_t>(hangar)];
-    sprite.position = {xs[static_cast<std::size_t>(hangar)], plates.y};
-    sprite.colour = colour;
-    sprite.layer = layer;
-    sprite.animation = pulse ? Animation::pulse : Animation::none;
-    list.sprite(sprite);
+    for (Sprite sprite : plates.marks[static_cast<std::size_t>(hangar)]) {
+      sprite = shifted(sprite, xs[static_cast<std::size_t>(hangar)], plates.y);
+      sprite.colour = colour;
+      sprite.layer = layer;
+      sprite.animation = pulse ? Animation::pulse : Animation::none;
+      list.sprite(sprite);
+    }
   };
   const int riding = logic_.quest().garage.riding;
   if (riding >= 0 && riding < garage_hangar_count) {
-    mark(riding, plates.riding_colour, plates.marks[0].layer, false);
+    mark(riding, plates.riding_colour, plates.marks[0].front().layer, false);
   }
   const bool active = logic_.view() == HangarView::wheel;
   if (logic_.card() == HangarMenu::exit_card) {

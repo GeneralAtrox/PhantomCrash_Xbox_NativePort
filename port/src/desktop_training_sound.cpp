@@ -15,6 +15,22 @@ constexpr const char *battle_sounds_document = "audio/battle_sounds.json";
 
 } // namespace
 
+bool TrainingScreen::battle_music_ended() const {
+  return !finale_ && (done_ || (scene_ && scene_->scene().state() == scene_state::exit));
+}
+
+std::string TrainingScreen::music() const {
+  if (battle_music_ended()) {
+    return {};
+  }
+  return finale_ ? finale_music() : cue_music_.empty() ? script_.music : cue_music_;
+}
+
+bool TrainingScreen::uses_music_program() const {
+  // Otherwise the runner would start the next playlist track after the exit stops it.
+  return free_play_ && cue_music_.empty() && !finale_ && !battle_music_ended();
+}
+
 void TrainingScreen::queue_dialogue(std::vector<std::string> sounds) {
   for (auto &sound : sounds) {
     SoundCue cue{SoundCue::Action::play, std::move(sound)};
@@ -33,6 +49,18 @@ void TrainingScreen::load_sounds(const DataRoots &roots, BattleSounds::PlaybackQ
 }
 
 void TrainingScreen::gather_sounds(const float seconds) {
+  const auto &player = battle_->robots().at(static_cast<std::size_t>(player_index_));
+  bool acquired = false;
+  for (std::size_t slot = 0; slot < weapon_slots; ++slot) {
+    const auto *weapon = player.weapons[slot];
+    const int target = player.alive && weapon && weapon->homing ? player.locks[slot] : -1;
+    acquired = acquired || (target >= 0 && target != heard_locks_[slot]);
+    heard_locks_[slot] = target;
+  }
+  if (acquired && !paused_) {
+    // Original lock completion: 0x05137d / 0x052153, bank 3 entry 0x0b.
+    unplaced_.push_back({SoundCue::Action::play, "sound/sfx/battle_player/11.wav"});
+  }
   std::vector<WorldSound> sounds;
   if (StageDoors *doors = battle_->doors()) {
     sounds = doors->take_sounds();
@@ -60,8 +88,11 @@ void TrainingScreen::gather_sounds(const float seconds) {
 
 std::vector<std::string> TrainingScreen::sound_preloads() const {
   std::vector<std::string> files;
+  files.push_back("window");
+  files.push_back("sound/sfx/battle_player/11.wav");
   if (battle_sounds_) {
-    files = sound_files(battle_sounds_->table());
+    auto battle_files = sound_files(battle_sounds_->table());
+    files.insert(files.end(), battle_files.begin(), battle_files.end());
   }
   files.push_back(script_.battle.settings.robot_wrecks.break_sound);
   const SceneTuning &scenes = script_.battle.scenes;

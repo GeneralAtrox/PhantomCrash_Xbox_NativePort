@@ -169,9 +169,13 @@ void Armory::fire(const WeaponTuning &weapon, const int owner, const int team, c
   }
   const bool valid = target >= 0 && target < static_cast<int>(targets.size());
   const Target *locked = valid ? &targets[static_cast<std::size_t>(target)] : nullptr;
-  // Start toward the lock before homing takes over; otherwise use the aim.
+  // Shoulder aim modes 0/1 follow the crosshair/tracked reticle (0x098bb7).
+  // Their pose already supplies that barrel direction; a retained lock outside
+  // the sight must not redirect the projectile after the barrel has aimed.
+  const bool sight_aimed = weapon.part && weapon.part->table == WeaponTable::shoulder &&
+                           (weapon.aim_mode == 0 || weapon.aim_mode == 1) && !weapon.homing;
   Vec3 direction = aim;
-  if (locked != nullptr) {
+  if (locked != nullptr && !sight_aimed) {
     direction = normalize(locked->centre - muzzle);
   }
   for (int round = 0; round < std::max(rounds, 1); ++round) {

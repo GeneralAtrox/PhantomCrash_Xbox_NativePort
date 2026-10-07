@@ -10,8 +10,8 @@
 namespace phantomcrash {
 
 // The player's hangars (the original's save + 0x25f0, 10 records of 0x36
-// bytes) and parts stock (+ 0xe08, 255 entries of 0x18).
-inline constexpr int garage_hangar_count = 10;
+// bytes), extended to twelve in the port, and parts stock (+ 0xe08, 255 entries of 0x18).
+inline constexpr int garage_hangar_count = 12;
 inline constexpr int garage_stock_size = 255;
 // A robot's part slots (a hangar's shorts 0..6, a robot record's pairs
 // from +2): body, legs, right and left arm weapons, right and left
@@ -105,7 +105,7 @@ struct Garage {
 [[nodiscard]] Garage new_game_garage(int owned);
 
 // Reads a garage, ignoring entries that do not fit: stock indices outside
-// [0, stock_size), hangars past the tenth, fitted parts that name no
+// [0, stock_size), hangars past the capacity, fitted parts that name no
 // stock entry.
 [[nodiscard]] Garage garage_from_json(const json::JsonValue &value);
 [[nodiscard]] json::JsonValue garage_to_json(const Garage &garage);

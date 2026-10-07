@@ -149,6 +149,14 @@ DatagramSocket::DatagramSocket(const Endpoint bind_to) : impl_(std::make_unique<
 
 DatagramSocket::~DatagramSocket() = default;
 
+void DatagramSocket::enable_broadcast() {
+  const int enabled = 1;
+  if (setsockopt(impl_->socket, SOL_SOCKET, SO_BROADCAST, reinterpret_cast<const char *>(&enabled),
+                 sizeof(enabled)) != 0) {
+    fail("broadcast setup");
+  }
+}
+
 Endpoint DatagramSocket::local() const {
   sockaddr_in address{};
   AddressSize size = sizeof(address);

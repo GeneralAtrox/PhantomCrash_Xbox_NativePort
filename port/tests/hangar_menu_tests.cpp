@@ -75,8 +75,8 @@ struct Opened {
 TEST_CASE("hangar.json reads the wheel, the plates, the menu and the routes") {
   const HangarMenuScript script = shipped_script();
   CHECK(script.scene == 14);
-  CHECK(script.cards.numbers.size() == 10);
-  CHECK(script.plates.plates.size() == 10);
+  CHECK(script.cards.numbers.size() == garage_hangar_count);
+  CHECK(script.plates.plates.size() == garage_hangar_count);
   REQUIRE(script.menu.items.size() == 5);
   CHECK(script.menu.items[3].action == HangarAction::assemble);
   CHECK(script.routes.at(HangarAction::spec) == "sv_spec");
@@ -120,6 +120,32 @@ TEST_CASE("the wheel wraps, scrolls the chosen card to the centre, cancel goes t
   settle(logic, 2.0);
   CHECK(logic.done());
   CHECK(logic.next() == "garage");
+}
+
+TEST_CASE("hangars eleven and twelve can be selected, purchased and reached by pointer") {
+  Opened shop(20000);
+  auto &logic = shop.logic;
+  const auto &script = logic.script();
+  for (int index = 10; index < garage_hangar_count; ++index) {
+    InputFrame click;
+    click.clicked = true;
+    click.pointer = std::array<float, 2>{script.plates.to_x[index] + 25, script.plates.y + 12};
+    logic.update(tick, click);
+    settle(logic, 0.5);
+    CHECK(logic.card() == index);
+    CHECK(logic.card_x(index) == script.cards.centre_x);
+    tap(logic, script.confirm_buttons);
+    REQUIRE(logic.view() == HangarView::buy);
+    tap(logic, script.left);
+    tap(logic, script.confirm_buttons);
+    CHECK(logic.quest().garage.hangars[index].owned);
+    tap(logic, script.confirm_buttons);
+  }
+  CHECK(logic.quest().money == 0);
+  tap(logic, script.right);
+  CHECK(logic.card() == HangarMenu::exit_card);
+  tap(logic, script.right);
+  CHECK(logic.card() == 0);
 }
 
 TEST_CASE("a hangar for sale is bought for its price, or the money will not do") {

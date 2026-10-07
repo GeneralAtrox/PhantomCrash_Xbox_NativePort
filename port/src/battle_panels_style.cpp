@@ -177,8 +177,30 @@ void parse_messages(const json::JsonValue &value, BattlePanelsStyle &out) {
 
 BattlePanelsStyle parse_battle_panels_style(const json::JsonValue &document) {
   BattlePanelsStyle out;
+  if (const auto *replacements = document.find("text_replacements")) {
+    for (const auto &entry : replacements->array()) {
+      BattlePanelTextStyle text;
+      text.source = sprite(entry, "source");
+      text.text = entry.string_or("text", "");
+      if (const auto *region = entry.find("region")) {
+        const auto &box = region->array();
+        if (box.size() != 4) {
+          throw std::runtime_error("HUD text region needs 4 coordinates");
+        }
+        text.region = std::array<float, 4>{
+            static_cast<float>(box[0].number()), static_cast<float>(box[1].number()),
+            static_cast<float>(box[2].number()), static_cast<float>(box[3].number())};
+      }
+      if (entry.find("colour")) {
+        text.colour = colour(entry, "colour", 0xffffff);
+      }
+      out.text_replacements.push_back(std::move(text));
+    }
+  }
   out.widescreen = document.string_or("layout", "widescreen") != "4:3";
   out.flash_frames = number(document, "flash_frames", out.flash_frames);
+  out.money_count_seconds = number(document, "money_count_seconds", out.money_count_seconds);
+  out.text_gap = std::max(0.0F, number(document, "text_gap", out.text_gap));
   out.durability = gauge(member(document, "durability"));
   const json::JsonValue &optic = member(document, "optic");
   out.optic = gauge(optic);

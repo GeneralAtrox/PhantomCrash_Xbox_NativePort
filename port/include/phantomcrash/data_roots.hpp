@@ -21,6 +21,7 @@ public:
   // The layout of a source checkout or install rooted at `root`:
   // data/, mods/, artifacts/europe/assets/, artifacts/europe/files/Media/.
   [[nodiscard]] static DataRoots standard(const std::filesystem::path &root);
+  [[nodiscard]] static DataRoots configured(const std::filesystem::path &root, bool slai);
   // As standard, without mods/: the shipped data and the converted assets.
   [[nodiscard]] static DataRoots shipped(const std::filesystem::path &root);
 
@@ -45,6 +46,7 @@ public:
 private:
   std::filesystem::path data_;
   std::filesystem::path mods_;
+  std::filesystem::path content_;
   std::vector<std::filesystem::path> asset_roots_;
 };
 

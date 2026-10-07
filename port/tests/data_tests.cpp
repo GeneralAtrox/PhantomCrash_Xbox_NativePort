@@ -11,6 +11,7 @@
 #include "phantomcrash/data_roots.hpp"
 #include "phantomcrash/input.hpp"
 #include "phantomcrash/json.hpp"
+#include "phantomcrash/slai_content.hpp"
 
 using phantomcrash::DataRoots;
 namespace json = phantomcrash::json;
@@ -156,4 +157,49 @@ TEST_CASE("the shipped data documents load and name known buttons") {
   static_cast<void>(phantomcrash::buttons_from_json(*menu.find("cancel")->find("buttons")));
   const auto title = roots.document("ui/title.json");
   static_cast<void>(phantomcrash::buttons_from_json(*title.find("start")->find("buttons")));
+}
+
+TEST_CASE("SLAI content is opt-in and legacy overlays cannot bypass its toggle") {
+  TempFolder root;
+  root.write("data/test.json", R"({"value":1})");
+  root.write("mods/data/test.json", R"({"value":2})");
+  root.write("artifacts/europe/assets/model.txt", "base");
+  CHECK(DataRoots::configured(root.path(), false).document("test.json").number_or("value", 0) == 2);
+  root.write("mods/slai/native_parts.json", "{}");
+  CHECK(DataRoots::configured(root.path(), false).document("test.json").number_or("value", 0) == 1);
+  CHECK(!phantomcrash::slai_installed(root.path()));
+  root.write("artifacts/slai/assets/installed.json", R"({"version":1,"disc":"SLES_529.40"})");
+  for (auto file : {"tables/parts.json", "tables/garage.json", "robots/catalogue.json",
+                    "slai/native_parts.json", "slai/assets/manifest.json"}) {
+    root.write(fs::path("artifacts/slai/assets") / file, "{}");
+  }
+  root.write("artifacts/slai/assets/data/test.json", R"({"value":3})");
+  root.write("artifacts/slai/assets/model.txt", "imported");
+  CHECK(phantomcrash::slai_installed(root.path()));
+  CHECK(DataRoots::configured(root.path(), true).document("test.json").number_or("value", 0) == 3);
+  CHECK(DataRoots::configured(root.path(), true).asset("model.txt") ==
+        root.path() / "artifacts/slai/assets/model.txt");
+  CHECK(DataRoots::configured(root.path(), false).asset("model.txt") ==
+        root.path() / "artifacts/europe/assets/model.txt");
+}
+
+TEST_CASE("content modes retain original saves and use independent campaign files") {
+  TempFolder root;
+  const auto base = root.path() / "settings.json";
+  phantomcrash::Settings original;
+  original.quest.player_name = "Original";
+  original.online_profile = original.quest;
+  CHECK(phantomcrash::save_settings(base, original));
+  CHECK(!phantomcrash::load_settings(base).slai_enabled);
+  const auto modded = phantomcrash::content_profile_path(base, true, false);
+  const auto clean = phantomcrash::content_profile_path(base, false, true);
+  CHECK(modded != base && clean != base && modded != clean);
+  auto fresh = phantomcrash::load_content_settings(base, modded, true);
+  CHECK(fresh.quest.player_name.empty() && !fresh.online_profile);
+  fresh.quest.player_name = "SLAI";
+  CHECK(phantomcrash::save_settings(modded, fresh));
+  CHECK(phantomcrash::load_content_settings(base, modded, true).quest.player_name == "SLAI");
+  CHECK(phantomcrash::load_settings(base).quest.player_name == "Original");
+  CHECK(phantomcrash::content_profile_path(base, false, false) == base);
+  CHECK(phantomcrash::load_content_settings(base, clean, false).quest.player_name.empty());
 }

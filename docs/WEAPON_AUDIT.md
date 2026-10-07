@@ -67,6 +67,36 @@ strike connects once. A hit on the striker breaks the strike off.
 The port keeps the blade on the weapon's muzzle node, which the strike
 motion now swings; the arm's aim drops for the strike so the motion shows.
 
+## Homing lock bounds
+
+Homing weapons now check the chip's box when retaining a candidate as well
+as acquiring one. The angular hold cannot keep or finish a lock outside
+that box. Leaving it clears the candidate and its acquisition timer;
+returning requires the chip's lock delay again. Already launched missiles
+retain their assigned target, as before.
+
+## Reticle-aimed shoulder weapons
+
+Shoulder aim modes 0 and 1 use the crosshair or tracked reticle direction
+already evaluated by the combat pose (`0x098bb7`). Projectile launch now
+preserves that direction for non-homing weapons, including the Catapult,
+instead of redirecting the round toward a retained lock outside the sight.
+Homing weapons keep their lock-directed launch.
+
+## Muzzle flashes
+
+The firing event now draws the original muzzle model. Handler `0x099d26`
+uses model slot `0x39e`, and `0x09a0da` uses `0x39f`, both at scale 3.
+These resolve to meshes 9 and 10 of the already converted binlink model
+194. `data/world/muzzle_flashes.json` maps the weapon's `fire_sound`
+selector to these models and exposes scale and display duration.
+
+The native renderer holds the immediate draw for one 30 Hz battle tick,
+with additive, unlit materials. The firing event captures the barrel's
+position and direction before a multi-barrel weapon advances. S.L.A.I.
+weapons with their own projectile routes retain their source effects.
+The smoke path at `0x086bfa` is separate from these muzzle-model draws.
+
 ## What remains
 
 - **Sights without a reticle.** Every robot locks in its chip's boxes

@@ -1,4 +1,5 @@
 #include "phantomcrash/online_content.hpp"
+#include "phantomcrash/data_roots.hpp"
 #include "../extract/sha256.hpp"
 #include <algorithm>
 #include <array>
@@ -90,16 +91,17 @@ void scan(const std::filesystem::path &folder, const std::filesystem::path &root
 } // namespace
 
 Compatibility content_fingerprint(const std::filesystem::path &executable,
-                                  const std::filesystem::path &root) {
+                                  const std::filesystem::path &root, std::optional<bool> slai) {
   extract::Sha256 hash;
   file(hash, "executable", executable);
+  number(hash, slai ? (*slai ? 2 : 1) : 0);
   std::map<std::string, std::filesystem::path> files;
-  for (const auto *name :
-       {"data", "mods", "artifacts/europe/assets", "artifacts/europe/files/Media"}) {
-    const auto folder = root / name;
+  const auto roots = slai ? DataRoots::configured(root, *slai) : DataRoots::standard(root);
+  auto folders = roots.asset_roots();
+  folders.push_back(root / "data");
+  for (const auto &folder : folders) {
     if (!std::filesystem::is_directory(folder)) {
-      if (std::string_view(name) == "mods" ||
-          std::string_view(name) == "artifacts/europe/files/Media") {
+      if (folder == root / "mods" || folder == root / "artifacts/europe/files/Media") {
         continue;
       }
       throw std::runtime_error("Online play requires " + folder.string());

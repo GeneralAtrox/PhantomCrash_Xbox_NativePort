@@ -30,7 +30,8 @@ DLLS = (
     "avutil-61.dll", "swresample-7.dll", "swscale-10.dll", "libpng16.dll", "z.dll",
     "deflate.dll",
 )
-PROGRAMS = ("phantomcrash_port.exe", "phantomcrash_extract.exe")
+PROGRAMS = ("phantomcrash_port.exe", "phantomcrash_extract.exe",
+            "phantomcrash_slai_install.exe", "phantomcrash_slai_audio.exe")
 RUNTIME_NOTICE = """\
 {names}
 are Microsoft Visual C++ {version} runtime files from the Visual Studio
@@ -139,6 +140,13 @@ def main() -> None:
         for library in LIBRARIES:
             add(z, INSTALLED / "share" / library / "copyright",
                 f"{stem}/licenses/{library}.txt")
+        importer_licenses = ROOT / "build/port/slai-installer/licenses"
+        if not (importer_licenses / "python.txt").is_file():
+            raise ValueError("Build the S.L.A.I. installer and its runtime notices first")
+        for path in sorted(importer_licenses.rglob("*")):
+            if path.is_file():
+                add(z, path, f"{stem}/licenses/slai-installer/" +
+                    path.relative_to(importer_licenses).as_posix())
         z.writestr(f"{stem}/build-info.json", json.dumps(metadata, indent=2) + "\n")
         z.writestr(f"{stem}/Install Game Data.bat", INSTALL_SCRIPT)
         z.writestr(f"{stem}/Start Game.bat", (
@@ -161,7 +169,8 @@ def main() -> None:
         for file in ("config.h", "config_components.h", "ffbuild/config.mak"):
             add(z, VCPKG / "buildtrees/ffmpeg/x64-windows-rel" / file,
                 f"ffmpeg-build/{file}")
-        for file in ("vcpkg.json", "scripts/build-port.ps1", "docs/WINDOWS_RELEASE.md"):
+        for file in ("vcpkg.json", "scripts/build-port.ps1", "docs/WINDOWS_RELEASE.md",
+                     "tools/slai-installer-requirements.txt", "tools/build_slai_installer.py"):
             add(z, ROOT / file, file)
         z.writestr("README.txt", (
             f"Library sources for Phantom Crash {version} Windows x64.\n"

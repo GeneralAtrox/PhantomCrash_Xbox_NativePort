@@ -10,6 +10,7 @@
 #include <map>
 #include <optional>
 #include <string>
+#include <vector>
 
 namespace phantomcrash {
 
@@ -83,7 +84,16 @@ struct HudCounter {
   NumberStyle number;
 };
 
+// Replaces lettering in an atlas sprite; region is source-relative LTRB.
+struct BattlePanelTextStyle {
+  Sprite source;
+  std::string text;
+  std::optional<std::array<float, 4>> region;
+  std::optional<std::uint32_t> colour;
+};
+
 struct BattlePanelsStyle {
+  std::vector<BattlePanelTextStyle> text_replacements;
   bool widescreen{true}; // anchored elements keep to the window's edges
   // The screen's canvas: 640x480 alone, 640x240 for each of two screens and
   // 320x240 for each of three or four.
@@ -93,6 +103,8 @@ struct BattlePanelsStyle {
   bool labels{true};
   bool messages_shown{true};
   float flash_frames{10.0F};
+  float money_count_seconds{0.75F};
+  float text_gap{6.0F};
   HudGauge durability;
   HudGauge optic;
   std::uint32_t optic_active_colour{0x64ff6e}; // flashed while camouflaged

@@ -114,13 +114,9 @@ public:
   // Register the existing entrance scene before creating the agreed timeline.
   void prepare_online();
   void draw(const Viewport &viewport) override;
-  // An entrance's jingle plays in place of the battle's music until it ends.
-  [[nodiscard]] std::string music() const override {
-    return finale_ ? finale_music() : cue_music_.empty() ? script_.music : cue_music_;
-  }
-  [[nodiscard]] bool uses_music_program() const override {
-    return free_play_ && cue_music_.empty() && !finale_;
-  }
+  // Battle music ends when entering the exit elevator or leaving the screen.
+  [[nodiscard]] std::string music() const override;
+  [[nodiscard]] bool uses_music_program() const override;
   void set_music(const std::string &file) override {
     heard_music_ = file;
     if (file.empty() && !finale_) {
@@ -186,6 +182,7 @@ public:
                                           int height) override;
 
 private:
+  [[nodiscard]] bool battle_music_ended() const;
   bool online() const;
   void capture_online(const RobotControl &control, const FireControl &fire);
   bool online_result_ready() const;
@@ -335,6 +332,7 @@ private:
   std::unique_ptr<EventPlayer> message_;
   std::vector<std::string> sounds_; // heard whole: the menus', the chatter's
   std::vector<SoundCue> unplaced_;  // dialogue and non-spatial categorized sounds
+  std::array<int, weapon_slots> heard_locks_{-1, -1, -1, -1};
   std::unique_ptr<BattleSounds> battle_sounds_;
   std::vector<PlacedCue> placed_; // heard where they are
   std::vector<DamageRumble> rumble_;

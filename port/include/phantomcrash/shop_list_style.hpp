@@ -1,6 +1,7 @@
 #pragma once
 
 #include "phantomcrash/json.hpp"
+#include "phantomcrash/hangar_labels.hpp"
 #include "phantomcrash/location_frame.hpp"
 #include "phantomcrash/part_stats.hpp"
 #include "phantomcrash/sprite_layer.hpp"
@@ -54,7 +55,7 @@ struct ShopGoodsList {
   Sprite swatch_frame; // around a paint's or emblem's picture
   std::array<float, 2> swatch_at{};
   int swatch_layer{};
-  std::vector<Sprite> hangar_badges; // the player's: the hangar a part is fitted in
+  std::vector<HangarLabel> hangar_badges; // the player's: the hangar a part is fitted in
   // ASSEMBLE's: the plate under each hangar number (alone for a loose part)
   // and the plates under every row, shown or not.
   std::optional<Sprite> badge_base;

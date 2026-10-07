@@ -29,8 +29,8 @@ class DesktopShots final {
 public:
   // `bank` must outlive this (DesktopEffects' system keeps it); `contact`
   // is how a robot's touch spreads over the force field.
-  DesktopShots(WorldRenderer &world, const EffectBank &bank, FenceContactLook contact = {},
-               DesktopSourceParticles *source_particles = nullptr);
+  DesktopShots(WorldRenderer &world, const EffectBank &bank, const DataRoots &roots,
+               FenceContactLook contact = {}, DesktopSourceParticles *source_particles = nullptr);
 
   // Starts the effects of this tick's landings, wrecks and blasts.
   void tick(const Battle &battle, EffectSystem &effects, float seconds,
@@ -58,6 +58,18 @@ private:
   std::vector<int> look_sprites_;
   Mesh exhaust_;
   Mesh beam_;
+  struct MuzzleLook {
+    Mesh mesh;
+    float scale{3.0F};
+    float seconds{1.0F / 30.0F};
+  };
+  struct MuzzleFlash {
+    int style{};
+    Mat4 world;
+    float remaining{};
+  };
+  std::map<int, MuzzleLook> muzzle_looks_;
+  std::vector<MuzzleFlash> muzzle_flashes_;
   FenceImpacts fence_;
   float fence_log_seconds_{};
   std::size_t fence_contact_requests_{};

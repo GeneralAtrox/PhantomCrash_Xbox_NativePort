@@ -26,6 +26,7 @@ struct SettingsMenu::Impl {
   static constexpr UINT pause_unfocused_command = 0x7204;
   static constexpr UINT controls_command = 0x7205;
   static constexpr UINT coop_command = 0x7206;
+  static constexpr UINT slai_command = 0x7209;
   static constexpr UINT skip_conversations_command = 0x7208;
   static constexpr UINT first_level_command = 0x7300;
   static constexpr UINT last_level_command = 0x73ff;
@@ -38,6 +39,7 @@ struct SettingsMenu::Impl {
   std::optional<int> level;
   std::optional<CheatRequest> cheat;
   bool copy_requested{};
+  bool slai_toggle{};
   HWND window{};
   HMENU bar{}, menu{}, levels{}, audio{}, cheats{};
   std::unique_ptr<VisualsDialog> visuals;
@@ -55,6 +57,7 @@ struct SettingsMenu::Impl {
       refresh_cheats_menu(cheats, settings.cheats);
     }
     check(pause_unfocused_command, settings.pause_unfocused);
+    check(slai_command, settings.slai_enabled);
     check(skip_conversations_command, settings.skip_conversations);
     if (coop) {
       coop->refresh();
@@ -86,6 +89,9 @@ struct SettingsMenu::Impl {
       break;
     case coop_command:
       coop->show();
+      break;
+    case slai_command:
+      slai_toggle = true;
       break;
     case visuals_command:
       visuals->show();
@@ -150,6 +156,11 @@ struct SettingsMenu::Impl {
   static LRESULT CALLBACK message(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam,
                                   UINT_PTR id, DWORD_PTR data) {
     auto &self = *reinterpret_cast<Impl *>(data);
+    // Alt and F10 control cursor release; do not enter the native keyboard
+    // menu loop when either key is released. Mouse and mnemonic access remain.
+    if (message == WM_SYSCOMMAND && (wparam & 0xfff0) == SC_KEYMENU && lparam == 0) {
+      return 0;
+    }
     // Windows uses VK_RETURN for both Enter keys; bit 24 distinguishes the
     // keypad key. Handle both here before native Alt-menu processing eats it.
     if (message == WM_SYSKEYDOWN && wparam == VK_RETURN && (lparam & (1LL << 29)) &&
@@ -210,6 +221,8 @@ SettingsMenu::SettingsMenu(void *native_window, const Settings &initial)
   state.visuals = std::make_unique<VisualsDialog>(hwnd, state.settings);
   state.coop = std::make_unique<CoopDialog>(hwnd, state.settings);
   if (!AppendMenuW(state.menu, MF_STRING, Impl::coop_command, L"&Co-op...") ||
+      !AppendMenuW(state.menu, MF_STRING, Impl::slai_command,
+                   L"S.L.A.I. content (restart required)") ||
       !AppendMenuW(state.menu, MF_STRING, Impl::visuals_command, L"&Visuals...") ||
       !AppendMenuW(state.menu, MF_STRING, Impl::controls_command,
                    L"&Keyboard / Controller Controls...") ||
@@ -237,6 +250,14 @@ SettingsMenu::SettingsMenu(void *native_window, const Settings &initial)
 }
 
 SettingsMenu::~SettingsMenu() = default;
+
+bool SettingsMenu::take_slai_toggle() {
+  return std::exchange(impl_->slai_toggle, false);
+}
+void SettingsMenu::set_slai_enabled(bool enabled) {
+  impl_->settings.slai_enabled = enabled;
+  impl_->refresh();
+}
 
 const Settings &SettingsMenu::settings() const {
   return impl_->settings;
@@ -330,6 +351,12 @@ void SettingsMenu::set_fullscreen(const bool enabled) {
   impl_->settings.fullscreen = enabled;
 }
 void SettingsMenu::set_visible(bool) {}
+bool SettingsMenu::take_slai_toggle() {
+  return false;
+}
+void SettingsMenu::set_slai_enabled(bool enabled) {
+  impl_->settings.slai_enabled = enabled;
+}
 bool SettingsMenu::visuals_open() const {
   return false;
 }

@@ -37,7 +37,7 @@ HangarCarousel parse_hangars(const json::JsonValue &value) {
   }
   hangars.arrows = {arrows[0], arrows[1]};
   hangars.arrow_lit = colour_of(value, "arrow_lit");
-  hangars.numbers = member(value, "numbers", parse_sprites);
+  hangars.numbers = member(value, "numbers", parse_hangar_labels);
   hangars.centre = numbers<2>(required(value, "centre"), "centre");
   hangars.step = number_of(value, "step");
   hangars.clip = numbers<4>(required(value, "clip"), "clip");

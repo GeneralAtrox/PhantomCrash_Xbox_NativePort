@@ -164,13 +164,15 @@ void DesktopInput::sticks(const Buttons held, InputFrame &frame, const bool focu
   }
 }
 
-void DesktopInput::capture_mouse(SDL_Window *window, const bool gameplay) {
+void DesktopInput::capture_mouse(SDL_Window *window, const bool gameplay, const bool window_ui) {
   if (!gameplay && mouse_gameplay_) {
     mouse_released_ = false;
   }
   mouse_gameplay_ = gameplay;
   mouse_window_ = window;
-  const bool capture = gameplay && controls_ && controls_->mouse_aim && !mouse_released_;
+  mouse_window_ui_ = window_ui;
+  const bool capture = gameplay && controls_ && controls_->mouse_aim && !mouse_released_ &&
+                       !window_ui && !(SDL_GetModState() & SDL_KMOD_ALT);
   if (capture != mouse_captured_) {
     mouse_captured_ = capture && SDL_SetWindowRelativeMouseMode(window, true);
     if (!capture) {
@@ -178,6 +180,10 @@ void DesktopInput::capture_mouse(SDL_Window *window, const bool gameplay) {
     }
     mouse_delta_ = {};
     mouse_pressed_ = 0;
+    suppress_mouse_fire_ = true; // A menu click must be released before it can fire.
+    if (!capture) {
+      SDL_ShowCursor();
+    }
   }
 }
 

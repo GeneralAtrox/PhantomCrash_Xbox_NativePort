@@ -56,7 +56,7 @@ HangarCards parse_cards(const json::JsonValue &value) {
   cards.card = member(value, "card", parse_sprite);
   cards.colour = colour_of(value, "colour");
   cards.riding_colour = colour_of(value, "riding_colour");
-  cards.numbers = member(value, "numbers", parse_sprites);
+  cards.numbers = member(value, "numbers", parse_hangar_labels);
   cards.for_sale = member(value, "for_sale", parse_sprite);
   cards.price = member(value, "price", parse_number_style);
   cards.price_layer = integer_of(value, "price_layer");
@@ -76,15 +76,15 @@ HangarCards parse_cards(const json::JsonValue &value) {
   cards.exit = member(value, "exit", parse_sprite);
   if (cards.period <= 0.0F || cards.scroll_seconds <= 0.0 ||
       cards.numbers.size() != garage_hangar_count) {
-    throw std::runtime_error("cards: needs a period, a scroll time and ten numbers");
+    throw std::runtime_error("cards: needs a period, a scroll time and one number per hangar");
   }
   return cards;
 }
 
 HangarPlates parse_plates(const json::JsonValue &value) {
   HangarPlates plates;
-  plates.plates = member(value, "plates", parse_sprites);
-  plates.marks = member(value, "marks", parse_sprites);
+  plates.plates = member(value, "plates", parse_hangar_labels);
+  plates.marks = member(value, "marks", parse_hangar_labels);
   plates.from_x = floats(required(value, "from_x"));
   plates.to_x = floats(required(value, "to_x"));
   plates.y = number_of(value, "y");
@@ -98,7 +98,7 @@ HangarPlates parse_plates(const json::JsonValue &value) {
   const std::size_t count = garage_hangar_count;
   if (plates.plates.size() != count || plates.marks.size() != count ||
       plates.from_x.size() != count || plates.to_x.size() != count || plates.slide_seconds <= 0.0) {
-    throw std::runtime_error("plates: needs ten plates, marks and places and a slide time");
+    throw std::runtime_error("plates: needs one plate, mark and place per hangar and a slide time");
   }
   return plates;
 }

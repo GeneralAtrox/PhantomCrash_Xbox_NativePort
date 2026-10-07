@@ -80,7 +80,7 @@ TEST_CASE("dealer.json has the menu, the trade window and the three dealers") {
   CHECK(script.items.front().id == "profile");
   CHECK(script.items.back().id == "exit");
   CHECK(script.purchase.actions.size() == 3);
-  CHECK(script.purchase.hangars.numbers.size() == 10);
+  CHECK(script.purchase.hangars.numbers.size() == garage_hangar_count);
   CHECK(script.dealers.size() == 3);
   CHECK(script.dealers.at("dealer_american_stars").index == 0);
   CHECK(script.dealers.at("dealer_kojima").index == 1);
@@ -148,13 +148,39 @@ TEST_CASE("a hangar that is not the player's says so") {
   const DealerScript script = shipped_script();
   Dealer logic = at_buy(shared, 8000);
   tap(logic, script.confirm_buttons);
-  tap(logic, script.left); // hangar 10, not owned
+  tap(logic, script.left); // last hangar, not owned
   settle(logic, 0.5);
-  CHECK(logic.hangar() == 9);
+  CHECK(logic.hangar() == garage_hangar_count - 1);
   tap(logic, script.confirm_buttons);
   CHECK(logic.message() == "not_yours");
   tap(logic, script.confirm_buttons);
   CHECK(logic.view() == DealerView::hangars);
+}
+
+TEST_CASE("the purchase carousel wraps to hangar twelve and accepts its second digit") {
+  const Tables shared = tables();
+  const auto script = shipped_script().purchase;
+  QuestSave quest = quest_with(8000);
+  quest.garage = new_game_garage(garage_hangar_count);
+  SvPurchase purchase(script, shared.parts, shared.garage);
+  purchase.start(offer());
+  (void)purchase.update(0.5, InputFrame{}, quest);
+  (void)purchase.update(tick, InputFrame{script.right, script.right, 1}, quest);
+  (void)purchase.update(0.5, InputFrame{}, quest);
+  (void)purchase.update(tick, InputFrame{script.confirm, script.confirm, 1}, quest);
+  REQUIRE(purchase.view() == PurchaseView::hangars);
+  (void)purchase.update(tick, InputFrame{script.left, script.left, 1}, quest);
+  (void)purchase.update(0.5, InputFrame{}, quest);
+  REQUIRE(purchase.hangar() == 11);
+  InputFrame click;
+  click.clicked = true;
+  click.pointer =
+      std::array<float, 2>{script.hangars.centre[0] + 50, script.hangars.centre[1] + 15};
+  (void)purchase.update(tick, click, quest);
+  CHECK(purchase.message() == "delivered");
+  CHECK(quest.garage.hangars[11].complete());
+  CHECK(quest.garage.hangars[11].name == "HL-220H");
+  CHECK(quest.money == 3000);
 }
 
 TEST_CASE("without the money the dealer says so") {

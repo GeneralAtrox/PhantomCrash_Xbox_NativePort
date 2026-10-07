@@ -32,6 +32,11 @@ std::shared_ptr<CoopState> make_coop_state(const Options &options, const Setting
   coop->profiles = saved.coop_profiles;
   coop->saved_profiles = saved.coop_profiles;
   coop->online_profile = saved.online_profile;
+  coop->online_mode = options.online.has_value();
+  coop->online_host = options.online && options.online->host;
+  coop->fingerprint = [root, slai = saved.slai_enabled] {
+    return online::content_fingerprint(executable(), root, slai);
+  };
   if (options.online) {
     coop->profiles.fill(std::nullopt);
     coop->saved_profiles.fill(std::nullopt);
@@ -42,12 +47,17 @@ std::shared_ptr<CoopState> make_coop_state(const Options &options, const Setting
       room.server = online::Endpoint::parse(options.online->address, options.online->port);
     }
     SDL_Log("Online: checking executable, data, all asset roots, mods and model buffers");
-    room.compatibility = online::content_fingerprint(executable(), root);
+    room.compatibility = coop->fingerprint();
     coop->open_online = [room] { return std::make_shared<online::Lobby>(room); };
     SDL_Log("Online: %s on UDP port %u", room.host ? "hosting" : "joining", options.online->port);
   }
-  coop->save_profile = [preferences, smoke, online = options.online.has_value()](
-                           const int slot, const QuestSave &profile) {
+  coop->save_profile = [preferences, smoke, owner = std::weak_ptr(coop)](const int slot,
+                                                                         const QuestSave &profile) {
+    const auto state = owner.lock();
+    if (!state) {
+      return false;
+    }
+    const bool online = state->online_mode;
     if (smoke) {
       return online; // scripted online checks exercise saves in memory only
     }
@@ -73,9 +83,8 @@ std::shared_ptr<CoopState> make_coop_state(const Options &options, const Setting
 }
 
 void copy_coop_profiles(const CoopState &coop, Settings &settings) {
-  if (coop.open_online) {
-    settings.online_profile = coop.online_profile;
-  } else {
+  settings.online_profile = coop.online_profile;
+  if (!coop.online_mode) {
     settings.coop_profiles = coop.profiles;
   }
 }

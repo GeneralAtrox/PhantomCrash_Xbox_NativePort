@@ -184,7 +184,7 @@ Implemented and tested so far:
   connection while the applications remain open; it does not restore a terminated
   client/host process or provide host migration.
 
-The `phantomcrash_online_tests` target currently passes 37 tests, including its
+The `phantomcrash_online_tests` target currently passes 41 tests, including its
 port identity check. Coverage includes real loopback sockets, lost packets and
 ACKs, duplicate/reordered input, three-player room membership, incompatible
 fingerprints, bounded prediction, and real Battle rollback with three delayed
@@ -201,7 +201,7 @@ The three additional wreck tests cover preparation before burn expiry, collision
 and shot blocking, repeated rollback through creation/destruction, and empty geometry.
 
 Build verification: the Release desktop executable and online/co-op tests build
-successfully. Co-op tests now pass 21/21: new coverage includes repeated rollback
+successfully. Co-op tests now pass 22/22: new coverage includes repeated rollback
 through replacements and background clocks, rewards/scenes, arena rebuilds, and
 three real UDP rooms driving co-op match replicas with delayed inputs. The network
 test converges to the same exact selected observations as a fully confirmed
@@ -345,12 +345,37 @@ All agent-created build/test logs for this implementation pass were temporary;
 the standard `build/port` working build is retained. No game settings or saves
 were changed by the new online tests.
 
-The remaining validation is the two-machine network test below. No GUI host/join
-selector exists yet; the command-line entry points are used for this test.
+The remaining validation is the two-machine network test below. Current source
+builds have a COOP connection menu: Local split-screen, Host network game, and an
+automatically refreshed list of LAN hosts. UDP discovery uses port 29642; hosts
+created through the menu listen for gameplay on 29641. Hosts advertise only while
+their online co-op session is open, including during gameplay. Solo games are not
+advertised. Manually addressed hosts also advertise when the discovery port is
+available. Room replies identify the actual gameplay port and current capacity;
+stale rooms expire after four seconds and full rooms cannot be selected.
+
+Discovery queries each active IPv4 interface's broadcast address, with global
+broadcast and loopback fallbacks, so a preferred VPN adapter does not hide the
+physical LAN. It uses a separate, bounded UDP query/reply protocol. A random query token
+rejects unsolicited replies, host identities deduplicate multiple interfaces,
+and discovered addresses still undergo the existing full compatibility handshake.
+The first GUI connection hashes content on a worker while the menu remains
+responsive. Network saves use the online profile; local profiles are restored
+when leaving the network session. Discovery/room-handshake and save-isolation
+regressions are included in the counts above. A two-process desktop check opened
+COOP without network arguments, hosted from the menu, displayed the host in the
+browser and joined as player 2. A separate broadcast-only query received the
+host's reply. LAN menu discovery was added after
+the published v0.5.0 package.
 
 ### Two-machine network test
 
 Use the same executable, data, extracted assets and mods on both Windows machines.
+With a current source build, open COOP on both computers, select Host network game
+on one, then select its automatically listed name on the other. Allow the game
+through the private-network firewall for UDP 29641 and 29642. Discovery requires
+the same broadcast network; it does not discover Internet hosts. The explicit
+commands below remain available for routed networks and the v0.5.0 release.
 From the repository directory, start the host with:
 
 ```powershell

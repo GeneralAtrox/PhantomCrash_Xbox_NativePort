@@ -26,6 +26,8 @@ struct Datagram {
   std::vector<std::uint8_t> bytes;
 };
 
+[[nodiscard]] std::vector<Endpoint> local_broadcasts(std::uint16_t port);
+
 // Nonblocking, one owned socket; no threads, DNS lookup or global socket handles.
 class DatagramSocket final {
 public:
@@ -34,6 +36,7 @@ public:
   DatagramSocket(const DatagramSocket &) = delete;
   DatagramSocket &operator=(const DatagramSocket &) = delete;
   [[nodiscard]] Endpoint local() const;
+  void enable_broadcast();
   // False means the send buffer is temporarily full. Callers retain reliable data.
   bool send(Endpoint target, std::span<const std::uint8_t> bytes);
   [[nodiscard]] std::optional<Datagram> receive();

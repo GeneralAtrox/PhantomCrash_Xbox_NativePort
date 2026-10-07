@@ -126,16 +126,17 @@ void PurchaseOverlay::draw_hangars(DrawList &list, const SvPurchase &purchase,
     const auto &shown = garage.hangars[static_cast<std::size_t>(hangar)];
     const bool empty = shown.owned && shown.empty();
     const bool chosen = hangar == purchase.hangar() && !scrolling;
-    Sprite number = style.numbers[static_cast<std::size_t>(hangar)];
-    number.position = {style.centre[0] + (static_cast<float>(nearest + k) - at) * style.step,
-                       style.centre[1]};
-    number.layer = style.number_layer;
-    number.colour = empty ? style.empty_colour : style.used_colour;
-    list.sprite(number, style.clip);
-    if (chosen) {
-      number.layer = style.chosen_layer;
-      number.colour = empty ? style.chosen_empty : style.chosen_used;
-      list.sprite(number, purchase_pulse(purchase.view_seconds()));
+    for (Sprite number : style.numbers[static_cast<std::size_t>(hangar)]) {
+      number.position[0] += style.centre[0] + (static_cast<float>(nearest + k) - at) * style.step;
+      number.position[1] += style.centre[1];
+      number.layer = style.number_layer;
+      number.colour = empty ? style.empty_colour : style.used_colour;
+      list.sprite(number, style.clip);
+      if (chosen) {
+        number.layer = style.chosen_layer;
+        number.colour = empty ? style.chosen_empty : style.chosen_used;
+        list.sprite(number, purchase_pulse(purchase.view_seconds()));
+      }
     }
   }
 }

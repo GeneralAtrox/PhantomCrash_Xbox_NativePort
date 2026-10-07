@@ -88,25 +88,30 @@ int Battle::find_lock(const Combatant &robot, const WeaponTuning &weapon, const 
     angle = std::acos(std::clamp(dot(normalize(offset), facing), -1.0F, 1.0F));
     return true;
   };
-  // 0x51045, 0x51e37: a shoulder or melee lock holds while its robot stays
-  // in range and within the hold off the aim, out of the reticle too.
+  const std::optional<TargetView> view = sight_view(robot);
+  const bool outer = weapon.kind == WeaponKind::melee ||
+                     slot >= static_cast<std::size_t>(WeaponSlot::right_shoulder);
+  const auto inside_chip = [&](const Combatant &other) {
+    return view && view->boxes &&
+           in_lock_box(*view, other.centre(settings_.robot_height), view->boxes->centre,
+                       outer ? view->boxes->outer_half : view->boxes->inner_half);
+  };
+  // Preserve the held target's priority, but homing acquisition and retention
+  // must both respect the chip's box. The angular hold alone can keep a
+  // candidate outside a narrow chip's bounds and even finish locking there.
   if (weapon.hold_degrees > 0.0F && held >= 0 && held < static_cast<int>(robots_.size())) {
     float angle = 0.0F;
     const Combatant &other = robots_[static_cast<std::size_t>(held)];
     if (bearing(other, angle) && angle <= radians(weapon.hold_degrees) &&
-        target_visible(robot, other)) {
+        target_visible(robot, other) && (!weapon.homing || inside_chip(other))) {
       return held;
     }
   }
   // 0x04f6a0, 0x05262d, 0x051e37: arm weapons lock inside the inner box,
   // shoulder and melee weapons inside the outer one, the nearest first.
-  const std::optional<TargetView> view = sight_view(robot);
   if (!view || !view->boxes) {
     return -1;
   }
-  const bool outer = weapon.kind == WeaponKind::melee ||
-                     slot >= static_cast<std::size_t>(WeaponSlot::right_shoulder);
-  const auto &boxes = *view->boxes;
   int nearest = -1;
   float nearest_distance = range;
   for (std::size_t index = 0; index < robots_.size(); ++index) {
@@ -118,9 +123,7 @@ int Battle::find_lock(const Combatant &robot, const WeaponTuning &weapon, const 
     const Combatant &other = robots_[index];
     const Vec3 centre = other.centre(settings_.robot_height);
     const float distance = length(centre - from);
-    if (distance < nearest_distance &&
-        in_lock_box(*view, centre, boxes.centre, outer ? boxes.outer_half : boxes.inner_half) &&
-        target_visible(robot, other)) {
+    if (distance < nearest_distance && inside_chip(other) && target_visible(robot, other)) {
       nearest_distance = distance;
       nearest = static_cast<int>(index);
     }

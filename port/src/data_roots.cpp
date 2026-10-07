@@ -1,4 +1,5 @@
 #include "phantomcrash/data_roots.hpp"
+#include "phantomcrash/slai_content.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -75,6 +76,19 @@ DataRoots DataRoots::shipped(const std::filesystem::path &root) {
                     root / "artifacts" / "europe" / "files" / "Media"});
 }
 
+DataRoots DataRoots::configured(const std::filesystem::path &root, bool slai) {
+  auto result = legacy_slai(root) ? shipped(root) : standard(root);
+  if (slai) {
+    if (!slai_installed(root)) {
+      throw std::runtime_error("Install S.L.A.I. from its ISO in Settings before enabling it");
+    }
+    result.content_ = root / "artifacts/slai/assets";
+    const auto at = result.asset_roots_.begin() + (result.mods_.empty() ? 0 : 1);
+    result.asset_roots_.insert(at, result.content_);
+  }
+  return result;
+}
+
 std::optional<std::filesystem::path>
 DataRoots::find_root(const std::vector<std::filesystem::path> &starts) {
   std::error_code error;
@@ -120,6 +134,11 @@ std::filesystem::path DataRoots::asset(std::string_view relative) const {
 json::JsonValue DataRoots::document(std::string_view relative) const {
   const auto path = checked_relative(relative);
   auto result = json::read_file(data_ / path);
+  if (!content_.empty()) {
+    if (auto overlay = locate(content_ / "data", path)) {
+      json::merge(result, json::read_file(*overlay));
+    }
+  }
   if (mods_.empty()) {
     return result;
   }

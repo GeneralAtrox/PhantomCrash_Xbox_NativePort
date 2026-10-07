@@ -233,3 +233,16 @@ dialogue, or play a movie; those paths were checked in source, not verified
 by listening. No new tests were added. The user's settings were not modified.
 Cleanup of `build/port/audio-options-review.json` was rejected by automatic
 approval review ("blocked by policy"); the isolated review file remains.
+
+## Pause-menu and homing acquisition cues
+
+The native pause overlay queues the existing `window` UI effect on opening.
+Gameplay pause freezes music and non-UI effect cursors while keeping the UI
+channel live; focus loss still pauses the entire device. The runner drains the
+menu cue before returning from its paused tick.
+
+Each local viewport plays `battle_player/11.wav` once when a homing weapon
+acquires a new target, including reacquisition after losing the lock. Simultaneous
+mount acquisitions are coalesced into one cue. This is distinct from the existing
+`battle_player/42.wav` warning for being locked onto. The acquisition sample is
+called as bank 3, entry 0x0b at European XBE 0x05137d and 0x052153.

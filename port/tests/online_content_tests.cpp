@@ -7,6 +7,37 @@
 using namespace phantomcrash::online;
 namespace fs = std::filesystem;
 
+TEST_CASE("SLAI toggle and active pack content participate in multiplayer compatibility") {
+  const auto root = fs::temp_directory_path() /
+                    ("phantom-slai-hash-" +
+                     std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+  struct Cleanup {
+    fs::path root;
+    ~Cleanup() {
+      fs::remove_all(root);
+    }
+  } cleanup{root};
+  const auto write = [&](const fs::path &relative, const std::string &text) {
+    fs::create_directories((root / relative).parent_path());
+    std::ofstream(root / relative) << text;
+  };
+  write("game.exe", "game");
+  write("data/rules.json", "{}");
+  write("artifacts/europe/assets/base.txt", "base");
+  const auto off = content_fingerprint(root / "game.exe", root, false);
+  write("artifacts/slai/assets/installed.json", R"({"version":1,"disc":"SLES_529.40"})");
+  for (auto file : {"tables/parts.json", "tables/garage.json", "robots/catalogue.json",
+                    "slai/native_parts.json", "slai/assets/manifest.json"}) {
+    write(fs::path("artifacts/slai/assets") / file, "{}");
+  }
+  CHECK(content_fingerprint(root / "game.exe", root, false) == off);
+  const auto on = content_fingerprint(root / "game.exe", root, true);
+  CHECK(on != off);
+  write("artifacts/slai/assets/tables/parts.json", "{\"changed\":true}");
+  CHECK(content_fingerprint(root / "game.exe", root, true) != on);
+  CHECK(content_fingerprint(root / "game.exe", root, false) == off);
+}
+
 namespace {
 struct ContentFixture {
   fs::path root = fs::temp_directory_path() /

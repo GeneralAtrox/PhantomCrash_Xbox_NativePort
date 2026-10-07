@@ -96,11 +96,13 @@ void draw_goods_row(DrawList &list, const GlyphFont &font, const ShopGoodsList &
     return;
   }
   if (line.hangar < static_cast<int>(style.hangar_badges.size())) {
-    Sprite badge = shifted(style.hangar_badges[static_cast<std::size_t>(line.hangar)], 0.0F, dy);
-    if (look != nullptr) {
-      badge.colour = look->badge;
+    for (Sprite badge : style.hangar_badges[static_cast<std::size_t>(line.hangar)]) {
+      badge = shifted(badge, 0.0F, dy);
+      if (look != nullptr) {
+        badge.colour = look->badge;
+      }
+      list.sprite(badge);
     }
-    list.sprite(badge);
   }
   if (line.side < 0 || line.side >= static_cast<int>(style.side_marks.size())) {
     return;

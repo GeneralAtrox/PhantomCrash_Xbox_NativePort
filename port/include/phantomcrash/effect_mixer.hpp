@@ -55,6 +55,9 @@ public:
   void release_key(std::uint64_t key);
   void stop_name(const std::string &name);
   void stop_all();
+  void set_gameplay_paused(bool paused) noexcept {
+    gameplay_paused_ = paused;
+  }
   // The SE volume, over every voice.
   void set_gain(float gain) noexcept {
     gain_ = gain;
@@ -86,6 +89,7 @@ private:
 
   std::vector<Voice> voices_;
   float gain_{1.0F};
+  bool gameplay_paused_{};
   AudioOptions audio_;
   std::uint64_t count_{};
   int output_rate_;

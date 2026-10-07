@@ -95,6 +95,33 @@ TEST_CASE("the garage survives the save file") {
   CHECK(back.emblems == garage.emblems);
 }
 
+TEST_CASE("ten hangar saves gain empty slots and the twelfth robot survives saving") {
+  Garage original = new_game_garage(10);
+  original.hangars[9].name = "Existing tenth";
+  auto legacy = garage_to_json(original);
+  for (auto &[key, value] : std::get<json::JsonValue::Object>(legacy.value)) {
+    if (key == "hangars") {
+      std::get<json::JsonValue::Array>(value.value).resize(10);
+    }
+  }
+  Garage migrated = garage_from_json(legacy);
+  CHECK(migrated.hangars[9] == original.hangars[9]);
+  CHECK(!migrated.hangars[10].owned);
+  CHECK(!migrated.hangars[11].owned);
+  CHECK(migrated.hangars[10].empty());
+  CHECK(migrated.hangars[11].empty());
+  PartTables parts;
+  parts.chips.push_back(ChipRecord{});
+  GarageTables tables;
+  migrated.hangars[11].owned = true;
+  REQUIRE(install_robot(migrated, 11, robot_with_modules({}), parts, tables) >= 0);
+  migrated.riding = 11;
+  const auto restored = garage_from_json(garage_to_json(migrated));
+  CHECK(restored == migrated);
+  CHECK(restored.hangars[11].complete());
+  CHECK(restored.riding == 11);
+}
+
 TEST_CASE("an SV's price adds up its modules, paint and emblem") {
   PartTables parts;
   GarageTables tables;

@@ -57,6 +57,7 @@ struct BattleEvent {
   std::optional<StageHit> surface;
   int object{-1}; // effect: scenery instance whose destruction changed collision
   int target{-1}; // impact: struck robot; preserved for attached source effects
+  Vec3 direction; // fired: barrel direction before a multi-barrel weapon advances
 };
 
 } // namespace phantomcrash

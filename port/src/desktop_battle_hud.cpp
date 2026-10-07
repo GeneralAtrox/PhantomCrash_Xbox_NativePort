@@ -46,7 +46,7 @@ BattleHud::BattleHud(TextureCache &textures, const GlyphFont &font,
     sights_->set_viewer(viewer);
   }
   if (panels) {
-    panels_.emplace(textures, std::move(*panels), viewer);
+    panels_.emplace(textures, font, std::move(*panels), viewer);
   }
 }
 
@@ -78,6 +78,7 @@ void BattleHud::draw(const Viewport &viewport, const Battle &battle, const Mat4 
     sights_->hide();
   }
   if (panels_) {
+    panels_->update_money(info.panels.money, elapsed);
     panels_->draw(viewport, battle, info.panels, clock);
   }
   draw_goal(viewport, info);

@@ -15,6 +15,8 @@
 #include "desktop_coop_storage.hpp"
 #include "desktop_frame_counter.hpp"
 #include "desktop_game_data.hpp"
+#include "desktop_slai.hpp"
+#include "phantomcrash/slai_content.hpp"
 #include "desktop_input.hpp"
 #include "desktop_options.hpp"
 #include "desktop_tools.hpp"
@@ -107,15 +109,23 @@ int run(const Options &options) {
   if (!prepare_game_data(root, !smoke && !benchmark)) {
     return 0;
   }
-  const auto roots = DataRoots::standard(root);
+  const auto configuration = options.settings.value_or(settings_path());
+  const bool slai = load_settings(configuration).slai_enabled;
+  if (slai && !prepare_slai_data(root, !smoke && !benchmark)) {
+    return 1;
+  }
+  const auto roots = DataRoots::configured(root, slai);
   if (const auto result = run_desktop_tool(options, roots)) {
     return *result;
   }
   for (const char *document : documents) {
     static_cast<void>(roots.document(document));
   }
-  const auto preferences = options.settings.value_or(settings_path());
-  const Settings saved = load_settings(preferences);
+  const auto preferences = content_profile_path(configuration, slai, legacy_slai(root));
+  const Settings saved = load_content_settings(configuration, preferences, slai);
+  if (!smoke && !std::filesystem::exists(preferences) && !save_settings(preferences, saved)) {
+    throw std::runtime_error("Cannot create the selected content mode's settings and saves");
+  }
   Settings initial = saved;
   if (options.fullscreen) {
     initial.fullscreen = *options.fullscreen;
@@ -168,7 +178,8 @@ int run(const Options &options) {
   WindowTitle title(host.window());
   while (running) {
     input.configure(menu.settings().host_controls);
-    input.capture_mouse(host.window(), screens.mouse_aim() && host.focused() && !smoke);
+    input.capture_mouse(host.window(), screens.mouse_aim() && host.focused() && !smoke,
+                        menu.frame_active());
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
       if (event.type == SDL_EVENT_QUIT) {
@@ -184,6 +195,12 @@ int run(const Options &options) {
         dump_requested = !smoke;
       }
       input.handle(event);
+    }
+    // Native menu interaction can change focus/capture while SDL pumps events.
+    input.capture_mouse(host.window(), screens.mouse_aim() && host.focused() && !smoke,
+                        menu.frame_active());
+    if (!smoke) {
+      update_slai_menu(menu, root, configuration);
     }
     const Settings &settings = menu.settings();
     screens.set_coop_enabled(settings.experimental_coop || bool(coop->open_online));

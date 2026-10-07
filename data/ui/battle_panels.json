@@ -1,4 +1,20 @@
 {
+ "text_replacements": [
+  {"source": {"image": "textures/scroll/common_2d_tex/1.png", "rect": [360, 456, 400, 472]}, "text": "DAY-"},
+  {"source": {"image": "textures/scroll/common_2d_tex/1.png", "rect": [432, 472, 480, 488]}, "text": "TIME"},
+  {"source": {"image": "textures/scroll/common_2d_tex/1.png", "rect": [400, 456, 464, 472]}, "text": "MONEY"},
+  {"source": {"image": "textures/scroll/common_2d_tex/1.png", "rect": [0, 496, 96, 512]}, "text": "SHOOTDOWN"},
+  {"source": {"image": "textures/scroll/game_quest_tex/0.png", "rect": [192, 328, 272, 344]}, "text": "DAMAGED"},
+  {"source": {"image": "textures/scroll/game_quest_tex/0.png", "rect": [488, 72, 512, 88]}, "text": "HIT"},
+  {"source": {"image": "textures/scroll/game_quest_tex/0.png", "rect": [456, 232, 512, 248]}, "text": "BINGO!"},
+  {"source": {"image": "textures/scroll/game_quest_tex/0.png", "rect": [272, 328, 352, 344]}, "text": "WEAPON LOST"},
+  {"source": {"image": "textures/scroll/game_quest_tex/0.png", "rect": [352, 328, 432, 344]}, "text": "WEAPON LOST"},
+  {"source": {"image": "textures/scroll/game_quest_tex/0.png", "rect": [144, 304, 296, 328]}, "text": "MISSILE ALERT"},
+  {"source": {"image": "textures/scroll/game_quest_tex/0.png", "rect": [240, 72, 392, 112]}, "text": "SYS DURABILITY\nDOWN 50%", "colour": "#ffc823"},
+  {"source": {"image": "textures/scroll/game_quest_tex/0.png", "rect": [0, 232, 152, 272]}, "text": "SYS DURABILITY\nDOWN 75%", "colour": "#ff6060"},
+  {"source": {"image": "textures/scroll/game_quest_tex/0.png", "rect": [0, 272, 152, 304]}, "text": "DURABILITY", "region": [8, 2, 92, 16], "colour": "#b0ff20"},
+  {"source": {"image": "textures/scroll/game_quest_tex/0.png", "rect": [0, 304, 144, 328]}, "text": "O.C TIME", "region": [3, 6, 60, 21], "colour": "#b0ff20"}
+ ],
  "notes": [
   "The single-player battle panels in 640x480 units, from the original's records: game_quest_tex (slot 465, sprites 1397-1434) for the panels, game_tex (slot 464) for the weapon digits and common_2d_tex/1 for the labels and the number font. Split screen uses battle_panels_split2.json (two screens) and battle_panels_split4.json (three or four) instead: game_vs_tex (slot 466) and the records at 0x204148, 0x203f50, 0x204a20, 0x205100 and 0x204d90.",
   "layout: \"widescreen\" keeps left- and right-anchored elements to the window's edges; \"4:3\" leaves every element where the original puts it (docs/WIDESCREEN.md). Anchors are the port's.",
@@ -15,6 +31,8 @@
  ],
  "layout": "widescreen",
  "flash_frames": 10,
+ "money_count_seconds": 0.75,
+ "text_gap": 6,
  "durability": {
   "anchor": "centre",
   "frame": {"image": "textures/scroll/game_quest_tex/0.png", "rect": [0, 272, 152, 304], "position": [245, 371]},

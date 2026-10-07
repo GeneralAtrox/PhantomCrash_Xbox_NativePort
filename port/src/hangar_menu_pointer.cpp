@@ -52,12 +52,14 @@ InputFrame HangarMenu::pointer_input(InputFrame input) {
     }
   }
   for (int index = static_cast<int>(plates.plates.size()) - 1; index >= 0; --index) {
-    Sprite plate = plates.plates[index];
-    plate.position = {plates.from_x[index] + (plates.to_x[index] - plates.from_x[index]) * slide,
-                      plates.y};
-    if (shop_hit(input, plate)) {
-      select(index, false);
-      return input;
+    for (Sprite plate : plates.plates[index]) {
+      plate.position[0] +=
+          plates.from_x[index] + (plates.to_x[index] - plates.from_x[index]) * slide;
+      plate.position[1] += plates.y;
+      if (shop_hit(input, plate)) {
+        select(index, false);
+        return input;
+      }
     }
   }
   // Cards are clipped to the authored canvas and submitted in ascending order.

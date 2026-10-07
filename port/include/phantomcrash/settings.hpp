@@ -180,6 +180,7 @@ struct Settings {
   bool pause_unfocused{true};
   bool skip_conversations{}; // story conversations never play (their scenes still count as seen)
   bool experimental_coop{};
+  bool slai_enabled{};
   CoopOptions coop;
   // Independent experimental campaigns; importing a solo slot never overwrites it.
   std::array<std::optional<QuestSave>, 4> coop_profiles{};

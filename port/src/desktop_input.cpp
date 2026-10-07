@@ -27,10 +27,19 @@ DesktopInput::~DesktopInput() {
 
 void DesktopInput::handle(const SDL_Event &event) {
   switch (event.type) {
+  case SDL_EVENT_KEY_UP:
+    if (event.key.scancode == SDL_SCANCODE_LALT || event.key.scancode == SDL_SCANCODE_RALT) {
+      capture_mouse(mouse_window_, mouse_gameplay_, mouse_window_ui_);
+    }
+    break;
   case SDL_EVENT_KEY_DOWN:
+    if (event.key.scancode == SDL_SCANCODE_LALT || event.key.scancode == SDL_SCANCODE_RALT) {
+      capture_mouse(mouse_window_, mouse_gameplay_, mouse_window_ui_);
+      break;
+    }
     if (event.key.scancode == SDL_SCANCODE_F10 && !event.key.repeat) {
       mouse_released_ = !mouse_released_;
-      capture_mouse(mouse_window_, mouse_gameplay_);
+      capture_mouse(mouse_window_, mouse_gameplay_, mouse_window_ui_);
       break;
     }
     // Alt combinations belong to the window (Alt+Enter, Alt+F4).
@@ -47,10 +56,14 @@ void DesktopInput::handle(const SDL_Event &event) {
     pointer_moved_ = true;
     break;
   case SDL_EVENT_MOUSE_BUTTON_DOWN:
+    if (mouse_gameplay_ && (mouse_window_ui_ || (SDL_GetModState() & SDL_KMOD_ALT))) {
+      suppress_mouse_fire_ = true;
+      break;
+    }
     if (mouse_gameplay_ && mouse_released_) {
       mouse_released_ = false;
       suppress_mouse_fire_ = true;
-      capture_mouse(mouse_window_, true);
+      capture_mouse(mouse_window_, true, mouse_window_ui_);
       break;
     }
     if (mouse_captured_) {

@@ -1,11 +1,54 @@
 #include "desktop_frame.hpp"
 
 #include "desktop_draw_list.hpp"
+#include "phantomcrash/money.hpp"
 
 #include <algorithm>
 #include <utility>
 
 namespace phantomcrash {
+namespace {
+std::string hud_number(const HudStyle &hud, const NumberStyle &style, std::int64_t value) {
+  const auto sprites = number_sprites(hud.font, style, value, hud.layer);
+  std::string text;
+  for (auto it = sprites.rbegin(); it != sprites.rend(); ++it) {
+    if (it->rect == hud.font.comma.rect) {
+      text += ',';
+    } else if (it->rect == hud.font.point.rect) {
+      text += '.';
+    } else {
+      for (std::size_t digit = 0; digit < hud.font.digits.size(); ++digit) {
+        if (it->rect == hud.font.digits[digit].rect) {
+          text += static_cast<char>('0' + digit);
+          break;
+        }
+      }
+    }
+  }
+  return text;
+}
+
+void hud_text(DrawList &list, const GlyphFont &font, const std::string &text, float left, float top,
+              float width, float height, bool right, int layer, std::uint32_t colour) {
+  auto glyphs = layout_run(font, glyph_run(font, text), 0, 0);
+  float extent = 0;
+  for (const auto &glyph : glyphs) {
+    extent = std::max(extent, glyph.x + glyph.width);
+  }
+  if (extent <= 0 || font.cell <= 0) {
+    return;
+  }
+  const float scale = std::min(height / font.cell, width / extent);
+  const float x = right ? left + width - extent * scale : left;
+  for (auto &glyph : glyphs) {
+    glyph.x = x + glyph.x * scale;
+    glyph.y = top + glyph.y * scale;
+    glyph.width *= scale;
+    glyph.height *= scale;
+  }
+  list.text(layer, std::move(glyphs), colour);
+}
+} // namespace
 
 LocationFrame::LocationFrame(const GlyphFont &font, const FrameStyle &style,
                              const std::vector<MusicCredit> &credits, FramePlacement placement)
@@ -67,9 +110,19 @@ void LocationFrame::draw(DrawList &list, const QuestSave &quest) const {
   if (placement_.hud) {
     const HudStyle hud =
         placement_.hud_at ? placed_hud(style_.hud, *placement_.hud_at) : style_.hud;
-    for (const auto &sprite : hud_sprites(hud, quest)) {
-      list.sprite(sprite);
-    }
+    const auto &day = hud.day_label;
+    const float height = day.size ? (*day.size)[1] : day.rect[3] - day.rect[1];
+    hud_text(list, font_, "DAY-" + hud_number(hud, hud.day, quest.day + 1), day.position[0],
+             day.position[1], hud.day.right[0] - day.position[0], height, false, hud.layer,
+             hud.day.colour);
+    hud_text(list, font_, hud_number(hud, hud.money, shown_ny(quest.money)), hud.day.right[0] + 12,
+             hud.money.right[1], hud.money.right[0] - hud.day.right[0] - 12, height, true,
+             hud.layer, hud.money.colour);
+    const auto &unit = hud.money_unit;
+    const auto size =
+        unit.size.value_or(std::array{unit.rect[2] - unit.rect[0], unit.rect[3] - unit.rect[1]});
+    hud_text(list, font_, "NY", unit.position[0], unit.position[1], size[0], size[1], false,
+             unit.layer, unit.colour);
   }
   // The plate shows only while a Scoobee is ridden (0x1d4a4).
   if (placement_.riding_plate && plate_seconds_ >= 0.0 && !quest.riding.empty()) {

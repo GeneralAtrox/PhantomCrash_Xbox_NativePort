@@ -290,10 +290,13 @@ void ScreenRunner::tick(const InputFrame &raw_input, const double tick_seconds) 
     return; // The session owns its campaigns, simulation clocks and mixers.
   }
   if (screen_->gameplay_paused() != was_paused) {
-    audio_.set_paused(screen_->gameplay_paused());
+    audio_.set_gameplay_paused(screen_->gameplay_paused());
     rumble_.stop();
   }
   if (screen_->gameplay_paused() || was_paused) {
+    for (const SoundCue &cue : screen_->take_sound_cues()) {
+      audio_.play_cue(cue);
+    }
     if (screen_->done()) {
       show(screen_->next());
     }
@@ -384,7 +387,8 @@ void ScreenRunner::set_paused(const bool paused) {
   if (schedule_overlay_) {
     schedule_overlay_->set_paused(paused);
   }
-  audio_.set_paused(paused || screen_->gameplay_paused());
+  audio_.set_gameplay_paused(screen_->gameplay_paused());
+  audio_.set_paused(paused);
   if (paused) {
     rumble_.stop(); // 0x0b1140 stops every robot's pad
   }

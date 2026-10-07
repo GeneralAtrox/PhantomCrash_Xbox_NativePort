@@ -173,6 +173,7 @@ Settings settings_from_json(const json::JsonValue &value) {
   settings.pause_unfocused = value.boolean_or("pause_unfocused", settings.pause_unfocused);
   settings.skip_conversations = value.boolean_or("skip_conversations", settings.skip_conversations);
   settings.experimental_coop = value.boolean_or("experimental_coop", false);
+  settings.slai_enabled = value.boolean_or("slai_enabled", false);
   if (const auto *coop = value.find("coop")) {
     settings.coop.enemy_level_offset = clamped(*coop, "enemy_level_offset", 0, -99, 99);
     settings.coop.kill_ny_percent = clamped(*coop, "kill_ny_percent", 100, 0, 1000);
@@ -267,6 +268,7 @@ json::JsonValue settings_to_json(const Settings &settings) {
       {"pause_unfocused", JsonValue{settings.pause_unfocused}},
       {"skip_conversations", JsonValue{settings.skip_conversations}},
       {"experimental_coop", JsonValue{settings.experimental_coop}},
+      {"slai_enabled", JsonValue{settings.slai_enabled}},
       {"coop",
        JsonValue{JsonValue::Object{
            {"enemy_level_offset",
@@ -276,7 +278,8 @@ json::JsonValue settings_to_json(const Settings &settings) {
            {"share_cash", JsonValue{settings.coop.share_cash}},
            {"share_boss_clears", JsonValue{settings.coop.share_boss_clears}}}}},
       {"coop_profiles", JsonValue{std::move(profiles)}},
-      {"online_profile", settings.online_profile ? quest_to_json(*settings.online_profile) : JsonValue{}},
+      {"online_profile",
+       settings.online_profile ? quest_to_json(*settings.online_profile) : JsonValue{}},
       {"host_controls", host_controls_to_json(settings.host_controls)},
       {"rumble_robots", JsonValue{static_cast<std::int64_t>(settings.rumble_robots)}},
       {"cheats",

@@ -63,7 +63,7 @@ void parse_extras(const json::JsonValue &value, ShopGoodsList &list) {
     list.swatch_layer = integer_of(value, "swatch_layer");
   }
   if (const json::JsonValue *badges = value.find("hangar_badges")) {
-    list.hangar_badges = parse_sprites(*badges);
+    list.hangar_badges = parse_hangar_labels(*badges);
   }
   if (value.find("in_use") != nullptr) {
     list.in_use = member(value, "in_use", parse_sprite);
@@ -137,7 +137,12 @@ float goods_name_width(const ShopGoodsList &list, const float padding) {
       right = std::min(right, left);
     }
   };
-  for (const auto *badges : {&list.hangar_badges, &list.side_marks, &list.lit_side_marks}) {
+  for (const auto &label : list.hangar_badges) {
+    for (const auto &badge : label) {
+      reserve(badge);
+    }
+  }
+  for (const auto *badges : {&list.side_marks, &list.lit_side_marks}) {
     for (const auto &badge : *badges) {
       reserve(badge);
     }

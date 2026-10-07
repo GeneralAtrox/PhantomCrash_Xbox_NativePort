@@ -172,7 +172,7 @@ void CoopScreen::draw_presence(const int slot, const Viewport &v) {
 
 void CoopScreen::draw(const Viewport &viewport) {
   viewport_ = viewport;
-  if (draw_online_wait(viewport)) {
+  if (draw_connection_menu(viewport) || draw_online_wait(viewport)) {
     return;
   }
   const int count = state_->online ? 1

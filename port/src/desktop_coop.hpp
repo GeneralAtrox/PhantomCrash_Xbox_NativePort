@@ -1,6 +1,7 @@
 #pragma once
 
 #include "desktop_screens.hpp"
+#include "phantomcrash/online_discovery.hpp"
 
 namespace phantomcrash {
 
@@ -53,6 +54,18 @@ private:
   void pump_online();
   bool draw_online_wait(const Viewport &viewport);
   void draw_online_presence(const Viewport &viewport);
+  void begin_lan(bool host, online::Endpoint server = {});
+  bool tick_connection_menu(const InputFrame &input);
+  bool draw_connection_menu(const Viewport &viewport);
+  void advertise_lan();
+  void open_online_game();
+  bool connection_menu_{}, checking_content_{}, selected_host_{};
+  int connection_choice_{};
+  online::Endpoint selected_server_;
+  std::string discovery_error_;
+  std::unique_ptr<online::LanBrowser> lan_browser_;
+  std::unique_ptr<online::LanAdvertiser> lan_advertiser_;
+  std::optional<std::array<std::optional<QuestSave>, 4>> local_profiles_, local_saved_profiles_;
   int online_slot_{-1};
   std::string online_error_;
   std::array<std::string, 4> online_presence_log_;

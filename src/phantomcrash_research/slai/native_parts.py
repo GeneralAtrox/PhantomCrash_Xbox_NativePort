@@ -272,6 +272,8 @@ def register_parts(image: Path, assets: Path, data: Path, mods: Path) -> dict:
             deliveries.append({"category": 2, "id": p["index"], "name": p["name"]})
     schedule = mods / "slai/native_deliveries.json"
     progression = write_progression(assets, mods, deliveries, schedule if schedule.exists() else None)
+    from .cheat_robots import register_cheat_robots
+    cheat_robots = register_cheat_robots(data, mods, imported, parts)
     save(schedule, read(mods / "slai/deliveries.json"))
     result = {"parts": imported, "unresolved": missing, "progression": progression,
               "rig_adapter": "Original part hierarchies and PMT channels; native mixed-part mounts and motion-slot adapter"}
@@ -279,4 +281,4 @@ def register_parts(image: Path, assets: Path, data: Path, mods: Path) -> dict:
     if wheels:
         save(wheel_file, {"parts": list(wheels.values())})
     return {**progression, "registered_parts": len(imported), "unresolved_parts": len(missing),
-            "registered_body_banks": body_banks}
+            "registered_body_banks": body_banks, "registered_cheat_robots": cheat_robots}

@@ -37,8 +37,8 @@ public:
 
   void handle(const SDL_Event &event);
   void configure(const HostControls &controls);
-  // F10 releases the mouse; clicking the game captures it again.
-  void capture_mouse(SDL_Window *window, bool gameplay);
+  // Hold Alt for the window menus; F10 releases until the game is clicked.
+  void capture_mouse(SDL_Window *window, bool gameplay, bool window_ui = false);
   // A tap of `buttons` on `port` for the next logic tick (scripted smoke
   // runs); a port pressed this way counts as connected from then on.
   void press(Buttons buttons, int port = 0);
@@ -89,6 +89,7 @@ private:
   std::optional<HostControls> controls_;
   SDL_Window *mouse_window_{};
   bool mouse_gameplay_{};
+  bool mouse_window_ui_{};
   bool mouse_released_{};
   bool mouse_captured_{};
   bool suppress_mouse_fire_{};

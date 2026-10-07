@@ -12,6 +12,7 @@ add_library(phantomcrash_core
   src/location_menu.cpp
   src/location_menu_script.cpp
   src/data_roots.cpp
+  src/slai_content.cpp
   src/event_player.cpp
   src/frame_rate.cpp
   src/front_end.cpp
@@ -376,6 +377,7 @@ if(BUILD_TESTING)
     tests/rigid_source_playback_tests.cpp
     tests/source_effect_slots_tests.cpp
     tests/slai_supply_tests.cpp
+    tests/slai_cheat_tests.cpp
     tests/slai_leg_mount_tests.cpp
     tests/source_suspension_tests.cpp
     tests/source_roll_tests.cpp
@@ -508,6 +510,7 @@ if(PHANTOMCRASH_BUILD_DESKTOP)
     src/desktop_battle_hud.cpp
     src/desktop_battle_sights.cpp
     src/desktop_battle_panels.cpp
+    src/desktop_battle_panel_text.cpp
     src/desktop_battle_chatter.cpp
     src/desktop_battle_scene.cpp
     src/desktop_battle_view.cpp
@@ -523,6 +526,7 @@ if(PHANTOMCRASH_BUILD_DESKTOP)
     src/desktop_frame_rate_dialog.cpp
     src/desktop_front_end.cpp
     src/desktop_game_data.cpp
+    src/desktop_slai.cpp
     src/desktop_menu_buttons.cpp
     src/desktop_host.cpp
     src/desktop_input.cpp
@@ -548,6 +552,7 @@ if(PHANTOMCRASH_BUILD_DESKTOP)
     src/desktop_coop.cpp
     src/desktop_coop_storage.cpp
     src/desktop_coop_online.cpp
+    src/desktop_coop_discovery.cpp
     src/desktop_coop_draw.cpp
     src/desktop_coop_cursors.cpp
     src/desktop_coop_matches.cpp
@@ -707,7 +712,7 @@ if(PHANTOMCRASH_BUILD_DESKTOP)
   if(BUILD_TESTING)
     add_executable(phantomcrash_coop_tests tests/core_tests.cpp tests/coop_settings_tests.cpp
       tests/online_local_input_tests.cpp tests/online_result_tests.cpp
-      tests/coop_checkpoint_tests.cpp
+      tests/coop_checkpoint_tests.cpp tests/coop_storage_tests.cpp src/desktop_coop_storage.cpp
       src/desktop_coop_matches.cpp src/desktop_coop_rewards.cpp src/desktop_coop_checkpoint.cpp
       src/desktop_online_match.cpp src/desktop_online_session.cpp src/desktop_online_state.cpp
       src/desktop_online_presentation.cpp)

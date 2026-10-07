@@ -32,9 +32,13 @@ InputFrame SvPurchase::pointer_input(InputFrame input) {
     const int reach = style.shown / 2 + 1;
     for (int k = -reach; k <= reach; ++k) {
       const int n = (hangar_ + k + garage_hangar_count) % garage_hangar_count;
-      Sprite hit = style.numbers[n];
-      hit.position = {style.centre[0] + k * style.step, style.centre[1]};
-      if (!shop_hit(input, hit)) {
+      bool clicked = false;
+      for (Sprite hit : style.numbers[n]) {
+        hit.position[0] += style.centre[0] + k * style.step;
+        hit.position[1] += style.centre[1];
+        clicked = clicked || shop_hit(input, hit);
+      }
+      if (!clicked) {
         continue;
       }
       if (k == 0) {

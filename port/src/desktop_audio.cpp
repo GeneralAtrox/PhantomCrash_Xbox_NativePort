@@ -95,7 +95,7 @@ bool AudioMixer::open_music(const Track &track) {
   }
   const SDL_AudioSpec spec{SDL_AUDIO_F32, MusicDecoder::channels, MusicDecoder::rate};
   music_ = SDL_CreateAudioStream(&spec, nullptr);
-  if (music_ == nullptr || !SDL_BindAudioStream(device_, music_)) {
+  if (music_ == nullptr || (!gameplay_paused_ && !SDL_BindAudioStream(device_, music_))) {
     SDL_Log("Music stream failed: %s", SDL_GetError());
     return false;
   }
@@ -231,6 +231,28 @@ void AudioMixer::set_volumes(const float music, const float effects) {
     effect_gain_ = effects;
     if (effects_stream_ != nullptr) {
       SDL_SetAudioStreamGain(effects_stream_, effect_gain_);
+    }
+  }
+}
+
+void AudioMixer::set_gameplay_paused(const bool paused) {
+  if (gameplay_paused_ == paused) {
+    return;
+  }
+  gameplay_paused_ = paused;
+  if (effects_stream_) {
+    SDL_LockAudioStream(effects_stream_);
+    mixer_.set_gameplay_paused(paused);
+    if (paused) {
+      SDL_ClearAudioStream(effects_stream_);
+    }
+    SDL_UnlockAudioStream(effects_stream_);
+  }
+  if (music_) {
+    if (paused) {
+      SDL_UnbindAudioStream(music_);
+    } else if (!SDL_BindAudioStream(device_, music_)) {
+      SDL_Log("Could not resume battle music: %s", SDL_GetError());
     }
   }
 }

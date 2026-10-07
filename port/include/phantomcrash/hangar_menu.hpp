@@ -30,7 +30,7 @@ struct HangarStatus {
 
 enum class HangarView { wheel, menu, buy, notice };
 
-// The garage's HANGAR (scene 14): the ten hangars and EXIT as cards on a
+// The garage's HANGAR (scene 14): the hangars and EXIT as cards on a
 // wheel, a hangar not owned for sale, and an owned one's menu: board it,
 // test-drive the ridden one, see its specs or assemble it.
 class HangarMenu final : public TownLogic {

@@ -17,6 +17,7 @@ void CoopScreen::pump_online() {
   }
   try {
     state_->online->update(transport_time());
+    advertise_lan();
     for (const auto &message : state_->online->take_messages()) {
       static_cast<void>(state_->online_game->receive(message, transport_time()));
     }

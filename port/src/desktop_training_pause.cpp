@@ -18,6 +18,7 @@ bool TrainingScreen::tick_pause(const InputFrame &input) {
     }
     paused_ = true;
     pause_menu_.open();
+    unplaced_.push_back({SoundCue::Action::play, "window"});
     SDL_Log("Battle pause menu: clock=%.3f play=%.3f; shared match continues=%d", clock_,
             play_seconds_, coop_match_ != nullptr);
     return true; // Opening input cannot also choose a button.

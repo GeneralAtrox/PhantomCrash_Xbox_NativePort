@@ -47,8 +47,10 @@ float ratio(const float value, const float maximum) {
 
 } // namespace
 
-BattlePanels::BattlePanels(TextureCache &textures, BattlePanelsStyle style, const int viewer)
-    : textures_(textures), style_(std::move(style)), log_(style_.messages), viewer_(viewer) {}
+BattlePanels::BattlePanels(TextureCache &textures, const GlyphFont &font, BattlePanelsStyle style,
+                           const int viewer)
+    : textures_(textures), style_(std::move(style)), text_(textures, font, style_),
+      log_(style_.messages), viewer_(viewer) {}
 
 const Combatant &BattlePanels::viewer(const Battle &battle) const {
   return battle.robots().at(static_cast<std::size_t>(viewer_));
@@ -69,7 +71,9 @@ void BattlePanels::put(const Viewport &viewport, const Sprite &sprite, const Hud
   if (width >= 0.0F) {
     out.size = std::array<float, 2>{width, sprite.rect[3] - sprite.rect[1]};
   }
-  draw_sprite(textures_, out, viewport, 0.0, alpha);
+  if (!text_.draw(out, viewport, alpha)) {
+    draw_sprite(textures_, out, viewport, 0.0, alpha);
+  }
 }
 
 // The messages come from the battle's events for the viewer (0x04da6c).
@@ -80,6 +84,27 @@ void BattlePanels::tick(const Battle &battle, const float seconds) {
     }
   }
   log_.update(seconds * hud_frames_per_second);
+}
+
+// Animate only the displayed NY; rewards and the saved balance remain immediate.
+void BattlePanels::update_money(const std::int64_t stored_money, const float seconds) {
+  const auto target = shown_ny(stored_money);
+  if (!money_target_ || target < *money_target_ || style_.money_count_seconds <= 0.0F) {
+    money_target_ = target;
+    money_shown_ = static_cast<double>(target);
+    money_from_ = money_shown_;
+    money_elapsed_ = 0.0;
+    return;
+  }
+  if (target != *money_target_) {
+    money_target_ = target;
+    money_from_ = money_shown_;
+    money_elapsed_ = 0.0;
+    return;
+  }
+  money_elapsed_ += std::max(seconds, 0.0F);
+  const double progress = std::min(money_elapsed_ / style_.money_count_seconds, 1.0);
+  money_shown_ = std::lerp(money_from_, static_cast<double>(target), progress);
 }
 
 void BattlePanels::draw(const Viewport &viewport, const Battle &battle,
@@ -199,15 +224,28 @@ void BattlePanels::draw_digits(const Viewport &viewport, const WeaponPanelSide &
 
 void BattlePanels::draw_numbers(const Viewport &viewport, const HudCounter &counter,
                                 const std::int64_t value) const {
-  put(viewport, counter.label, counter.anchor);
-  for (const Sprite &sprite : number_sprites(style_.font, counter.number, value, number_layer)) {
+  const auto digits = number_sprites(style_.font, counter.number, value, number_layer);
+  float left = counter.number.right[0];
+  for (const Sprite &sprite : digits) {
+    left = std::min(left, sprite.position[0]);
     put(viewport, sprite, counter.anchor);
   }
+  draw_counter_label(viewport, counter, left);
+}
+
+void BattlePanels::draw_counter_label(const Viewport &viewport, const HudCounter &counter,
+                                      const float number_left) const {
+  Sprite label = counter.label;
+  auto size = label.size.value_or(
+      std::array<float, 2>{label.rect[2] - label.rect[0], label.rect[3] - label.rect[1]});
+  // Atlas lettering had transparent right padding; outline glyphs need an explicit gap.
+  size[0] = std::min(size[0], std::max(0.0F, number_left - label.position[0] - style_.text_gap));
+  label.size = size;
+  put(viewport, label, counter.anchor);
 }
 
 void BattlePanels::draw_time(const Viewport &viewport, const double seconds) const {
   const HudCounter &counter = style_.time;
-  put(viewport, counter.label, counter.anchor);
   const auto total = static_cast<std::int64_t>(std::max(seconds, 0.0));
   // Hours, minutes and seconds, written right to left (0xbd123).
   const std::array<std::int64_t, 3> fields{total % 60, total / 60 % 60, total / 3600};
@@ -226,13 +264,15 @@ void BattlePanels::draw_time(const Viewport &viewport, const double seconds) con
     }
     style.right[0] = left;
   }
+  draw_counter_label(viewport, counter, style.right[0]);
 }
 
 void BattlePanels::draw_counters(const Viewport &viewport, const Battle &battle,
                                  const BattlePanelsInfo &info) const {
   draw_numbers(viewport, style_.day, info.day + 1);
   draw_time(viewport, info.mission_seconds);
-  draw_numbers(viewport, style_.money, shown_ny(info.money));
+  draw_numbers(viewport, style_.money,
+               money_target_ ? static_cast<std::int64_t>(money_shown_) : shown_ny(info.money));
   draw_numbers(viewport, style_.shootdown, viewer(battle).kills);
 }
 

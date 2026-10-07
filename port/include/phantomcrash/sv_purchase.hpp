@@ -1,6 +1,7 @@
 #pragma once
 
 #include "phantomcrash/garage.hpp"
+#include "phantomcrash/hangar_labels.hpp"
 #include "phantomcrash/garage_tables.hpp"
 #include "phantomcrash/input.hpp"
 #include "phantomcrash/json.hpp"
@@ -29,14 +30,14 @@ struct SvOffer {
 };
 
 // The hangar carousel (the dealers' 0x399d8, Wild Machines' 0x203bd): five
-// of the ten hangars' numbers cut to the window, the one chosen in the
+// of the hangars' numbers cut to the window, the one chosen in the
 // middle, drawn again over itself and pulsing. Empty hangars are lit, the
 // rest greyed; while it scrolls the arrow it scrolls towards lights up.
 struct HangarCarousel {
   Sprite panel;
   std::array<Sprite, 2> arrows; // left, right
   std::uint32_t arrow_lit{0xffffff};
-  std::vector<Sprite> numbers; // hangars 1 to 10
+  std::vector<HangarLabel> numbers; // one label per hangar
   std::array<float, 2> centre{};
   float step{};
   std::array<float, 4> clip{};

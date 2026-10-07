@@ -3,6 +3,7 @@
 
 #include "desktop_cockpit.hpp"
 #include "phantomcrash/skeleton.hpp"
+#include "phantomcrash/json_fields.hpp"
 #include <SDL3/SDL_log.h>
 
 #include <algorithm>
@@ -82,7 +83,7 @@ FenceContactLook load_fence_contact(const DataRoots &roots) {
   return {};
 }
 
-DesktopShots::DesktopShots(WorldRenderer &world, const EffectBank &bank,
+DesktopShots::DesktopShots(WorldRenderer &world, const EffectBank &bank, const DataRoots &roots,
                            const FenceContactLook contact, DesktopSourceParticles *source_particles)
     : bank_(&bank), residue_(world, bank), fence_(bank.fence, contact),
       source_particles_(source_particles) {
@@ -95,6 +96,19 @@ DesktopShots::DesktopShots(WorldRenderer &world, const EffectBank &bank,
   }
   exhaust_ = load_mesh(world, bank.exhaust);
   beam_ = load_mesh(world, bank.beam.model);
+  try {
+    const auto document = roots.document("world/muzzle_flashes.json");
+    for (const auto &entry : json::required(document, "flashes").array()) {
+      const int style = static_cast<int>(entry.number_or("style", -1));
+      muzzle_looks_[style] = {
+          load_mesh(world, EffectPicture{entry.string_or("model", ""),
+                                         static_cast<int>(entry.number_or("mesh", -1))}),
+          static_cast<float>(entry.number_or("scale", 3)),
+          static_cast<float>(entry.number_or("seconds", 1.0 / 30.0))};
+    }
+  } catch (const std::exception &error) {
+    SDL_Log("Muzzle flashes: %s", error.what());
+  }
   for (const EffectFlash &flash : bank.flashes) {
     std::vector<int> &textures = flash_textures_.emplace_back();
     for (const std::string &frame : flash.frames) {
@@ -136,6 +150,10 @@ void DesktopShots::add_mesh(const Mesh &mesh, const Mat4 &world, std::vector<Wor
 
 void DesktopShots::tick(const Battle &battle, EffectSystem &effects, const float seconds,
                         const BattleView *view) {
+  for (MuzzleFlash &flash : muzzle_flashes_) {
+    flash.remaining -= seconds;
+  }
+  std::erase_if(muzzle_flashes_, [](const MuzzleFlash &flash) { return flash.remaining <= 0; });
   if (source_particles_) {
     source_particles_->observe(battle, view);
     if (view) {
@@ -148,6 +166,17 @@ void DesktopShots::tick(const Battle &battle, EffectSystem &effects, const float
   residue_.tick(battle, seconds);
   const EffectBank &bank = *bank_;
   for (const BattleEvent &event : battle.events()) {
+    if (event.kind == BattleEventKind::fired && event.weapon &&
+        !(source_particles_ && source_particles_->has_projectile(*event.weapon))) {
+      const auto look = muzzle_looks_.find(event.weapon->fire_sound);
+      if (look != muzzle_looks_.end() && look->second.mesh.model >= 0) {
+        const float scale = look->second.scale;
+        muzzle_flashes_.push_back({event.weapon->fire_sound,
+                                   scaling({scale, scale, scale}) * heading_along(event.direction) *
+                                       translation(event.at),
+                                   look->second.seconds});
+      }
+    }
     if (event.object >= 0 && battle.objects()) {
       const auto &object = battle.objects()->objects().at(static_cast<std::size_t>(event.object));
       SDL_Log("Scenery destroyed: object=%d mesh=%d solid=%d collision triangles=%zu", event.object,
@@ -218,6 +247,14 @@ void DesktopShots::add_items(const Battle &battle, const Mat4 &view,
   const Mat4 camera = facing(view);
   std::uniform_real_distribution<float> roll(0.0F, 2.0F * std::numbers::pi_v<float>);
   add_beams(battle, camera, items);
+  for (const MuzzleFlash &flash : muzzle_flashes_) {
+    const std::size_t first = items.size();
+    add_mesh(muzzle_looks_.at(flash.style).mesh, flash.world, items);
+    for (std::size_t index = first; index < items.size(); ++index) {
+      items[index].additive = true;
+      items[index].local_light = false;
+    }
+  }
   for (const Projectile &shot : battle.armory().projectiles()) {
     if (source_particles_ && source_particles_->add_projectile(shot, items)) {
       continue;

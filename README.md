@@ -31,6 +31,20 @@ For a prebuilt Windows executable, download the Windows x64 ZIP from
 See [Windows release setup](docs/WINDOWS_RELEASE.md) for runtime prerequisites
 and extracting your own game disc. The requirements below are for source builds.
 
+Version 0.5.2 discovers LAN games from **COOP**. One player selects
+**Host network game**; other players open **COOP** and select that host from the
+automatically refreshed list. **Local split-screen** remains separate. Both PCs
+need matching builds/content and must allow the game through their private-network
+firewall (UDP 29642 for discovery, UDP 29641 for menu-hosted games). A game merely
+running in solo mode is not a joinable host. Older releases use the command-line
+setup in the Windows release instructions.
+
+**Settings > S.L.A.I. content** enables the optional content pack. It is off by
+default and requires your European S.L.A.I. PS2 ISO (SLES-52940) for installation
+only. The release includes a standalone converter; no Python installation is
+needed. Restart after changing the toggle. Base-game and S.L.A.I. campaigns use
+separate save files; legacy manually imported content and saves are retained.
+
 - Python 3.11+ (no third-party runtime dependencies; `pytest` for tests)
 - PowerShell 7.4+
 - Visual Studio 2022 with the C++ workload, CMake 3.25+
@@ -419,7 +433,9 @@ click Assign; OK applies and saves the bindings with your settings on exit.
 Restore defaults resets the bindings and mouse options; Cancel discards edits.
 In battle, W/S move forward/backward and A/D strafe. The mouse or controller's
 right stick turns and aims; the left stick moves. Left/right click fires the
-left/right arm weapon. F10 releases the mouse for the menus; click the game to
+left/right arm weapon. Hold Alt to show the cursor and click Settings or Copy Agent Prompt;
+release Alt over the game to resume aiming. The cursor stays free over the window bar
+or while a menu is open. F10 also releases the mouse for the menus; click the game to
 capture it again. Mouse sensitivity, Y inversion and mouse capture can be changed
 in the same dialog. The torso-twist training steps retain right-stick torso control.
 

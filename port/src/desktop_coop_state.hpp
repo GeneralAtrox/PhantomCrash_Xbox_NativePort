@@ -1,6 +1,8 @@
 #pragma once
 
 #include "phantomcrash/settings.hpp"
+#include "phantomcrash/online_room.hpp"
+#include <future>
 #include <functional>
 #include <memory>
 
@@ -20,6 +22,9 @@ struct CoopState {
   std::shared_ptr<online::Lobby> online;
   std::shared_ptr<OnlineGame> online_game;
   std::function<std::shared_ptr<online::Lobby>()> open_online;
+  bool online_mode{}, online_host{};
+  std::function<online::Compatibility()> fingerprint;
+  std::shared_future<online::Compatibility> pending_fingerprint;
   std::optional<QuestSave> online_profile;
   // Explicit Save completes only after the host has written this profile.
   std::function<bool(int, const QuestSave &)> save_profile;

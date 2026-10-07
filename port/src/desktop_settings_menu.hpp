@@ -28,6 +28,8 @@ public:
   [[nodiscard]] const Settings &settings() const;
   // Keyboard shortcuts change settings through here so the menu stays in step.
   void set_fullscreen(bool enabled);
+  bool take_slai_toggle();
+  void set_slai_enabled(bool enabled);
   // The menu bar is hidden in fullscreen.
   void set_visible(bool visible);
   // True once after the user interacts with the menu, so the loop can drop

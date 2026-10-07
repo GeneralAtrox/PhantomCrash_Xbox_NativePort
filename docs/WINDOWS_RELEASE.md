@@ -53,6 +53,32 @@ one); it uses and saves the current quest.
 
 ## Included changes
 
+0.5.2 adds:
+
+- **Automatic LAN discovery in COOP.** Choose Host network game on one PC, then
+  select its automatically listed name on another. Discovery searches each
+  active IPv4 network, including alongside VPN adapters. Local split-screen
+  remains available, with separate network and local saves.
+- **S.L.A.I. content toggle.** Settings > S.L.A.I. content is off by default.
+  First enable requires your European S.L.A.I. PS2 ISO (SLES-52940). A bundled
+  installer converts the assets into `artifacts/slai/assets`; no Python install
+  is required. The ISO is only needed for installation. Later toggles reuse the
+  installed assets and take effect after restarting the game.
+- **Weapon fixes.** Homing locks drop when a target leaves the chip's lock box;
+  non-homing shoulder weapons follow the reticle instead of an off-screen lock.
+  Firing displays muzzle flashes from the existing converted models.
+- **Audio cues.** The pause menu plays its opening cue while gameplay audio is
+  paused, and acquiring a new homing target plays the acquisition cue.
+- **Garage and shop updates.** Twelve hangar slots, S.L.A.I. starter robots in
+  the Fill Hangars cheat when enabled, and label/layout fixes.
+
+S.L.A.I. and the base game have separate campaign/profile files. A new S.L.A.I.
+campaign starts fresh; switching off returns to the base-game campaign. Original
+settings and saves are retained. If an older, manually assembled S.L.A.I. mod is
+found in `mods`, that legacy overlay is retained on disk but no longer loaded
+automatically; new base and S.L.A.I. profiles are kept separately from its saves.
+Both peers must enable the same content when playing online.
+
 0.5.1 fixes:
 
 - Selected main-menu and Quest-submenu buttons pulse yellow with dark text,
@@ -83,8 +109,13 @@ Reconnection does not restore a closed game or migrate the host.
 
 ### Starting online play
 
-Install the same release and matching content on each machine. From the extracted
-release directory, the host runs:
+Install the same release and matching content on each machine. In version 0.5.2,
+open COOP, choose **Host network game** on one PC, then select its automatically
+listed name on the other PC. Allow the game through the private-network firewall:
+UDP 29642 for discovery and UDP 29641 for the hosted game. Both PCs must be on the
+same broadcast network. Games running in solo mode are not advertised.
+
+For a manually addressed connection, from the extracted release directory the host runs:
 
 ```powershell
 .\phantomcrash_port.exe --root . --online-host 29641
@@ -200,7 +231,15 @@ license terms (`licenses/microsoft-visual-cpp-runtime.txt`).
 ## Reproducing a package
 
 From the matching source tag, run `scripts/build-port.ps1`, then
-`python tools/package_release.py` (`--output DIR` writes elsewhere). Packaging
+build `phantomcrash_slai_audio` and the bundled importer:
+
+```powershell
+python -m venv .tools/slai-builder
+.tools/slai-builder/Scripts/python.exe -m pip install -r tools/slai-installer-requirements.txt
+.tools/slai-builder/Scripts/python.exe tools/build_slai_installer.py
+```
+
+Run `python tools/package_release.py` (`--output DIR` writes elsewhere). Packaging
 uses `build/port`, the Visual Studio C++ Redist for the runtime DLLs the
 binaries import, and the pinned `.tools/vcpkg` sources, and writes the two
 ZIPs plus SHA-256 checksums to `build/releases`. Only the port, data, tooling

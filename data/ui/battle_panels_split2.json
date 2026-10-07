@@ -1,4 +1,13 @@
 {
+ "text_replacements": [
+  {"source": {"image": "textures/scroll/game_vs_tex/0.png", "rect": [400, 344, 464, 360]}, "text": "WEAPON LOST"},
+  {"source": {"image": "textures/scroll/game_vs_tex/0.png", "rect": [400, 360, 464, 376]}, "text": "WEAPON LOST"},
+  {"source": {"image": "textures/scroll/game_vs_tex/0.png", "rect": [400, 264, 504, 280]}, "text": "MISSILE ALERT"},
+  {"source": {"image": "textures/scroll/game_vs_tex/0.png", "rect": [400, 216, 488, 240]}, "text": "SYS DURABILITY\nDOWN 50%", "colour": "#ffc823"},
+  {"source": {"image": "textures/scroll/game_vs_tex/0.png", "rect": [136, 344, 224, 368]}, "text": "SYS DURABILITY\nDOWN 75%", "colour": "#ff6060"},
+  {"source": {"image": "textures/scroll/game_vs_tex/0.png", "rect": [200, 280, 328, 312]}, "text": "DURABILITY", "region": [8, 2, 75, 14], "colour": "#b0ff20"},
+  {"source": {"image": "textures/scroll/game_vs_tex/0.png", "rect": [0, 376, 120, 392]}, "text": "O.C TIME", "region": [3, 3, 50, 14], "colour": "#b0ff20"}
+ ],
  "notes": [
   "The split-screen battle panels for two screens (0x204148, the weapon records 0x204a20 left and 0x205100 right), in the 640x240 canvas of one screen, from game_vs_tex (slot 466) and game_tex (slot 464). Same schema as battle_panels.json.",
   "With more than one screen the original (0x4aaed, 0x4ad3b) draws no DAY, TIME, MONEY or SHOOTDOWN labels, no DAMAGED / HIT / BINGO! messages and no ammunition or charge bars: their sections are left out. The weapon panel is the 64x16 icon strip on its frame, the digits above it.",

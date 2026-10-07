@@ -16,9 +16,14 @@ CoopScreen::CoopScreen(SDL_Renderer *renderer, const DataRoots &roots, const Gam
   state_->matches = std::make_shared<CoopMatches>();
   if (state_->open_online) {
     state_->online = state_->open_online();
-    state_->online_game =
-        std::make_shared<OnlineGame>(state_->online->room(), renderer_, roots_, state_->matches,
-                                     state_->options, state_->robots);
+    open_online_game();
+  } else {
+    connection_menu_ = true;
+    try {
+      lan_browser_ = std::make_unique<online::LanBrowser>();
+    } catch (const std::exception &error) {
+      discovery_error_ = error.what();
+    }
   }
   SDL_Log("Co-op: lobby opened; independent profiles, solo saves preserved");
 }
@@ -32,6 +37,12 @@ CoopScreen::~CoopScreen() {
   state_->online_game.reset();
   state_->matches.reset();
   state_->online.reset();
+  if (local_profiles_) {
+    state_->profiles = std::move(*local_profiles_);
+    state_->saved_profiles = std::move(*local_saved_profiles_);
+    state_->online_mode = false;
+    state_->online_host = false;
+  }
 }
 
 void CoopScreen::persist(const int slot) {
@@ -154,6 +165,9 @@ void CoopScreen::lobby_input(const int slot, const InputFrame &input) {
 }
 
 void CoopScreen::tick(const InputFrame &input, const double seconds) {
+  if (tick_connection_menu(input)) {
+    return;
+  }
   if (state_->online) {
     try {
       tick_online(input, seconds);

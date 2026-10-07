@@ -31,15 +31,17 @@ TEST_CASE("long part names stop before fitted-part and side badges") {
   const auto assemble =
       parse_goods_list(json::required(roots.document("ui/assemble.json"), "list"));
   CHECK(buy.name_at[0] + goods_name_width(buy, 18) == 340);
-  CHECK(sell.name_at[0] + goods_name_width(sell, 18) <= sell.hangar_badges[0].position[0] - 18);
+  CHECK(sell.name_at[0] + goods_name_width(sell, 18) <=
+        sell.hangar_badges[0].front().position[0] - 18);
   CHECK(assemble.name_at[0] + goods_name_width(assemble, 18) <=
         assemble.side_marks[0].position[0] - 18);
   sell.name_width = 1000;
-  CHECK(sell.name_at[0] + goods_name_width(sell, 18) <= sell.hangar_badges[0].position[0] - 18);
+  CHECK(sell.name_at[0] + goods_name_width(sell, 18) <=
+        sell.hangar_badges[0].front().position[0] - 18);
   sell.name_width = 80;
   CHECK(goods_name_width(sell, 18) == 80);
   sell.name_width = 0;
-  sell.hangar_badges[0].centered = true;
+  sell.hangar_badges[0].front().centered = true;
   CHECK(sell.name_at[0] + goods_name_width(sell, 18) <=
-        sell.hangar_badges[0].position[0] - 20 - 18);
+        sell.hangar_badges[0].front().position[0] - 20 - 18);
 }

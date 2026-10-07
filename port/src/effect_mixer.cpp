@@ -145,7 +145,7 @@ std::size_t EffectMixer::active() const {
 void EffectMixer::mix(float *out, const std::size_t frames) {
   std::fill(out, out + frames * 2, 0.0F);
   for (Voice &voice : voices_) {
-    if (voice.samples == nullptr) {
+    if (voice.samples == nullptr || (gameplay_paused_ && voice.bus != AudioBus::ui)) {
       continue;
     }
     const EffectSamples &sound = *voice.samples;

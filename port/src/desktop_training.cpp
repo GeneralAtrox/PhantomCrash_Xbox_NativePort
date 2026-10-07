@@ -76,7 +76,7 @@ TrainingScreen::TrainingScreen(TextureCache &textures, const GlyphFont &font,
   effects_ = DesktopEffects::load(world_, context.roots);
   if (effects_) {
     effects_->system().set_stage(&battle_->stage());
-    shots_ = std::make_unique<DesktopShots>(*world_, effects_->system().bank(),
+    shots_ = std::make_unique<DesktopShots>(*world_, effects_->system().bank(), context.roots,
                                             load_fence_contact(context.roots),
                                             effects_->source_particles());
   }
