@@ -1,9 +1,13 @@
 # S.L.A.I. research and native integration
 
-## Current asset integration (2026-10-06)
+## Current asset integration (2026-10-07)
 
 The port now registers the converted parts, cosmetics and arenas. S.L.A.I.
-content is an opt-in `mods/` overlay; its story, menus, scripts, movies and
+content is enabled through **Settings > S.L.A.I. content (restart required)**,
+off by default. The installer converts the user's ISO to `artifacts/slai/assets`;
+the ISO is required only for installation. Base and S.L.A.I. modes keep separate
+campaign saves. Legacy S.L.A.I. `mods/` overlays stay on disk for research but
+are no longer automatically loaded by the game. Its story, menus, scripts, movies and
 progression systems are outside this import. Source is the user's PAL disc,
 `SLES_529.40`. Source filenames and message names are shipped data; semantic
 field labels and native adapter parameters are researcher-assigned.

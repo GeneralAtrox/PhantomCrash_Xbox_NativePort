@@ -365,17 +365,19 @@ when leaving the network session. Discovery/room-handshake and save-isolation
 regressions are included in the counts above. A two-process desktop check opened
 COOP without network arguments, hosted from the menu, displayed the host in the
 browser and joined as player 2. A separate broadcast-only query received the
-host's reply. LAN menu discovery was added after
-the published v0.5.0 package.
+host's reply. LAN menu discovery is included in v0.5.2.
 
 ### Two-machine network test
 
 Use the same executable, data, extracted assets and mods on both Windows machines.
-With a current source build, open COOP on both computers, select Host network game
+With v0.5.2 or later, open COOP on both computers, select Host network game
 on one, then select its automatically listed name on the other. Allow the game
 through the private-network firewall for UDP 29641 and 29642. Discovery requires
 the same broadcast network; it does not discover Internet hosts. The explicit
 commands below remain available for routed networks and the v0.5.0 release.
+Both computers must use the same S.L.A.I. setting and installed content when
+enabled. Disabled S.L.A.I. assets are excluded from the compatibility hash;
+different enabled settings or changes to active content reject the connection.
 From the repository directory, start the host with:
 
 ```powershell

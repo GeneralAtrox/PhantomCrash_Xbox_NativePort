@@ -1,4 +1,14 @@
-# S.L.A.I. parts (experimental mod)
+# S.L.A.I. content (optional)
+
+From v0.5.2, enable **Settings > S.L.A.I. content (restart required)** to install
+the content from a European S.L.A.I. PS2 ISO (`SLES-52940`). The ISO is required
+only for installation. Converted content stays in `artifacts/slai/assets`, and
+the toggle is off by default. Restart after changing it. Each mode uses separate
+campaign saves so disabling the pack preserves imported parts and progress.
+
+The commands below document the earlier research overlay workflow. The game
+does not automatically load a legacy S.L.A.I. `mods/` overlay; keep it for research
+and use the Settings installation for gameplay.
 
 S.L.A.I. (PS2, the Phantom Crash sequel) uses the same robot makers and part
 slots, so its part models can become new Phantom Crash parts. Nothing changes

@@ -39,3 +39,11 @@ player's own disc.
 Belen Masia, Fernando Navarro and Diego Gutierrez, is included under its MIT
 license. The pinned shader and precomputed area/search lookup headers are in
 `port/third_party/smaa`, together with the unmodified license and revision.
+
+## Optional S.L.A.I. installer
+
+The Windows installer executable bundles Python, NumPy and Pillow, packaged
+with PyInstaller. Their copyright notices and license terms, including the
+PyInstaller bootloader exception and NumPy's bundled library notices, are
+included in release packages under `licenses/slai-installer`. Build versions
+are pinned in `tools/slai-installer-requirements.txt`.
