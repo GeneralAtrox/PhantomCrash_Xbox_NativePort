@@ -1,5 +1,11 @@
 # Windows release
 
+Version 0.5.6 adds per-game volume and window persistence for Phangrade launches.
+Phangrade restores volume before playback and remembers the window position, size,
+maximised state and fullscreen across updates. Use the Phangrade window menu or
+launcher volume control; these preferences live outside the version directory.
+Direct launches retain the existing settings behaviour.
+
 This is a work-in-progress Windows x64 port. The ZIP includes
 `phantomcrash_port.exe`, the game data installer `phantomcrash_extract.exe`,
 their libraries and editable `data`. Extract the entire ZIP before running it.
