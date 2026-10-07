@@ -136,7 +136,7 @@ void BattlePanels::draw_gauges(const Viewport &viewport, const Battle &battle,
   const HudGauge &optic = style_.optic;
   const float gauge = std::clamp(player.camouflage, 0.0F, 1.0F);
   colour = gauge >= optic.low ? optic.colour : optic.low_colour;
-  if (player.camouflaged) {
+  if (!player.camouflaged && player.combat.camouflage_seconds != 0 && gauge < 1.0F) {
     colour = hud_flash(style_.optic_active_colour, optic.colour, clock, style_.flash_frames);
   }
   put(viewport, optic.frame, optic.anchor);

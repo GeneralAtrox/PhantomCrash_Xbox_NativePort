@@ -46,6 +46,11 @@ SaveDetailsStyle parse_details(const json::JsonValue &value) {
 LoadGameScript parse_load_game(const json::JsonValue &document) {
   try {
     LoadGameScript script;
+    if (const auto *profile = document.find("profile_image")) {
+      script.profile_offset = numbers<2>(required(*profile, "offset"), "profile offset");
+      script.profile_size = numbers<2>(required(*profile, "size"), "profile size");
+      script.profile_layer = static_cast<int>(profile->number_or("layer", script.profile_layer));
+    }
     parse_menu_basics(document, script);
     script.slot_sound = script.move_sound;
     script.row_sound = required(document, "sounds").string_or("row", "");

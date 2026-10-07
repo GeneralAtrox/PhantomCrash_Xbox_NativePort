@@ -32,6 +32,7 @@ add_library(phantomcrash_core
   src/weapon_mounts.cpp
   src/pose_transform.cpp
   src/battle_damage.cpp
+  src/battle_camouflage.cpp
   src/shown_armour.cpp
   src/battle_death.cpp
   src/battle_wrecks.cpp

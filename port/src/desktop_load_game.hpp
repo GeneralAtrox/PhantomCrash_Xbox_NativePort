@@ -1,6 +1,7 @@
 #pragma once
 
 #include "desktop_frame.hpp"
+#include "phantomcrash/robot_parts.hpp"
 #include "desktop_screen.hpp"
 #include "desktop_textures.hpp"
 #include "phantomcrash/glyph_font.hpp"
@@ -17,10 +18,11 @@ namespace phantomcrash {
 // credits outlive the screen.
 class LoadGameScreen final : public Screen {
 public:
-  LoadGameScreen(TextureCache &textures, const GlyphFont &font, LoadGameScript script,
-                 std::vector<SaveSlot> slots, const MessageBoxStyle &box, const FrameStyle &frame,
-                 const std::vector<MusicCredit> &credits, QuestSave quest = {}, bool hud = false,
-                 SaveLoadHooks hooks = {}, bool unreadable = false);
+  LoadGameScreen(TextureCache &textures, const GlyphFont &font, const PartTables &parts,
+                 LoadGameScript script, std::vector<SaveSlot> slots, const MessageBoxStyle &box,
+                 const FrameStyle &frame, const std::vector<MusicCredit> &credits,
+                 QuestSave quest = {}, bool hud = false, SaveLoadHooks hooks = {},
+                 bool unreadable = false);
 
   void tick(const InputFrame &input, double tick_seconds) override;
   void draw(const Viewport &viewport) override;
@@ -47,10 +49,12 @@ public:
   }
 
 private:
+  std::optional<Sprite> profile_image(const QuestSave &quest, const SaveSlotStyle &slot) const;
   void draw_details(DrawList &list, const QuestSave &quest) const;
 
   TextureCache &textures_;
   const GlyphFont &font_;
+  const PartTables &parts_;
   const FrameStyle &style_;
   LoadGame menu_;
   QuestSave quest_; // the day and money, drawn with `hud`

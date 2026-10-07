@@ -4,6 +4,7 @@
 #include "desktop_screens.hpp"
 
 #include "desktop_load_game.hpp"
+#include "desktop_game_screens.hpp"
 #include "desktop_option.hpp"
 #include "desktop_option_screens.hpp"
 
@@ -88,9 +89,9 @@ std::unique_ptr<Screen> ScreenRunner::make_save_load(const std::string &name,
     save_slots_[static_cast<std::size_t>(slot)] = quest_;
     return quest_;
   };
-  return std::make_unique<LoadGameScreen>(textures_, font_, std::move(script), std::move(slots),
-                                          message_box_, frame_, credits_, quest_, entry.hud,
-                                          std::move(hooks), save_slots_unreadable_);
+  return std::make_unique<LoadGameScreen>(textures_, font_, game_->part_tables(), std::move(script),
+                                          std::move(slots), message_box_, frame_, credits_, quest_,
+                                          entry.hud, std::move(hooks), save_slots_unreadable_);
 }
 
 } // namespace phantomcrash

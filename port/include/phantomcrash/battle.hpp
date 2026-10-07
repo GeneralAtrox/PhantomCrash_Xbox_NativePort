@@ -54,6 +54,7 @@ struct BattleCheats {
 // walking the stage's enemy path, respawning when destroyed.
 class Battle final {
   friend class StateInspector;
+
 public:
   Battle(BattleSettings settings, EnemyPath path, std::uint32_t seed = 1);
   // Robots point into the settings' weapons: no copies.
@@ -326,6 +327,7 @@ private:
   [[nodiscard]] bool muzzle_blocked(const Combatant &robot, WeaponSlot slot) const;
   void separate();
   void respawn(Combatant &drone);
+  void update_camouflage(Combatant &robot, bool toggle, float seconds);
   void tick_supply(float seconds);
   void supply_explosion(Vec3 at);
   void take_supply(Combatant &robot, const SupplyTaken &taken);

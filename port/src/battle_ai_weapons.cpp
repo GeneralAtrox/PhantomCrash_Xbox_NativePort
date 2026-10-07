@@ -82,8 +82,9 @@ void Battle::ai_weapons(Combatant &drone, const float seconds) {
                       ai_chance(random_, level.camouflage_probability,
                                 data.value("fire_probability_scale"))))) {
       s.camouflage_toggle = true;
-      s.camouflage_left =
-          settings_.camouflage_seconds * level.camouflage_duration * ai_random(random_);
+      s.camouflage_left = (drone.combat.camouflage_seconds >= 0 ? drone.combat.camouflage_seconds
+                                                                : settings_.camouflage_seconds) *
+                          level.camouflage_duration * ai_random(random_);
     }
     s.camouflage_wait = level.camouflage_interval * ai_random(random_);
   }
@@ -113,18 +114,8 @@ void Battle::fire_drones(const float seconds) {
       continue;
     }
     if (settings_.ai.original) {
-      if (robot.ai.camouflage_toggle) {
-        robot.camouflaged =
-            !robot.camouflaged && robot.camouflage > settings_.ai.original->value("cloak_minimum");
-        if (robot.camouflaged) {
-          chatter(robot, chatter_event::camouflage);
-        }
-        robot.ai.camouflage_toggle = false;
-      }
-      const float drain = robot.camouflaged ? -seconds / settings_.camouflage_seconds
-                                            : seconds / settings_.camouflage_recharge_seconds;
-      robot.camouflage = std::clamp(robot.camouflage + drain, 0.0F, 1.0F);
-      robot.camouflaged &= robot.camouflage > 0;
+      update_camouflage(robot, robot.ai.camouflage_toggle, seconds);
+      robot.ai.camouflage_toggle = false;
     }
     fire_weapons(static_cast<int>(index), ai_fire(robot), seconds);
   }

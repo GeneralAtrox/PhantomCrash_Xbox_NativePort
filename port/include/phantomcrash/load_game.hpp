@@ -57,6 +57,9 @@ struct LoadGameScript : MenuBasics {
   std::string help_text;
   FramePlacement frame;
   std::vector<SaveSlotStyle> slots;
+  std::array<float, 2> profile_offset{32, 32};
+  std::array<float, 2> profile_size{64, 64};
+  int profile_layer{258};
   ChoiceSprites exit; // the EXIT button, and its lit form
   SaveDetailsStyle details;
   SavedTimeStyle saved_time;

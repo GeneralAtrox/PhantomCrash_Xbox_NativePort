@@ -340,23 +340,7 @@ void Battle::tick(const RobotControl &player, const FireControl &fire, const flo
     const auto &own = controls_[static_cast<int>(index)];
     const FireControl &own_fire = cooperative_ || versus_ ? own.second : fire;
     const RobotControl &own_control = cooperative_ || versus_ ? own.first : player;
-    if (own_fire.camouflage) {
-      self.camouflaged = !self.camouflaged && self.camouflage > 0.1F;
-      self.camouflage_broken = false;
-      if (self.camouflaged) {
-        chatter(self, chatter_event::camouflage); // 0x074fa4
-      }
-    }
-    const float drain = self.camouflaged ? -seconds / settings_.camouflage_seconds
-                                         : seconds / settings_.camouflage_recharge_seconds;
-    const float before = self.camouflage;
-    self.camouflage = std::clamp(self.camouflage + drain, 0.0F, 1.0F);
-    // 0x0751be: once, as a running camouflage's gauge falls through a quarter.
-    if (self.camouflaged && before > camouflage_low_share &&
-        self.camouflage <= camouflage_low_share) {
-      chatter(self, chatter_event::camouflage_low);
-    }
-    self.camouflaged = self.camouflaged && self.camouflage > 0.0F;
+    update_camouflage(self, own_fire.camouflage, seconds);
     fire_weapons(static_cast<int>(index), own_fire, seconds);
     watch_idle(self, own_control, own_fire, seconds);
   }

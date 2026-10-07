@@ -1,5 +1,6 @@
 #include "desktop_screens.hpp"
 #include "desktop_load_game.hpp"
+#include "desktop_game_screens.hpp"
 #include "phantomcrash/saved_time.hpp"
 
 namespace phantomcrash {
@@ -56,9 +57,9 @@ std::unique_ptr<Screen> ScreenRunner::make_coop_save_load(LoadGameScript script,
     coop_->saved_profiles[slot] = checkpoint;
     return checkpoint;
   };
-  return std::make_unique<LoadGameScreen>(textures_, font_, std::move(script), std::move(slots),
-                                          message_box_, frame_, credits_, quest_, entry.hud,
-                                          std::move(hooks), save_slots_unreadable_);
+  return std::make_unique<LoadGameScreen>(textures_, font_, game_->part_tables(), std::move(script),
+                                          std::move(slots), message_box_, frame_, credits_, quest_,
+                                          entry.hud, std::move(hooks), save_slots_unreadable_);
 }
 
 } // namespace phantomcrash

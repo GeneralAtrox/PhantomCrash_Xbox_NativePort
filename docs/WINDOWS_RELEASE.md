@@ -53,6 +53,17 @@ one); it uses and saves the current quest.
 
 ## Included changes
 
+0.5.3 fixes:
+
+- Optical camouflage uses the equipped modules' active and recharge timings.
+  The O.C. gauge flashes during recovery rather than while discharging.
+- Dodge animations lean towards the dodge direction.
+- Occupied save slots show the saved robot's equipped CHIP portrait.
+- Pepper's training dialogue extends the blue upper-left edge correctly.
+- The town map keeps its upper-right border black and corrects vertical rider
+  rotation on the board.
+
+
 0.5.2 adds:
 
 - **Automatic LAN discovery in COOP.** Choose Host network game on one PC, then

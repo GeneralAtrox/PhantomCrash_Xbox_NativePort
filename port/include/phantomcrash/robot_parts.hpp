@@ -193,6 +193,9 @@ struct CombatStats {
   float knockdown_resistance{}; // taken off a weapon's knockdown chance
   float knockback_resistance{}; // percent of a knockback it shrugs off
   float beam_resistance{};      // 0..1 of a beam's damage it shrugs off
+  // Negative means no module data: use the scripted battle defaults.
+  float camouflage_seconds{-1.0F};
+  float camouflage_recharge_seconds{-1.0F};
 };
 
 // A missing chip or legs gives nothing.

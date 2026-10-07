@@ -128,7 +128,8 @@ void TownMap::follow_mouse(const InputFrame &input, const int step) {
   const auto &stick = input.right_stick;
   if (std::hypot(stick[0], stick[1]) > stick_pushed) {
     mouse_ = false;
-    turn_to(std::atan2(stick[0], stick[1]));
+    // Input Y is positive upward; the rider is upright with the stick held down.
+    turn_to(std::atan2(stick[0], -stick[1]));
   } else if (mouse_ && input.pointer) {
     spin(*input.pointer);
   } else {

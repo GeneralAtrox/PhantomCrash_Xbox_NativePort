@@ -7,12 +7,13 @@
 
 namespace phantomcrash {
 
-LoadGameScreen::LoadGameScreen(TextureCache &textures, const GlyphFont &font, LoadGameScript script,
+LoadGameScreen::LoadGameScreen(TextureCache &textures, const GlyphFont &font,
+                               const PartTables &parts, LoadGameScript script,
                                std::vector<SaveSlot> slots, const MessageBoxStyle &box,
                                const FrameStyle &frame, const std::vector<MusicCredit> &credits,
                                QuestSave quest, const bool hud, SaveLoadHooks hooks,
                                const bool unreadable)
-    : textures_(textures), font_(font), style_(frame),
+    : textures_(textures), font_(font), parts_(parts), style_(frame),
       menu_(std::move(script), std::move(slots), box, std::move(hooks), unreadable),
       quest_(std::move(quest)), frame_(font, frame, credits, with_hud(menu_.script().frame, hud)) {
   const LoadGameScript &data = menu_.script();
@@ -28,6 +29,36 @@ LoadGameScreen::LoadGameScreen(TextureCache &textures, const GlyphFont &font, Lo
 void LoadGameScreen::tick(const InputFrame &input, const double tick_seconds) {
   menu_.update(tick_seconds, input);
   frame_.update(tick_seconds);
+}
+
+std::optional<Sprite> LoadGameScreen::profile_image(const QuestSave &quest,
+                                                    const SaveSlotStyle &slot) const {
+  const auto &garage = quest.garage;
+  if (garage.riding < 0 || garage.riding >= static_cast<int>(garage.hangars.size())) {
+    return std::nullopt;
+  }
+  const auto &hangar = garage.hangars[static_cast<std::size_t>(garage.riding)];
+  const auto stock = garage.stock.find(hangar.part(PartSlot::chip));
+  if (!hangar.owned || stock == garage.stock.end() || stock->second.kind != PartKind::chip) {
+    return std::nullopt;
+  }
+  const int chip = stock->second.id;
+  if (chip < 0 || chip >= static_cast<int>(parts_.chips.size()) || !parts_.chips[chip].face) {
+    return std::nullopt;
+  }
+  const auto &style = menu_.script();
+  Sprite face = *parts_.chips[chip].face;
+  const float width = face.rect[2] - face.rect[0], height = face.rect[3] - face.rect[1];
+  if (width <= 0 || height <= 0) {
+    return std::nullopt;
+  }
+  const float scale = std::min(style.profile_size[0] / width, style.profile_size[1] / height);
+  face.size = std::array<float, 2>{width * scale, height * scale};
+  face.centered = true;
+  face.position = {slot.plate.position[0] + style.profile_offset[0] + style.profile_size[0] / 2,
+                   slot.plate.position[1] + style.profile_offset[1] + style.profile_size[1] / 2};
+  face.layer = style.profile_layer;
+  return face;
 }
 
 void LoadGameScreen::draw_details(DrawList &list, const QuestSave &quest) const {
@@ -104,6 +135,9 @@ void LoadGameScreen::draw(const Viewport &viewport) {
       if (!quest) {
         card_sprite(slot.empty);
         continue;
+      }
+      if (const auto portrait = profile_image(*quest, slot)) {
+        card_sprite(*portrait);
       }
       if (const auto time = parse_saved_time(quest->saved)) {
         for (const auto &sprite : saved_time_sprites(script, slot, *time)) {

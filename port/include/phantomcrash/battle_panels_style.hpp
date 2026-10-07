@@ -107,7 +107,7 @@ struct BattlePanelsStyle {
   float text_gap{6.0F};
   HudGauge durability;
   HudGauge optic;
-  std::uint32_t optic_active_colour{0x64ff6e}; // flashed while camouflaged
+  std::uint32_t optic_active_colour{0x64ff6e}; // recovery flash; legacy configuration name
   WeaponPanelStyle weapons;
   NumberFont font;
   Sprite colon;
