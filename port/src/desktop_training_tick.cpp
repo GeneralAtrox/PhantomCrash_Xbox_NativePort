@@ -72,10 +72,6 @@ void TrainingScreen::tick_battle(const InputFrame &input, const float seconds) {
   if (!online()) {
     gather_sounds(seconds);
   }
-  hud_->tick(*battle_, seconds);
-  for (SplitView &split : splits_) {
-    split.hud->tick(*battle_, seconds);
-  }
   tutorial_.update(lesson_sample(battle_->player(), heading_before, seconds));
 }
 

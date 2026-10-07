@@ -63,6 +63,9 @@ void BattleHud::set_screen(const std::array<float, 2> canvas, const float pieces
 }
 
 void BattleHud::tick(const Battle &battle, const float seconds) {
+  if (sights_) {
+    sights_->record_defeats(battle);
+  }
   if (panels_) {
     panels_->tick(battle, seconds);
   }

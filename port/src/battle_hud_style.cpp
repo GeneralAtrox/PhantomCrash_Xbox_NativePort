@@ -148,6 +148,10 @@ BattleHudStyle parse_battle_hud_style(const json::JsonValue &document) {
     out.advance = static_cast<float>(tag->number_or("advance", out.advance));
     out.max_glyphs = static_cast<int>(tag->number_or("max_glyphs", out.max_glyphs));
   }
+  if (const json::JsonValue *defeated = markers.find("defeated")) {
+    style.markers.defeated = piece(*defeated);
+    style.markers.defeated_offset = pair(*defeated, "offset", style.markers.defeated_offset);
+  }
   if (const json::JsonValue *leader = markers.find("leader"); leader != nullptr) {
     style.markers.leader = piece(*leader);
     style.markers.leader_offset = pair(*leader, "offset", style.markers.leader_offset);

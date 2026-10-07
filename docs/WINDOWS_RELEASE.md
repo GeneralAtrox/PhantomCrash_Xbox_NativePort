@@ -53,6 +53,18 @@ one); it uses and saves the current quest.
 
 ## Included changes
 
+0.5.5 fixes:
+
+- Enabled the original RUMBLING entrance music cue previously suppressed by
+  inherited tutorial settings.
+- Restored the MISSILE ALERT border, durability/O.C. frame outlines and the
+  multiplication sign in the SHOOTDOWN counter.
+- Added ordinary damage notifications to the scrolling HUD ticker and made
+  online HUD notifications follow confirmed battle events.
+- Added skull markers for credited defeated robot identities when they return
+  during the battle.
+- Made durability warning text heavier and centered within its striped panel.
+
 0.5.4 fixes:
 
 - Corrected left/right stick rotation of the town map rider while preserving

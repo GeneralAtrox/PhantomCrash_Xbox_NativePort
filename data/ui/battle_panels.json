@@ -3,17 +3,17 @@
   {"source": {"image": "textures/scroll/common_2d_tex/1.png", "rect": [360, 456, 400, 472]}, "text": "DAY-"},
   {"source": {"image": "textures/scroll/common_2d_tex/1.png", "rect": [432, 472, 480, 488]}, "text": "TIME"},
   {"source": {"image": "textures/scroll/common_2d_tex/1.png", "rect": [400, 456, 464, 472]}, "text": "MONEY"},
-  {"source": {"image": "textures/scroll/common_2d_tex/1.png", "rect": [0, 496, 96, 512]}, "text": "SHOOTDOWN"},
+  {"source": {"image": "textures/scroll/common_2d_tex/1.png", "rect": [0, 496, 96, 512]}, "text": "SHOOTDOWN ×"},
   {"source": {"image": "textures/scroll/game_quest_tex/0.png", "rect": [192, 328, 272, 344]}, "text": "DAMAGED"},
   {"source": {"image": "textures/scroll/game_quest_tex/0.png", "rect": [488, 72, 512, 88]}, "text": "HIT"},
   {"source": {"image": "textures/scroll/game_quest_tex/0.png", "rect": [456, 232, 512, 248]}, "text": "BINGO!"},
   {"source": {"image": "textures/scroll/game_quest_tex/0.png", "rect": [272, 328, 352, 344]}, "text": "WEAPON LOST"},
   {"source": {"image": "textures/scroll/game_quest_tex/0.png", "rect": [352, 328, 432, 344]}, "text": "WEAPON LOST"},
-  {"source": {"image": "textures/scroll/game_quest_tex/0.png", "rect": [144, 304, 296, 328]}, "text": "MISSILE ALERT"},
-  {"source": {"image": "textures/scroll/game_quest_tex/0.png", "rect": [240, 72, 392, 112]}, "text": "SYS DURABILITY\nDOWN 50%", "colour": "#ffc823"},
-  {"source": {"image": "textures/scroll/game_quest_tex/0.png", "rect": [0, 232, 152, 272]}, "text": "SYS DURABILITY\nDOWN 75%", "colour": "#ff6060"},
-  {"source": {"image": "textures/scroll/game_quest_tex/0.png", "rect": [0, 272, 152, 304]}, "text": "DURABILITY", "region": [8, 2, 92, 16], "colour": "#b0ff20"},
-  {"source": {"image": "textures/scroll/game_quest_tex/0.png", "rect": [0, 304, 144, 328]}, "text": "O.C TIME", "region": [3, 6, 60, 21], "colour": "#b0ff20"}
+  {"source": {"image": "textures/scroll/game_quest_tex/0.png", "rect": [144, 304, 296, 328]}, "text": "MISSILE ALERT", "region": [8, 4, 144, 20]},
+  {"source": {"image": "textures/scroll/game_quest_tex/0.png", "rect": [240, 72, 392, 112]}, "stroke_width": 0.8, "centered": true, "text": "SYS DURABILITY\nDOWN 50%", "colour": "#ffc823"},
+  {"source": {"image": "textures/scroll/game_quest_tex/0.png", "rect": [0, 232, 152, 272]}, "stroke_width": 0.8, "centered": true, "text": "SYS DURABILITY\nDOWN 75%", "colour": "#ff6060"},
+  {"source": {"image": "textures/scroll/game_quest_tex/0.png", "rect": [0, 272, 152, 304]}, "text": "DURABILITY", "region": [12, 4, 90, 14], "colour": "#b0ff20"},
+  {"source": {"image": "textures/scroll/game_quest_tex/0.png", "rect": [0, 304, 144, 328]}, "text": "O.C TIME", "region": [5, 8, 56, 17], "colour": "#b0ff20"}
  ],
  "notes": [
   "The single-player battle panels in 640x480 units, from the original's records: game_quest_tex (slot 465, sprites 1397-1434) for the panels, game_tex (slot 464) for the weapon digits and common_2d_tex/1 for the labels and the number font. Split screen uses battle_panels_split2.json (two screens) and battle_panels_split4.json (three or four) instead: game_vs_tex (slot 466) and the records at 0x204148, 0x203f50, 0x204a20, 0x205100 and 0x204d90.",
@@ -25,7 +25,7 @@
   "icons are keyed by the weapon's kind (weapon record +0x1c, tables/parts.json): 0 cannon -> 1421/1422, 1 missile -> 1417/1418, or homing (1415/1416) when the record's homing rate (+0x40) is not zero, 2 machine gun or shotgun -> 1423/1424, 3 grenade -> 1419/1420, 5 beam -> 1425/1426, 6 melee -> 1427/1428. readout is what the panel shows beside the icon.",
   "readout \"ammo\" (kinds 0-3): the shown ammunition in four zero-padded digits at digit_positions (12, 24, 36, 48 left / 31, 43, 55, 67 right) and the bar 1429 stretched to bar_width * shown / maximum (mirrored on the right), bar_colour, bar_low_colour below bar_low, flashing toward refill_colour while refilling. readout \"charge\" (kind 5): three digits of the percentage at the first three digit_positions, the percent sign (1354, 1375) and the bar, flashing toward bar_charging_colour until full. readout \"none\" (kind 6): the icon only.",
   "labels (0x4ad3b, records 0x203e70-0x203ec4, number font 3 at 0x27dc18 + 3 * 64, 0xfff0f0f0): DAY- (3751) at 396,39 (the record's 356 plus 40) and the day plus one in two zero-padded digits ending at 453; TIME (3757) at 466,39 and the battle clock (battle +0xee524, one a 60 Hz frame) as HH:MM:SS written from 504, the colon (3746) advancing colon_advance, ending at 586; MONEY (3753) at 421,430 and the money in nine digits with commas ending at 573; SHOOTDOWN (3756) at 47,430 and the player's kills (robot +0x20) in four zero-padded digits ending at 187. Each number is placed from its label's left, the label's width and the digit advance (0xd381c).",
-  "messages (0x4ad3b, HUD state + 0x8b4; 0x4da6c queues them): DAMAGED (1403, 0xffc8dc50), HIT (1404, 0xff0fc8d2) and BINGO! (1402, 0xfffaf000) at 48,388, each 120 frames, sliding in from 30 below over 10 frames and out toward 150 above; the list drops push_scroll when one arrives and rises scroll_decay of that a frame, at least min_scroll. HIT goes to a robot whose hit did damage to another (0x9d2ce); when a robot is shot down (0x7675e) it gets DAMAGED if others had damaged it, and every robot that damaged it gets BINGO! and a kill.",
+  "messages (0x4ad3b, HUD state + 0x8b4; 0x4da6c queues them): DAMAGED (1403, 0xffc8dc50), HIT (1404, 0xff0fc8d2) and BINGO! (1402, 0xfffaf000) at 48,388, each 120 frames, sliding in from 30 below over 10 frames and out toward 150 above; the list drops push_scroll when one arrives and rises scroll_decay of that a frame, at least min_scroll. DAMAGED is queued when the player takes damage; HIT goes to a robot whose hit did damage to another (0x9d2ce); when a robot is shot down (0x7675e) it gets DAMAGED if others had damaged it, and every robot that damaged it gets BINGO! and a kill.",
   "warning (0x4ad3b, records 0x203de4-0x203e54): below half armour the stripes 1412 and SYS DURABILITY DOWN 50% (1408); below a quarter the stripes and 75% (1410), at 431,73. The original alternates two records every 60 frames; the European records are the same text twice (the Japanese sprites 1409 and 1411 are unused).",
   "missile_alert (0x4ad3b, record 0x203dc8): MISSILE ALERT (1406, 0xffff8080) at 248,120 while a missile is homing on the player, its alpha 0.5 + 0.5 * a 60-frame triangle wave."
  ],

@@ -509,6 +509,7 @@ if(PHANTOMCRASH_BUILD_DESKTOP)
     src/desktop_audio_effects.cpp
     src/desktop_source_audio.cpp
     src/desktop_battle_hud.cpp
+    src/desktop_battle_defeats.cpp
     src/desktop_battle_sights.cpp
     src/desktop_battle_panels.cpp
     src/desktop_battle_panel_text.cpp

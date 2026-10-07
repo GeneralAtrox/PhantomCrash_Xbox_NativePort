@@ -6,6 +6,10 @@
 namespace phantomcrash {
 void TrainingScreen::tick_effects(const double tick_seconds) {
   const auto seconds = static_cast<float>(tick_seconds);
+  hud_->tick(*battle_, seconds);
+  for (SplitView &split : splits_) {
+    split.hud->tick(*battle_, seconds);
+  }
   if (chatter_) {
     chatter_->set_scene(scene_ && scene_->scene().active());
     chatter_->tick(*battle_, tick_seconds, message_ != nullptr || finale_);

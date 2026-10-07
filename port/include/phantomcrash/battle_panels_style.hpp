@@ -90,6 +90,8 @@ struct BattlePanelTextStyle {
   std::string text;
   std::optional<std::array<float, 4>> region;
   std::optional<std::uint32_t> colour;
+  float stroke_width{}; // extra glyph weight in canvas units
+  bool centered{};
 };
 
 struct BattlePanelsStyle {

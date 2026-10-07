@@ -345,6 +345,11 @@ void BattleSights::draw_marker_extras(const Viewport &viewport, const Combatant 
     return;
   }
   const std::optional<float> half = draw_tag(viewport, robot.tag, point, colour);
+  if (half && markers.defeated && defeated_.contains({robot.name, robot.tag})) {
+    put(viewport, *markers.defeated,
+        point.x + markers.defeated_offset[0] - *half * markers.tag.advance,
+        point.y + markers.defeated_offset[1], false);
+  }
   if (half && robot.leader && markers.leader) {
     put(viewport, *markers.leader, point.x + markers.leader_offset[0] - *half * markers.tag.advance,
         point.y + markers.leader_offset[1], false);

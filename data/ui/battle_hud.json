@@ -64,6 +64,7 @@
   "bar_offset": [-66, -13],
   "team_colours": ["#ffff00", "#8080ff", "#ff8080", "#00e100"],
   "tag": {"offset": [-35, -30], "cell": 12, "advance": 12, "max_glyphs": 14},
+  "defeated": {"image": "textures/scroll/game_tex/0.png", "rect": [56, 200, 88, 216], "offset": [-94, -30]},
   "leader": {"image": "textures/scroll/game_tex/0.png", "rect": [232, 184, 256, 200], "offset": [-62, -30]},
   "player_numbers": {
    "offset": [-54, -34],

@@ -30,7 +30,7 @@ BattlePanelText::BattlePanelText(TextureCache &textures, const GlyphFont &font,
 }
 
 void BattlePanelText::text(const Sprite &sprite, const std::string &label, const Viewport &viewport,
-                           const float alpha) const {
+                           const float alpha, const float stroke_width, const bool centered) const {
   const auto size = sprite.size.value_or(
       std::array<float, 2>{sprite.rect[2] - sprite.rect[0], sprite.rect[3] - sprite.rect[1]});
   if (font_.cell <= 0 || size[0] <= 0 || size[1] <= 0) {
@@ -51,17 +51,41 @@ void BattlePanelText::text(const Sprite &sprite, const std::string &label, const
     return;
   }
   const float height = font_.cell * static_cast<float>(lines.size());
-  const float scale = std::min(size[0] / width, size[1] / height);
+  const float scale = std::min(std::max(0.0F, size[0] - 2 * stroke_width) / width,
+                               std::max(0.0F, size[1] - 2 * stroke_width) / height);
   const float left = sprite.position[0] - (sprite.centered ? size[0] / 2 : 0);
   const float top = sprite.position[1] - (sprite.centered ? size[1] / 2 : 0);
   for (std::size_t i = 0; i < lines.size(); ++i) {
     auto &glyphs = lines[i];
+    float line_width = 0;
+    for (const auto &glyph : glyphs) {
+      line_width = std::max(line_width, glyph.x + glyph.width);
+    }
+    const float inset = centered ? (size[0] - line_width * scale) / 2 : stroke_width;
     for (auto &glyph : glyphs) {
-      glyph.x = left + glyph.x * scale;
+      glyph.x = left + inset + glyph.x * scale;
       glyph.y = top + (size[1] - height * scale) / 2 +
                 (glyph.y + static_cast<float>(i) * font_.cell) * scale;
       glyph.width *= scale;
       glyph.height *= scale;
+    }
+    if (stroke_width > 0) {
+      // Expand the sharp glyph silhouette without changing its advances or atlas.
+      for (const auto offset : std::array<std::array<float, 2>, 8>{{{-1, 0},
+                                                                    {1, 0},
+                                                                    {0, -1},
+                                                                    {0, 1},
+                                                                    {-0.707F, -0.707F},
+                                                                    {0.707F, -0.707F},
+                                                                    {-0.707F, 0.707F},
+                                                                    {0.707F, 0.707F}}}) {
+        auto weighted = glyphs;
+        for (auto &glyph : weighted) {
+          glyph.x += offset[0] * stroke_width;
+          glyph.y += offset[1] * stroke_width;
+        }
+        draw_glyphs(textures_, font_, weighted, viewport, sprite.colour, std::nullopt, alpha);
+      }
     }
     draw_glyphs(textures_, font_, glyphs, viewport, sprite.colour, std::nullopt, alpha);
   }
@@ -108,7 +132,7 @@ bool BattlePanelText::draw(const Sprite &sprite, const Viewport &viewport,
     label.size = std::array<float, 2>{(r[2] - r[0]) * sx, (r[3] - r[1]) * sy};
   }
   label.colour = replacement.colour.value_or(sprite.colour);
-  text(label, replacement.text, viewport, alpha);
+  text(label, replacement.text, viewport, alpha, replacement.stroke_width, replacement.centered);
   return true;
 }
 

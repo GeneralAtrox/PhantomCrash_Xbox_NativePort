@@ -98,6 +98,8 @@ struct BattleHudStyle {
     // A team leader's icon (sprite 0x567) left of its tag: at the robot's
     // point + leader_offset, moved left by the tag's half advance as the
     // tag is. Only a tagged robot shows it.
+    std::optional<HudPiece> defeated;
+    std::array<float, 2> defeated_offset{-62.0F, -30.0F};
     std::optional<HudPiece> leader;
     std::array<float, 2> leader_offset{-62.0F, -30.0F};
     // Versus mode's 1P-4P labels (sprites 0x5b8 + n), by their top-left at

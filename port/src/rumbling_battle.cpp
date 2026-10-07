@@ -96,6 +96,8 @@ TrainingScript rumbling_training(const TrainingScript &base, const TestDriveScri
     script = test_drive_training(base, drive, garage, garage.riding, parts);
   }
   script.return_to = battle.return_to;
+  // RUMBLING uses the regular entrance cues; the inherited tutorial suppresses them.
+  script.battle.scenes.regular_battle = true;
   return script;
 }
 

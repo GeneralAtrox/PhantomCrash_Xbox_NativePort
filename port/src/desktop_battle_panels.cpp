@@ -23,6 +23,7 @@ constexpr int ammo_shown_max = 9999;
 // respawns and supply pickups show none.
 int message_for(const BattleEventKind kind) {
   switch (kind) {
+  case BattleEventKind::damaged:
   case BattleEventKind::shot_down:
     return hud_message_damaged;
   case BattleEventKind::hit:

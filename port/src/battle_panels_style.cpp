@@ -194,6 +194,8 @@ BattlePanelsStyle parse_battle_panels_style(const json::JsonValue &document) {
       if (entry.find("colour")) {
         text.colour = colour(entry, "colour", 0xffffff);
       }
+      text.stroke_width = std::clamp(number(entry, "stroke_width", 0.0F), 0.0F, 2.0F);
+      text.centered = entry.boolean_or("centered", false);
       out.text_replacements.push_back(std::move(text));
     }
   }

@@ -1,5 +1,8 @@
 #pragma once
 
+#include <set>
+#include <utility>
+
 #include "desktop_textures.hpp"
 #include "phantomcrash/battle.hpp"
 #include "phantomcrash/battle_hud_state.hpp"
@@ -25,6 +28,7 @@ public:
   // The robot's AI chip: the reticles' shapes and sizes, the tracking
   // speed and the lock time.
   void set_fire_control(const ChipStats &chip);
+  void record_defeats(const Battle &battle);
   // The robot whose sights these are: 0, the player's, or a split
   // screen's robot.
   void set_viewer(const int robot) noexcept {
@@ -88,6 +92,7 @@ private:
   [[nodiscard]] std::array<float, 2> offset_scale() const;
   [[nodiscard]] std::array<float, 2> outer_half() const;
 
+  std::set<std::pair<std::string, std::string>> defeated_; // identities, never reusable slots
   TextureCache &textures_;
   const GlyphFont &font_;
   BattleHudStyle style_;
