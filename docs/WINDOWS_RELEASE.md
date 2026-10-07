@@ -53,6 +53,11 @@ one); it uses and saves the current quest.
 
 ## Included changes
 
+0.5.4 fixes:
+
+- Corrected left/right stick rotation of the town map rider while preserving
+  the corrected up/down controls.
+
 0.5.3 fixes:
 
 - Optical camouflage uses the equipped modules' active and recharge timings.
