@@ -10,7 +10,10 @@ These rules are inherited from the Record of Lodoss War project
 - Use checks appropriate to the change. Unrelated historical evidence or test
   failures do not block implementation, builds, or visual review.
 - Do not change recorded hashes merely to make a check pass.
-- Behaviour has to be similar to the original game, not bit-exact.
+- Recreate the original’s observable behaviour and visual presentation so they
+  are indistinguishable in equivalent play situations. Byte-for-byte
+  implementation is unnecessary. Nuance is required functionality, not optional
+  polish.
   Deterministic replay is not a goal. The user reviews visuals and behaviour
   personally; no automated side-by-side comparison against xemu is required.
 
