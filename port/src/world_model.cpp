@@ -79,6 +79,12 @@ public:
 
   ModelData build() {
     for (cgltf_size index = 0; index < data_->nodes_count; ++index) {
+      if (data_->nodes[index].mesh != nullptr) {
+        const int slot = static_cast<int>(node_indices_.size());
+        node_indices_[&data_->nodes[index]] = slot;
+      }
+    }
+    for (cgltf_size index = 0; index < data_->nodes_count; ++index) {
       const cgltf_node &node = data_->nodes[index];
       if (node.mesh != nullptr) {
         add_node(node);
@@ -92,6 +98,8 @@ public:
   }
 
 private:
+  std::map<const cgltf_node *, int> node_indices_;
+
   int texture(const cgltf_texture_view &view) {
     const cgltf_texture *texture = view.texture;
     if (texture == nullptr || texture->image == nullptr || texture->image->uri == nullptr) {
@@ -183,6 +191,16 @@ private:
     entry.name = node.name != nullptr ? node.name : "";
     entry.world = mirrored(world);
     entry.local = mirrored(local);
+    entry.parent_local = entry.local;
+    const cgltf_node *parent = node.parent;
+    while (parent != nullptr && parent->mesh == nullptr) {
+      cgltf_node_transform_local(parent, local);
+      entry.parent_local = entry.parent_local * mirrored(local);
+      parent = parent->parent;
+    }
+    if (parent != nullptr) {
+      entry.parent = node_indices_.at(parent);
+    }
     entry.rig_node = static_cast<int>(&node - data_->nodes);
     model_.nodes.push_back(std::move(entry));
     const int node_index = static_cast<int>(model_.nodes.size() - 1);

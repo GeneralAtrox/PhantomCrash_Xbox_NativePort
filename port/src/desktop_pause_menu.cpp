@@ -51,18 +51,21 @@ void PauseMenu::load(const json::JsonValue &data, const Buttons extra_pause) {
   pill_.lit_text_colour = parse_colour(json::required(pill, "lit_text_colour").string());
   const auto &labels = json::required(data, "labels");
   labels_ = {two_strings(labels, "menu"), two_strings(labels, "asking")};
+  load_roster(data);
 }
 
 void PauseMenu::open() noexcept {
   cursor_ = resume_or_no;
   asking_ = false;
+  roster_page_ = 0;
 }
 
 std::array<float, 4> PauseMenu::button_box(const int index) const {
   const float height = pill_.plain[3] - pill_.plain[1];
   const float left = title_.at[0] - pill_.width - pill_.gap * 0.5F +
                      static_cast<float>(index) * (pill_.width + pill_.gap);
-  return {left, pill_.y, left + pill_.width, pill_.y + height};
+  const float y = showing_roster() ? roster_layout_.button_y : pill_.y;
+  return {left, y, left + pill_.width, y + height};
 }
 
 int PauseMenu::button_at(const std::array<float, 2> &point) const {
@@ -93,6 +96,14 @@ PauseMenu::Choice PauseMenu::choose(const int index) {
 }
 
 PauseMenu::Choice PauseMenu::tick(const InputFrame &input) {
+  if (showing_roster()) {
+    const std::size_t pages = roster_pages();
+    if (input.any_pressed(button::down)) {
+      roster_page_ = (roster_page_ + 1) % pages;
+    } else if (input.any_pressed(button::up)) {
+      roster_page_ = (roster_page_ + pages - 1) % pages;
+    }
+  }
   if (input.any_pressed(button::left | button::right)) {
     cursor_ = 1 - cursor_;
   }
@@ -143,7 +154,10 @@ void PauseMenu::draw_button(DrawList &list, const GlyphFont &font, const int ind
 void PauseMenu::draw(DrawList &list, const GlyphFont &font) const {
   for (const Line *line : {&title_, &help_}) {
     const auto run = glyph_run(font, line->text[asking_ ? 1 : 0]);
-    list.text(layer_, layout_run(font, run, line->at[0] - run_width(font, run) * 0.5F, line->at[1]),
+    const float y = showing_roster()
+                        ? (line == &title_ ? roster_layout_.title_y : roster_layout_.help_y)
+                        : line->at[1];
+    list.text(layer_, layout_run(font, run, line->at[0] - run_width(font, run) * 0.5F, y),
               line->colour);
   }
   draw_button(list, font, resume_or_no);

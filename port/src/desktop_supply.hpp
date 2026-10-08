@@ -83,9 +83,8 @@ private:
                                                          const DataRoots &roots,
                                                          const SceneTuning &tuning,
                                                          SupplySettings settings, Battle &battle);
-// The player's pickups and carrier shot down this tick: their money into
-// `money`, a pickup's sound at the robot.
-void collect_supply(const Battle &battle, const SupplyLook &look, std::int64_t &money,
-                    std::vector<WorldSound> &sounds);
+// Pickup audio only; match accounting consumes the reward events separately.
+void gather_supply_sounds(const Battle &battle, const SupplyLook &look,
+                          std::vector<WorldSound> &sounds);
 
 } // namespace phantomcrash

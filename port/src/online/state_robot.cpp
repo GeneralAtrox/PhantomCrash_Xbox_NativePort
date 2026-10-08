@@ -6,12 +6,12 @@ void StateInspector::write(online::StateWriter &out, const RobotMover &v) {
   out(v.tuning_, v.position_, v.heading_, v.twist_, v.mouse_yaw_, v.twist_stick_, v.twist_push_,
       v.twist_reset_from_, v.twist_reset_left_, v.quick_turn_left_, v.quick_turn_cooldown_,
       v.pitch_, v.mode_, v.motion_, v.motion_revision_, v.loops_, v.motion_speed_, v.mode_seconds_,
-      v.backward_, v.grounded_, v.floor_, v.local_velocity_, v.vertical_speed_, v.dash_hold_,
-      v.lift_left_, v.lift_spent_, v.down_boosting_, v.jump_was_held_, v.stick_, v.rolling_steer_,
-      v.stagger_left_, v.strike_armed_frames_, v.strike_last_frames_, v.lunge_at_, v.lunge_height_,
-      v.lunge_piloted_, v.dodged_, v.flick_state_, v.flick_left_, v.timings_, v.leg_type_,
-      v.dash_steer_, v.dodge_velocity_, v.dodge_slide_frames_, v.dodge_ease_frames_,
-      v.dodge_last_frames_);
+      v.backward_, v.grounded_, v.floor_, v.local_velocity_, v.coast_velocity_, v.coast_brake_,
+      v.vertical_speed_, v.dash_hold_, v.lift_left_, v.lift_spent_, v.down_boosting_,
+      v.jump_was_held_, v.stick_, v.rolling_steer_, v.stagger_left_, v.strike_armed_frames_,
+      v.strike_last_frames_, v.lunge_at_, v.lunge_height_, v.lunge_piloted_, v.dodged_,
+      v.flick_state_, v.flick_left_, v.timings_, v.leg_type_, v.dash_steer_, v.dodge_velocity_,
+      v.dodge_slide_frames_, v.dodge_ease_frames_, v.dodge_last_frames_);
 }
 
 void StateInspector::write(online::StateWriter &out, const RobotCombat &v) {

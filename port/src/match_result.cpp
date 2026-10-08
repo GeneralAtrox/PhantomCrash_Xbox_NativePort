@@ -1,10 +1,24 @@
 #include "phantomcrash/match_result.hpp"
+#include "phantomcrash/battle_events.hpp"
 
 #include <algorithm>
 #include <cmath>
 #include <stdexcept>
 
 namespace phantomcrash {
+
+std::int64_t match_event_prize(const std::span<const BattleEvent> events, const int player) {
+  std::int64_t prize = 0;
+  for (const auto &event : events) {
+    if (event.robot == player &&
+        (event.kind == BattleEventKind::supply || event.kind == BattleEventKind::carrier_down ||
+         event.kind == BattleEventKind::wreck_destroyed ||
+         event.kind == BattleEventKind::object_reward)) {
+      prize += static_cast<std::int64_t>(event.amount);
+    }
+  }
+  return prize;
+}
 
 MatchResultRules parse_match_result_rules(const json::JsonValue &value) {
   MatchResultRules rules;

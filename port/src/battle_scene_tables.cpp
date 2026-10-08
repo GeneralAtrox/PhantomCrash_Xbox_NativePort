@@ -4,6 +4,7 @@
 
 #include "phantomcrash/json_fields.hpp"
 
+#include <cmath>
 #include <stdexcept>
 #include <string>
 
@@ -81,6 +82,12 @@ SceneTuning parse_scene_tuning(const JsonValue &value) {
   s.entrance = value.boolean_or("entrance", s.entrance);
   s.exit = value.boolean_or("exit", s.exit);
   s.computer_entrance = value.boolean_or("computer_entrance", s.computer_entrance);
+  s.computer_entrance_speed = number(value, "computer_entrance_speed", s.computer_entrance_speed);
+  s.computer_entrance_skip_stand =
+      value.boolean_or("computer_entrance_skip_stand", s.computer_entrance_skip_stand);
+  if (!std::isfinite(s.computer_entrance_speed) || s.computer_entrance_speed <= 0.0F) {
+    throw std::runtime_error("computer_entrance_speed must be positive and finite");
+  }
   s.rider_entrance = value.boolean_or("rider_entrance", s.rider_entrance);
   s.computer_exit = value.boolean_or("computer_exit", s.computer_exit);
   s.regular_battle = value.boolean_or("regular_battle", s.regular_battle);

@@ -29,6 +29,8 @@ struct MovementTuning {
   float walk_speed{7.5F}; // units per second at full stick
   float back_speed{5.5F};
   float walk_accel{30.0F}; // units per second squared
+  float stop_keep{0.875F}; // leg record +0xbc, retained momentum per battle tick
+  float stop_speed{6.0F};  // 0x090d21 stops below 0.2 units per 30 Hz tick
   float dash_speed{24.0F};
   float dash_back_speed{18.0F};
   // How fast the walk and dash motions play (robot +0x68, +0x70): the
@@ -58,9 +60,10 @@ struct MovementTuning {
   float dash_turn_ease_ticks{16.0F};
   // The Standard controls (0x0774ad, robot +0x2740 bit 0). The left stick
   // pushed past `flick_stick` to one side, let go and pushed there again,
-  // each within `flick_seconds`, dodges to that side. In the air the left
-  // stick's x turns instead of strafing, unless the right stick's x is
-  // pushed past `standard_air_turn_stick`.
+  // each within `flick_seconds`, dodges to that side. The requested native
+  // controls retain strafing in the air. Disable standard_air_strafe for
+  // the original left-stick turning with right-stick priority.
+  bool standard_air_strafe{true};
   float flick_stick{0.5F};               // 0x17accc, 0x17be84
   float flick_seconds{5.0F / 30.0F};     // 5 ticks (+0x253c)
   float standard_air_turn_stick{0.001F}; // 0x19f8d0
@@ -127,8 +130,9 @@ struct MovementTuning {
   float twist_stick_keep{0.9F}; // per battle tick
   float twist_reset_seconds{8.0F / 30.0F};
   // The aim pitch follows the camera's look (+0x118 +0x40): 3 degrees a
-  // battle tick times the stick (0x19f8f8); 0x0aa499 clamps it to +-0.4 rad.
-  float pitch_limit{0.4F};
+  // battle tick times the stick (0x19f8f8), with a 45-degree camera limit
+  // (0x07fd72). The separate +-0.4 rad clamp in 0x0aa499 is for body animation.
+  float pitch_limit{0.7853982F};
   float pitch_per_second{1.5707964F};
 };
 

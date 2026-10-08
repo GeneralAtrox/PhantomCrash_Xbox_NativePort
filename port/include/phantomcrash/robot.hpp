@@ -163,7 +163,8 @@ void read_maker_tables(const json::JsonValue &document, RobotCatalogue &catalogu
 // Each drawn node of a part model is skinned rigidly to one bone slot: the
 // body's drawing nodes take slots from 0, the legs continue after them;
 // hierarchy-only nodes consume no slot (0x0a8f5a). Writes local * bone; a
-// node without a posed bone keeps its model placement under `fallback`.
+// node without a posed bone follows its nearest posed mesh ancestor, or
+// keeps its model placement under `fallback` when none is posed.
 void skin_nodes(const ModelData &model, const PosePart &bones, int first_slot, const Mat4 &fallback,
                 std::vector<Mat4> &node_worlds);
 

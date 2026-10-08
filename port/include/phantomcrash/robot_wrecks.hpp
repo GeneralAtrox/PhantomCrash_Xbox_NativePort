@@ -8,7 +8,7 @@ namespace phantomcrash {
 
 struct RobotWreckSettings {
   float burn_seconds{6.45F};
-  int reward_ny{5000};
+  int reward_ny{10000};
   int break_effect{15};
   std::string break_sound{"sound/sfx/battle/16.wav"};
 };
@@ -36,6 +36,7 @@ struct RobotWreck {
 
 class RobotWrecks final {
   friend class StateInspector;
+
 public:
   using CollisionBuilder = std::function<StageCollision(const RobotWreck &)>;
   // Online assets outlive the battle. The builder only reads those assets and

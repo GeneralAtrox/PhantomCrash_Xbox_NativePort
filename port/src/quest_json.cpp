@@ -75,6 +75,11 @@ AreaRoster roster_from_json(const json::JsonValue &value) {
   roster.day = static_cast<int>(value.number_or("day", -1));
   roster.contest = static_cast<int>(value.number_or("contest", -1));
   roster.drawn_for = static_cast<int>(value.number_or("drawn_for", roster.contest));
+  if (const auto *eliminated = value.find("eliminated")) {
+    for (const auto &entry : eliminated->array()) {
+      roster.eliminated.push_back(static_cast<int>(entry.number()));
+    }
+  }
   if (const auto *members = value.find("members"); members != nullptr && members->is_array()) {
     for (const auto &entry : members->array()) {
       RosterMember member;
@@ -96,6 +101,10 @@ AreaRoster roster_from_json(const json::JsonValue &value) {
 json::JsonValue roster_to_json(const AreaRoster &roster) {
   using json::JsonValue;
   JsonValue::Array members;
+  JsonValue::Array eliminated;
+  for (const int entrant : roster.eliminated) {
+    eliminated.emplace_back(static_cast<std::int64_t>(entrant));
+  }
   for (const RosterMember &member : roster.members) {
     members.push_back(JsonValue{JsonValue::Object{
         {"entrant", JsonValue{static_cast<std::int64_t>(member.entrant)}},
@@ -109,6 +118,7 @@ json::JsonValue roster_to_json(const AreaRoster &roster) {
       {"day", JsonValue{static_cast<std::int64_t>(roster.day)}},
       {"contest", JsonValue{static_cast<std::int64_t>(roster.contest)}},
       {"drawn_for", JsonValue{static_cast<std::int64_t>(roster.drawn_for)}},
+      {"eliminated", JsonValue{std::move(eliminated)}},
       {"members", JsonValue{std::move(members)}},
   }};
 }

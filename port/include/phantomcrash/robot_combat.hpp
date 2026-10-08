@@ -8,6 +8,7 @@ namespace phantomcrash {
 // Simulation-owned pose and firing attachments. Render views only sample it.
 class RobotCombat final {
   friend class StateInspector;
+
 public:
   RobotCombat(RobotLibrary &library, RobotAssembly assembly);
   RobotCombat(const RobotCombat &source);
@@ -45,6 +46,9 @@ public:
   }
   [[nodiscard]] int motion() const {
     return animator_.motion();
+  }
+  [[nodiscard]] RootMotionSource root_motion_source() const {
+    return animator_.root_motion_source(motion_revision_);
   }
 
 private:

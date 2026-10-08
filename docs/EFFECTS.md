@@ -377,17 +377,25 @@ a time, and `DesktopMountEffects` follows it:
 2. The lanes stop; a burst (42) starts where the weapon was, with 43 and 44
    following it there (0x086e91). A shoulder weapon's burst is at its mount.
 3. Until 43 and 44 have played out.
-4. An arm's stump keeps going for the rest of the battle: sparks at the
-   forearm and at the joint, the arc 39, side arcs (41) from the joint
-   along its x axis, scattered 0.8 and 0.3–0.7 long, re-chosen every tick
-   (the left arm's point the other way), and a trail (40) from the joint
+4. An arm's stump keeps going for the rest of the battle: sparks halfway
+   between the joint and forearm, and at the joint, the arc 39, side arcs (41)
+   from the joint along its x axis, scattered 0.8 and 0.3–0.7 long, re-chosen
+   every tick (the left arm's point the other way), and a trail (40) from the joint
    while the robot is slower than 350 km/h (0x19b588). A lane that has
    played out waits a random number of ticks (0x2326e0, plus 5) and starts
    again. A wreck stops them all.
 
-The arcs' segment is the frame's second row (0x087063, 0x065058). The
-original moves the forearm's sparks by a factor of 0.5 in state 4
-(0x065640), which is not decoded; the port keeps them on the forearm node.
+The arcs' segment is the frame's second row (0x087063, 0x065058).
+In state 4, the original places the two persistent forearm spark lanes at
+`(joint + forearm) * 0.5`, recomputed from the current pose each battle tick.
+Focused Ghidra inspection and a radare2 disassembly cross-check of the European
+XBE resolve the call chain at `0x07a304`: `0x052b40` adds the two world-space
+positions and `0x065640` scales their sum by 0.5. These are researcher-assigned
+meanings, not original source symbols. This is midpoint placement, not a
+velocity or drift multiplier. The port now follows that placement for both
+arms, including when the spark lanes restart. The initial state-1 sparks stay
+at the forearm; the shoulder-joint sparks, arcs and trail retain their own
+anchors.
 
 ## Emitter creation
 

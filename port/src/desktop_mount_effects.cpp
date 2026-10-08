@@ -26,10 +26,11 @@ constexpr std::array<std::array<float, 4>, 4> longest_pause{{
     {5, 15, 5, 5},
     {5, 15, 5, 5},
 }};
-constexpr float trail_top_kmh = 350.0F;     // 0x19b588
-constexpr float kmh_per_unit_second = 3.6F; // 0x17ccfc * 0x1b5adc * 0x19f8d0, a frame at 30
-constexpr float arc_jitter = 0.1F;          // 0x087063
-constexpr float arc_reach = 0.7F;           // of the way to the forearm
+constexpr float trail_top_kmh = 350.0F;      // 0x19b588
+constexpr float kmh_per_unit_second = 3.6F;  // 0x17ccfc * 0x1b5adc * 0x19f8d0, a frame at 30
+constexpr float arc_jitter = 0.1F;           // 0x087063
+constexpr float arc_reach = 0.7F;            // of the way to the forearm
+constexpr float stump_spark_midpoint = 0.5F; // 0x07a304: joint + forearm, then 0x065640
 constexpr float side_arc_spread = 0.8F;
 constexpr float side_arc_shortest = 0.3F;
 constexpr float side_arc_longest = 0.7F;
@@ -114,6 +115,7 @@ bool DesktopMountEffects::keep_arc(Lane &lane, EffectSystem &effects, const Arm 
 void DesktopMountEffects::step_stump(const std::size_t side, const Arm &arm, const float speed,
                                      Watch &watch, EffectSystem &effects) {
   const Vec3 joint = transform_point({}, arm.joint);
+  const Vec3 spark_position = (joint + arm.forearm) * stump_spark_midpoint;
   Lanes &forearm = watch.lanes[side];
   Lanes &shoulder = watch.lanes[side + 2];
   for (std::size_t index = 0; index < 4; ++index) {
@@ -130,7 +132,7 @@ void DesktopMountEffects::step_stump(const std::size_t side, const Arm &arm, con
       }
     } else {
       const bool playing = index == 3 ? keep_arc(lane, effects, arm, false, false)
-                                      : keep(lane, effects, spark_group, arm.forearm);
+                                      : keep(lane, effects, spark_group, spark_position);
       if (!playing) {
         lane.wait = pause(longest_pause[side][index], pause_floor);
       }

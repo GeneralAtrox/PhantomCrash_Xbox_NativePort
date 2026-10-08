@@ -231,7 +231,7 @@ void TrainingScreen::draw_screen(const Viewport &screen, const std::size_t index
   }
   BattleHudInfo info;
   info.panels.day = day_;
-  info.panels.money = money_ - money_at_start_;
+  info.panels.money = extra_prize_;
   info.panels.mission_seconds = clock_;
   split->hud->draw(screen, *battle_, view_projection, info, clock_);
 }

@@ -374,25 +374,4 @@ RobotAssembly assemble_robot(const RobotCatalogue &catalogue, const RobotSkeleto
   return robot;
 }
 
-void skin_nodes(const ModelData &model, const PosePart &bones, const int first_slot,
-                const Mat4 &fallback, std::vector<Mat4> &node_worlds) {
-  node_worlds.resize(model.nodes.size());
-  int slot = first_slot;
-  for (std::size_t i = 0; i < model.nodes.size(); ++i) {
-    const bool drawn =
-        std::any_of(model.draws.begin(), model.draws.end(),
-                    [i](const ModelDraw &draw) { return draw.node == static_cast<int>(i); });
-    if (!drawn) {
-      node_worlds[i] = model.nodes[i].world * fallback;
-      continue;
-    }
-    if (slot >= 0 && slot < bone_slots && bones.set[static_cast<std::size_t>(slot)]) {
-      node_worlds[i] = model.nodes[i].local * bones.bones[static_cast<std::size_t>(slot)];
-    } else {
-      node_worlds[i] = model.nodes[i].world * fallback;
-    }
-    ++slot;
-  }
-}
-
 } // namespace phantomcrash

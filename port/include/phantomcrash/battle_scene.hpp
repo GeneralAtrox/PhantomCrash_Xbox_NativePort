@@ -66,16 +66,18 @@ struct BattleSceneTables {
 [[nodiscard]] BattleSceneTables parse_battle_scenes(const json::JsonValue &document);
 
 // The scenes' rules and timing (data/world/training.json "scenes"); the
-// defaults are the original's.
+// defaults retain the requested faster NPC entry without its standing pause.
 struct SceneTuning {
   std::string tables{"tables/battle_scenes.json"};
-  int stage{6};                 // the gate table's stage (the training ground)
-  int gate{0};                  // the player enters at robot index % gates (0x0825df)
-  bool entrance{true};          // FreePlay enters in state 1-4 (0x080778, save +0x10f10 3)
-  bool exit{true};              // walking back into a gate leaves the battle (0x08224d)
-  bool computer_entrance{true}; // computer robots walk out of their gates too (0x082552)
-  bool computer_exit{true};     // ... and leave by walking back into one (0x08224d)
-  bool rider_entrance{true};    // VS: each piloted robot walks out in state 1 (0x080778)
+  int stage{6};                        // the gate table's stage (the training ground)
+  int gate{0};                         // the player enters at robot index % gates (0x0825df)
+  bool entrance{true};                 // FreePlay enters in state 1-4 (0x080778, save +0x10f10 3)
+  bool exit{true};                     // walking back into a gate leaves the battle (0x08224d)
+  bool computer_entrance{true};        // computer robots walk out of their gates too (0x082552)
+  float computer_entrance_speed{2.0F}; // NPC scene playback, including the door delay
+  bool computer_entrance_skip_stand{true}; // hand control to AI when the walk ends
+  bool computer_exit{true};                // ... and leave by walking back into one (0x08224d)
+  bool rider_entrance{true};               // VS: each piloted robot walks out in state 1 (0x080778)
   // Battle modes 0 and 2, not the lessons' mode 4: the entrances raise
   // chatter, the player's plays the music cue, and computer robots wait
   // for the other robots' scenes (0x09199e).
@@ -125,14 +127,15 @@ enum class SceneCue { none, ready, go };
 // entrance walks robot 0 out of its gate while the camera follows one of
 // four shots, under letterbox bars, then READY and GO!; the exit starts
 // when it walks back into a gate, turns it to the gate and walks it in, and
-// ends the battle. Computer robots, including bosses, use the same walk and
-// full timing without taking over the player's camera. A computer robot
+// ends the battle. Computer robots, including bosses, use the same walk at
+// their configured speed and can skip its final standing phase. A computer robot
 // that walks back into a gate leaves too, and
 // once its door has shut it is out of the battle (a drone comes back as a
 // shot-down one does). Robots are shielded while they walk in or out.
 // Entrances open the gates' doors.
 class BattleScene final {
   friend class StateInspector;
+
 public:
   BattleScene(BattleSceneTables tables, SceneTuning tuning, std::uint32_t seed = 1);
 

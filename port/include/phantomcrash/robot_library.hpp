@@ -1,5 +1,7 @@
 #pragma once
 
+#include "phantomcrash/root_motion.hpp"
+
 #include "phantomcrash/weapon_mounts.hpp"
 #include "phantomcrash/movement_mounts.hpp"
 
@@ -67,6 +69,7 @@ private:
 // motion fades over a few frames.
 class RobotAnimator final {
   friend class StateInspector;
+
 public:
   RobotAnimator(RobotLibrary &library, const RobotAssembly &assembly);
   // Copies playback state while binding to the destination pose's assembly.
@@ -115,6 +118,11 @@ public:
   }
   [[nodiscard]] float frame() const noexcept {
     return frame_;
+  }
+  [[nodiscard]] RootMotionSource root_motion_source(std::optional<std::uint64_t> revision) const {
+    // S.L.A.I. has its own source playback and movement path.
+    return {assembly_.source_transition_frames.empty() ? legs_ : nullptr, motion_, frame_, revision,
+            assembly_.skeleton ? root_motion_track(*assembly_.skeleton) : -1};
   }
 
   // Poses the robot standing at `root` (its ground point and heading).

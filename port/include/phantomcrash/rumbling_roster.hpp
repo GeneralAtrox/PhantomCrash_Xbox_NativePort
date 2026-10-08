@@ -37,7 +37,8 @@ using RosterRandom = std::function<float()>;
 
 // The live RUMBLING's next opponent at `roster`'s place `leaving`, once its
 // robot is shot down: drawn as the day's roster was, from those not already
-// out, the one leaving among them. Nothing when nobody is left.
+// out. First defeats advance a finite checklist, but defeated pilots can
+// respawn. The champion is preferred once every pre-boss opponent is marked.
 [[nodiscard]] std::optional<RosterMember> draw_replacement(const RegulationCheck &check,
                                                            const ContestTables &contests,
                                                            const QuestSave &quest,
@@ -50,6 +51,16 @@ using RosterRandom = std::function<float()>;
                                                     const ContestTables &contests,
                                                     const QuestSave &quest,
                                                     const AreaRoster &roster);
+
+// Complete finite opponent list, including reserves and leaders, before the boss.
+[[nodiscard]] std::vector<RosterMember>
+contest_opponents(const RegulationCheck &check, const ContestTables &contests, int contest);
+
+struct RosterStatus {
+  std::string name;
+  bool eliminated{};
+  RosterSource source{RosterSource::member};
+};
 
 // 0x06cf5a: draws each area's roster anew when it is not for today's
 // contest; true when any was.

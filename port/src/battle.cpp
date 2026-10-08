@@ -322,7 +322,8 @@ void Battle::tick(const RobotControl &player, const FireControl &fire, const flo
     const RobotAssembly *assembly = robot.pose ? &robot.pose->assembly() : nullptr;
     robot.mover.set_timings(assembly ? &assembly->timings : nullptr,
                             assembly ? assembly->leg_type : -1);
-    robot.mover.tick(control, seconds);
+    robot.mover.tick(control, seconds,
+                     robot.pose ? robot.pose->root_motion_source() : RootMotionSource{});
     recover(robot, seconds);
   }
   separate();

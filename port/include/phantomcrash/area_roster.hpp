@@ -16,6 +16,9 @@ namespace phantomcrash {
 // leader, the contest's champion, or the contest's extra team.
 enum class RosterSource { member, leader, champion, extra };
 
+// No eligible replacement: retry only after another opponent leaves the arena.
+inline constexpr float waiting_for_opponent = -1.0F;
+
 // An opponent's robot as the live rumble last left it (rumbling_world.hpp).
 struct LiveRobot {
   bool placed{};                   // has been out: the rest is its state
@@ -52,6 +55,8 @@ struct AreaRoster {
   int contest{-1};                   // the contest it was drawn for, or no_contest
   int drawn_for{-1};                 // the contest the teams came from (a cleared game's pick)
   std::vector<RosterMember> members; // the player's place left out
+  // First defeats in this day's finite checklist; respawns do not clear them.
+  std::vector<int> eliminated;
 
   bool operator==(const AreaRoster &) const = default;
 };

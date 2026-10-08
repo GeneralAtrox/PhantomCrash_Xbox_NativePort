@@ -1,5 +1,5 @@
-// Computer robots reuse the player's complete entrance walk and timing,
-// shielded while they walk out
+// Computer robots reuse the entrance walk at their own speed and can hand
+// control to AI as soon as it ends, shielded while they walk out
 // (entry_shield.hpp), and their exits (state 6: 0x08224d, 0x089fa3,
 // 0x08a161, 0x08a496). NPC arrivals leave the player's camera and music alone.
 #include "phantomcrash/battle_scene.hpp"
@@ -152,6 +152,7 @@ void BattleScene::walk_robot(Battle &battle, RobotEntrance &entry, const float s
     return;
   }
   battle.raise_shield(entry.robot);
+  const float entrance_step = step * (entry.rider ? 1.0F : tuning_.computer_entrance_speed);
   if (cinematic() && cinematic_ != entry.robot) {
     battle.raise_shield(entry.robot);
     hold_still(battle, entry.robot); // it walks out after the boss's scene
@@ -169,17 +170,19 @@ void BattleScene::walk_robot(Battle &battle, RobotEntrance &entry, const float s
     }
     const bool door_busy = doors != nullptr && !doors->idle(entry.gate);
     if (entry.delay > 0.0F && (tuning_.ranker || door_busy)) {
-      entry.delay -= step;
+      entry.delay -= entrance_step;
       hold_still(battle, entry.robot);
       return;
     }
     start_walking(battle, entry);
   }
-  // Use the player's cadence and retain the final standing phase.
+  // Piloted riders keep their full sequence. NPCs can finish at the walk's
+  // end; observe() releases them after the last scripted displacement lands.
+  const bool skip_stand = !entry.rider && tuning_.computer_entrance_skip_stand;
   const float before = entry.left;
-  entry.left -= step;
+  entry.left = std::max(skip_stand ? tuning_.stand_frame : 0.0F, entry.left - entrance_step);
   open_door(battle, entry.gate, before, entry.left);
-  if (entry.left <= 0.0F) {
+  if (!skip_stand && entry.left <= 0.0F) {
     end_robot(battle, entry);
     return;
   }

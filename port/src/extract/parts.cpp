@@ -85,7 +85,8 @@ public:
     if (name_id < 0 || name_id >= name_count) {
       return null();
     }
-    const std::int16_t sprite = image_.i16(names + static_cast<std::uint32_t>(name_id) * name_size + name_face);
+    const std::int16_t sprite =
+        image_.i16(names + static_cast<std::uint32_t>(name_id) * name_size + name_face);
     return sprite >= 0 ? sprite_json(tables_, sprite) : null();
   }
   Json entry_name(int name_id, std::uint32_t field_offset) const {
@@ -187,7 +188,8 @@ Json weapon(const Parts &p, std::uint32_t table, int index) {
 Json body(const Parts &p, int index) {
   const std::uint32_t r = bodies + static_cast<std::uint32_t>(index) * body_size;
   const std::uint8_t kind = p.image().u8(r + 4);
-  const int player_floor = kind < player_body_floors.size() ? player_body_floors[kind] : floor_default;
+  const int player_floor =
+      kind < player_body_floors.size() ? player_body_floors[kind] : floor_default;
   return object({{"index", integer(index)},
                  {"name", p.name(r)},
                  {"class", integer(kind)},
@@ -221,7 +223,8 @@ Json legs(const Parts &p, int index) {
                                           {"computer", integer(computer_floor)}})},
                  {"price", p.int_curve(r + 0x8C)},
                  {"dodge", p.float_curve(r + 0x9C)},
-                 {"air_dodge", p.float_curve(r + 0xAC)}});
+                 {"air_dodge", p.float_curve(r + 0xAC)},
+                 {"stop_keep", p.float_value(r + 0xBC)}});
 }
 
 Json pilot(const Parts &p, int index) {

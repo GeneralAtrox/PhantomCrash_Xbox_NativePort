@@ -49,6 +49,11 @@ void RumblingWorld::release_coop_robot(const int area, const int actor) {
     auto &member = place.roster.members.at(actor - 1);
     member.live.down = true;
     member.live.arrival = 0;
+    for (auto &other : place.roster.members) {
+      if (other.live.arrival == waiting_for_opponent) {
+        other.live.arrival = 0;
+      }
+    }
   }
 }
 } // namespace phantomcrash

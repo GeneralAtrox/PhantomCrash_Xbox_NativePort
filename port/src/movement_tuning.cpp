@@ -63,6 +63,9 @@ MovementTuning parse_movement_tuning(const json::JsonValue &value) {
   t.dash_turn_ease_ticks =
       std::max(1.0F, number(value, "dash_turn_ease_ticks", t.dash_turn_ease_ticks));
   t.flick_stick = number(value, "flick_stick", t.flick_stick);
+  t.standard_air_strafe = value.boolean_or("standard_air_strafe", t.standard_air_strafe);
+  t.stop_keep = number(value, "stop_keep", t.stop_keep);
+  t.stop_speed = number(value, "stop_speed", t.stop_speed);
   t.flick_seconds = number(value, "flick_seconds", t.flick_seconds);
   t.standard_air_turn_stick = number(value, "standard_air_turn_stick", t.standard_air_turn_stick);
   t.quick_turn_stick = number(value, "quick_turn_stick", t.quick_turn_stick);

@@ -52,6 +52,7 @@ struct RumblingStage {
 
 class RumblingWorld final {
   friend class StateInspector;
+
 public:
   struct Checkpoint;
   // In-memory rollback for this world, including every arena and RNG stream.
@@ -91,6 +92,7 @@ public:
   [[nodiscard]] std::shared_ptr<Battle>
   stand_up_contest(int area, int contest, const QuestSave &quest, std::vector<RobotParts> &looks);
   [[nodiscard]] bool player_won() const;
+  [[nodiscard]] std::vector<RosterStatus> roster_status(int area) const;
   // The bounties of the opponents the player has shot down in the lent area
   // so far, for the HUD; give_back pays them.
   [[nodiscard]] std::int64_t bounty_won() const;

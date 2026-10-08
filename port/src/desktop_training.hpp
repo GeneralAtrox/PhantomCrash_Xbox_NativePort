@@ -352,8 +352,6 @@ private:
   int day_{};
   bool standard_controls_{true}; // BUTTON CONFIG's CONTROL TYPE
   bool beginner_{};              // and its BEGINNER MODE
-  std::int64_t money_{};
-  std::int64_t money_at_start_{}; // the HUD shows only what this match has earned
 };
 
 } // namespace phantomcrash

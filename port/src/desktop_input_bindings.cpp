@@ -5,7 +5,7 @@
 
 namespace phantomcrash {
 namespace {
-constexpr float stick_dead_zone = 0.2F;
+constexpr float trigger_dead_zone = 0.2F;
 
 // The stick's other axis, for a stick axis.
 SDL_GamepadAxis across(const SDL_GamepadAxis axis) {
@@ -84,8 +84,13 @@ float DesktopInput::value(const Binding &binding, SDL_Gamepad *pad) const {
     return SDL_GetGamepadButton(pad, binding.button) ? 1.0F : 0.0F;
   }
   if (binding.axis != SDL_GAMEPAD_AXIS_INVALID) {
-    const float axis = static_cast<float>(SDL_GetGamepadAxis(pad, binding.axis)) / 32767.0F;
-    return std::clamp((axis * binding.sign - stick_dead_zone) / (1.0F - stick_dead_zone), 0.0F,
+    const int raw = SDL_GetGamepadAxis(pad, binding.axis);
+    if (across(binding.axis) != SDL_GAMEPAD_AXIS_INVALID) {
+      const float dead_zone = controls_ ? controls_->stick_dead_zone : original_stick_dead_zone;
+      return std::max(0.0F, host_stick_axis(raw, dead_zone) * binding.sign);
+    }
+    const float axis = static_cast<float>(raw) / 32767.0F;
+    return std::clamp((axis * binding.sign - trigger_dead_zone) / (1.0F - trigger_dead_zone), 0.0F,
                       1.0F);
   }
   return 0.0F;

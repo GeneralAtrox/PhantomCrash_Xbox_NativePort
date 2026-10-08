@@ -67,6 +67,8 @@ struct ModelNode {
   Mat4 world; // model space
   Mat4 local; // relative to its parent
   int rig_node{-1};
+  int parent{-1};    // nearest ancestor retained in ModelData::nodes
+  Mat4 parent_local; // includes any intervening transform-only nodes
 };
 
 struct ModelData {

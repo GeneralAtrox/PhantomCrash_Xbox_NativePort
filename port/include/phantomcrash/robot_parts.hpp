@@ -128,12 +128,13 @@ struct ArmourRecord {
   LevelCurve sockets;              // body +0x28: socket holes for modules (0x0bb0c8)
   // Legs only (robot_load.hpp): the model, and the curves the load scales.
   int model{-1};
-  LevelCurve capacity;  // +0x5c: the weight carried before the robot slows
-  LevelCurve speed;     // +0x1c: the dash; the walk is half
-  LevelCurve jump;      // +0x2c: the jump's height
-  LevelCurve turn;      // +0x3c
-  LevelCurve dodge;     // +0x9c: a dodge's push on the ground ...
-  LevelCurve air_dodge; // +0xac: ... and in the air
+  LevelCurve capacity;     // +0x5c: the weight carried before the robot slows
+  LevelCurve speed;        // +0x1c: the dash; the walk is half
+  LevelCurve jump;         // +0x2c: the jump's height
+  LevelCurve turn;         // +0x3c
+  LevelCurve dodge;        // +0x9c: a dodge's push on the ground ...
+  LevelCurve air_dodge;    // +0xac: ... and in the air
+  float stop_keep{0.875F}; // legs +0xbc: retained stopping momentum per 30 Hz tick
 };
 
 // A pilot (0x1c9920): the tag its robot's marker shows (0x04de50), and

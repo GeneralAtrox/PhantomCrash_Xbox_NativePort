@@ -144,7 +144,7 @@ void BattleScene::walk_step(Battle &battle, const int index, const int state, co
   const SceneTrack *scene = track(state);
   ScriptedStep walk;
   walk.heading = origin.heading;
-  if (left > tuning_.stand_frame && scene != nullptr && scene->walk) {
+  if (left >= tuning_.stand_frame && scene != nullptr && scene->walk) {
     Vec3 moved = turned(sample(*scene->walk, scene->frames - left) -
                             sample(*scene->walk, scene->frames - before),
                         origin.heading);
@@ -227,6 +227,12 @@ void BattleScene::observe(Battle &battle) {
   for (const BattleEvent &event : battle.events()) {
     if (event.kind == BattleEventKind::respawned) {
       static_cast<void>(start_robot_entrance(battle, event.robot));
+    }
+  }
+  for (RobotEntrance &entry : robots_) {
+    if (!entry.rider && entry.walking && entry.state == scene_state::computer &&
+        tuning_.computer_entrance_skip_stand && entry.left <= tuning_.stand_frame) {
+      end_robot(battle, entry);
     }
   }
   observe_robot_gates(battle);

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "phantomcrash/root_motion.hpp"
+
 #include "phantomcrash/movement_tuning.hpp"
 #include "phantomcrash/math3d.hpp"
 #include "phantomcrash/robot_motion.hpp"
@@ -115,7 +117,7 @@ public:
     leg_type_ = leg_type;
   }
   void place(Vec3 position, float heading);
-  void tick(const RobotControl &control, float seconds);
+  void tick(const RobotControl &control, float seconds, const RootMotionSource &root = {});
   // A hit that pushes the robot along `push` (world space): it plays the
   // hit reaction for that direction (0x08dcd1) for `seconds`, at least
   // hit_seconds, stopped on the ground and falling uncontrolled in the air.
@@ -219,7 +221,10 @@ public:
 
 private:
   void set_mode(MoveMode mode, int motion, bool loops, bool restart = false);
-  void tick_ground(const RobotControl &control, float seconds);
+  void tick_ground(const RobotControl &control, float seconds, const RootMotionSource &root);
+  bool stop_root_walk(const RobotControl &control, const RootMotionSource &root);
+  void tick_root_coast(const RobotControl &control, float seconds);
+  void apply_root_stride(const RobotControl &control, float seconds, const RootMotionSource &root);
   void tick_wheels(const RobotControl &control, float seconds);
   void steer_dash(float side, float seconds);
   void tick_air(const RobotControl &control, float seconds);
@@ -254,6 +259,8 @@ private:
   bool grounded_{true};
   float floor_{};
   Vec3 local_velocity_{};
+  Vec3 coast_velocity_{}; // stopping momentum in world space (robot +0x2584)
+  bool coast_brake_{};    // the idle callback starts the brake after a completed stride
   float vertical_speed_{};
   float dash_hold_{};
   float lift_left_{};  // the held jump's lift still to come, seconds

@@ -19,16 +19,11 @@ void TrainingScreen::update_result(const double seconds) {
   done_ = done_ || (!death_pending && ((free_play_ && screens_ == 1 && death_finished) ||
                                        (scene_ && scene_->scene().finished()) || finale_done() ||
                                        (!free_play_ && tutorial_.finished() && !message_)));
+  if (!coop_match_ && battle_) {
+    extra_prize_ += match_event_prize(battle_->events(), player_index_);
+  }
   if (!match_results_ || !battle_) {
     return;
-  }
-  for (const BattleEvent &event : battle_->events()) {
-    if (!coop_match_ && event.robot == player_index_ &&
-        (event.kind == BattleEventKind::carrier_down ||
-         event.kind == BattleEventKind::object_reward ||
-         event.kind == BattleEventKind::wreck_destroyed)) {
-      extra_prize_ += static_cast<std::int64_t>(event.amount);
-    }
   }
   if (!battle_->player().alive) {
     outcome_ = MatchOutcome::retire;

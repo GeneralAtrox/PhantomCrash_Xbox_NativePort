@@ -1,4 +1,5 @@
 #include "test_support.hpp"
+#include "phantomcrash/battle_events.hpp"
 #include "phantomcrash/match_result.hpp"
 #include "phantomcrash/robot_parts.hpp"
 #include "phantomcrash/data_roots.hpp"
@@ -102,4 +103,52 @@ TEST_CASE("repair combines base and current level prices before truncating") {
   CHECK(rules.base_repair_share == 0.2);
   CHECK(rules.level_repair_share == 0.01);
   CHECK(rules.rental_prize_divisor == 2);
+}
+
+TEST_CASE("cash pickups wrecks carriers and scenery reach the receipt once") {
+  const std::array first_tick{
+      BattleEvent{0, BattleEventKind::supply, -1, 200},
+      BattleEvent{0, BattleEventKind::carrier_down, -1, 300},
+      BattleEvent{0, BattleEventKind::wreck_destroyed, -1, 500},
+      BattleEvent{0, BattleEventKind::object_reward, -1, 100},
+      BattleEvent{0, BattleEventKind::shot_down, -1, 900},
+      BattleEvent{1, BattleEventKind::wreck_destroyed, -1, 500},
+      BattleEvent{1, BattleEventKind::supply, -1, 200},
+  };
+  const std::array second_tick{
+      BattleEvent{0, BattleEventKind::wreck_destroyed, -1, 500},
+      BattleEvent{0, BattleEventKind::supply, -1, 0}, // armour/ammo pickup
+  };
+  const auto extras = match_event_prize(first_tick, 0) + match_event_prize(second_tick, 0);
+  CHECK(extras == 1600);
+  const std::int64_t bounties = 7000;
+  const auto hud_earnings = extras + bounties;
+  auto match = entered();
+  match.rental = false;
+  match.outcome = MatchOutcome::leave;
+  match.shootdowns = 1;
+  const auto receipt = match_receipt(match, 16285, hud_earnings, prices(), {}, {});
+  CHECK(receipt.gross_prize == 8600);
+  CHECK(receipt.prize == hud_earnings);
+  CHECK(receipt.repair_total == 0);
+  CHECK(receipt.match.shootdowns == 1);
+  QuestSave quest;
+  settle_match(receipt, quest);
+  CHECK(quest.money == 24885);
+}
+
+TEST_CASE("event cash belongs to its player and excludes combat notifications") {
+  const std::array events{
+      BattleEvent{2, BattleEventKind::supply, -1, 200},
+      BattleEvent{2, BattleEventKind::carrier_down, -1, 300},
+      BattleEvent{2, BattleEventKind::object_reward, -1, 100},
+      BattleEvent{2, BattleEventKind::wreck_destroyed, -1, 500},
+      BattleEvent{2, BattleEventKind::bingo, -1, 900},
+      BattleEvent{2, BattleEventKind::damaged, -1, 900},
+      BattleEvent{2, BattleEventKind::destroyed, -1, 900},
+      BattleEvent{-1, BattleEventKind::object_reward, -1, 100},
+  };
+  CHECK(match_event_prize(events, 0) == 0);
+  CHECK(match_event_prize(events, 2) == 1100);
+  CHECK(match_event_prize({}, 2) == 0);
 }

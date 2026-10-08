@@ -83,4 +83,6 @@ def test_part_tables_read_the_combat_stats_and_weights():
     assert parts.level_value(legs["jump"], 0) == pytest.approx(19.14)
     assert parts.level_value(legs["dodge"], 0) == pytest.approx(0.55)
     assert parts.level_value(legs["air_dodge"], 0) == pytest.approx(0.3)
+    assert legs["stop_keep"] == pytest.approx(0.875)
+    assert tables["legs"][4]["stop_keep"] == pytest.approx(0.96)
     assert parts.level_value(tables["arm_weapons"][0]["weight"], 0) == pytest.approx(40.0)

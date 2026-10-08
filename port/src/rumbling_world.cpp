@@ -16,22 +16,6 @@ constexpr float missing_armour = 1000.0F;
 // opponents already out at the start stand anywhere else on it.
 constexpr int entry_kind = 0;
 
-// Every weapon it still has is out of rounds, and none recharges.
-bool out_of_ammo(const Combatant &robot) {
-  bool armed = false;
-  for (std::size_t slot = 0; slot < weapon_slots; ++slot) {
-    if (robot.weapons[slot] == nullptr) {
-      continue;
-    }
-    armed = true;
-    const Magazine &magazine = robot.magazines[slot];
-    if (!robot.lost[slot] && (!magazine.empty() || magazine.recharging())) {
-      return false;
-    }
-  }
-  return armed;
-}
-
 } // namespace
 
 RumblingLive parse_rumbling_live(const json::JsonValue &document) {
@@ -147,7 +131,7 @@ void RumblingWorld::build(const int index, const QuestSave &quest) {
     fit(index, place, quest);
     const LiveRobot &live = area.roster.members[place].live;
     const int robot = static_cast<int>(place) + 1;
-    if (live.placed) {
+    if (live.placed || live.down) {
       restore(battle, robot, live);
     } else {
       scatter(battle, index, robot);
@@ -200,6 +184,7 @@ RumblingRobot RumblingWorld::seat_member(Battle &battle, const std::string &name
   battle.set_sight(robot_index, robot.sight);
   battle.set_movement(robot_index, robot.movement);
   battle.set_auto_respawn(robot_index, false);
+  battle.set_boss(robot_index, member.source == RosterSource::champion);
   return robot;
 }
 
@@ -262,53 +247,6 @@ void RumblingWorld::record(const Combatant &robot, LiveRobot &live) {
   }
 }
 
-void RumblingWorld::step(const int index, const QuestSave &quest, const float seconds,
-                         const bool run) {
-  Area &area = areas_[static_cast<std::size_t>(index)];
-  Battle &battle = *area.battle;
-  if (run) {
-    battle.tick({}, {}, seconds);
-  }
-  for (std::size_t place = 0; place < area.roster.members.size(); ++place) {
-    RosterMember &member = area.roster.members[place];
-    const int robot_index = static_cast<int>(place) + 1;
-    Combatant &robot = battle.robot(robot_index);
-    if (battle.cooperative() && robot.piloted) {
-      continue;
-    }
-    if (robot.alive && out_of_ammo(robot)) {
-      battle.take_out(robot_index); // nothing left to fight with: it leaves
-    }
-    if (!robot.alive && !member.live.down) {
-      member.live.down = true;
-      member.live.arrival = live_.arrival_seconds;
-      if (lent_ == index && robot.shot_by == 0) {
-        area.player_kills.push_back(member);
-        area.player_bounty +=
-            roster_card(check_, tables_.contests, quest, member.entrant, true).bounty;
-      }
-      robot.shot_by = -1;
-    }
-    if (member.live.down) {
-      member.live.arrival -= seconds;
-      if (member.live.arrival > 0.0F || robot.dying) {
-        continue;
-      }
-      if (const auto next =
-              draw_replacement(check_, tables_.contests, quest, area.roster,
-                               static_cast<int>(place), [this] { return random_share(); })) {
-        member = *next;
-      }
-      member.live = {};
-      fit(index, place, quest);
-      battle.bring_in(robot_index);
-      battle.raise_shield(robot_index);
-      ++area.changes;
-    }
-    record(robot, member.live);
-  }
-}
-
 std::shared_ptr<Battle> RumblingWorld::lend(const int area, QuestSave &quest) {
   if (area < 0 || area >= roster_areas) {
     return nullptr;
@@ -353,7 +291,8 @@ std::int64_t RumblingWorld::give_back(QuestSave &quest) {
   std::int64_t prize = 0;
   for (const RosterMember &kill : area.player_kills) {
     const int key = beaten_key(kill.team, kill.place);
-    if (std::ranges::find(quest.beaten, key) == quest.beaten.end()) {
+    if (kill.source != RosterSource::champion &&
+        std::ranges::find(quest.beaten, key) == quest.beaten.end()) {
       quest.beaten.push_back(key);
     }
     const RosterCard card = roster_card(check_, tables_.contests, quest, kill.entrant, true);

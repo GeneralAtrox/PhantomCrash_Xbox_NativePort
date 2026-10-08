@@ -40,8 +40,6 @@ TrainingScreen::TrainingScreen(TextureCache &textures, const GlyphFont &font,
   day_ = context.day;
   standard_controls_ = context.standard_controls;
   beginner_ = context.beginner;
-  money_ = context.money;
-  money_at_start_ = money_;
   match_results_ = context.match_results;
   victory_hold_ = context.victory_hold_seconds;
   coop_match_ = context.coop_match;
@@ -241,9 +239,8 @@ BattleHudInfo TrainingScreen::hud_info() const {
   info.panels.day = day_;
   // Only this match's earnings, as the original's HUD: pickups, and the
   // bounties as they are won; settling halves a rental's.
-  info.panels.money = money_ - money_at_start_ +
-                      (coop_match_ ? coop_match_->players[coop_slot_].bounty
-                                   : extra_prize_ + (live_world_ ? live_world_->bounty_won() : 0));
+  info.panels.money = coop_match_ ? coop_match_->players[coop_slot_].bounty
+                                  : extra_prize_ + (live_world_ ? live_world_->bounty_won() : 0);
   info.panels.mission_seconds = clock_;
   info.panels.gauges = !cockpit_up();
   info.sights = views_.view() <= camera_view::behind; // 0x04eaa3

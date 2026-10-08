@@ -229,52 +229,14 @@ AreaRoster draw_roster(const RegulationCheck &check, const ContestTables &contes
   const Contest &held = *contests.contest(drawn_for);
   const int places = roster_places(held, rules);
   for (int place = 1; place < places; ++place) {
-    if (const auto member = draw(pools, rules, held.reserve_after, random)) {
+    const auto member = rules.live_size > 0
+                            ? draw_replacement(check, contests, quest, roster, -1, random)
+                            : draw(pools, rules, held.reserve_after, random);
+    if (member) {
       roster.members.push_back(*member);
     }
   }
   return roster;
-}
-
-std::optional<RosterMember> draw_replacement(const RegulationCheck &check,
-                                             const ContestTables &contests, const QuestSave &quest,
-                                             const AreaRoster &roster, const int leaving,
-                                             const RosterRandom &random) {
-  Pools pools;
-  const Contest *held = contests.contest(roster.drawn_for);
-  if (held == nullptr || !fill_pools(check, contests, quest, roster.drawn_for, pools)) {
-    return std::nullopt;
-  }
-  // Those still out are not drawn again; the one leaving goes back in.
-  for (Pool &pool : pools) {
-    std::erase_if(pool.left, [&](const RosterMember &candidate) {
-      for (std::size_t index = 0; index < roster.members.size(); ++index) {
-        if (static_cast<int>(index) != leaving && roster.members[index].same(candidate)) {
-          return true;
-        }
-      }
-      return false;
-    });
-  }
-  pools[unbeaten].drawn = static_cast<int>(roster.members.size());
-  return draw(pools, check.rules.roster, held->reserve_after, random);
-}
-
-std::vector<int> replacement_entrants(const RegulationCheck &check, const ContestTables &contests,
-                                      const QuestSave &quest, const AreaRoster &roster) {
-  Pools pools;
-  std::vector<int> entrants;
-  if (!fill_pools(check, contests, quest, roster.drawn_for, pools)) {
-    return entrants;
-  }
-  for (const Pool &pool : pools) {
-    for (const RosterMember &member : pool.left) {
-      if (std::ranges::find(entrants, member.entrant) == entrants.end()) {
-        entrants.push_back(member.entrant);
-      }
-    }
-  }
-  return entrants;
 }
 
 bool refresh_rosters(const RegulationCheck &check, const ContestTables &contests, QuestSave &quest,

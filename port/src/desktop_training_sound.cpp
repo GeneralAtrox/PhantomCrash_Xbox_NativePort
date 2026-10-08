@@ -65,7 +65,7 @@ void TrainingScreen::gather_sounds(const float seconds) {
   if (StageDoors *doors = battle_->doors()) {
     sounds = doors->take_sounds();
   }
-  collect_supply(*battle_, script_.battle.supply.look, money_, sounds);
+  gather_supply_sounds(*battle_, script_.battle.supply.look, sounds);
   if (StageObjects *objects = battle_->objects()) {
     for (auto &[name, at] : objects->take_sounds()) {
       sounds.push_back({std::move(name), at});

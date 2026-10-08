@@ -206,22 +206,6 @@ void RobotAnimator::advance_source_roll(const RobotMover &mover, const float sec
   source_roll_.advance(*assembly_.skeleton, unrolled[0].bones, unrolled[0].set, mover, seconds);
 }
 
-namespace {
-
-int root_motion_track(const SkeletonNode &node) {
-  if (node.flags == node_root_motion && node.track >= 0) {
-    return node.track;
-  }
-  for (const SkeletonNode &child : node.children) {
-    if (const int track = root_motion_track(child); track >= 0) {
-      return track;
-    }
-  }
-  return -1;
-}
-
-} // namespace
-
 float stride_speed(const MotionBank &bank, const RobotAssembly &assembly, const int motion) {
   const Motion *clip = bank.motion(motion);
   if (clip == nullptr || assembly.skeleton == nullptr) {

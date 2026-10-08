@@ -174,8 +174,10 @@ These gaps have since been closed:
 - Shoulder modes 0/1 aim at separate sight points (above).
 - Dash-turn clips 3/4/6/7 (`0x08f5d8`) play on eligible legs while dashing
   and turning (`movement.dash_turn_*` in `training.json`, see
-  [TRAINING_GROUND.md](TRAINING_GROUND.md)). Which stick side picks clip 3
-  rather than 4 is assumed and still needs a visual check.
+  [TRAINING_GROUND.md](TRAINING_GROUND.md)). Original-code inspection confirms
+  eased positive steering selects clip 3, negative steering clip 4; reverse
+  dash adds three. Positive heading turns toward rider-right (model -X).
+  The port's existing direction mapping matches these branches.
 
 No replacement animation clips were generated.
 

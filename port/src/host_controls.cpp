@@ -5,6 +5,12 @@
 
 namespace phantomcrash {
 
+float host_stick_axis(const int raw, const float dead_zone) {
+  const float axis = static_cast<float>(std::clamp(raw, -32767, 32767)) / 32767.0F;
+  const float magnitude = std::max(0.0F, (std::abs(axis) - dead_zone) / (1.0F - dead_zone));
+  return std::copysign(magnitude, axis);
+}
+
 std::vector<HostBinding> default_host_bindings() {
   return {{"up", "Move forward / menu up", {"W", "Up"}, "lefty-"},
           {"down", "Move backward / menu down", {"S", "Down"}, "lefty+"},
@@ -36,6 +42,10 @@ HostControls host_controls_from_json(const json::JsonValue &value) {
   HostControls controls;
   controls.mouse_aim = value.boolean_or("mouse_aim", true);
   controls.invert_mouse_y = value.boolean_or("invert_mouse_y", false);
+  const double dead_zone = value.number_or("stick_dead_zone", original_stick_dead_zone);
+  if (std::isfinite(dead_zone)) {
+    controls.stick_dead_zone = static_cast<float>(std::clamp(dead_zone, 0.0, 0.95));
+  }
   const double sensitivity = value.number_or("mouse_degrees_per_pixel", 0.15);
   if (std::isfinite(sensitivity)) {
     controls.mouse_degrees_per_pixel = static_cast<float>(std::clamp(sensitivity, 0.01, 2.0));
@@ -73,6 +83,7 @@ json::JsonValue host_controls_to_json(const HostControls &controls) {
   return JsonValue{JsonValue::Object{
       {"mouse_aim", JsonValue{controls.mouse_aim}},
       {"invert_mouse_y", JsonValue{controls.invert_mouse_y}},
+      {"stick_dead_zone", JsonValue{static_cast<double>(controls.stick_dead_zone)}},
       {"mouse_degrees_per_pixel", JsonValue{static_cast<double>(controls.mouse_degrees_per_pixel)}},
       {"bindings", JsonValue{std::move(bindings)}}}};
 }

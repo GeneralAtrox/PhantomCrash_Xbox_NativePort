@@ -5,8 +5,14 @@
 
 #include <array>
 #include <cstdint>
+#include <span>
 
 namespace phantomcrash {
+
+struct BattleEvent;
+
+// Non-bounty earnings from one simulation tick, shared by the HUD and receipt.
+[[nodiscard]] std::int64_t match_event_prize(std::span<const BattleEvent> events, int player);
 
 enum class MatchOutcome { retire, win, leave };
 

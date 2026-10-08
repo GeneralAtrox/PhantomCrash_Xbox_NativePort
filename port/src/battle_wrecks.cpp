@@ -17,7 +17,11 @@ bool Battle::hit_wreck(const WeaponHit &hit) {
     return false;
   }
   const auto slot = static_cast<std::size_t>(index);
-  if (hit.damage > 0 && wrecks_.destroy(slot)) {
+  // A projectile must strike the wreck itself. Nearby blasts and melee
+  // strikes leave it intact, so its bounty still requires an aimed shot.
+  const bool projectile = hit.weapon && hit.weapon->kind != WeaponKind::melee;
+  const bool direct = hit.directional || hit.direct;
+  if (projectile && direct && hit.damage > 0 && wrecks_.destroy(slot)) {
     BattleEvent event{hit.attacker, BattleEventKind::wreck_destroyed};
     event.at = wrecks_.items()[slot].centre;
     event.slot = settings_.robot_wrecks.break_effect;

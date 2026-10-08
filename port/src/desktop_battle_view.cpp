@@ -288,7 +288,8 @@ void BattleView::add_items(const Battle &battle, std::vector<WorldItem> &items, 
       items[item].flash = flash;
     }
     add_shadow(robot, visual, root, first, items);
-    if (static_cast<int>(index) != hidden_shield && robot.mover.mode() != MoveMode::scripted) {
+    if (static_cast<int>(index) != hidden_shield &&
+        (!robot.piloted || robot.mover.mode() != MoveMode::scripted)) {
       add_shield(robot, items);
     }
     for (std::size_t item = first; item < items.size(); ++item) {

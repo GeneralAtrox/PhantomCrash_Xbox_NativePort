@@ -73,7 +73,7 @@ void RobotMover::tick_air(const RobotControl &control, const float seconds) {
   // it is pushed, and does not strafe (0x0774ad, robot +0x2534).
   float steer_turn = control.move[0];
   float strafe = control.strafe;
-  if (control.standard) {
+  if (control.standard && !tuning_.standard_air_strafe) {
     steer_turn =
         std::abs(control.move[0]) > tuning_.standard_air_turn_stick ? control.move[0] : strafe;
     strafe = 0.0F;

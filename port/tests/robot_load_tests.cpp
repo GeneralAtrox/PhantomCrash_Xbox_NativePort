@@ -92,7 +92,8 @@ TEST_CASE("an overloaded robot slows sharply and the legs' level trims the speed
 }
 
 TEST_CASE("the load sets the leg motions' rates and the speeds with them") {
-  const PartTables tables = test_tables();
+  PartTables tables = test_tables();
+  tables.legs[0].stop_keep = 0.94F;
   const RobotLoadout loadout = test_loadout();
   const LoadStats load = load_stats(tables, loadout);
   MovementTuning strides;
@@ -102,6 +103,7 @@ TEST_CASE("the load sets the leg motions' rates and the speeds with them") {
   strides.dash_stride = true;
   strides.turn_degrees_per_second = 100.0F;
   const MovementTuning moved = loaded_movement(tables, loadout, load, strides);
+  CHECK(close_to(moved.stop_keep, 0.94F)); // Part retention is independent of load.
   // The dash: 118 x 0.8363 / 216 / 0.5333; the walk: half that value / 216 / 0.3333.
   const float dash_rate = 118.0F * load.speed_factor / 216.0F / 0.533333F;
   const float walk_rate = 59.0F * load.speed_factor / 216.0F * 3.0F;

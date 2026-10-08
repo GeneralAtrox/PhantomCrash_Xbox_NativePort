@@ -170,6 +170,54 @@ TEST_CASE("skin bindings count drawing nodes and skip transform-only ancestors")
   CHECK(near(transform_point({}, worlds[4]), {4, 5, 6}));
 }
 
+TEST_CASE("unanimated weapon sections follow their posed ancestor through the model hierarchy") {
+  ModelData model;
+  model.nodes.resize(4);
+  for (int i = 0; i < 4; ++i) {
+    ModelDraw draw;
+    draw.node = i;
+    model.draws.push_back(draw);
+  }
+  model.nodes[1].parent = 0;
+  model.nodes[2].parent = 3; // glTF does not require parents to precede children
+  model.nodes[2].parent_local = translation({1, 0, 0});
+  model.nodes[3].parent = 1;
+  model.nodes[3].parent_local = translation({0, 2, 0});
+  PosePart bones;
+  bones.set[0] = bones.set[1] = true;
+  bones.bones[0] = translation({100, 100, 100});
+  bones.bones[1] = rotation_y(1.0F) * translation({4, 5, 6});
+  std::vector<Mat4> worlds;
+  skin_nodes(model, bones, 0, translation({-10, -10, -10}), worlds);
+  CHECK(near(transform_point({}, worlds[1]), {4, 5, 6}));
+  CHECK(near(transform_point({}, worlds[2]), transform_point({1, 2, 0}, bones.bones[1])));
+  CHECK(near(transform_point({}, worlds[3]), transform_point({0, 2, 0}, bones.bones[1])));
+}
+
+TEST_CASE("both original HM10 models retain barrel sections on the animated forearm") {
+  const auto roots = DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT);
+  for (const char *asset : {"models/binlink/12.gltf", "models/binlink/3.gltf"}) {
+    const auto path = roots.find_asset(asset);
+    if (!path) {
+      continue; // private extracted disc assets
+    }
+    const auto model = load_model(*path, asset);
+    REQUIRE(model.nodes.size() == 4);
+    CHECK(model.nodes[1].parent == 0);
+    CHECK(model.nodes[2].parent == 1);
+    CHECK(model.nodes[3].parent == 1);
+    PosePart bones;
+    bones.set[0] = bones.set[1] = true;
+    bones.bones[1] = rotation_y(0.8F) * translation({8, 6, 2});
+    std::vector<Mat4> worlds;
+    skin_nodes(model, bones, 0, {}, worlds);
+    for (const auto point : {Vec3{}, Vec3{0, 0, 1}}) {
+      CHECK(near(transform_point(point, worlds[2]), transform_point(point, worlds[1])));
+      CHECK(near(transform_point(point, worlds[3]), transform_point(point, worlds[1])));
+    }
+  }
+}
+
 TEST_CASE("both firing arms follow moving and turning robots without a stale muzzle") {
   Fixture f;
   auto rig = f.rig();

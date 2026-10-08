@@ -119,6 +119,7 @@ add_library(phantomcrash_core
   src/rumbling_map.cpp
   src/rumbling_robot.cpp
   src/rumbling_world.cpp
+  src/rumbling_progression.cpp
   src/rumbling_world_coop.cpp
   src/rumbling_world_result.cpp
   src/rumbling_roster.cpp
@@ -199,9 +200,11 @@ add_library(phantomcrash_core
   src/town_map.cpp
   src/town_map_script.cpp
   src/robot.cpp
+  src/robot_skin.cpp
   src/robot_body_models.cpp
   src/robot_library.cpp
   src/robot_mover.cpp
+  src/robot_root_motion.cpp
   src/movement_tuning.cpp
   src/robot_wheels.cpp
   src/robot_air.cpp
@@ -285,6 +288,7 @@ if(BUILD_TESTING)
     tests/front_end_tests.cpp
     tests/host_tests.cpp
     tests/host_controls_tests.cpp
+    tests/player_locomotion_tests.cpp
     tests/robot_preview_tests.cpp
     tests/rumble_tests.cpp
     tests/intro_tests.cpp
@@ -298,6 +302,7 @@ if(BUILD_TESTING)
     tests/battle_ai_tests.cpp
     tests/armory_tests.cpp
     tests/battle_damage_tests.cpp
+    tests/battle_wreck_tests.cpp
     tests/battle_chatter_tests.cpp
     tests/battle_scene_tests.cpp
     tests/battle_scene_robots_tests.cpp
@@ -337,6 +342,7 @@ if(BUILD_TESTING)
     tests/test_drive_tests.cpp
     tests/rumbling_tests.cpp
     tests/rumbling_live_tests.cpp
+    tests/rumbling_progression_tests.cpp
     tests/rumbling_roster_tests.cpp
     tests/keep_sv_tests.cpp
     tests/vs_mode_tests.cpp
@@ -680,6 +686,7 @@ if(PHANTOMCRASH_BUILD_DESKTOP)
     src/desktop_world_shadows.cpp
     src/desktop_world_screen.cpp
     src/desktop_pause_menu.cpp
+    src/desktop_pause_roster.cpp
     src/desktop_sharp_text.cpp
     src/desktop_smaa.cpp
     src/desktop_world_sprites.cpp

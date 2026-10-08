@@ -17,6 +17,9 @@ bool TrainingScreen::tick_pause(const InputFrame &input) {
       return false;
     }
     paused_ = true;
+    if (live_world_) {
+      pause_menu_.set_roster(live_world_->roster_status(live_area_));
+    }
     pause_menu_.open();
     unplaced_.push_back({SoundCue::Action::play, "window"});
     SDL_Log("Battle pause menu: clock=%.3f play=%.3f; shared match continues=%d", clock_,
@@ -56,7 +59,11 @@ void TrainingScreen::draw_pause(const Viewport &viewport) {
   // Port pause presentation; gameplay and the replay recording stay underneath.
   fill_black(textures_, pause_menu_.dim());
   DrawList list(textures_, font_, viewport, 0);
+  if (live_world_) {
+    pause_menu_.set_roster(live_world_->roster_status(live_area_));
+  }
   pause_menu_.draw(list, font_);
+  pause_menu_.draw_roster(list, font_, textures_.renderer(), viewport);
   list.flush();
 }
 

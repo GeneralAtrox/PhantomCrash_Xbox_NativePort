@@ -18,9 +18,9 @@ namespace phantomcrash {
 //   2. a burst (42, with 43 and 44 following) where the weapon was;
 //   3. until 43 and 44 have played out;
 //   4. an arm's stump keeps sparking for the rest of the battle: sparks at
-//      the forearm and the joint, the arcs 39 and 41, and a trail (40) from
-//      the joint while slower than 350 km/h. Each restarts after a random
-//      pause once it has played out.
+//      the joint/forearm midpoint and the joint, the arcs 39 and 41, and a
+//      trail (40) from the joint while slower than 350 km/h. Each restarts
+//      after a random pause once it has played out.
 // A shoulder weapon only has the burst.
 class DesktopMountEffects final {
 public:

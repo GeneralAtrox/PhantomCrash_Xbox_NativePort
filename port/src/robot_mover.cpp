@@ -74,6 +74,8 @@ void RobotMover::place(const Vec3 position, const float heading) {
     position_.y = std::max(position_.y, floor_);
   }
   local_velocity_ = {};
+  coast_velocity_ = {};
+  coast_brake_ = false;
   vertical_speed_ = 0.0F;
   down_boosting_ = false;
   jump_was_held_ = false;
@@ -83,7 +85,8 @@ void RobotMover::place(const Vec3 position, const float heading) {
 
 Vec3 RobotMover::velocity() const {
   return heading_forward(heading_) * local_velocity_.z +
-         heading_right(heading_) * local_velocity_.x + Vec3{0.0F, vertical_speed_, 0.0F};
+         heading_right(heading_) * local_velocity_.x + coast_velocity_ +
+         Vec3{0.0F, vertical_speed_, 0.0F};
 }
 
 void RobotMover::set_mode(const MoveMode mode, const int motion, const bool loops,
@@ -157,7 +160,8 @@ void RobotMover::turn(const float stick, const float degrees_per_second, const f
   heading_ = wrap_angle(heading_ + radians(degrees_per_second) * stick * seconds);
 }
 
-void RobotMover::tick(const RobotControl &input, const float seconds) {
+void RobotMover::tick(const RobotControl &input, const float seconds,
+                      const RootMotionSource &root) {
   RobotControl control = input;
   if (control.standard) {
     const int flicked = flick(control.strafe, seconds);
@@ -175,11 +179,13 @@ void RobotMover::tick(const RobotControl &input, const float seconds) {
   } else {
     tick_twist(control, seconds);
     if (grounded_) {
-      tick_ground(control, seconds);
+      tick_ground(control, seconds, root);
     } else {
       tick_air(control, seconds);
     }
   }
+  apply_root_stride(control, seconds, root);
+  tick_root_coast(control, seconds);
   position_ = position_ + velocity() * seconds;
   if (grounded_ && position_.y > floor_ + ground_snap) {
     grounded_ = false; // walked off an edge
@@ -230,7 +236,8 @@ void RobotMover::bump_head() {
   lift_left_ = 0.0F;
 }
 
-void RobotMover::tick_ground(const RobotControl &control, const float seconds) {
+void RobotMover::tick_ground(const RobotControl &control, const float seconds,
+                             const RootMotionSource &root) {
   const float forward = control.move[1];
   const float side = control.move[0];
   const float strafe = std::abs(control.strafe) > tuning_.stick_threshold ? control.strafe : 0;
@@ -275,11 +282,25 @@ void RobotMover::tick_ground(const RobotControl &control, const float seconds) {
     return;
   }
 
+  if (coast_brake_) {
+    coast_brake_ = false;
+    set_mode(MoveMode::brake, robot_motion::brake, false);
+  }
+  if (stop_root_walk(control, root)) {
+    turn(side, tuning_.turn_degrees_per_second, seconds);
+    return;
+  }
+
   // Dashing: a click of the stick, or holding it far over for 30 frames
   // (0x08ff1e); it lasts while the stick stays pushed.
   if (mode_ == MoveMode::dash) {
     turn(side, tuning_.dash_turn_degrees_per_second, seconds);
     if (std::abs(forward) < tuning_.dash_stick * 0.5F || (forward < 0.0F) != backward_) {
+      if (tuning_.dash_stride && root.bank) {
+        coast_velocity_ = velocity();
+        coast_velocity_.y = 0.0F;
+        local_velocity_ = {};
+      }
       set_mode(MoveMode::brake, robot_motion::brake, false);
     } else {
       const float speed = backward_ ? -tuning_.dash_back_speed : tuning_.dash_speed;

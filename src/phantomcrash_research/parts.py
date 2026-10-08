@@ -275,6 +275,7 @@ def legs(image: _Image, index: int) -> dict:
         # load (0x07c34e to robot +0x80 and +0x84; 0x08d98c).
         "dodge": _float_curve(image, record + 0x9C),
         "air_dodge": _float_curve(image, record + 0xAC),
+        "stop_keep": _float(image, record + 0xBC),  # 0x09281d -> robot +0x44f0; 0x090d21
     }
 
 

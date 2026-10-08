@@ -484,6 +484,13 @@ them through the usual `desktop_input.cpp` mapping.
 Player strafing is independent of yaw. It uses the robot's loaded walk speed
 and acceleration, normalizes diagonal movement, and works in the air and
 alongside a forward dash. The AI retains its steering/forward control path.
+`movement.standard_air_strafe` enables this requested airborne behaviour;
+disabling it restores the original Standard airborne turning rule.
+Controller sticks use the recovered per-axis dead zone of 16384/32767,
+then rescale the remaining travel (`0x0dff50`, axis processing at `0x0e029f`).
+The saved `host_controls.stick_dead_zone` setting can override it. Mouse yaw
+retains the loaded turn-rate limit and consumes each queued displacement once;
+pitch remains a direct, clamped PC input.
 This is the requested port control scheme, not the original left-stick steering.
 
 ### Robots, drones and weapons
@@ -493,11 +500,19 @@ This is the requested port control scheme, not the original left-stick steering.
   translation(position)`.
 - The original moves robots by root motion (0x0910d4): the leg skeleton's
   node flagged 0x2 carries the body along the walk. The pose keeps the body
-  still and moves that travel onto the foot targets, and the port walks and
-  dashes at the speed the leg motions stride (`stride_speeds`), so the feet
-  stay planted and each leg part keeps its own pace (the default legs
-  stride at about 20 units a second walking and 32 dashing). Legs without
+  still and moves that travel onto the foot targets. With `stride_speeds`,
+  forward walking and dashing now sample each tick's root displacement from
+  the simulation pose's animation clock, including starts and loop crossings;
+  they no longer accelerate toward the clip's average speed. The default legs
+  stride at about 20 units a second walking and 32 dashing. Legs without
   root motion (the hovering drones) use the `movement` speeds.
+  Releasing a walk ends its clip immediately (`0x08ff1e`, `0x08e6b6`).
+  Remaining momentum stays in world space, decays by the leg record's
+  `stop_keep` each 30 Hz tick, and stops below 6 units/s (`0x090d21`).
+  The idle callback starts the brake after a completed stride (`0x08e480`);
+  releasing a dash also seeds this momentum. While sliding, `0x090e27`
+  adds twice the normal steering. Pure lateral movement retains the requested
+  port acceleration and diagonal movement remains normalized.
 - Letting go of a dash plays the brake motion (27, timing 0/15/44/59: lead-in,
   hold, settle) to its last frame before the robot stands, as 0x08ff1e only
   marks the stop (+0x12c = 3). The stick, pushed again, may cut it short after
@@ -846,9 +861,12 @@ robot index % 4 (0x0825df). The lessons start in their own states (0x18,
   frames (+0x277c). While the gate's door is busy they wait, until the
   delay runs out. In regular battles they also wait for the player's
   scene and for a boss entering (0x09199e, which answers no in mode 4).
-  The port now uses the player's full 540-frame entrance at the same
-  cadence: the same walk track, door cue and final standing phase. Live
-  RUMBLING arrivals remain queued until the scene consumes them before
+  NPCs use the same walk track and door cue at twice the playback speed
+  (`computer_entrance_speed: 2`). They skip the final standing phase
+  (`computer_entrance_skip_stand: true`) and resume AI immediately after
+  the last walk step. This requested change makes an unobstructed entrance
+  take three seconds; player and piloted VS entrances retain nine seconds.
+  Live RUMBLING arrivals remain queued until the scene consumes them before
   the next battle tick; clearing transient combat events cannot skip entry.
   Combatants already fighting when the player joins are left in place.
   NPC doors use a shuffled rotation shared by all entrants: every available
@@ -865,10 +883,11 @@ robot index % 4 (0x0825df). The lessons start in their own states (0x18,
   (0x089032, 0x0892d1). The player's shield is raised immediately on
   placement and refreshed throughout its entrance (0x08928c writes 300
   frames at 0x0892d1), then counts down for five seconds after control
-  returns. All robots refresh protection throughout entry. Their shield visual stays
-  hidden during scripted movement and appears when control returns; damage protection remains active
-  throughout, including while the visual is hidden. Arena monitors use the same
-  visibility rule. The player's exit is protected for its scene (0x08224d).
+  returns. All robots refresh protection throughout entry. NPC shields are
+  visible while queued inside the door and throughout the walk, so their
+  protection is apparent. Piloted robots retain the hidden shield during
+  scripted movement. Arena monitors use the same visibility rule. The
+  player's exit is protected for its scene (0x08224d).
   No hit hurts a shielded robot. Its glow (+0xac, 0x082e60) rises 0.015 a
   frame to 0.3 while more than 10 frames are left, then falls 0.03 a
   frame. 0x06f592 draws it: object slot 0x41b (mesh 30 of resource 197, a
@@ -1217,8 +1236,9 @@ The local transform is S·Rx·Ry·Rz·T with row vectors.
    legs' own under the load ([PART_RECORDS.md](PART_RECORDS.md)). With the
    Preferred controls, 0x07d330 turns the twist (robot +0xf8) by robot +0x7c
    times the 2 frames a tick and the right stick. The aim pitch follows the
-   camera's look, 3 degrees a tick (0x19f8f8), clamped to 0.4 rad by
-   0x0aa499. A dodge adds the legs' +0x9c or +0xac push, 2 frames a tick
+   camera's look, 3 degrees a tick (0x19f8f8), with a 45-degree camera
+   limit (0x07fd72). The 0.4 rad clamp in 0x0aa499 limits body animation,
+   not player look. A dodge adds the legs' +0x9c or +0xac push, 2 frames a tick
    (0x08d98c) to its speed along the ground. The dodge motion's frames
    time the rest (0x08ef79, `robot_dodge.cpp`): the robot goes on as it
    moved until the loop start, slides keeping 0.99 of the push a tick until
@@ -1241,9 +1261,11 @@ The local transform is S·Rx·Ry·Rz·T with row vectors.
    the left stick (0x0774ad's states +0x2538, each step within 5 ticks,
    +0x253c, set +0x2f6c bit 0x10 or 0x20 as the dodge buttons do), and in
    the air (+0x2534) its left stick's x turns, the right's when pushed past
-   0.001. The original sets bit 0x10, the white button's, for a flick to
-   positive x; the port dodges to the side flicked, as an assumption about
-   the pad's x sign. 0x08b70b, 0x08c18a and 0x091f8f pick Pepper's lesson
+   0.001. The port defaults to the requested airborne strafe instead.
+   Direction is now verified: a positive flick sets bit 0x10; `0x08d98c`
+   selects clip 13/15 and negative model X, which is rider-right along -Z.
+   Negative flicks select clip 14/16 and rider-left. The existing port mapping
+   matches. 0x08b70b, 0x08c18a and 0x091f8f pick Pepper's lesson
    scripts for the type (0x243168 or 0x243220), not motions; those are
    ported. BEGINNER MODE (BUTTON CONFIG's byte at config +0x6024, copied
    per pad to +0x10fd4 by 0x027ca1 and to robot +0x273c at 0x0817c3; the

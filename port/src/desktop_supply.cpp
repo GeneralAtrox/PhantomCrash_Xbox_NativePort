@@ -326,19 +326,15 @@ std::unique_ptr<DesktopSupply> load_supply(WorldRenderer *world, const DataRoots
   return nullptr;
 }
 
-void collect_supply(const Battle &battle, const SupplyLook &look, std::int64_t &money,
-                    std::vector<WorldSound> &sounds) {
+void gather_supply_sounds(const Battle &battle, const SupplyLook &look,
+                          std::vector<WorldSound> &sounds) {
   for (const BattleEvent &event : battle.events()) {
     if (event.robot != battle.player_index()) {
       continue;
     }
     if (event.kind == BattleEventKind::supply) {
-      money += static_cast<std::int64_t>(event.amount);
       // 0x066e50, for player robots, at the robot.
       sounds.push_back({look.take_sound, battle.player().aim_origin(), AudioBus::pickups});
-    } else if (event.kind == BattleEventKind::carrier_down ||
-               event.kind == BattleEventKind::wreck_destroyed) {
-      money += static_cast<std::int64_t>(event.amount);
     }
   }
 }

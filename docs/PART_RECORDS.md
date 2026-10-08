@@ -383,6 +383,15 @@ ignores the buttons (they fire weapons) and gives way to lesson messages.
   dodge's push is extracted (`dodge`, `air_dodge`) but the port's dodge
   still uses `movement.dodge_speed` and `dodge_seconds`, and the aim's
   pitch rate is a port value.
+- **Stopping momentum.** The leg record's float at `+0xbc` is `stop_keep`.
+  `0x09281d` copies it to robot `+0x44f0`; `0x090d21` multiplies the
+  world-space residual displacement at `+0x2584` by it each 30 Hz tick.
+  This is a fixed part value, not a level curve or a load factor: leg 0
+  retains 0.875, leg 4 retains 0.96, and drone legs 23/24 retain 0.5.
+  Below 0.2 units/tick (6 units/s) the residual is cleared. Both extractors
+  emit the field, and loaded movement uses it for stopping after root-driven
+  travel. Forward walk/dash motion now samples root displacement each tick
+  from the simulation animation phase, rather than only its average stride.
 - **Chatter.** See below.
 - **Armour.** `robot_armour` sums the body's and legs' armour curves, each
   raised to the player's or the computer's floor. The training ground gives

@@ -74,7 +74,9 @@ bool RobotWrecks::destroy(const std::size_t index) {
 float RobotWrecks::ground_height(const Vec3 at, const float step, const float radius) const {
   float height = no_ground;
   for (const auto &wreck : items_) {
-    if (wreck.solid()) {
+    const float reach = wreck.radius + std::max(radius, 0.0F);
+    const float dx = at.x - wreck.centre.x, dz = at.z - wreck.centre.z;
+    if (wreck.solid() && dx * dx + dz * dz <= reach * reach) {
       height = std::max(height, wreck.collision->ground_height(at, step, radius));
     }
   }
@@ -84,7 +86,9 @@ float RobotWrecks::ground_height(const Vec3 at, const float step, const float ra
 unsigned RobotWrecks::push_sphere(Vec3 &at, const float radius) const {
   unsigned contact = 0;
   for (const auto &wreck : items_) {
-    if (wreck.solid()) {
+    const Vec3 away = at - wreck.centre;
+    const float reach = wreck.radius + radius;
+    if (wreck.solid() && dot(away, away) <= reach * reach) {
       contact |= wreck.collision->push_sphere(at, radius);
     }
   }
@@ -93,8 +97,13 @@ unsigned RobotWrecks::push_sphere(Vec3 &at, const float radius) const {
 
 std::optional<Vec3> RobotWrecks::segment_hit(const Vec3 from, const Vec3 to) const {
   std::optional<Vec3> nearest;
+  const Vec3 delta = to - from;
+  const float squared = dot(delta, delta);
   for (const auto &wreck : items_) {
-    if (wreck.solid()) {
+    const float along =
+        squared > 0.0F ? std::clamp(dot(wreck.centre - from, delta) / squared, 0.0F, 1.0F) : 0.0F;
+    const Vec3 away = from + delta * along - wreck.centre;
+    if (wreck.solid() && dot(away, away) <= wreck.radius * wreck.radius) {
       if (const auto at = wreck.collision->segment_hit(from, to);
           at && (!nearest || length(*at - from) < length(*nearest - from))) {
         nearest = at;

@@ -14,6 +14,7 @@ TEST_CASE("desktop bindings and mouse preferences survive a settings save") {
   bind_host_pad(settings.host_controls, "left_trigger", "a");
   settings.host_controls.invert_mouse_y = true;
   settings.host_controls.mouse_degrees_per_pixel = 0.32F;
+  settings.host_controls.stick_dead_zone = 0.2F;
   const Settings restored = settings_from_json(settings_to_json(settings));
   CHECK(restored.host_controls == settings.host_controls);
   const auto &bindings = restored.host_controls.bindings;
@@ -52,6 +53,31 @@ TEST_CASE("mouse aim is a displacement and does not repeat after it is consumed"
   }
   CHECK(std::abs(mover.heading() - 0.2F) < 0.0001F);
   CHECK(std::abs(mover.pitch() - 0.1F) < 0.0001F);
+}
+
+TEST_CASE("mouse and stick look reach and stop at 45 degrees in both directions") {
+  for (const float direction : {-1.0F, 1.0F}) {
+    RobotMover mouse(MovementTuning{});
+    RobotMover stick(MovementTuning{});
+    mouse.place({}, 0.0F);
+    stick.place({}, 0.0F);
+    RobotControl moved;
+    moved.mouse_aim[1] = direction * radians(90.0F);
+    mouse.tick(moved, 1.0F / 30.0F);
+    RobotControl held;
+    held.pitch = direction;
+    for (int tick = 0; tick < 60; ++tick) {
+      stick.tick(held, 1.0F / 30.0F);
+    }
+    CHECK(std::abs(mouse.pitch() - direction * radians(45.0F)) < 0.0001F);
+    CHECK(std::abs(stick.pitch() - direction * radians(45.0F)) < 0.0001F);
+    moved.mouse_aim[1] = -direction * radians(3.0F);
+    held.pitch = -direction;
+    mouse.tick(moved, 1.0F / 30.0F);
+    stick.tick(held, 1.0F / 30.0F);
+    CHECK(std::abs(mouse.pitch() - direction * radians(42.0F)) < 0.0001F);
+    CHECK(std::abs(stick.pitch() - direction * radians(42.0F)) < 0.0001F);
+  }
 }
 
 TEST_CASE("the mouse turns no faster than the stick, at the legs' turn rate") {
