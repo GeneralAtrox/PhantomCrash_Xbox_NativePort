@@ -1,10 +1,8 @@
 # Windows release
 
-Version 0.5.6 adds per-game volume and window persistence for Phangrade launches.
-Phangrade restores volume before playback and remembers the window position, size,
-maximised state and fullscreen across updates. Use the Phangrade window menu or
-launcher volume control; these preferences live outside the version directory.
-Direct launches retain the existing settings behaviour.
+Version 0.5.7 brings root-motion movement with momentum on stopping, faster
+NPC entrances, wreck and prize rules, the RUMBLING roster in the pause menu
+and the HM10 barrel fix.
 
 This is a work-in-progress Windows x64 port. The ZIP includes
 `phantomcrash_port.exe`, the game data installer `phantomcrash_extract.exe`,
@@ -58,6 +56,26 @@ opens the Class D rental shortcut (`rumbling_d_night_rental` for the night
 one); it uses and saves the current quest.
 
 ## Included changes
+
+0.5.7 changes:
+
+- Walking and dashing robots move by their motion's root each tick and keep
+  their legs' momentum when stopping (leg record `stop_keep`).
+- The aim pitch reaches the original camera's 45-degree limit. Standard
+  controls keep strafing in the air (`standard_air_strafe`).
+- Computer robots walk out of their gates at double speed and take control
+  as the walk ends, with their shield visible while queued and walking.
+- Wrecks break only from a direct shot, and their collision no longer
+  reaches beyond their radius. The wreck bounty is 10000 NY, and supply,
+  carrier, wreck and object rewards count towards the match prize.
+- The RUMBLING pause menu lists the opponents, with skulls for those
+  eliminated; up/down pages through longer rosters.
+- Canon/HM10 barrel sections stay on the animated forearm.
+- Arm-stump sparks sit midway between the joint and forearm, as in the
+  original.
+- Controller stick dead zone setting (`stick_dead_zone`).
+
+0.5.6 adds per-game volume and window persistence for Phangrade launches.
 
 0.5.5 fixes:
 
