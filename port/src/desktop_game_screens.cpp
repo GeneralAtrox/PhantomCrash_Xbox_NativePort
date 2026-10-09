@@ -290,7 +290,7 @@ std::unique_ptr<Screen> GameScreens::make(const std::string &name, const std::st
     return std::make_unique<RecordsScreen>(textures_, font_, records_, contests_,
                                            story_progress(events_, quest, records_.unscored_events),
                                            from, resolve(records_.exit_to, place_before), frame_,
-                                           credits_, quest);
+                                           credits_, quest, preview_world().world);
   }
   if (name == "battle_music") {
     return std::make_unique<BattleMusicScreen>(textures_, font_, battle_music_, from, frame_,

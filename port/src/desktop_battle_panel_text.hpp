@@ -16,8 +16,6 @@ public:
   bool draw(const Sprite &sprite, const Viewport &viewport, float alpha) const;
 
 private:
-  void text(const Sprite &sprite, const std::string &label, const Viewport &viewport, float alpha,
-            float stroke_width, bool centered) const;
   TextureCache &textures_;
   const GlyphFont &font_;
   using Key = std::pair<std::string, std::array<float, 4>>;

@@ -108,6 +108,10 @@ struct AssembleTotalsStyle {
   std::optional<Sprite> negative;
   float negative_dx{};
   float negative_dy{};
+  // Opt-in (port addition): a value the part raises or lowers, and its
+  // arrow, take these colours; the original draws both in `colour`.
+  std::optional<std::uint32_t> up_colour;
+  std::optional<std::uint32_t> down_colour;
 };
 
 // A line's details (0x019d24): the box fading in over `fade_seconds`, the

@@ -170,7 +170,7 @@ TEST_CASE("the records give a weapon's timing, flight and blast, and a robot's a
   WeaponTuning weapon;
   weapon.kind = WeaponKind::grenade;
   apply_weapon_stats(weapon, sling);
-  CHECK(near(weapon.cooldown, 0.75F));
+  CHECK(near(weapon.cooldown, 0.8F)); // 45 frames: a round every 1 + 23 ticks (0x09b4f7)
   CHECK(near(weapon.life_seconds, 1.25F));
   CHECK(near(weapon.speed, 45.0F));
   CHECK(near(weapon.launch_degrees, 30.0F));

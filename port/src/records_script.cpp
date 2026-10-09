@@ -137,6 +137,9 @@ ConventionVenue parse_venue(const json::JsonValue &value) {
     venue.ranks = parse_sprites(*ranks);
   }
   venue.champion_names = member(value, "champion_names", parse_sprites);
+  if (value.find("backdrop") != nullptr) {
+    venue.backdrop = member(value, "backdrop", parse_sprite);
+  }
   return venue;
 }
 
@@ -211,6 +214,55 @@ ConventionStyle parse_convention(const json::JsonValue &value) {
   return style;
 }
 
+Vec3 vec3(const json::JsonValue &value, const char *what) {
+  const auto items = json::numbers<3>(value, what);
+  return {items[0], items[1], items[2]};
+}
+
+std::vector<Vec3> vec3s(const json::JsonValue &value, const char *what) {
+  std::vector<Vec3> items;
+  for (const json::JsonValue &item : value.array()) {
+    items.push_back(vec3(item, what));
+  }
+  return items;
+}
+
+RecordTrophies parse_trophies(const json::JsonValue &value) {
+  RecordTrophies trophies;
+  trophies.model = required(value, "model").string();
+  const json::JsonValue &camera = required(value, "camera");
+  trophies.eye = vec3(required(camera, "eye"), "eye");
+  trophies.target = vec3(required(camera, "target"), "target");
+  trophies.fov_degrees = static_cast<float>(camera.number_or("fov_degrees", trophies.fov_degrees));
+  trophies.near_plane = static_cast<float>(camera.number_or("near_plane", trophies.near_plane));
+  trophies.far_plane = static_cast<float>(camera.number_or("far_plane", trophies.far_plane));
+  trophies.light_direction = vec3(required(value, "light_direction"), "light_direction");
+  trophies.diffuse = static_cast<float>(value.number_or("diffuse", trophies.diffuse));
+  trophies.ambient = static_cast<float>(value.number_or("ambient", trophies.ambient));
+  trophies.frame_rate = static_cast<float>(value.number_or("frame_rate", trophies.frame_rate));
+  trophies.spin_per_frame =
+      static_cast<float>(value.number_or("spin_per_frame", trophies.spin_per_frame));
+  trophies.layer = static_cast<int>(value.number_or("layer", trophies.layer));
+  const json::JsonValue &first = required(value, "first_ranker");
+  trophies.first_ranker_node = static_cast<int>(required(first, "node").number());
+  trophies.first_ranker = vec3(required(first, "position"), "first_ranker position");
+  trophies.first_ranker_tilt = static_cast<float>(first.number_or("tilt", 0.0));
+  trophies.class_node = static_cast<int>(required(value, "class_node").number());
+  trophies.class_cells = vec3s(required(value, "class_cells"), "class cell");
+  trophies.area_nodes = integers(required(value, "area_nodes"));
+  trophies.area_ranker = vec3(required(value, "area_ranker"), "area_ranker");
+  trophies.regulation_cells = vec3s(required(value, "regulation_cells"), "regulation cell");
+  trophies.regulation_nodes = integers(required(value, "regulation_nodes"));
+  if (trophies.regulation_nodes.size() != trophies.regulation_cells.size()) {
+    throw std::runtime_error("regulation_nodes: one for each regulation cell");
+  }
+  trophies.cell_step = static_cast<float>(value.number_or("cell_step", trophies.cell_step));
+  trophies.won_cell = member(value, "won_cell", parse_sprite);
+  trophies.area_won_cell = member(value, "area_won_cell", parse_sprite);
+  trophies.no_convention = member(value, "no_convention", parse_sprite);
+  return trophies;
+}
+
 } // namespace
 
 RecordsScript parse_records(const json::JsonValue &document) {
@@ -239,6 +291,13 @@ RecordsScript parse_records(const json::JsonValue &document) {
       script.pages[name] = member(pages, name.c_str(), parse_page);
     }
     script.completion_contests = integers(required(document, "completion_contests"));
+    if (document.find("help") != nullptr) {
+      script.help = member(document, "help", parse_ticker);
+      script.help_text = required(document, "help_text").string();
+    }
+    if (document.find("trophies") != nullptr) {
+      script.trophies = member(document, "trophies", parse_trophies);
+    }
     if (const auto *unscored = document.find("unscored_events")) {
       script.unscored_events = integers(*unscored);
     }

@@ -5,11 +5,13 @@
 #include "phantomcrash/glyph_font.hpp"
 #include "phantomcrash/message_box.hpp"
 #include "phantomcrash/sprite_layer.hpp"
+#include "phantomcrash/sprite_text.hpp"
 
 #include <array>
 #include <cstdint>
 #include <functional>
 #include <optional>
+#include <string>
 #include <vector>
 
 namespace phantomcrash {
@@ -27,6 +29,14 @@ public:
   void sprite(const Sprite &source, const std::array<float, 4> &clip, float alpha = 1.0F);
   void text(int layer, std::vector<GlyphQuad> glyphs, std::uint32_t colour,
             const std::optional<std::array<float, 4>> &clip = std::nullopt, float alpha = 1.0F);
+  // Text standing in for the atlas's digits and labels, over the shadow
+  // data/ui/sprite_text.json gives them while sharp text is on.
+  void shaded_text(int layer, std::vector<GlyphQuad> glyphs, std::uint32_t colour);
+  // A line of lettering in a data/ui/sprite_text.json display font, its ink
+  // fitted to `box` (canvas left, top, right, bottom) from the box's left;
+  // in the game's own font there when the display font is not installed.
+  void label(int layer, std::string text, const std::string &font, const std::array<float, 4> &box,
+             std::uint32_t colour, const std::optional<TextShadow> &shadow, float shadow_blur);
   // A ticker `seconds` after its text was set.
   void ticker(const TickerStyle &style, const std::vector<int> &run, double seconds);
   // A message box as it is now: the growing window, then its lines and choices.

@@ -101,6 +101,9 @@ public:
   [[nodiscard]] int grid_row() const noexcept {
     return row_;
   }
+  [[nodiscard]] int venue_index() const noexcept {
+    return venue_;
+  }
   [[nodiscard]] int regulation_page() const noexcept {
     return regulation_page_;
   }

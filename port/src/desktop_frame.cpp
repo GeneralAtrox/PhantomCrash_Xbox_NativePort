@@ -46,7 +46,7 @@ void hud_text(DrawList &list, const GlyphFont &font, const std::string &text, fl
     glyph.width *= scale;
     glyph.height *= scale;
   }
-  list.text(layer, std::move(glyphs), colour);
+  list.shaded_text(layer, std::move(glyphs), colour);
 }
 } // namespace
 

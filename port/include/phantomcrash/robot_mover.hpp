@@ -119,7 +119,7 @@ public:
   void place(Vec3 position, float heading);
   void tick(const RobotControl &control, float seconds, const RootMotionSource &root = {});
   // A hit that pushes the robot along `push` (world space): it plays the
-  // hit reaction for that direction (0x08dcd1) for `seconds`, at least
+  // hit reaction for that direction (0x08dcd1) for `seconds`, at most
   // hit_seconds, stopped on the ground and falling uncontrolled in the air.
   void stagger(float seconds, Vec3 push);
   // Starts a melee strike (0x09c337), unless one is under way.
@@ -188,6 +188,11 @@ public:
   }
   [[nodiscard]] bool down_boosting() const noexcept {
     return down_boosting_;
+  }
+  // Walking only sideways this tick: the original's strafe (0x08dede) slides
+  // the robot without changing its state or motion, so it takes no steps.
+  [[nodiscard]] bool strafing() const noexcept {
+    return strafing_;
   }
   // Velocity in the robot's own frame: +z forward, +x right.
   [[nodiscard]] Vec3 local_velocity() const noexcept {
@@ -266,6 +271,7 @@ private:
   float lift_left_{};  // the held jump's lift still to come, seconds
   float lift_spent_{}; // and what it has used, seconds
   bool down_boosting_{};
+  bool strafing_{};
   bool jump_was_held_{};
   std::array<float, 2> stick_{};
   float rolling_steer_{};

@@ -112,17 +112,24 @@ void AssembleScreen::draw_value(DrawList &list, const double before, const doubl
     list.sprite(minus, alpha);
     return;
   }
-  const std::vector<int> run = glyph_run(font_, stat_text({StatRow::level, after, decimals}));
-  list.text(style.layer, layout_run(font_, run, right - run_width(font_, run), y), style.colour,
-            std::nullopt, alpha);
   const double scale = std::pow(10.0, decimals);
   const double shown_before = std::round(before * scale);
   const double shown_after = std::round(after * scale);
-  if (shown_after == shown_before) {
+  const bool changed = shown_after != shown_before;
+  const bool up = shown_after > shown_before;
+  const std::optional<std::uint32_t> &marked = up ? style.up_colour : style.down_colour;
+  const std::uint32_t colour = changed && marked ? *marked : style.colour;
+  const std::vector<int> run = glyph_run(font_, stat_text({StatRow::level, after, decimals}));
+  list.text(style.layer, layout_run(font_, run, right - run_width(font_, run), y), colour,
+            std::nullopt, alpha);
+  if (!changed) {
     return;
   }
-  Sprite arrow = shown_after > shown_before ? style.up : style.down;
+  Sprite arrow = up ? style.up : style.down;
   arrow.position = {right + style.arrow_dx, y + style.arrow_dy};
+  if (marked) {
+    arrow.colour = *marked;
+  }
   list.sprite(arrow, alpha);
 }
 

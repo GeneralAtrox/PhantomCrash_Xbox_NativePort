@@ -15,7 +15,8 @@ namespace phantomcrash {
 // 1: the Python tools (0.2.0 and earlier) wrote no version.
 // 2: the C++ extractor (phantomcrash_extract).
 // 3: legs records carry stop_keep (0.5.7).
-inline constexpr int converted_assets_version = 3;
+// 4: chatter.json carries the Area Rankers' defeat lines.
+inline constexpr int converted_assets_version = 4;
 
 struct GameDataPaths {
   std::filesystem::path europe;   // artifacts/europe

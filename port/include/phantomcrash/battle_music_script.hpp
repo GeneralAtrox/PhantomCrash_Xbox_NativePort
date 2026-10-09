@@ -8,7 +8,9 @@
 #include "phantomcrash/town_screen.hpp"
 
 #include <array>
+#include <cstdint>
 #include <map>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -45,6 +47,17 @@ struct MusicDiscs {
   std::array<float, 2> number_offset{}; // from a disc's left edge and y
   NumberStyle number;
   int first_layer{}; // the discs' layers count down from it
+  // The tray under them opens over tray_seconds, scaled from tray_from to 1
+  // about its centre; the browsed program's label (BattleMusicScript::
+  // program_lit) then pops into its slot over label_seconds from label_from.
+  Sprite tray;
+  double tray_seconds{};
+  std::array<float, 2> tray_from{1.0F, 1.0F};
+  double label_seconds{};
+  std::array<float, 2> label_from{1.0F, 1.0F};
+  // A program with a name of its own shows it there instead, centred here.
+  std::array<float, 2> name_centre{};
+  std::uint32_t name_colour{0xffffff};
 };
 
 // The stock of owned tracks PROGRAM EDIT picks from (0x376d0, 0x38b7f):
@@ -65,6 +78,12 @@ struct MusicStock {
   std::array<float, 2> portrait_at{};
   std::vector<Sprite> arrows; // page back and forward, while there are pages
   std::vector<Sprite> hints;
+  // STOCK over the grid (0x376d0): shown heading_seconds after the view
+  // opens, it pops in over heading_grow from heading_from (x, y scale).
+  std::optional<Sprite> heading;
+  double heading_seconds{};
+  double heading_grow{};
+  std::array<float, 2> heading_from{1.0F, 1.0F};
 };
 
 // data/ui/battle_music.json (original scene 33).
@@ -103,7 +122,9 @@ struct BattleMusicScript : TownBasics {
   float slide_distance{};
 
   Sprite program_panel;
-  std::vector<Sprite> program_lit; // over the chosen program's row
+  std::vector<Sprite> program_lit; // the browsed program's label in the tray's slot
+  Sprite program_cursor;           // on the browsed row, at program_cursor_y
+  std::vector<float> program_cursor_y;
   Sprite set_prompt;
   Sprite set_ok;
   std::vector<Sprite> back_hints;

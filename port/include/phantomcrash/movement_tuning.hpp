@@ -114,8 +114,8 @@ struct MovementTuning {
   float computer_lunge_turn_degrees{7.875F};
   float lunge_cone_degrees{90.0F};
   float lunge_climb_rate{6.0F}; // of the height between them, a second
-  // A flinch lasts at least as long as the hit reactions' motions, 29
-  // frames (motions 17-20 and 29-32).
+  // A flinch lasts its stun, at most as long as the hit reactions' motions,
+  // 29 frames (motions 17-20 and 29-32; 0x07675e caps robot +0x25a0).
   float hit_seconds{29.0F / 60.0F};
   // The twist (robot +0xf8, 0x07d330 with the Standard controls): the
   // legs' turn (robot +0x7c) times the 60 Hz frames a tick and the stick,

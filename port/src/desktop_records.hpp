@@ -1,9 +1,11 @@
 #pragma once
 
+#include "desktop_records_trophies.hpp"
 #include "desktop_town_screen.hpp"
 #include "phantomcrash/records.hpp"
 
 #include <array>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -19,7 +21,7 @@ public:
   RecordsScreen(TextureCache &textures, const GlyphFont &font, RecordsScript script,
                 const ContestTables &contests, StoryProgress progress, const std::string &from,
                 const std::string &back, const FrameStyle &frame,
-                const std::vector<MusicCredit> &credits, QuestSave quest);
+                const std::vector<MusicCredit> &credits, QuestSave quest, WorldRenderer *world);
 
   void tick(const InputFrame &input, double tick_seconds) override;
   void draw(const Viewport &viewport) override;
@@ -43,12 +45,18 @@ private:
   void draw_convention_items(DrawList &list, bool sliding) const;
   void draw_grid(DrawList &list) const;
   void draw_champion(DrawList &list, int contest, int slot) const;
+  // A grid's won cells darkened and its empty ones marked, and the turning
+  // trophies of the view shown (0x334fc).
+  void draw_cells(DrawList &list) const;
+  [[nodiscard]] std::vector<TrophyPlace> trophy_places() const;
   // Text left-aligned at (x, y), or right-aligned when `right`.
   void draw_text(DrawList &list, const std::string &text, float x, float y, int layer,
                  std::uint32_t colour, float alpha, bool right = false) const;
 
   const ContestTables &contests_;
   Records records_;
+  std::vector<int> help_run_;
+  std::optional<RecordsTrophyView> trophies_;
 };
 
 } // namespace phantomcrash

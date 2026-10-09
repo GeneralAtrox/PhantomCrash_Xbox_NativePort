@@ -84,8 +84,13 @@ struct TrainingContext {
   // A won match stands this long before it ends: the First Ranker's first
   // clear (story/progression.json clear_hold_frames).
   float victory_hold_seconds{};
+  // The RUMBLING contest's ranker, if it is a ranker's, and its area: a
+  // boss shot down then holds the battle in its defeat (0x089861).
+  RankerContest ranker{RankerContest::none};
+  int ranker_area{-1};
   std::array<bool, weapon_slots> finale_lost{};
   bool beginner{}; // BUTTON CONFIG's BEGINNER MODE
+  ControlOptions controls{}; // its assignments and VIEW CHANGE TYPE
   BattleSounds::PlaybackQuery sound_playing;
   std::function<void()> online_exit;
   std::optional<std::uint32_t>
@@ -188,6 +193,8 @@ private:
   bool online_result_ready() const;
   void present_online();
   void tick_effects(double seconds);
+  // The live checklist's marked tags for the name tags' skulls, now and then.
+  void refresh_marked_tags(float seconds);
   std::shared_ptr<online::Presentation> online_presentation_;
   std::function<void()> online_exit_;
   bool online_exit_requested_{}, online_settled_{};
@@ -261,6 +268,9 @@ private:
   [[nodiscard]] bool in_cockpit() const;
   [[nodiscard]] bool cockpit_up() const;
   [[nodiscard]] CockpitInput cockpit_input() const;
+  // desktop_training_defeat.cpp
+  void observe_defeat();
+  [[nodiscard]] std::optional<CameraShot> defeat_shot(float seconds, const SightTest &sees);
   [[nodiscard]] bool in_scene() const {
     return finale_ || (scene_ && scene_->scene().scripted());
   }
@@ -300,6 +310,7 @@ private:
   std::shared_ptr<Battle> battle_; // the live RUMBLING's is shared with its world
   const RumblingWorld *live_world_{};
   int live_area_{-1};
+  float marked_refresh_{}; // seconds until the marked tags are read again
   int live_changes_{};
   std::vector<int> live_entrants_; // drawn as, by battle robot
   std::unique_ptr<BattleView> view_;
@@ -348,10 +359,17 @@ private:
   double play_seconds_{};
   std::int64_t extra_prize_{};
   float victory_hold_{}; // seconds a win still stands before the match ends
+  RankerContest ranker_{RankerContest::none};
+  int ranker_area_{-1};
+  // The camera on a boss's defeat (desktop_training_defeat.cpp).
+  std::optional<ChaseCamera> defeat_chase_;
+  std::optional<CameraViews> defeat_views_;
   double clock_{};       // seconds of battle: the HUD's mission time and pulses
   int day_{};
   bool standard_controls_{true}; // BUTTON CONFIG's CONTROL TYPE
   bool beginner_{};              // and its BEGINNER MODE
+  ControlOptions controls_{};    // and its assignments and VIEW CHANGE TYPE
+  BattleButtons buttons_;        // the script's, as BUTTON CONFIG assigns them
 };
 
 } // namespace phantomcrash

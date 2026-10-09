@@ -215,6 +215,7 @@ PartStatsTable parse_part_stats(const json::JsonValue &document) {
         table.full_price.push_back(static_cast<int>(module.number()));
       }
     }
+    table.extras = parse_extra_stats(document);
     return table;
   } catch (const std::exception &error) {
     throw std::runtime_error(std::string("part_stats.json: ") + error.what());

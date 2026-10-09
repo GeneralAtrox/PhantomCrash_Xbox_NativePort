@@ -86,6 +86,9 @@ struct TrainingLesson {
 struct TrainingScript {
   std::string stage;
   std::string music;
+  // FreePlay battles play the player's music program; a ranker's contest
+  // plays its theme (`music`) instead (0x09e24c).
+  bool music_program{true};
   std::string return_to;
   std::map<std::string, TrainingLesson> lessons; // screen name -> lesson
   std::map<std::string, RobotParts> robots;      // "player", "drone", ...

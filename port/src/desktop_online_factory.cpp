@@ -73,6 +73,7 @@ std::unique_ptr<TrainingScreen> make_online_battle_view(std::shared_ptr<CoopMatc
                           player.profile.player_name};
   context.standard_controls = options.controls.standard();
   context.beginner = options.controls.beginner != 0;
+  context.controls = options.controls;
   context.day = player.profile.day;
   context.money = player.profile.money;
   context.live_battle = match->battle;

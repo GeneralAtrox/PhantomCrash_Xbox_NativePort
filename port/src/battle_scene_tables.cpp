@@ -107,6 +107,10 @@ SceneTuning parse_scene_tuning(const JsonValue &value) {
   s.exit_step = number(value, "exit_step", s.exit_step);
   s.still_step = number(value, "still_step", s.still_step);
   s.left_armour = number(value, "left_armour", s.left_armour);
+  s.defeat_frames = number(value, "defeat_frames", s.defeat_frames);
+  s.first_ranker_defeat_frames =
+      number(value, "first_ranker_defeat_frames", s.first_ranker_defeat_frames);
+  s.defeat_watch = number(value, "defeat_watch", s.defeat_watch);
   s.gone_shield_frames = number(value, "gone_shield_frames", s.gone_shield_frames);
   s.ready_sound = value.string_or("ready_sound", s.ready_sound);
   s.go_sound = value.string_or("go_sound", s.go_sound);

@@ -204,6 +204,32 @@ FireControl battle_fire(const InputFrame &input, const BattleButtons &buttons) {
   return fire;
 }
 
+void apply_button_config(BattleButtons &buttons, const ControlOptions &controls) {
+  if (controls.bindings == ControlOptions{}.bindings) {
+    return;
+  }
+  const auto bound = [&controls](const std::size_t action) {
+    return static_cast<std::size_t>(
+        std::clamp(controls.bindings[action], 0, static_cast<int>(control_action_count) - 1));
+  };
+  // Actions 0-3 are the weapons in WeaponSlot order.
+  for (std::size_t slot = 0; slot < weapon_slots; ++slot) {
+    buttons.fire[slot] = bindable_buttons[bound(slot)];
+    buttons.fire_labels[slot] = std::string(bindable_button_labels[bound(slot)]);
+  }
+  buttons.dodge_right = bindable_buttons[bound(4)];
+  buttons.dodge_left = bindable_buttons[bound(5)];
+  buttons.jump = bindable_buttons[bound(6)];
+  buttons.camouflage = bindable_buttons[bound(7)];
+}
+
+InputFrame view_changed(InputFrame input, const ControlOptions &controls) {
+  if (controls.view != 0) {
+    input.right_stick[1] = -input.right_stick[1];
+  }
+  return input;
+}
+
 LessonSample lesson_sample(const Combatant &player, const float heading_before,
                            const float seconds) {
   LessonSample sample;

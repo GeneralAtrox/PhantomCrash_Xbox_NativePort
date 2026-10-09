@@ -2,6 +2,7 @@
 #include "phantomcrash/money.hpp"
 
 #include "desktop_draw_list.hpp"
+#include "desktop_extra_stats.hpp"
 #include "desktop_part_stats.hpp"
 #include "desktop_shop_list.hpp"
 #include "phantomcrash/canvas.hpp"
@@ -50,6 +51,7 @@ void ModuleShopScreen::tick(const InputFrame &raw_input, const double tick_secon
   } else {
     preview_.hide();
   }
+  preview_.set_lift(details_fit(chosen).raise);
   preview_.tick(tick_seconds);
 }
 
@@ -137,24 +139,36 @@ void ModuleShopScreen::draw_chosen(DrawList &list, const ShopGoods &line) const 
   const ShopGoodsList &style = script.list;
   const Goods &goods = line.goods;
   const bool module = goods.kind == GoodsKind::module;
-  if (module) {
-    list.sprite(reduces_lasers(logic_.garage(), goods) ? style.laser_names : style.module_names);
-  } else {
-    list.sprite(script.categories[static_cast<std::size_t>(logic_.category())].stat_names);
+  const DetailsFit fit = details_fit(&line);
+  Sprite names =
+      module ? (reduces_lasers(logic_.garage(), goods) ? style.laser_names : style.module_names)
+             : script.categories[static_cast<std::size_t>(logic_.category())].stat_names;
+  names.position[1] -= fit.raise;
+  if (fit.squeeze != 1.0F) {
+    names.size =
+        std::array{names.rect[2] - names.rect[0], (names.rect[3] - names.rect[1]) * fit.squeeze};
   }
+  list.sprite(names);
   const auto lines = part_stats(logic_.table(), logic_.parts(), logic_.garage(), goods);
   PartStatsStyle stats = style.stats;
+  stats.step = fit.step;
   if (module && style.module_stats_right > 0.0F) {
     stats.right = style.module_stats_right;
   }
-  draw_part_stats(list, font_, stats, lines, goods,
-                  module ? style.module_stats_top : style.stats_top);
+  const float values_top =
+      (module ? style.module_stats_top : style.stats_top) - fit.raise - fit.lift;
+  draw_part_stats(list, font_, stats, lines, goods, values_top);
+  if (script.extra_stats) {
+    draw_extra_stats(list, font_, *script.extra_stats, chosen_extras(&line), names, lines.size(),
+                     stats, values_top);
+  }
   // STOCK MODULE shows no price.
   if (script.mode != ModuleShopMode::stock) {
     NumberStyle price = style.price;
     if (module) {
       price.right[1] += style.module_rise;
     }
+    price.right[1] -= fit.raise;
     for (const Sprite &digit :
          money_sprites(hud(), price, shown_ny(line.price), style.stats.layer)) {
       list.sprite(digit);
@@ -175,6 +189,38 @@ void ModuleShopScreen::draw_chosen(DrawList &list, const ShopGoods &line) const 
       list.sprite(swatch);
     }
   }
+}
+
+// A part's details with extra lines close up and move up where the style
+// says (extra_stats part_raise and part_step); otherwise the windows grow a
+// line for each.
+ModuleShopScreen::DetailsFit ModuleShopScreen::details_fit(const ShopGoods *line) const {
+  const ShopGoodsList &style = logic_.script().list;
+  DetailsFit fit{0.0F, 0.0F, style.stats.step, 1.0F, 0.0F};
+  const auto extras = static_cast<float>(chosen_extras(line).size());
+  fit.grow = style.stats.step * extras;
+  const auto &extra = logic_.script().extra_stats;
+  if (extras == 0.0F || line->goods.kind == GoodsKind::module || !extra ||
+      extra->part_step <= 0.0F) {
+    return fit;
+  }
+  const auto printed = static_cast<float>(
+      part_stats(logic_.table(), logic_.parts(), logic_.garage(), line->goods).size());
+  fit.step = extra->part_step;
+  fit.squeeze = extra->part_step / style.stats.step;
+  fit.grow = std::max(0.0F, (printed + extras) * fit.step - printed * style.stats.step);
+  fit.raise = extra->part_raise;
+  // The squeezed art's separators come up from under each line's value.
+  fit.lift = extra->line_rows[0] * (1.0F - fit.squeeze);
+  return fit;
+}
+
+// The chosen goods' extra stat lines; none without the style for them.
+std::vector<ExtraStatLine> ModuleShopScreen::chosen_extras(const ShopGoods *line) const {
+  if (line == nullptr || !logic_.script().extra_stats) {
+    return {};
+  }
+  return extra_stats(logic_.table(), logic_.parts(), logic_.garage(), line->goods);
 }
 
 // 0x1f8a3 and 0x21cd2: the grid dimmed, the list window and the details
@@ -201,10 +247,16 @@ void ModuleShopScreen::draw_list(DrawList &list) const {
   const ShopGoods *line = logic_.chosen();
   const bool module = line != nullptr && line->goods.kind == GoodsKind::module;
   const auto &details = module ? style.module_details : style.details;
-  draw_pop_window(list, details[1], seconds);
-  if (draw_pop_window(list, details[0], seconds)) {
+  const DetailsFit fit = details_fit(line);
+  const auto placed = [&fit](const PopWindow &window) {
+    PopWindow out = grown_window(window, fit.grow);
+    out.sprite.position[1] -= fit.raise;
+    return out;
+  };
+  draw_pop_window(list, placed(details[1]), seconds);
+  if (draw_pop_window(list, placed(details[0]), seconds)) {
     for (const Sprite &label : style.price_label) {
-      list.sprite(shifted(label, 0.0F, module ? style.module_rise : 0.0F));
+      list.sprite(shifted(label, 0.0F, (module ? style.module_rise : 0.0F) - fit.raise));
     }
     if (line != nullptr &&
         (line->goods.kind == GoodsKind::paint || line->goods.kind == GoodsKind::emblem)) {

@@ -48,7 +48,7 @@ ModelBatch read_batch(const Words &w) {
   b.first_index = w[13];
   b.first_vertex = w[14];
   b.first_triangle = w[15];
-  b.power = static_cast<double>(w[16]);
+  b.power = word_float(w[16]); // D3DMATERIAL8.Power, a float
   b.centre = floats3(w, 17);
   b.extent = floats3(w, 20);
   return b;

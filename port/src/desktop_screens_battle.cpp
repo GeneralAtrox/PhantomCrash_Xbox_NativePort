@@ -94,6 +94,14 @@ std::unique_ptr<Screen> ScreenRunner::make_battle(const std::string &name) {
     scenes.ranker = ranker_contest(game_->regulation_check().rules, entry->area, entry->contest) !=
                     RankerContest::none;
     scenes.ranker_gate = entry->ranker_gate;
+    // 0x09e24c and 0x09e6b1: a ranker's contest plays the ranker's theme,
+    // not the music program, and its entrance starts it again.
+    if (const auto theme = story_rules_.ranker_music.find(entry->contest);
+        theme != story_rules_.ranker_music.end()) {
+      battle_training_.music = theme->second;
+      battle_training_.music_program = false;
+      scenes.boss_music = theme->second;
+    }
     if (cooperative()) {
       return make_coop_battle(*entry);
     }
@@ -173,10 +181,16 @@ std::unique_ptr<Screen> ScreenRunner::make_training(const TrainingScript &script
                           vs == nullptr ? nullptr : &vs_battle_,
                           vs};
   context.beginner = options_.controls.beginner != 0;
+  context.controls = options_.controls;
   context.sound_playing = [this](std::uint64_t key) { return audio_.sound_playing(key); };
   if (match_results && active_match_ && !quest_.cleared &&
       active_match_->contest == game_->regulation_check().rules.first_ranker) {
     context.victory_hold_seconds = story_rules_.clear_hold_frames / part_frames_per_second;
+  }
+  if (match_results && active_match_) {
+    context.ranker = ranker_contest(game_->regulation_check().rules, active_match_->area,
+                                    active_match_->contest);
+    context.ranker_area = active_match_->area;
   }
   if (finale) {
     context.finale = &finale_tables_;

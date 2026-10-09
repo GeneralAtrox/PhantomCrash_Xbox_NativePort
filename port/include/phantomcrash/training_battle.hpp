@@ -7,6 +7,7 @@
 #include "phantomcrash/glyph_font.hpp"
 #include "phantomcrash/input.hpp"
 #include "phantomcrash/json.hpp"
+#include "phantomcrash/settings.hpp"
 #include "phantomcrash/entry_shield.hpp"
 #include "phantomcrash/optical_camouflage.hpp"
 #include "phantomcrash/robot_shadow.hpp"
@@ -131,6 +132,16 @@ using LessonMessages = std::map<int, std::array<std::vector<EventCommand>, 2>>;
                                           const LessonStep *step, bool standard = true,
                                           bool beginner = false);
 [[nodiscard]] FireControl battle_fire(const InputFrame &input, const BattleButtons &buttons);
+
+// BUTTON CONFIG's assignments (ControlOptions::bindings) as the battle's
+// weapon, step, jump and camouflage buttons and the HUD's labels. The
+// original's assignment leaves `buttons` as the data gave them.
+void apply_button_config(BattleButtons &buttons, const ControlOptions &controls);
+
+// VIEW CHANGE TYPE: the original negates the right stick's up/down for
+// NORMAL (0x0779f8, robot +0x2740 bit 2) and leaves it for REVERSE, so
+// REVERSE turns the port's look the other way.
+[[nodiscard]] InputFrame view_changed(InputFrame input, const ControlOptions &controls);
 
 // What `player` did over the tick of `seconds` that started at
 // `heading_before`, for the lesson goals.

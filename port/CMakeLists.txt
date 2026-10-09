@@ -50,6 +50,7 @@ add_library(phantomcrash_core
   src/battle_chatter.cpp
   src/battle_scene.cpp
   src/battle_scene_robots.cpp
+  src/battle_scene_defeat.cpp
   src/battle_scene_tables.cpp
   src/robot_load.cpp
   src/robot_ai.cpp
@@ -162,6 +163,7 @@ add_library(phantomcrash_core
   src/chip_shop_pointer.cpp
   src/chip_uplift.cpp
   src/part_stats.cpp
+  src/extra_stats.cpp
   src/shop_goods.cpp
   src/sort_hints.cpp
   src/module_shop_script.cpp
@@ -227,6 +229,8 @@ add_library(phantomcrash_core
   src/motion_source.cpp
   src/sound_config.cpp
   src/sprite_layer.cpp
+  src/sprite_shapes.cpp
+  src/sprite_text.cpp
   src/story_event_script.cpp
   src/story_progression.cpp
   src/training_battle.cpp
@@ -234,6 +238,7 @@ add_library(phantomcrash_core
   src/tutorial.cpp
   src/version.cpp
   src/world_model.cpp
+  src/world_model_stages.cpp
   src/rigid_animation.cpp
   src/rigid_playback.cpp
   src/rigid_source_playback.cpp
@@ -302,9 +307,11 @@ if(BUILD_TESTING)
     tests/battle_ai_tests.cpp
     tests/armory_tests.cpp
     tests/battle_damage_tests.cpp
+    tests/beam_charge_tests.cpp
     tests/battle_wreck_tests.cpp
     tests/battle_chatter_tests.cpp
     tests/battle_scene_tests.cpp
+    tests/battle_scene_defeat_tests.cpp
     tests/battle_scene_robots_tests.cpp
     tests/world_sound_tests.cpp
     tests/battle_sounds_tests.cpp
@@ -519,6 +526,10 @@ if(PHANTOMCRASH_BUILD_DESKTOP)
     src/desktop_battle_sights.cpp
     src/desktop_battle_panels.cpp
     src/desktop_battle_panel_text.cpp
+    src/desktop_sprite_shapes.cpp
+    src/desktop_sprite_text.cpp
+    src/desktop_display_text.cpp
+    src/desktop_textures_erase.cpp
     src/desktop_battle_chatter.cpp
     src/desktop_battle_scene.cpp
     src/desktop_battle_view.cpp
@@ -619,6 +630,7 @@ if(PHANTOMCRASH_BUILD_DESKTOP)
     src/desktop_screens_cheats.cpp
     src/desktop_training_sound.cpp
     src/desktop_training_camera.cpp
+    src/desktop_training_defeat.cpp
     src/desktop_training_live.cpp
     src/desktop_training_split.cpp
     src/desktop_training_finale.cpp
@@ -646,8 +658,10 @@ if(PHANTOMCRASH_BUILD_DESKTOP)
     src/desktop_online_resource_check.cpp
     src/desktop_sv_spec.cpp
     src/desktop_part_stats.cpp
+    src/desktop_extra_stats.cpp
     src/desktop_chip_dialog.cpp
     src/desktop_records_convention.cpp
+    src/desktop_records_trophies.cpp
     src/desktop_schedule.cpp
     src/desktop_contest_info.cpp
     src/desktop_rumbling.cpp

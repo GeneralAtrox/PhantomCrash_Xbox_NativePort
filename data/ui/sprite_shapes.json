@@ -1,0 +1,234 @@
+{
+ "notes": [
+  "Plain frames and cursors the menus draw from their atlases, redrawn as rounded-rectangle outlines at the output resolution while sharp text is on (settings), instead of the atlas art stretched and filtered. Each shape is found by its sprite's image and rect, wherever a screen draws it; anything not listed, and all painted art, is drawn from the atlas.",
+  "An outline is a rounded rectangle (box: LTRB in the sprite's texels, relative to its rect; radius in texels) coloured by distance from its edge: stops are [distance, colour, alpha], negative inside. Two stops at one distance are a hard edge, antialiased over one screen pixel. The first stop's colour fills the inside (alpha 0 leaves it empty); nothing is drawn past the last. radius_growth (default 1) is how much the corner radius grows per texel of distance, for rings rounder inside than out. count and step repeat an outline over a grid of cells. Outlines draw in order.",
+  "Geometry is measured from the art (each edge where its alpha crosses half, each corner from its diagonal); the original's three-texel soft edges are drawn as hard edges at that point, keeping their darker rim as a one-texel band.",
+  "record_tex [0,480,432,624] and [432,480,864,624]: RECORDS' venue and REGULATION grids (0x33660, 0x3472d), lines 6.3 texels wide every 62. Each cell's white ring is drawn first, then the frame, then the cells' rims, so no ring covers another's rim.",
+  "record_tex [1928,304,2008,384] and [864,480,1008,624]: the grid's cursor and the area ranker's cursor, an orange ring 6.8 texels wide with darker edges.",
+  "media_playlist_tex [640,440,696,480] and [1896,288,1952,344]: BGM SELECT's stock slot and program disc, a white rim round a dark fill. [1440,440,1496,480], [920,440,1064,480], [752,440,920,480] and [1312,440,1440,480]: its stock, menu, program and play-mode cursors, a glow along a rounded ring kept as soft as the art; their profiles are sampled from the art a texel apart across the ring's long side."
+ ],
+ "shapes": [
+  {
+   "image": "textures/scroll/record_tex/0.png",
+   "rect": [0, 480, 432, 624],
+   "outlines": [
+    {
+     "box": [34.15, 13.15, 89.85, 68.85],
+     "radius": 3,
+     "count": [4, 2],
+     "step": [62, 62],
+     "stops": [[0.5, "#ffffff", 0], [0.5, "#ffffff", 1], [6, "#ffffff", 1], [6, "#ffffff", 0]]
+    },
+    {
+     "box": [282.15, 13.15, 399.85, 130.85],
+     "radius": 3,
+     "stops": [[0.5, "#ffffff", 0], [0.5, "#ffffff", 1], [6, "#ffffff", 1], [6, "#ffffff", 0]]
+    },
+    {
+     "box": [27.85, 6.85, 406.15, 137.15],
+     "radius": 4.3,
+     "stops": [[-3, "#ffffff", 0], [-3, "#ffffff", 1], [-1, "#ffffff", 1], [0, "#cfcfcf", 1], [0, "#cfcfcf", 0]]
+    },
+    {
+     "box": [34.15, 13.15, 89.85, 68.85],
+     "radius": 3,
+     "count": [4, 2],
+     "step": [62, 62],
+     "stops": [[0, "#cfcfcf", 0], [0, "#cfcfcf", 1], [1, "#ffffff", 1], [1, "#ffffff", 0]]
+    },
+    {
+     "box": [282.15, 13.15, 399.85, 130.85],
+     "radius": 3,
+     "stops": [[0, "#cfcfcf", 0], [0, "#cfcfcf", 1], [1, "#ffffff", 1], [1, "#ffffff", 0]]
+    }
+   ]
+  },
+  {
+   "image": "textures/scroll/record_tex/0.png",
+   "rect": [432, 480, 864, 624],
+   "outlines": [
+    {
+     "box": [34.15, 13.15, 89.85, 68.85],
+     "radius": 3,
+     "count": [6, 2],
+     "step": [62, 62],
+     "stops": [[0.5, "#ffffff", 0], [0.5, "#ffffff", 1], [6, "#ffffff", 1], [6, "#ffffff", 0]]
+    },
+    {
+     "box": [27.85, 6.85, 406.15, 137.15],
+     "radius": 4.3,
+     "stops": [[-3, "#ffffff", 0], [-3, "#ffffff", 1], [-1, "#ffffff", 1], [0, "#cfcfcf", 1], [0, "#cfcfcf", 0]]
+    },
+    {
+     "box": [34.15, 13.15, 89.85, 68.85],
+     "radius": 3,
+     "count": [6, 2],
+     "step": [62, 62],
+     "stops": [[0, "#cfcfcf", 0], [0, "#cfcfcf", 1], [1, "#ffffff", 1], [1, "#ffffff", 0]]
+    }
+   ]
+  },
+  {
+   "image": "textures/scroll/record_tex/0.png",
+   "rect": [1928, 304, 2008, 384],
+   "outlines": [
+    {
+     "box": [12.42, 12.42, 67.58, 67.58],
+     "radius": 3.1,
+     "radius_growth": 0.32,
+     "stops": [
+      [0, "#cb7f0a", 0],
+      [0, "#cb7f0a", 1],
+      [1, "#ff9e10", 1],
+      [5.8, "#ff9e10", 1],
+      [6.81, "#c07800", 1],
+      [6.81, "#c07800", 0]
+     ]
+    }
+   ]
+  },
+  {
+   "image": "textures/scroll/record_tex/0.png",
+   "rect": [864, 480, 1008, 624],
+   "outlines": [
+    {
+     "box": [12.42, 12.42, 131.58, 131.58],
+     "radius": 3.1,
+     "radius_growth": 0.32,
+     "stops": [
+      [0, "#cb7f0a", 0],
+      [0, "#cb7f0a", 1],
+      [1, "#ff9e10", 1],
+      [5.8, "#ff9e10", 1],
+      [6.81, "#c07800", 1],
+      [6.81, "#c07800", 0]
+     ]
+    }
+   ]
+  },
+  {
+   "image": "textures/scroll/media_playlist_tex/0.png",
+   "rect": [640, 440, 696, 480],
+   "outlines": [
+    {
+     "box": [4.78, 5.77, 49.03, 30.23],
+     "radius": 7.7,
+     "stops": [[-1.75, "#000000", 0.8], [-1.75, "#ffffff", 1], [0, "#ffffff", 1], [0, "#ffffff", 0]]
+    }
+   ]
+  },
+  {
+   "image": "textures/scroll/media_playlist_tex/0.png",
+   "rect": [1440, 440, 1496, 480],
+   "outlines": [
+    {
+     "box": [5.79, 6.76, 47.93, 29.24],
+     "radius": 6.5,
+     "stops": [
+      [-7, "#ff9f0d", 0.0],
+      [-6, "#ff9f0d", 0.03],
+      [-5, "#ffa10f", 0.11],
+      [-4, "#ffa210", 0.23],
+      [-3, "#ffa81a", 0.45],
+      [-2, "#ffb632", 0.71],
+      [-1, "#ffd486", 0.89],
+      [0, "#ffedce", 0.97],
+      [1, "#ffd284", 0.91],
+      [2, "#ffb739", 0.72],
+      [3, "#ffa916", 0.47],
+      [4, "#ffa210", 0.24],
+      [5, "#ffa010", 0.1],
+      [6, "#ffa010", 0.03],
+      [7, "#ffa010", 0]
+     ]
+    }
+   ]
+  },
+  {
+   "image": "textures/scroll/media_playlist_tex/0.png",
+   "rect": [920, 440, 1064, 480],
+   "outlines": [
+    {
+     "box": [4.98, 5.78, 134.0, 33.92],
+     "radius": 14.1,
+     "stops": [
+      [-6, "#ff9f0d", 0.01],
+      [-5, "#ff9e0f", 0.02],
+      [-4, "#ff9f0c", 0.1],
+      [-3, "#ff9f0c", 0.36],
+      [-2, "#ffb215", 0.69],
+      [-1, "#ffe071", 0.94],
+      [0, "#ffef94", 1.0],
+      [1, "#ffd558", 0.94],
+      [2, "#ffb018", 0.68],
+      [3, "#ff9d0e", 0.35],
+      [4, "#ff9d0e", 0.14],
+      [5, "#ff9e0d", 0.03],
+      [6, "#ff9e0d", 0]
+     ]
+    }
+   ]
+  },
+  {
+   "image": "textures/scroll/media_playlist_tex/0.png",
+   "rect": [752, 440, 920, 480],
+   "outlines": [
+    {
+     "box": [9.84, 7.36, 156.91, 26.04],
+     "radius": 9.0,
+     "stops": [
+      [-7, "#ff9f0e", 0.07],
+      [-6, "#ffa013", 0.16],
+      [-5, "#ffa419", 0.32],
+      [-4, "#ffae21", 0.51],
+      [-3, "#ffb025", 0.7],
+      [-2, "#ffc444", 0.84],
+      [-1, "#ffe67b", 0.96],
+      [0, "#fff7ad", 0.99],
+      [1, "#fff4a7", 0.94],
+      [2, "#ffdf7b", 0.87],
+      [3, "#ffbc36", 0.65],
+      [4, "#ffad1f", 0.42],
+      [5, "#ffa514", 0.19],
+      [6, "#ffa210", 0.07],
+      [7, "#ffa210", 0]
+     ]
+    }
+   ]
+  },
+  {
+   "image": "textures/scroll/media_playlist_tex/0.png",
+   "rect": [1312, 440, 1440, 480],
+   "outlines": [
+    {
+     "box": [5.02, 5.03, 115.57, 31.18],
+     "radius": 11.6,
+     "stops": [
+      [-5, "#ff9e0c", 0.01],
+      [-4, "#ff9b09", 0.1],
+      [-3, "#ff9e04", 0.34],
+      [-2, "#ffae15", 0.69],
+      [-1, "#ffd355", 0.93],
+      [0, "#ffef84", 0.98],
+      [1, "#ffd54c", 0.93],
+      [2, "#ffab0c", 0.71],
+      [3, "#ff9d0a", 0.38],
+      [4, "#ff9d0a", 0.12],
+      [5, "#ff9d0a", 0]
+     ]
+    }
+   ]
+  },
+  {
+   "image": "textures/scroll/media_playlist_tex/0.png",
+   "rect": [1896, 288, 1952, 344],
+   "outlines": [
+    {
+     "box": [4.0, 7.1, 46.0, 48.9],
+     "radius": 21,
+     "stops": [[-2, "#333233", 0.8], [-2, "#ffffff", 1], [0, "#ffffff", 1], [0, "#ffffff", 0]]
+    }
+   ]
+  }
+ ]
+}

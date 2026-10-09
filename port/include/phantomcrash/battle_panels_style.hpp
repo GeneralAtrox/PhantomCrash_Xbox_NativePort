@@ -4,6 +4,7 @@
 #include "phantomcrash/json.hpp"
 #include "phantomcrash/location_frame.hpp"
 #include "phantomcrash/sprite_layer.hpp"
+#include "phantomcrash/sprite_text.hpp"
 
 #include <array>
 #include <cstdint>
@@ -84,15 +85,8 @@ struct HudCounter {
   NumberStyle number;
 };
 
-// Replaces lettering in an atlas sprite; region is source-relative LTRB.
-struct BattlePanelTextStyle {
-  Sprite source;
-  std::string text;
-  std::optional<std::array<float, 4>> region;
-  std::optional<std::uint32_t> colour;
-  float stroke_width{}; // extra glyph weight in canvas units
-  bool centered{};
-};
+// Replaces lettering in an atlas sprite (sprite_text.hpp).
+using BattlePanelTextStyle = SpriteTextStyle;
 
 struct BattlePanelsStyle {
   std::vector<BattlePanelTextStyle> text_replacements;

@@ -116,9 +116,13 @@ void Magazine::refill(const int amount) {
   dry_seconds = 0.0F;
 }
 
-void Magazine::tick(const float seconds) {
+void Magazine::tick(const float seconds, const bool resting) {
   dry_seconds = empty() ? dry_seconds + seconds : 0.0F;
   if (limited() && recharging() && !refilling()) {
+    if (!resting) {
+      shown = static_cast<float>(ammo) + charge;
+      return;
+    }
     if (ammo >= max) {
       charge = 0.0F;
     } else {

@@ -152,7 +152,9 @@ void BattleScene::walk_robot(Battle &battle, RobotEntrance &entry, const float s
     return;
   }
   battle.raise_shield(entry.robot);
-  const float entrance_step = step * (entry.rider ? 1.0F : tuning_.computer_entrance_speed);
+  // A boss's scene plays at the battle's pace, as do riders' walks.
+  const bool boss = entry.state == scene_state::boss;
+  const float entrance_step = step * (entry.rider || boss ? 1.0F : tuning_.computer_entrance_speed);
   if (cinematic() && cinematic_ != entry.robot) {
     battle.raise_shield(entry.robot);
     hold_still(battle, entry.robot); // it walks out after the boss's scene
@@ -178,7 +180,7 @@ void BattleScene::walk_robot(Battle &battle, RobotEntrance &entry, const float s
   }
   // Piloted riders keep their full sequence. NPCs can finish at the walk's
   // end; observe() releases them after the last scripted displacement lands.
-  const bool skip_stand = !entry.rider && tuning_.computer_entrance_skip_stand;
+  const bool skip_stand = !entry.rider && !boss && tuning_.computer_entrance_skip_stand;
   const float before = entry.left;
   entry.left = std::max(skip_stand ? tuning_.stand_frame : 0.0F, entry.left - entrance_step);
   open_door(battle, entry.gate, before, entry.left);
@@ -211,6 +213,19 @@ void BattleScene::start_walking(Battle &battle, RobotEntrance &entry) {
                                   : chatter_event::rival_entrance;
     lines_.emplace_back(entry.robot, line);
   }
+  // 0x082cff: a boss (on the other side, loadout +0x70 1) takes the camera,
+  // the letterbox bars and the music for its own shot, the first time in a
+  // battle only; the other robots fight on meanwhile.
+  const SceneTrack *scene = track(scene_state::boss);
+  if (entry.rider || !robot.rival || !robot.boss || boss_played_ || cinematic() ||
+      scene == nullptr) {
+    return;
+  }
+  entry.state = scene_state::boss;
+  entry.left = scene->frames;
+  cinematic_ = entry.robot;
+  letterbox_way_ = 1.0F; // the bars slide in (global +0xef320 2)
+  music_ = tuning_.boss_music;
 }
 
 void BattleScene::end_robot(Battle &battle, RobotEntrance &entry) {

@@ -8,13 +8,29 @@
 
 #include <SDL3/SDL.h>
 
+#include <array>
+#include <cstdint>
+#include <optional>
 #include <map>
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace phantomcrash {
 
 class SharpText;
+class SpriteShapes;
+class SpriteText;
+
+// Lettering erased from atlas art: `region` (rect-relative LTRB), each row
+// filled from the colours just outside its two ends, or with `fill` (opaque
+// 0xRRGGBB).
+struct EraseArea {
+  std::array<float, 4> region{};
+  std::optional<std::uint32_t> fill;
+  float slant{}; // each row shifted right by slant times its height above the bottom
+};
+class DisplayText;
 
 // Images named by the data files, loaded through the data roots on first use
 // and kept for the whole run (the front end uses two textures).
@@ -47,6 +63,20 @@ public:
   void set_sharp_text(bool enabled) {
     sharp_enabled_ = enabled;
   }
+  // The atlas digits and labels drawn as sharp text (desktop_sprite_text.hpp);
+  // null while sharp text is off, so they are drawn from the atlas.
+  [[nodiscard]] SpriteText *sprite_text();
+  void set_sprite_text(std::unique_ptr<SpriteText> text);
+  // The atlas frames and cursors drawn as outlines (desktop_sprite_shapes.hpp),
+  // loaded on first use; null while sharp text is off or a replay is
+  // recorded, so they are drawn from the atlas.
+  [[nodiscard]] SpriteShapes *sprite_shapes();
+  // Whole strings in installed display fonts (desktop_display_text.hpp).
+  [[nodiscard]] DisplayText &display_text();
+  // `rect` of `file` with the lettering in each area erased (desktop_textures_erase.cpp).
+  // Null when the image is missing.
+  [[nodiscard]] SDL_Texture *erased(const std::string &file, const std::array<float, 4> &rect,
+                                    const std::vector<EraseArea> &areas);
 
 private:
   SDL_Renderer *renderer_{};
@@ -54,6 +84,11 @@ private:
   const DataRoots &roots_;
   std::map<std::string, SDL_Texture *> textures_;
   std::unique_ptr<SharpText> sharp_;
+  std::unique_ptr<SpriteText> sprite_text_;
+  std::unique_ptr<SpriteShapes> sprite_shapes_;
+  bool shapes_loaded_{};
+  std::unique_ptr<DisplayText> display_text_;
+  std::map<std::string, SDL_Texture *> erased_;
   bool sharp_enabled_{true};
   struct HitMask {
     int width{}, height{};

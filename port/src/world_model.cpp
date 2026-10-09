@@ -2,6 +2,7 @@
 
 #include "phantomcrash/json.hpp"
 #include "phantomcrash/rigid_animation.hpp"
+#include "world_model_stages.hpp"
 
 #ifdef _MSC_VER
 #pragma warning(push, 0)
@@ -13,11 +14,13 @@
 #endif
 
 #include <algorithm>
+#include <cstdint>
 #include <cstring>
 #include <limits>
 #include <map>
 #include <memory>
 #include <stdexcept>
+#include <string>
 #include <tuple>
 
 namespace phantomcrash {
@@ -110,6 +113,10 @@ private:
       entry.wrap_u = wrap_mode(static_cast<int>(texture->sampler->wrap_s));
       entry.wrap_v = wrap_mode(static_cast<int>(texture->sampler->wrap_t));
     }
+    return add_texture(std::move(entry));
+  }
+
+  int add_texture(ModelTexture entry) {
     const auto key = std::make_tuple(entry.image, entry.wrap_u, entry.wrap_v);
     if (const auto found = textures_.find(key); found != textures_.end()) {
       return found->second;
@@ -148,7 +155,7 @@ private:
       entry.blend_depth_write = source_flags >= 0 && !entry.additive;
       entry.original_material = source_flags >= 0;
       entry.specular = (flags & 0x40U) != 0;
-      entry.specular_power = static_cast<float>(game_extra(metadata, "power", 0.0));
+      entry.specular_power = specular_power(game_extra(metadata, "power", 0.0));
       if (const auto *game = metadata.find("phantomcrash"); game && game->is_object()) {
         // The extractor's historical name is diffuse, but 0x0b3240 writes
         // this RGB into D3DMATERIAL8.Ambient, leaving vertex diffuse intact.
@@ -163,6 +170,12 @@ private:
           const auto stage = static_cast<unsigned>(stages->array()[0].number());
           entry.texture_add = (stage & 1U) != 0;
           entry.texture_alpha = (stage & 0x40U) != 0;
+          if (entry.base_texture >= 0) {
+            const auto &base = model_.textures[static_cast<std::size_t>(entry.base_texture)];
+            if (auto reflect = reflect_stage_texture(*game, base.image)) {
+              entry.reflect_texture = add_texture(std::move(*reflect));
+            }
+          }
         }
       }
     }

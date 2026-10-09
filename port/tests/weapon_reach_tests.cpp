@@ -73,6 +73,7 @@ TEST_CASE("a beam runs out to its length and a stun makes a flinch") {
   laser.top_speed = 60.0F;
   laser.acceleration = 2.0F;
   laser.stun = 1.0F;
+  laser.recharge_frames = 150.0F;
   WeaponTuning weapon;
   weapon.part = PartRef{WeaponTable::arm, 29, 0};
   apply_weapon_stats(weapon, laser);
@@ -81,4 +82,5 @@ TEST_CASE("a beam runs out to its length and a stun makes a flinch") {
   CHECK(weapon.acceleration == 0.0F);
   CHECK(weapon.lock_range == arm_lock_range);
   CHECK(near(weapon.stagger_seconds, 1.0F / 60.0F));
+  CHECK(near(weapon.recharge_seconds, 5.0F)); // 150 battle ticks, as the shop shows
 }

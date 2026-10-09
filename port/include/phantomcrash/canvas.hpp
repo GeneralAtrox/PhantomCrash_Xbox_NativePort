@@ -23,6 +23,9 @@ struct Viewport {
   // The screen's pixel rectangle: the window, or one screen of a split.
   float origin_x{}, origin_y{};
   int pixel_width{}, pixel_height{};
+  // Seconds since the last logic tick, so steady motion (the tickers)
+  // moves every presented frame rather than in 60 Hz steps.
+  double tick_lag{};
 
   [[nodiscard]] float to_pixel_x(float x) const {
     return offset_x + x * scale;

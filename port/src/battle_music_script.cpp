@@ -3,7 +3,9 @@
 #include "phantomcrash/battle_music_script.hpp"
 
 #include "phantomcrash/json_fields.hpp"
+#include "phantomcrash/music_library.hpp"
 
+#include <algorithm>
 #include <stdexcept>
 
 namespace phantomcrash {
@@ -62,6 +64,13 @@ MusicDiscs parse_discs(const json::JsonValue &value) {
   discs.number_offset = point(value, "number_offset");
   discs.number = member(value, "number", parse_number_style);
   discs.first_layer = static_cast<int>(required(value, "first_layer").number());
+  discs.tray = member(value, "tray", parse_sprite);
+  discs.tray_seconds = required(value, "tray_seconds").number();
+  discs.tray_from = point(value, "tray_from");
+  discs.label_seconds = required(value, "label_seconds").number();
+  discs.label_from = point(value, "label_from");
+  discs.name_centre = point(value, "name_centre");
+  discs.name_colour = parse_colour(required(value, "name_colour").string());
   return discs;
 }
 
@@ -82,6 +91,12 @@ MusicStock parse_stock(const json::JsonValue &value) {
   stock.portrait_at = point(value, "portrait_at");
   stock.arrows = member(value, "arrows", parse_sprites);
   stock.hints = member(value, "hints", parse_sprites);
+  if (value.find("heading") != nullptr) {
+    stock.heading = member(value, "heading", parse_sprite);
+    stock.heading_seconds = number_of(value, "heading_seconds");
+    stock.heading_grow = std::max(1.0e-6, static_cast<double>(number_of(value, "heading_grow")));
+    stock.heading_from = point(value, "heading_from");
+  }
   if (stock.columns <= 0 || stock.rows <= 0 || stock.arrows.size() != 2) {
     throw std::runtime_error("the stock needs a grid and two arrows");
   }
@@ -138,11 +153,15 @@ BattleMusicScript parse_battle_music(const json::JsonValue &document) {
     const auto &programs = required(document, "programs");
     script.program_panel = member(programs, "panel", parse_sprite);
     script.program_lit = member(programs, "lit", parse_sprites);
+    script.program_cursor = member(programs, "cursor", parse_sprite);
+    script.program_cursor_y = floats(required(programs, "cursor_y"));
     script.set_prompt = member(programs, "set_prompt", parse_sprite);
     script.set_ok = member(programs, "set_ok", parse_sprite);
     script.back_hints = member(programs, "back_hints", parse_sprites);
-    if (script.program_lit.size() != 8) {
-      throw std::runtime_error("programs needs a lit label per program");
+    constexpr auto programs_count = static_cast<std::size_t>(music_program_count);
+    if (script.program_lit.size() != programs_count ||
+        script.program_cursor_y.size() != programs_count) {
+      throw std::runtime_error("programs needs a label and a cursor place per program");
     }
 
     const auto &mode = required(document, "play_mode");

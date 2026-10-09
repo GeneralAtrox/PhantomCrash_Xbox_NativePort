@@ -122,8 +122,9 @@ void TrainingScreen::vs_controls(const InputFrame &input, const bool locked) {
         own.mouse_fire_left = input.mouse_fire_left;
         own.mouse_fire_right = input.mouse_fire_right;
       }
-      control = battle_control(own, setup.buttons, nullptr, standard_controls_, beginner_);
-      fire = battle_fire(own, setup.buttons);
+      control = battle_control(view_changed(own, controls_), buttons_, nullptr, standard_controls_,
+                               beginner_);
+      fire = battle_fire(own, buttons_);
     }
     battle_->set_player_control(static_cast<int>(index), control, fire);
   }

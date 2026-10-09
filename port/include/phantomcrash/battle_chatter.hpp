@@ -89,6 +89,9 @@ struct ChatterTables {
   std::vector<json::JsonValue> scripts; // command arrays, as events.json gives them
   // Line tables (0x1b3520): per event, an index into scripts, or -1.
   std::vector<std::array<int, chatter_event::count>> tables;
+  // Each Area Ranker's defeat line, by area (0x2431b4), an index into
+  // scripts or -1.
+  std::vector<int> ranker_defeats;
 };
 
 // Throws std::runtime_error when a value is missing or wrong.

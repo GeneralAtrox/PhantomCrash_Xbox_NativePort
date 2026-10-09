@@ -300,6 +300,12 @@ void DesktopShots::add_beams(const Battle &battle, const Mat4 &camera,
                        translation({beam.reach * half, 0.0F, 0.0F}) * beam_frame(beam, toward);
     const std::size_t first = items.size();
     add_mesh(beam_, world, items);
+    // 0x09b9fe sets the beam batch's flags 0x300 before drawing it: unlit
+    // and added to what is behind (SRCALPHA, ONE), a glow rather than the
+    // plain blend its model records (flags 0x102).
+    for (std::size_t index = first; index < items.size(); ++index) {
+      items[index].additive = true;
+    }
     const float frames = beam.held * part_frame_rate;
     if (frames < look.fade_frames) {
       const int level = std::max(static_cast<int>(std::lround(frames)), 0) * beam_ramp_step;

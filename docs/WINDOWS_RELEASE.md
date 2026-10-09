@@ -1,8 +1,8 @@
 # Windows release
 
-Version 0.5.7 brings root-motion movement with momentum on stopping, faster
-NPC entrances, wreck and prize rules, the RUMBLING roster in the pause menu
-and the HM10 barrel fix.
+Version 0.5.8 brings sharp lettering and vector frames on the menus, the
+module shop's extra stats, the BATTLE MUSIC programmer's animation, boss
+entrance and defeat scenes, the Area Rankers' themes and lighting fixes.
 
 This is a work-in-progress Windows x64 port. The ZIP includes
 `phantomcrash_port.exe`, the game data installer `phantomcrash_extract.exe`,
@@ -57,23 +57,36 @@ one); it uses and saves the current quest.
 
 ## Included changes
 
-0.5.7 changes:
+0.5.8 changes:
 
-- Walking and dashing robots move by their motion's root each tick and keep
-  their legs' momentum when stopping (leg record `stop_keep`).
-- The aim pitch reaches the original camera's 45-degree limit. Standard
-  controls keep strafing in the air (`standard_air_strafe`).
-- Computer robots walk out of their gates at double speed and take control
-  as the walk ends, with their shield visible while queued and walking.
-- Wrecks break only from a direct shot, and their collision no longer
-  reaches beyond their radius. The wreck bounty is 10000 NY, and supply,
-  carrier, wreck and object rewards count towards the match prize.
-- The RUMBLING pause menu lists the opponents, with skulls for those
-  eliminated; up/down pages through longer rosters.
-- Canon/HM10 barrel sections stay on the animated forearm.
-- Arm-stump sparks sit midway between the joint and forearm, as in the
-  original.
-- Controller stick dead zone setting (`stick_dead_zone`).
+- Menu lettering baked into the art (labels, headings, warnings) is drawn as
+  sharp text at the window's resolution, and the records and BATTLE MUSIC
+  frames and cursors as vector outlines (`data/ui/sprite_text.json`,
+  `data/ui/sprite_shapes.json`). Both follow the sharp text setting.
+- BUY, SELL and STOCK MODULE show MORTAL SHOT, KNOCKDOWN RESIST and the legs'
+  KNOCKBACK RESIST. A leg's taller window fits above the CURRENT MUSIC plate,
+  and MODULE PARAMETER no longer overlaps the LEVEL row.
+- BATTLE MUSIC opens with the original's tray, disc fan, pulsing cursor and
+  STOCK heading; empty program slots are drawn.
+- RECORDS shows the venue logos and the PERSONAL BEST watermark. Hangars 11
+  and 12 have their own plates.
+- A boss takes the camera for its entrance the first time in a battle, and a
+  boss shot down holds the battle under letterbox bars while the camera
+  watches it. Area Rankers speak their defeat lines and their contests play
+  their own themes.
+- Rapid-fire guns fire at the original's 30 Hz battle cadence; beams recharge
+  as the shop states. Only a lock sight's countdown completes a lock, and a
+  strafe alone plays no footsteps.
+- The night video ship's searchlights follow their beams, the Aqualine night
+  gate lights read as a glow, reflective stages show their reflection, and
+  grated stairs and fences no longer hide what is behind their gaps.
+
+Converted assets: chatter gains the Area Rankers' defeat lines (version 4).
+The game converts the assets again on first start; the disc is not needed.
+
+0.5.7 brings root-motion movement with momentum on stopping, faster NPC
+entrances, wreck and prize rules, the RUMBLING roster in the pause menu and
+the HM10 barrel fix.
 
 0.5.6 adds per-game volume and window persistence for Phangrade launches.
 

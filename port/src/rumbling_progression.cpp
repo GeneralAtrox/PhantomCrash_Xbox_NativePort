@@ -153,8 +153,8 @@ std::vector<RosterStatus> RumblingWorld::roster_status(const int area) const {
     const PilotRecord *pilot = entrant ? check_.parts.pilot(entrant->pilot) : nullptr;
     const bool eliminated =
         std::ranges::find(roster.eliminated, member.entrant) != roster.eliminated.end();
-    status.push_back(
-        {pilot ? pilot->name : std::to_string(member.entrant), eliminated, member.source});
+    status.push_back({pilot ? pilot->name : std::to_string(member.entrant), eliminated,
+                      member.source, pilot ? pilot->tag : std::string{}});
   }
   if (const Contest *held = tables_.contests.contest(roster.drawn_for);
       held && held->champion >= 0) {
@@ -162,8 +162,8 @@ std::vector<RosterStatus> RumblingWorld::roster_status(const int area) const {
     const auto *pilot = entrant ? check_.parts.pilot(entrant->pilot) : nullptr;
     const bool eliminated =
         std::ranges::find(roster.eliminated, held->champion) != roster.eliminated.end();
-    status.push_back(
-        {pilot ? pilot->name : std::to_string(held->champion), eliminated, RosterSource::champion});
+    status.push_back({pilot ? pilot->name : std::to_string(held->champion), eliminated,
+                      RosterSource::champion, pilot ? pilot->tag : std::string{}});
   }
   return status;
 }

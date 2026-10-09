@@ -42,6 +42,7 @@ public:
 
 private:
   void draw_discs(DrawList &list) const;
+  void draw_program_label(DrawList &list, float sx, float sy) const;
   void draw_menu(DrawList &list, float offset) const;
   void draw_television(DrawList &list) const;
   void draw_programs(DrawList &list, float offset, bool outgoing) const;

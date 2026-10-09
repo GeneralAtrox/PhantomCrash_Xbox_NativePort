@@ -4,9 +4,29 @@
 #include <iterator>
 
 namespace phantomcrash {
+void TrainingScreen::refresh_marked_tags(const float seconds) {
+  constexpr float refresh_seconds = 0.5F;
+  marked_refresh_ -= seconds;
+  if (live_world_ == nullptr || marked_refresh_ > 0.0F) {
+    return;
+  }
+  marked_refresh_ = refresh_seconds;
+  std::set<std::string> tags;
+  for (const RosterStatus &entry : live_world_->roster_status(live_area_)) {
+    if (entry.eliminated && !entry.tag.empty()) {
+      tags.insert(entry.tag);
+    }
+  }
+  for (SplitView &split : splits_) {
+    split.hud->set_marked_tags(tags);
+  }
+  hud_->set_marked_tags(std::move(tags));
+}
+
 void TrainingScreen::tick_effects(const double tick_seconds) {
   const auto seconds = static_cast<float>(tick_seconds);
   hud_->tick(*battle_, seconds);
+  refresh_marked_tags(seconds);
   for (SplitView &split : splits_) {
     split.hud->tick(*battle_, seconds);
   }

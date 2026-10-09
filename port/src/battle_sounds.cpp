@@ -323,7 +323,9 @@ void BattleSounds::observe_robot(const std::size_t index, const Combatant &robot
   // The walk's steps: a foot's contact keys (0x0ad737 counts their
   // crossings in +0x210c, 0x093637 then plays the step). A robot without
   // contact nodes counts them by time instead, faster as the walk speeds up.
-  const bool walking = mover.grounded() && (mode == MoveMode::walk || mode == MoveMode::turn);
+  // A strafe alone takes no steps (0x08dede leaves the stand state's motion).
+  const bool walking =
+      mover.grounded() && !mover.strafing() && (mode == MoveMode::walk || mode == MoveMode::turn);
   const bool keyed = stepped(robot, watch);
   if (keyed) {
     if (walking && watch.stepped) {

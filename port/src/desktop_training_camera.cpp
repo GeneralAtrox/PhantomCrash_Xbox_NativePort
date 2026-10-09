@@ -126,9 +126,10 @@ void TrainingScreen::tick_camera(const InputFrame &input, const float seconds) {
   if (cockpit_) {
     cockpit_->tick(cockpit_input(), seconds);
   }
-  std::optional<CameraShot> shot = finale_  ? finale_camera()
-                                   : scene_ ? scene_->scene().shot(camera_.chase())
-                                            : std::nullopt;
+  std::optional<CameraShot> shot = finale_ ? finale_camera() : defeat_shot(seconds, sees);
+  if (!shot && scene_) {
+    shot = scene_->scene().shot(camera_.chase());
+  }
   camera_.set_shot(shot ? shot : std::optional<CameraShot>(views_.shot()));
   update_target_view();
 }

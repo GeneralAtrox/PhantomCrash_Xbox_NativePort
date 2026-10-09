@@ -52,6 +52,7 @@ cbuffer Draw : register(b1) {
   float4 material_modes; // specular, texture add, texture alpha, original
   float4 source_directions[2];
   float4 source_colours[2];
+  float4 reflect_modes;  // reflect stage (normal_texture), unused x3
 };
 
 struct VertexIn {
@@ -127,7 +128,7 @@ float4 ps_main(VertexOut input, bool front : SV_IsFrontFace) : SV_Target {
   float3 highlight = 0.0;
   float3 n = normalize(input.normal) * (front ? 1.0 : -1.0);
   if ((unlit < 0.5 || local_light > 0.5) && rainbow.z < 0.5) {
-    if (has_normal > 0.5) {
+    if (has_normal > 0.5 && reflect_modes.x < 0.5) {
       float3 t = input.tangent.xyz - n * dot(n, input.tangent.xyz);
       t = normalize(t + 1e-6);
       float3 b = cross(n, t) * input.tangent.w;
@@ -154,6 +155,12 @@ float4 ps_main(VertexOut input, bool front : SV_IsFrontFace) : SV_Target {
   }
   if (has_base > 0.5) {
     float4 texel = base_texture.Sample(base_sampler, input.uv);
+    if (reflect_modes.x > 0.5) {
+      // reflect.xvu: the second stage at the world normal's x and z;
+      // reflect.xpu adds it to the base before the light modulates both.
+      float3 shine = normal_texture.Sample(normal_sampler, n.xz).rgb;
+      texel.rgb = saturate(texel.rgb + shine);
+    }
     if (rainbow.z > 0.5) {
       colour.a *= texel.a;
     } else {

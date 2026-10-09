@@ -53,6 +53,10 @@ struct Sprite {
   // Source-relative vertical bands for the left and right edges independently.
   // Detailed artwork between them is not extended; empty means the full edge.
   std::array<std::vector<std::array<float, 2>>, 2> edge_bands;
+  // Pieces drawn instead, placed from `position` and taking the sprite's
+  // colour and animation, when its lettering is not drawn as text (the
+  // original's composites, such as hangar plates 11 and 12).
+  std::vector<Sprite> fallback;
 };
 
 struct Quad {

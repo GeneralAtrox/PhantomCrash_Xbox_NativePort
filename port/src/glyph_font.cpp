@@ -85,7 +85,16 @@ std::vector<int> glyph_run(const GlyphFont &font, const std::string_view text) {
     } else if (point > U' ' && point < 0x7f) {
       point += 0xfee0; // '!' U+0021 -> U+FF01 and so on
     }
-    const auto found = font.glyphs.find(point);
+    auto found = font.glyphs.find(point);
+    if (found == font.glyphs.end()) {
+      // The Shift-JIS atlas has no fullwidth quotes; its curly ones stand
+      // in ("Pager's Friend" in the town table).
+      if (point == U'＇') {
+        found = font.glyphs.find(U'’');
+      } else if (point == U'＂') {
+        found = font.glyphs.find(U'”');
+      }
+    }
     run.push_back(found != font.glyphs.end() ? found->second : font.fallback);
   }
   return run;

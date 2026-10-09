@@ -32,6 +32,13 @@ public:
   // `quiet`: a lesson message has the window, so any line showing closes
   // and none starts.
   void tick(const Battle &battle, double tick_seconds, bool quiet);
+  // Area `area`'s ranker, robot `robot`, speaks its defeat line at once,
+  // closing any line showing (0x091f29). False without the line.
+  bool say_defeat(int robot, int area);
+  // A line is showing (0x089bb9 waits for the defeat line's end).
+  [[nodiscard]] bool speaking() const noexcept {
+    return player_ != nullptr;
+  }
   void draw(const Viewport &viewport) const;
   [[nodiscard]] std::vector<std::string> take_sounds() {
     return std::exchange(sounds_, {});
@@ -39,6 +46,7 @@ public:
 
 private:
   void close();
+  void start(const ChatterLine &line, const ChatterSpeaker &speaker);
 
   TextureCache &textures_;
   const GlyphFont &font_;

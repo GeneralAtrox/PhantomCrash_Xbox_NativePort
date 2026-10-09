@@ -93,7 +93,8 @@ struct WeaponTuning {
 // shown value up to the new amount over refill_count_seconds (0x09b986
 // counts weapon +0x98 from +0x9c to +0x94 over the 120 frames at +0xa4).
 // A beam's charge instead recharges by max / recharge_seconds a second
-// (0x097785 adds max / recharge frames every frame).
+// (0x097785 adds max / recharge frames every battle tick), only while the
+// beam is not held or fading (0x09ba08 calls it once the fade is out).
 struct Magazine {
   static constexpr float refill_count_seconds = 2.0F;
 
@@ -123,8 +124,15 @@ struct Magazine {
   void take();
   // Adds `amount`, up to the maximum, and starts the count.
   void refill(int amount);
-  void tick(float seconds);
+  // `resting`: a beam may recharge (none of it held or fading).
+  void tick(float seconds, bool resting = true);
 };
+
+// Missiles and grenades wait for the fire control's lock sights (0x051045);
+// guns and melee weapons use the target at once.
+[[nodiscard]] inline bool needs_lock_time(const WeaponTuning &weapon) {
+  return weapon.kind == WeaponKind::missile || weapon.kind == WeaponKind::grenade;
+}
 
 // {"handgun": {"kind": "gun", ...}, ...}; throws on an unknown kind.
 [[nodiscard]] std::map<std::string, WeaponTuning>
@@ -171,6 +179,7 @@ struct Beam {
   float held{};            // seconds held, up to the fade; counts down once let go
   std::optional<Vec3> tip; // where the tip was last tick; none once it starts again
   bool holding{};          // held this tick
+  float step_left{};       // seconds until the tip's next step (battle ticks, 30 Hz)
 };
 
 // A blast still growing: every battle tick it hurts each body it reaches,
@@ -251,6 +260,8 @@ public:
   [[nodiscard]] const std::vector<Beam> &beams() const noexcept {
     return beams_;
   }
+  // Whether `owner`'s beam on `slot` is held or still fading out.
+  [[nodiscard]] bool beam_live(int owner, int slot) const;
   [[nodiscard]] const std::vector<Explosion> &explosions() const noexcept {
     return explosions_;
   }

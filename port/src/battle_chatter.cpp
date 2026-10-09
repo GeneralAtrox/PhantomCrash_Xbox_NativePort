@@ -98,6 +98,16 @@ ChatterTables parse_chatter_tables(const JsonValue &document) {
         }
       }
     }
+    // Older conversions have no defeat lines; the rankers then say nothing.
+    if (const JsonValue *defeats = document.find("ranker_defeats")) {
+      for (const auto &entry : defeats->array()) {
+        const int script = entry.is_null() ? -1 : static_cast<int>(entry.number());
+        if (script >= static_cast<int>(tables.scripts.size())) {
+          throw std::runtime_error("ranker_defeats names script " + std::to_string(script));
+        }
+        tables.ranker_defeats.push_back(script);
+      }
+    }
     return tables;
   } catch (const std::exception &error) {
     throw std::runtime_error(std::string("chatter.json: ") + error.what());

@@ -105,7 +105,10 @@ void RobotMover::stagger(const float seconds, const Vec3 push) {
   lunge_at_.reset(); // a hit breaks the strike off
   down_boosting_ = false;
   lift_left_ = 0.0F;
-  stagger_left_ = std::max({stagger_left_, seconds, tuning_.hit_seconds});
+  // 0x07675e sets the hit's time (robot +0x25a0) to the stun, at most the
+  // reaction's frames, and 0x08f989 stands the robot up once the motion
+  // reaches it; every hit restarts the reaction.
+  stagger_left_ = std::min(seconds, tuning_.hit_seconds);
   // The push in the robot's own frame picks the reaction: along or across,
   // whichever is larger, and its sign.
   const float along = dot(push, heading_forward(heading_));
@@ -169,6 +172,7 @@ void RobotMover::tick(const RobotControl &input, const float seconds,
   }
   mode_seconds_ += seconds;
   dodged_ = 0;
+  strafing_ = false;
   if (mode_ == MoveMode::scripted || mode_ == MoveMode::destroyed) {
     if (!grounded_) {
       vertical_speed_ -= tuning_.gravity * seconds;
@@ -347,6 +351,7 @@ void RobotMover::tick_ground(const RobotControl &control, const float seconds,
                                  tuning_.walk_accel * seconds);
     set_mode(MoveMode::walk, backward_ ? robot_motion::walk_back : robot_motion::walk, true);
     motion_speed_ = amount * tuning_.walk_motion_rate;
+    strafing_ = !pushed;
     return;
   }
   local_velocity_.z = approach(local_velocity_.z, 0.0F, tuning_.walk_accel * seconds);

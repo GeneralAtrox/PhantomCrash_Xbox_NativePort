@@ -102,6 +102,10 @@ the step when a walking robot's contact node crosses a key
 (`contact_stepped`, the same crossings that start the step dust). A robot
 without contact nodes counts steps by time instead (`footstep_seconds`, a
 port value), faster as the walk speeds up.
+The original's strafe (`0x08dede`) slides the robot sideways without
+changing its state or motion, so a strafe alone takes no steps; the port
+animates the walk while strafing but plays no steps for it, so the
+rollers (HL4Roller and the other wheeled legs) no longer clatter sideways.
 
 ## Weapons
 

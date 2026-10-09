@@ -29,6 +29,11 @@ public:
   // speed and the lock time.
   void set_fire_control(const ChipStats &chip);
   void record_defeats(const Battle &battle);
+  // Name tags the live RUMBLING's checklist has marked: their markers keep
+  // the skull from earlier battles and saves too.
+  void set_marked_tags(std::set<std::string> tags) {
+    marked_tags_ = std::move(tags);
+  }
   // The robot whose sights these are: 0, the player's, or a split
   // screen's robot.
   void set_viewer(const int robot) noexcept {
@@ -93,6 +98,7 @@ private:
   [[nodiscard]] std::array<float, 2> outer_half() const;
 
   std::set<std::pair<std::string, std::string>> defeated_; // identities, never reusable slots
+  std::set<std::string> marked_tags_;
   TextureCache &textures_;
   const GlyphFont &font_;
   BattleHudStyle style_;

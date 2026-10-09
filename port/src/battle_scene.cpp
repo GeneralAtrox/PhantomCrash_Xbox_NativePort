@@ -94,6 +94,7 @@ void BattleScene::prepare(Battle &battle, const float seconds) {
   if (finished_ || battle.robots().empty() || seconds <= 0.0F) {
     return;
   }
+  tick_defeat(step);
   if (entering(state_)) {
     walk_entrance(battle, seconds, step);
   } else if (state_ == scene_state::exit) {

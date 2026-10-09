@@ -303,10 +303,11 @@ int run(const Options &options) {
         input.point(point.canvas, point.click);
       }
     }
-    const Viewport viewport = screens.placed(host.viewport());
+    Viewport viewport = screens.placed(host.viewport());
     for (int tick = 0; tick < ticks; ++tick) {
       screens.tick(input.sample(host.focused(), viewport), step.tick_seconds());
     }
+    viewport.tick_lag = smoke ? 0.0 : step.alpha() * step.tick_seconds();
     input.rumble(screens.rumble(), screens.screen() != "coop");
     screens.advance(elapsed);
     screens.draw(viewport);

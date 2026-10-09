@@ -109,6 +109,36 @@ TEST_CASE("module_shop.json reads both modes, a grid of eight with EXIT last") {
   CHECK(sell.list.hangar_badges.size() == garage_hangar_count);
 }
 
+TEST_CASE("details windows grow below their title and divider") {
+  const ModuleShopScript buy = shipped_script(ModuleShopMode::buy);
+  const ModuleShopScript stock = parse_stock_module(
+      DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT).document("ui/stock_module.json"), buy);
+  for (const ModuleShopScript *script : {&buy, &stock}) {
+    for (const PopWindow &window : script->list.details) {
+      REQUIRE(window.grow_caps.has_value());
+      // A part's window keeps its picture frame, divider and title whole.
+      CHECK((*window.grow_caps)[0] >= 148.0F);
+    }
+    for (const PopWindow &window : script->list.module_details) {
+      REQUIRE(window.grow_caps.has_value());
+      CHECK((*window.grow_caps)[0] >= 43.0F);
+    }
+  }
+}
+
+TEST_CASE("a leg's extra line fits above the CURRENT MUSIC plate") {
+  const ModuleShopScript buy = shipped_script(ModuleShopMode::buy);
+  REQUIRE(buy.extra_stats.has_value());
+  // Seven lines at the closer pitch take at most the room the window has
+  // below it and above it (5 pixels each).
+  const float step = buy.extra_stats->part_step;
+  const float raise = buy.extra_stats->part_raise;
+  CHECK(step > 0.0F);
+  CHECK(step < buy.list.stats.step);
+  CHECK(raise <= 5.0F);
+  CHECK(7.0F * step - 6.0F * buy.list.stats.step <= raise + 5.0F);
+}
+
 TEST_CASE("part_stats.json lists each kind's lines") {
   const PartStatsTable table = shipped_table();
   CHECK(table.rows[static_cast<std::size_t>(GoodsKind::legs)].size() == 6);
@@ -125,6 +155,19 @@ TEST_CASE("a body's stats: weight in tonnes, armour never below the floor") {
   CHECK(lines[2].row == StatRow::armour);
   CHECK(stat_text(lines[2]) == "80");
   CHECK(stat_text(lines[3]) == "4");
+}
+
+TEST_CASE("a module's extra stats show only what it changes") {
+  Shop shop;
+  shop.garage.modules[3].critical_percent = 10.0F;
+  const auto lines = extra_stats(shop.table, shop.parts, shop.garage, {GoodsKind::module, 3, 0});
+  // Its knockdown resistance is 0, so only the critical bonus shows.
+  REQUIRE(lines.size() == 1);
+  CHECK(lines[0].label == "MORTAL SHOT");
+  CHECK(lines[0].unit == "%");
+  CHECK(lines[0].value == "10");
+  CHECK(extra_stats(shop.table, shop.parts, shop.garage, {GoodsKind::module, 45, 0}).empty());
+  CHECK(extra_stats(shop.table, shop.parts, shop.garage, {GoodsKind::body, 0, 0}).empty());
 }
 
 TEST_CASE("the day's lineup and the player's goods") {

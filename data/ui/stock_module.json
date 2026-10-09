@@ -1,5 +1,5 @@
 {
- "notes": ["The garage's MODULES, STOCK MODULE (original scene 38; setup 0x03de75, grid 0x03d275, list 0x03dfed, drawing 0x03c848, 0x03d872 and 0x03d527). Opened from the garage menu (data/ui/garage.json), which EXIT goes back to. It shows the player's parts, CHIPs and modules and the paints and stickers owned, like SELL MODULE (data/ui/module_shop.json), but trades nothing.", "grid: five columns by two rows, column by column (0x1fe180): body, legs; arm weapons, CHIP; backpack weapons, colouring pattern; options, stickers; EXIT twice, the upper one without an icon. The icons slide in over 24 frames from their from_x (0x06c530); the chosen one is lit yellow, pulsing while the grid takes input. Confirm opens the list, even empty, or leaves on EXIT; cancel jumps to the lower EXIT (sys 4).", "list: the category's own goods (0x0182b1), six rows 38 apart with the maker's icon, the name, the hangar a part is fitted in (2552 plus the hangar) or the mark 2551 on a paint or sticker a hangar wears, and R or L for the slot of an arm or backpack weapon. The window pops open over 10 frames, the details over 12; the grid is covered by 2590. up/down move without wrapping; X sorts by name and Y by price, again turning the order round (0x01733d via 0x03c81d); cancel goes back to the grid (sys 8). No price shows.", "details: the chosen goods' labels (by category; a module's 2610, or 2611 when it cuts lasers) and stats (data/ui/part_stats.json, from y 246, or 202 for modules; the original puts a module's 5 further right, at x 565), and a paint's or sticker's picture in the frame 2603 (the original frames a CHIP's too). The chosen body, legs, arm or shoulder is also shown alone in the picture window (0x03cb50, 0x084680), as data/ui/robot_preview.json's stock_module entry places it; that mode's turn rate is 0, so it holds still.", "The help line shows the category's line (0x1fe218) on the grid and the goods' in the list; those and the swatches are the parts shop's (data/ui/module_shop.json goods_help and swatches, the same text at 0x1fe8ac)."],
+ "notes": ["The garage's MODULES, STOCK MODULE (original scene 38; setup 0x03de75, grid 0x03d275, list 0x03dfed, drawing 0x03c848, 0x03d872 and 0x03d527). Opened from the garage menu (data/ui/garage.json), which EXIT goes back to. It shows the player's parts, CHIPs and modules and the paints and stickers owned, like SELL MODULE (data/ui/module_shop.json), but trades nothing.", "grid: five columns by two rows, column by column (0x1fe180): body, legs; arm weapons, CHIP; backpack weapons, colouring pattern; options, stickers; EXIT twice, the upper one without an icon. The icons slide in over 24 frames from their from_x (0x06c530); the chosen one is lit yellow, pulsing while the grid takes input. Confirm opens the list, even empty, or leaves on EXIT; cancel jumps to the lower EXIT (sys 4).", "list: the category's own goods (0x0182b1), six rows 38 apart with the maker's icon, the name, the hangar a part is fitted in (2552 plus the hangar) or the mark 2551 on a paint or sticker a hangar wears, and R or L for the slot of an arm or backpack weapon. The window pops open over 10 frames, the details over 12; the grid is covered by 2590. up/down move without wrapping; X sorts by name and Y by price, again turning the order round (0x01733d via 0x03c81d); cancel goes back to the grid (sys 8). No price shows.", "details: the chosen goods' labels (by category; a module's 2610, or 2611 when it cuts lasers) and stats (data/ui/part_stats.json, from y 246, or 202 for modules; the original puts a module's 5 further right, at x 565), and a paint's or sticker's picture in the frame 2603 (the original frames a CHIP's too). The chosen body, legs, arm or shoulder is also shown alone in the picture window (0x03cb50, 0x084680), as data/ui/robot_preview.json's stock_module entry places it; that mode's turn rate is 0, so it holds still. grow_caps: when extra stat lines (data/ui/part_stats.json extras) make a details window taller, only the art between these rows (from the top, from the bottom) stretches: a part's window keeps its picture frame, divider and MODULE PARAMETER title (rows 117-147) whole above, a module's its title (rows 9-42); the rows between are plain sides.", "The help line shows the category's line (0x1fe218) on the grid and the goods' in the list; those and the swatches are the parts shop's (data/ui/module_shop.json goods_help and swatches, the same text at 0x1fe8ac)."],
  "scene": 38,
  "music": "garage",
  "fade_in": 0.5,
@@ -141,24 +141,28 @@
      {
       "sprite": {"id": "2601", "image": "textures/scroll/stock_module_tex/0.png", "rect": [1304, 0, 1528, 280], "position": [489.0, 239.0], "layer": 258, "centered": true},
       "seconds": 0.2,
-      "thin": 0.05
+      "thin": 0.05,
+      "grow_caps": [148, 24]
      },
      {
       "sprite": {"id": "2602", "image": "textures/scroll/stock_module_tex/0.png", "rect": [1528, 0, 1752, 280], "position": [489.0, 239.0], "layer": 5, "centered": true},
       "seconds": 0.2,
-      "thin": 0.05
+      "thin": 0.05,
+      "grow_caps": [148, 24]
      }
     ],
     "module_details": [
      {
       "sprite": {"id": "2604", "image": "textures/scroll/stock_module_tex/0.png", "rect": [1752, 0, 1976, 160], "position": [489.0, 252.0], "layer": 258, "centered": true},
       "seconds": 0.2,
-      "thin": 0.05
+      "thin": 0.05,
+      "grow_caps": [43, 24]
      },
      {
       "sprite": {"id": "2605", "image": "textures/scroll/stock_module_tex/0.png", "rect": [640, 320, 864, 480], "position": [489.0, 252.0], "layer": 5, "centered": true},
       "seconds": 0.2,
-      "thin": 0.05
+      "thin": 0.05,
+      "grow_caps": [43, 24]
      }
     ],
     "shade": {"id": "2590", "image": "textures/scroll/stock_module_tex/0.png", "rect": [1680, 480, 1904, 568], "position": [72, 212], "layer": 259},

@@ -43,6 +43,10 @@ inline constexpr std::array<Buttons, control_action_count> bindable_buttons{
     button::a,     button::b,    button::x, button::y, button::left_trigger, button::right_trigger,
     button::white, button::black};
 
+// The bindable buttons' names on the HUD's weapon labels.
+inline constexpr std::array<std::string_view, control_action_count> bindable_button_labels{
+    "A", "B", "X", "Y", "LT", "RT", "WH", "BK"};
+
 // The index of an action or bindable button name, or -1.
 [[nodiscard]] int control_action_index(std::string_view name);
 [[nodiscard]] int bindable_button_index(std::string_view name);

@@ -168,6 +168,9 @@ ModuleShopScript parse_module_shop(const json::JsonValue &document, const Module
       throw std::runtime_error(std::string("modes.") + mode_name + ": " + error.what());
     }
     script.list.stats = stats;
+    if (const auto *extras = document.find("extra_stats")) {
+      script.extra_stats = parse_extra_stats_style(*extras);
+    }
     if (script.category_help.size() != script.categories.size()) {
       throw std::runtime_error("category_help: needs one line a category");
     }
@@ -177,12 +180,34 @@ ModuleShopScript parse_module_shop(const json::JsonValue &document, const Module
   }
 }
 
+ExtraStatsStyle parse_extra_stats_style(const json::JsonValue &value) {
+  ExtraStatsStyle style;
+  style.font = value.string_or("font", "");
+  if (const auto *colour = value.find("colour")) {
+    style.colour = parse_colour(colour->string());
+  }
+  if (const auto *shadow = value.find("shadow")) {
+    style.shadow = parse_text_shadow(*shadow);
+    style.shadow_blur = static_cast<float>(shadow->number_or("blur", 0.0));
+  }
+  style.label_left = number_of(value, "label_left");
+  style.unit_left = number_of(value, "unit_left");
+  style.ink = numbers<2>(required(value, "ink"), "ink");
+  style.line_rows = numbers<2>(required(value, "line_rows"), "line_rows");
+  style.part_raise = static_cast<float>(value.number_or("part_raise", 0.0));
+  style.part_step = static_cast<float>(value.number_or("part_step", 0.0));
+  return style;
+}
+
 ModuleShopScript parse_stock_module(const json::JsonValue &document, const ModuleShopScript &shop) {
   ModuleShopScript script = parse_module_shop(document, ModuleShopMode::stock);
   for (std::size_t kind = 0; kind < script.goods_help.size(); ++kind) {
     if (script.goods_help[kind].empty()) {
       script.goods_help[kind] = shop.goods_help[kind];
     }
+  }
+  if (!script.extra_stats) {
+    script.extra_stats = shop.extra_stats;
   }
   if (script.paint_swatches.empty() && script.emblem_swatches.empty()) {
     script.paint_swatches = shop.paint_swatches;

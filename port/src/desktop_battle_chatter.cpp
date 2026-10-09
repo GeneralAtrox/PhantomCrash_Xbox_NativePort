@@ -41,17 +41,7 @@ void ChatterWindow::tick(const Battle &battle, const double tick_seconds, const 
   }
   const std::optional<ChatterLine> line = chatter_.take(quiet || player_ != nullptr);
   if (line && !quiet) {
-    event_ = std::make_unique<StoryEvent>();
-    event_->commands = chatter_script(tables_, *line, *chatter_.speaker(line->robot), font_);
-    for (const EventCommand &command : event_->commands) {
-      if (command.op == EventOp::sprite && !command.sprite.image.empty()) {
-        static_cast<void>(textures_.get(command.sprite.image));
-      }
-    }
-    player_ = std::make_unique<EventPlayer>(*event_, talk_, tuning_, ++lines_);
-    if (!sound_.empty()) {
-      sounds_.push_back(sound_);
-    }
+    start(*line, *chatter_.speaker(line->robot));
   }
   if (!player_) {
     return;
@@ -64,6 +54,33 @@ void ChatterWindow::tick(const Battle &battle, const double tick_seconds, const 
   if (player_->finished()) {
     close();
   }
+}
+
+void ChatterWindow::start(const ChatterLine &line, const ChatterSpeaker &speaker) {
+  event_ = std::make_unique<StoryEvent>();
+  event_->commands = chatter_script(tables_, line, speaker, font_);
+  for (const EventCommand &command : event_->commands) {
+    if (command.op == EventOp::sprite && !command.sprite.image.empty()) {
+      static_cast<void>(textures_.get(command.sprite.image));
+    }
+  }
+  player_ = std::make_unique<EventPlayer>(*event_, talk_, tuning_, ++lines_);
+  if (!sound_.empty()) {
+    sounds_.push_back(sound_);
+  }
+}
+
+bool ChatterWindow::say_defeat(const int robot, const int area) {
+  if (area < 0 || area >= static_cast<int>(tables_.ranker_defeats.size()) ||
+      tables_.ranker_defeats[static_cast<std::size_t>(area)] < 0) {
+    return false;
+  }
+  close();
+  // The line names and shows its ranker itself.
+  const ChatterSpeaker *speaker = chatter_.speaker(robot);
+  start({robot, -1, tables_.ranker_defeats[static_cast<std::size_t>(area)]},
+        speaker != nullptr ? *speaker : ChatterSpeaker{});
+  return true;
 }
 
 void ChatterWindow::draw(const Viewport &viewport) const {

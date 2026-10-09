@@ -150,8 +150,9 @@ shader `desktop_volumetric_light_shader.hpp`). Only the stages listed under
   beam dims as 1/(1 + (d/fade)²) with distance from its lamp; `beam_fade` is
   the default fade, and a light's own `air_fade` overrides it (the ships'
   narrow searchlights carry 250 units, the supply carrier's 80, stage 1's
-  gate strips 16, with `air` 0.7, so they read as a glow along the panels
-  rather than a cone filling the view when looking up at them).
+  and stage 5's (Aqualine night) gate strips 16, with `air` 0.7, so they read
+  as a glow along the lamps rather than a cone filling the view when looking
+  up at them).
 - **Per light.** Each stage, ship or supply light's `air` scales how strongly
   it lights the air (default 1). `point_lights.air` sets it for every effect
   light, including fires and blasts promoted to shadowed spotlights.

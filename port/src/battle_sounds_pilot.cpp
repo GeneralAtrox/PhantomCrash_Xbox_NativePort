@@ -15,16 +15,21 @@ namespace {
 constexpr std::uint64_t locked_key_base = 0xB7'0000;
 constexpr std::uint64_t carrier_key = 0xB8'0000;
 
-// Whether any other robot still standing has `index` locked (0x051045 sets
-// +0x8a2 for each robot whose lock list holds this one).
+// Whether any other robot still standing has a lock sight on `index`
+// (0x051045 sets +0x8a2 for each robot its missile and grenade sights,
+// +0x194, hold, locking or locked; a gun's aim is no lock).
 bool locked_on(const std::vector<Combatant> &robots, const std::size_t index) {
   for (std::size_t other = 0; other < robots.size(); ++other) {
     const Combatant &robot = robots[other];
     if (other == index || !robot.alive) {
       continue;
     }
-    if (std::ranges::find(robot.locks, static_cast<int>(index)) != robot.locks.end()) {
-      return true;
+    for (std::size_t slot = 0; slot < weapon_slots; ++slot) {
+      const WeaponTuning *weapon = robot.weapons[slot];
+      if (weapon != nullptr && !robot.lost[slot] && needs_lock_time(*weapon) &&
+          robot.lock_candidates[slot] == static_cast<int>(index)) {
+        return true;
+      }
     }
   }
   return false;

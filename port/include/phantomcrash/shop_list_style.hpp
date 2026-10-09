@@ -22,6 +22,10 @@ struct PopWindow {
   // A window built of a stretched middle (`sprite`) and caps above and
   // below it, opening with it (0x0177b8).
   std::optional<std::array<Sprite, 2>> caps;
+  // The art's rows kept whole above and below when the window grows for
+  // extra stat lines (the title and divider above, the corners below); the
+  // window keeps its size without them.
+  std::optional<std::array<float, 2>> grow_caps;
 };
 
 // The goods list (0x1f8a3 buy, 0x21cd2 sell, 0x303d7 tune-up) and the

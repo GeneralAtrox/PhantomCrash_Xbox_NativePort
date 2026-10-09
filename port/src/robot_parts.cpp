@@ -266,8 +266,16 @@ void apply_weapon_stats(WeaponTuning &weapon, const WeaponStats &stats) {
   weapon.damage = static_cast<float>(stats.damage);
   weapon.rounds = std::max(stats.rounds, 1);
   weapon.spread_degrees = stats.spread_degrees;
-  if (stats.fire_frames > 0.0F) {
-    weapon.cooldown = stats.fire_frames / fps;
+  if (stats.hud_kind == hud_kind::beam || stats.hud_kind == hud_kind::melee) {
+    if (stats.fire_frames > 0.0F) {
+      weapon.cooldown = stats.fire_frames / fps;
+    }
+  } else {
+    // 0x09b4f7 fires on a battle tick (30 Hz) whose count is out and counts
+    // down two frames a tick only on ticks it does not fire: a round every
+    // 1 + ceil(fire_frames / 2) ticks (a fire_frames 2 gun fires 15 a second).
+    const float ticks = 1.0F + std::ceil(std::max(stats.fire_frames, 0.0F) / 2.0F);
+    weapon.cooldown = ticks / battle_ticks_per_second;
   }
   if (stats.life_frames > 0.0F) {
     weapon.life_seconds = stats.life_frames / fps;
@@ -293,11 +301,13 @@ void apply_weapon_stats(WeaponTuning &weapon, const WeaponStats &stats) {
   weapon.blast_start_radius = stats.blast_start_radius;
   weapon.blast_seconds = stats.blast_frames / fps;
   weapon.blast_damage = stats.blast_damage;
-  weapon.recharge_seconds = stats.recharge_frames / fps;
+  // 0x097785 adds max / recharge frames once a battle tick (30 Hz), so a
+  // beam fills in its recharge frames of ticks, as the shop shows it.
+  weapon.recharge_seconds = stats.recharge_frames / battle_ticks_per_second;
   weapon.knockback = stats.knockback * battle_ticks_per_second;
   weapon.knockdown_percent = stats.knockdown;
   // Only a weapon with stun makes its target flinch (0x07675e, 0x08dcd1);
-  // the flinch lasts at least its hit motion (MovementTuning::hit_seconds).
+  // the flinch lasts the stun, at most its hit motion (MovementTuning::hit_seconds).
   weapon.stagger_seconds = stats.stun > 0.0F ? stats.stun / fps : 0.0F;
 }
 

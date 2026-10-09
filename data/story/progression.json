@@ -1,5 +1,6 @@
 {
   "notes": [
+    "ranker_music: a ranker's contest plays its ranker's theme in place of the player's music program (0x09e24c, by the contest's id: tracks 0xbe, 0x35, 0x3f, 0x3a), and the ranker's entrance starts it (0x088ffa calls 0x09e6b1 there instead of 13BossStart).",
     "Predicate IDs are the original table at 0x40e888. Class/area leader contest IDs come from world/rumbling.json. Unknown predicates remain blocked.",
     "0xd143b counts cleared class leaders plus area rankers, not days or battles. 0x2a178 counts owned music tracks.",
     "Winning the First Ranker's contest (first_ranker_class) for the first time holds the battle clear_hold_frames (60 Hz) after the winning blow (0x089861 sets robot state 0x17 with a 240-frame timer), then skips RESULT for clear_exit (0x089d1b)."
@@ -239,5 +240,11 @@
     }
   ],
   "clear_exit": "final_battle",
-  "clear_hold_frames": 240
+  "clear_hold_frames": 240,
+  "ranker_music": {
+    "14": "sound/VOICEPER.WAV",
+    "31": "sound/EISENDWN.WAV",
+    "48": "sound/FULLSTRA.WAV",
+    "49": "sound/FORCFULL.WAV"
+  }
 }

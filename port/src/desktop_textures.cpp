@@ -1,5 +1,8 @@
 #include "desktop_textures.hpp"
+#include "desktop_display_text.hpp"
 #include "desktop_sharp_text.hpp"
+#include "desktop_sprite_shapes.hpp"
+#include "desktop_sprite_text.hpp"
 
 #include <SDL3_image/SDL_image.h>
 
@@ -99,6 +102,32 @@ TextureCache::~TextureCache() {
   for (auto &[file, texture] : textures_) {
     SDL_DestroyTexture(texture);
   }
+  for (auto &[key, texture] : erased_) {
+    SDL_DestroyTexture(texture);
+  }
+}
+
+SpriteText *TextureCache::sprite_text() {
+  return sprite_text_ && sharp_text() != nullptr ? sprite_text_.get() : nullptr;
+}
+
+void TextureCache::set_sprite_text(std::unique_ptr<SpriteText> text) {
+  sprite_text_ = std::move(text);
+}
+
+SpriteShapes *TextureCache::sprite_shapes() {
+  if (!shapes_loaded_) {
+    shapes_loaded_ = true;
+    sprite_shapes_ = load_sprite_shapes(roots_);
+  }
+  return sprite_shapes_ && sharp_enabled_ && recording_ == nullptr ? sprite_shapes_.get() : nullptr;
+}
+
+DisplayText &TextureCache::display_text() {
+  if (!display_text_) {
+    display_text_ = std::make_unique<DisplayText>(renderer_, roots_);
+  }
+  return *display_text_;
 }
 
 SDL_Texture *TextureCache::get(const std::string &file) {
@@ -137,11 +166,86 @@ void TextureCache::preload(const json::JsonValue &document) {
   }
 }
 
+namespace {
+
+std::uint32_t multiply_colours(const std::uint32_t own, const std::uint32_t tint) {
+  std::uint32_t out = 0;
+  for (const int shift : {16, 8, 0}) {
+    const auto a = static_cast<float>((own >> shift) & 0xffU);
+    const auto b = static_cast<float>((tint >> shift) & 0xffU);
+    out |= static_cast<std::uint32_t>(a * b / 255.0F + 0.5F) << shift;
+  }
+  return out;
+}
+
+// Lettering the menus draw from an atlas, drawn in the game's font instead
+// wherever the sprite's animation places it.
+bool draw_as_text(TextureCache &textures, const Sprite &sprite, const Viewport &viewport,
+                  const double seconds, const float opacity, const std::uint32_t colour) {
+  const SpriteText *text =
+      sprite.angle == 0.0F && !sprite.flip_x ? textures.sprite_text() : nullptr;
+  const std::span<const SpriteTextStyle> styles =
+      text != nullptr ? text->find(sprite) : std::span<const SpriteTextStyle>{};
+  if (styles.empty()) {
+    return false;
+  }
+  Sprite placed = sprite;
+  placed.centered = false;
+  placed.colour = multiply_colours(sprite.colour, colour);
+  // A display font that is not installed leaves the art as it is.
+  bool drawn = false;
+  for (const auto &quad : place_sprite(sprite, seconds)) {
+    placed.position = {quad.x, quad.y};
+    placed.size = std::array<float, 2>{quad.width, quad.height};
+    if (!draw_sprite_text(textures, text->font(), placed, styles, viewport, opacity,
+                          text->shadow())) {
+      return drawn;
+    }
+    drawn = true;
+  }
+  return drawn;
+}
+
+// Plain frames and cursors the menus draw from an atlas, drawn as outlines
+// at the output resolution instead.
+bool draw_as_shape(TextureCache &textures, const Sprite &sprite, const Viewport &viewport,
+                   const double seconds, const float opacity, const std::uint32_t colour) {
+  const SpriteShapes *shapes =
+      sprite.angle == 0.0F && !sprite.flip_x ? textures.sprite_shapes() : nullptr;
+  const SpriteShape *shape = shapes != nullptr ? shapes->find(sprite) : nullptr;
+  if (shape == nullptr) {
+    return false;
+  }
+  const std::uint32_t tint = multiply_colours(sprite.colour, colour);
+  for (const auto &quad : place_sprite(sprite, seconds)) {
+    const auto pixels = viewport.to_pixels(quad.x, quad.y, quad.width, quad.height);
+    draw_sprite_shape(textures.renderer(), *shape,
+                      {pixels.x, pixels.y, pixels.width, pixels.height}, tint, opacity);
+  }
+  return true;
+}
+
+} // namespace
+
 void draw_sprite(TextureCache &textures, const Sprite &sprite, const Viewport &viewport,
                  const double seconds, const float alpha, const std::uint32_t colour) {
   SDL_Texture *texture = textures.get(sprite.image);
   const float opacity = alpha * animation_alpha(sprite.animation, seconds);
   if (texture == nullptr || opacity <= 0.0F) {
+    return;
+  }
+  if (draw_as_text(textures, sprite, viewport, seconds, opacity, colour) ||
+      draw_as_shape(textures, sprite, viewport, seconds, opacity, colour)) {
+    return;
+  }
+  if (!sprite.fallback.empty()) {
+    for (Sprite piece : sprite.fallback) {
+      piece.position[0] += sprite.position[0];
+      piece.position[1] += sprite.position[1];
+      piece.colour = sprite.colour;
+      piece.animation = sprite.animation;
+      draw_sprite(textures, piece, viewport, seconds, alpha, colour);
+    }
     return;
   }
   // Both colours multiply: the sprite's own and the caller's (greyed items).

@@ -42,6 +42,11 @@ public:
   // place.yaw, starting over each time it starts to spin.
   void place(const PreviewPlacement &place, bool spins);
   void tick(double seconds);
+  // Draws the picture and its part_clip `pixels` canvas pixels higher (the
+  // window it sits in moved up).
+  void set_lift(const float pixels) {
+    lift_ = pixels;
+  }
   // Adds the preview to `list` at the script's layer.
   void draw(DrawList &list, const Viewport &viewport, SDL_Renderer *renderer) const;
 
@@ -54,6 +59,7 @@ private:
   const RobotPreviewScript &script_;
   std::optional<RobotPreviewScreen> screen_;
   float spin_{}; // the screen's own
+  float lift_{};
   bool spinning_{true};
   std::optional<PreviewRobot> shown_;
   std::unique_ptr<Model> model_;

@@ -41,6 +41,12 @@ public:
   // See BattleSights::set_screen.
   void set_screen(std::array<float, 2> canvas, float pieces);
   void tick(const Battle &battle, float seconds);
+  // See BattleSights::set_marked_tags.
+  void set_marked_tags(std::set<std::string> tags) {
+    if (sights_) {
+      sights_->set_marked_tags(std::move(tags));
+    }
+  }
   // `clock` is the battle's time; the reticle moves on by the time since
   // the last draw.
   void draw(const Viewport &viewport, const Battle &battle, const Mat4 &view_projection,

@@ -76,6 +76,11 @@ StoryProgressionRules parse_story_progression(const json::JsonValue &document) {
     throw std::runtime_error("Story progression clear_exit must name a screen");
   }
   rules.clear_hold_frames = static_cast<float>(document.number_or("clear_hold_frames", 0.0));
+  if (const json::JsonValue *themes = document.find("ranker_music")) {
+    for (const auto &[contest, music] : themes->object()) {
+      rules.ranker_music[std::stoi(contest)] = music.string();
+    }
+  }
   rules.area_ranker_class =
       static_cast<int>(json::required(document, "area_ranker_class").number());
   rules.first_ranker_class =

@@ -138,6 +138,9 @@ Sprite parse_sprite(const json::JsonValue &value) {
     if (const auto *pivot = value.find("pivot")) {
       sprite.pivot = numbers<2>(*pivot, "pivot");
     }
+    if (const auto *fallback = value.find("fallback")) {
+      sprite.fallback = parse_sprites(*fallback);
+    }
   } catch (const std::exception &error) {
     throw std::runtime_error("sprite \"" + sprite.id + "\": " + error.what());
   }

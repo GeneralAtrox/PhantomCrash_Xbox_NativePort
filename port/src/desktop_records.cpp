@@ -16,16 +16,23 @@ RecordsScreen::RecordsScreen(TextureCache &textures, const GlyphFont &font, Reco
                              const ContestTables &contests, const StoryProgress progress,
                              const std::string &from, const std::string &back,
                              const FrameStyle &frame, const std::vector<MusicCredit> &credits,
-                             QuestSave quest)
+                             QuestSave quest, WorldRenderer *world)
     : TownScreen(textures, font, script, from, frame, credits, quest), contests_(contests),
       records_(std::move(script), contests, std::move(quest), progress, back) {
   const RecordsScript &data = records_.script();
   static_cast<void>(textures_.get(data.menu.panel.image));
   static_cast<void>(textures_.get(data.convention.hint.front().image));
+  help_run_ = glyph_run(font_, data.help_text);
+  if (data.trophies) {
+    trophies_.emplace(world, textures_.renderer(), *data.trophies);
+  }
 }
 
 void RecordsScreen::tick(const InputFrame &input, const double tick_seconds) {
   records_.update(tick_seconds, input);
+  if (trophies_) {
+    trophies_->tick(tick_seconds);
+  }
   tick_frame(tick_seconds, records_.faded_in());
 }
 
@@ -110,21 +117,28 @@ void RecordsScreen::draw_page(DrawList &list) const {
 }
 
 void RecordsScreen::draw(const Viewport &viewport) {
-  draw_town(viewport, records_.seconds(), records_.black_alpha(), [this](DrawList &list) {
-    switch (records_.view()) {
-    case RecordsView::menu:
-      draw_menu(list, false);
-      break;
-    case RecordsView::page:
-      draw_page(list);
-      break;
-    case RecordsView::convention:
-    case RecordsView::venue:
-    case RecordsView::regulation:
-      draw_convention(list);
-      break;
-    }
-  });
+  draw_town(viewport, records_.seconds(), records_.black_alpha(),
+            [this, &viewport](DrawList &list) {
+              if (const auto &help = records_.script().help) {
+                list.ticker(*help, help_run_, records_.seconds());
+              }
+              switch (records_.view()) {
+              case RecordsView::menu:
+                draw_menu(list, false);
+                break;
+              case RecordsView::page:
+                draw_page(list);
+                break;
+              case RecordsView::convention:
+              case RecordsView::venue:
+              case RecordsView::regulation:
+                draw_convention(list);
+                if (trophies_) {
+                  trophies_->draw(list, viewport, trophy_places());
+                }
+                break;
+              }
+            });
 }
 
 } // namespace phantomcrash

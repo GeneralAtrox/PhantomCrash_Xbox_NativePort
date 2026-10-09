@@ -156,6 +156,12 @@ AssembleTotalsStyle parse_totals(const json::JsonValue &value) {
     totals.negative_dx = number_of(value, "negative_dx");
     totals.negative_dy = number_of(value, "negative_dy");
   }
+  if (value.find("up_colour") != nullptr) {
+    totals.up_colour = colour_of(value, "up_colour");
+  }
+  if (value.find("down_colour") != nullptr) {
+    totals.down_colour = colour_of(value, "down_colour");
+  }
   return totals;
 }
 

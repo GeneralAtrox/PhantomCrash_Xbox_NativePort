@@ -10,6 +10,9 @@ namespace {
 
 using namespace world_constants;
 
+// Below half of one 8-bit alpha step: only fully transparent texels fail.
+constexpr float invisible_alpha = 0.5F / 255.0F;
+
 bool blended(const ModelMaterial &material) {
   return material.alpha == AlphaMode::blend || material.additive;
 }
@@ -263,10 +266,12 @@ void WorldRenderer::draw_one(const Draw &draw, const bool sky, const StageLighti
   const bool painted =
       draw.paint != nullptr && material.base_texture >= 0 &&
       (material.part_paint || model.paintable[static_cast<std::size_t>(material.base_texture)]);
+  // A reflect stage's texture takes the normal map's slot (none has both).
+  const int second =
+      material.reflect_texture >= 0 ? material.reflect_texture : material.normal_texture;
   ID3D11ShaderResourceView *views[] = {painted ? draw.paint : view_of(material.base_texture),
-                                       view_of(material.normal_texture)};
-  ID3D11SamplerState *samplers[] = {sampler_of(material.base_texture),
-                                    sampler_of(material.normal_texture)};
+                                       view_of(second)};
+  ID3D11SamplerState *samplers[] = {sampler_of(material.base_texture), sampler_of(second)};
 
   DrawConstants constants{};
   constants.world = draw.world;
@@ -285,7 +290,16 @@ void WorldRenderer::draw_one(const Draw &draw, const bool sky, const StageLighti
   }
   constants.has_base = views[0] != nullptr ? 1.0F : 0.0F;
   constants.has_normal = views[1] != nullptr ? 1.0F : 0.0F;
+  constants.reflect_modes[0] = material.reflect_texture >= 0 && views[1] != nullptr ? 1.0F : 0.0F;
   constants.alpha_test = material.alpha == AlphaMode::mask ? 1.0F : 0.0F;
+  // A blended batch that writes depth (grated stairs, fences) keeps its
+  // invisible texels out of the depth buffer, so the faces behind its gaps,
+  // later in the same batch, still show (port fix; 0x0b3240's own test,
+  // GREATEREQUAL 0, passes every texel).
+  if (material.alpha == AlphaMode::blend && material.blend_depth_write && !material.additive) {
+    constants.alpha_test = 1.0F;
+    constants.alpha_cutoff = invisible_alpha;
+  }
   // Fog hides what is added (2: fade toward black) and turns the rest toward
   // its colour (1); lerping an additive draw's black texels to the fog colour
   // would add a flat box of it.
@@ -317,6 +331,7 @@ void WorldRenderer::draw_one(const Draw &draw, const bool sky, const StageLighti
     constants.unlit = 1.0F;
     constants.has_base = views[0] ? 1.0F : 0.0F;
     constants.has_normal = 0.0F;
+    constants.reflect_modes[0] = 0.0F;
     constants.material_modes = {0, 0, 1, 0};
   }
   if (const auto &optical = draw.item->optical) {

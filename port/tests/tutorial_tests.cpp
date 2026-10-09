@@ -224,3 +224,24 @@ TEST_CASE("kill goals count from the step's start and place drones on request") 
   tutorial.update(sample);
   CHECK(tutorial.message() == std::pair(43, 1));
 }
+
+TEST_CASE("BUTTON CONFIG's assignments move the battle's buttons; REVERSE flips the look") {
+  BattleButtons buttons;
+  ControlOptions controls;
+  apply_button_config(buttons, controls);
+  CHECK(buttons.fire[0] == button::right_trigger); // the original's assignment
+  // Swap the right arm (R) and jump (A).
+  controls.bindings[0] = 0;
+  controls.bindings[6] = 5;
+  apply_button_config(buttons, controls);
+  CHECK(buttons.fire[0] == button::a);
+  CHECK(buttons.jump == button::right_trigger);
+  CHECK(buttons.fire_labels[0] == "A");
+  CHECK(buttons.dodge_right == button::black);
+  InputFrame input;
+  input.right_stick = {0.25F, 0.5F};
+  CHECK(view_changed(input, controls).right_stick[1] == 0.5F);
+  controls.view = 1;
+  CHECK(view_changed(input, controls).right_stick[1] == -0.5F);
+  CHECK(view_changed(input, controls).right_stick[0] == 0.25F);
+}

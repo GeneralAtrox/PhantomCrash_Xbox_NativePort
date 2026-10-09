@@ -65,6 +65,23 @@ enum class StatRow {
 };
 inline constexpr int stat_row_count = 15;
 
+// A stat the panel's art has no line for, shown below its lines only when
+// the goods change it (data/ui/part_stats.json "extras"): its label, unit
+// and where the value comes from.
+enum class ExtraStatSource {
+  critical_percent,     // modules and CHIPs: MORTAL SHOT
+  dodge_percent,        // CHIPs
+  knockdown_resistance, // modules and CHIPs
+  knockback_resistance, // legs
+};
+
+struct ExtraStat {
+  ExtraStatSource source{ExtraStatSource::critical_percent};
+  std::string label;
+  std::string unit;
+  int decimals{};
+};
+
 // Which lines each kind shows and how they read (data/ui/part_stats.json).
 struct PartStatsTable {
   std::array<std::vector<StatRow>, goods_kind_count> rows;
@@ -73,6 +90,7 @@ struct PartStatsTable {
   float battle_rate{30.0F};    // a beam's recharge counts battle ticks
   float display_rate{60.0F};   // a module's O.C times count display frames
   std::vector<int> full_price; // modules bought back at their whole price
+  std::array<std::vector<ExtraStat>, goods_kind_count> extras;
 };
 
 // Throws std::runtime_error naming what is malformed.
@@ -89,6 +107,22 @@ struct StatLine {
 // reduction, not both; armour is never below the player's floor.
 [[nodiscard]] std::vector<StatLine> part_stats(const PartStatsTable &table, const PartTables &parts,
                                                const GarageTables &garage, const Goods &goods);
+
+// An extra line as shown: its label, value and unit.
+struct ExtraStatLine {
+  std::string label;
+  std::string unit;
+  std::string value;
+};
+
+// The extras of part_stats.json; none when it lists none.
+[[nodiscard]] std::array<std::vector<ExtraStat>, goods_kind_count>
+parse_extra_stats(const json::JsonValue &document);
+// The goods' extra lines, leaving out those at 0.
+[[nodiscard]] std::vector<ExtraStatLine> extra_stats(const PartStatsTable &table,
+                                                     const PartTables &parts,
+                                                     const GarageTables &garage,
+                                                     const Goods &goods);
 
 // What a shop pays for goods: `rate` of the price, or all of it for the
 // modules the table names (0x22ea6: the Gold Bar).

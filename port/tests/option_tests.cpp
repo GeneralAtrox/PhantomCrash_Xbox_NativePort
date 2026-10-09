@@ -61,6 +61,9 @@ TEST_CASE("text maps ASCII to the font's full-width glyphs") {
   const auto font = small_font();
   CHECK((glyph_run(font, "AB ?x") == std::vector<int>{1, 2, 0, 3, 3}));
   CHECK((glyph_run(font, "あ") == std::vector<int>{4}));
+  const auto quoted = parse_glyph_font(json::parse(R"({"image": "font.png", "cell": 18,
+    "columns": 4, "characters": "？’”", "metrics": []})"));
+  CHECK((glyph_run(quoted, "'\"") == std::vector<int>{1, 2})); // curly for missing full-width
   CHECK(run_width(font, glyph_run(font, "AB ?x")) == 14.0F + 12.0F + 9.0F + 18.0F + 18.0F);
   const auto quads = layout_run(font, {1, 4}, 10.0F, 20.0F);
   CHECK(quads.size() == 2U);

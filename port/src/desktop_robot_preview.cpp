@@ -3,6 +3,7 @@
 #include "desktop_draw_list.hpp"
 #include "desktop_robot.hpp"
 #include "desktop_world_renderer.hpp"
+#include "phantomcrash/canvas.hpp"
 #include "phantomcrash/robot_library.hpp"
 #include "phantomcrash/robot_mover.hpp"
 
@@ -171,7 +172,7 @@ void RobotPreview::render(const Viewport &viewport, SDL_Renderer *renderer) cons
     const auto &box = *screen_->part_clip;
     const float scale = content.width / 640.0F;
     const SDL_Rect cut{static_cast<int>(std::lround(box[0] * scale)),
-                       static_cast<int>(std::lround(box[1] * scale)),
+                       static_cast<int>(std::lround((box[1] - lift_) * scale)),
                        static_cast<int>(std::lround((box[2] - box[0]) * scale)),
                        static_cast<int>(std::lround((box[3] - box[1]) * scale))};
     SDL_SetRenderClipRect(renderer, &cut);
@@ -183,6 +184,13 @@ void RobotPreview::render(const Viewport &viewport, SDL_Renderer *renderer) cons
   frame.view = look_at(script_.eye, script_.target, preview_up);
   frame.projection = perspective(radians(script_.fov_degrees), picture_aspect, script_.near_plane,
                                  script_.far_plane);
+  if (lift_ != 0.0F) {
+    // Moved up on the screen after projection: the picture's 480 canvas
+    // pixels span 2 in clip space.
+    Mat4 lifted;
+    lifted.at(3, 1) = 2.0F * lift_ / canvas_height;
+    frame.projection = frame.projection * lifted;
+  }
   frame.lighting.ambient = {script_.ambient, script_.ambient, script_.ambient};
   frame.lighting.sun_colour = {script_.diffuse, script_.diffuse, script_.diffuse};
   frame.lighting.sun_direction = screen_->light_direction;

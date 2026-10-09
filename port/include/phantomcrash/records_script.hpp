@@ -5,6 +5,7 @@
 
 #include "phantomcrash/input.hpp"
 #include "phantomcrash/json.hpp"
+#include "phantomcrash/math3d.hpp"
 #include "phantomcrash/sprite_layer.hpp"
 #include "phantomcrash/town_screen.hpp"
 
@@ -84,6 +85,9 @@ struct ConventionVenue {
   Sprite header;
   std::vector<Sprite> ranks; // the class columns' names
   std::vector<Sprite> champion_names;
+  // The faint mark behind the grid: the venue's area logo, or REGULATION's
+  // PERSONAL BEST (0x33660 and 0x3472d).
+  std::optional<Sprite> backdrop;
 };
 
 struct ConventionRegulation {
@@ -138,6 +142,44 @@ struct ConventionStyle {
   ConventionRegulation regulation;
 };
 
+// CONVENTION RECORD's turning trophies (0x334fc): one node each of the
+// recordcup model (resource 217), seen by RECORDS' camera (0x34d83). A
+// trophy stands in each cell of a contest won, and the big one behind the
+// FIRST RANKER plate once that contest is won (0x34451). They are moved to
+// a cell, tilted about x and turned about their own y by a spin shared by
+// all of them.
+struct RecordTrophies {
+  std::string model;
+  Vec3 eye{0.0F, 0.0F, -10.0F};
+  Vec3 target;
+  float fov_degrees{52.0F};
+  float near_plane{0.5F};
+  float far_plane{100.0F};
+  Vec3 light_direction{0.0F, 0.0F, 1.0F}; // the way it travels (0x5741b)
+  float diffuse{1.0F};
+  float ambient{0.25F};
+  float frame_rate{60.0F};
+  float spin_per_frame{0.02F};
+  int layer{4}; // drawn after the panel and the plate on the same layer
+  int first_ranker_node{-1};
+  Vec3 first_ranker;
+  float first_ranker_tilt{};
+  // A venue's class contests, row by row, and its area ranker's trophy.
+  int class_node{-1};
+  std::vector<Vec3> class_cells;
+  std::vector<int> area_nodes; // by venue
+  Vec3 area_ranker;
+  // REGULATION's cells, row by row on a page, and their trophies.
+  std::vector<Vec3> regulation_cells;
+  std::vector<int> regulation_nodes;
+  // Drawn at the cell's offset: a won cell darkened, and a cell with no
+  // contest marked NO CONVENTION over it.
+  float cell_step{62.0F};
+  Sprite won_cell;
+  Sprite area_won_cell;
+  Sprite no_convention;
+};
+
 struct RecordsScript : TownBasics {
   Buttons up{}, down{}, left{}, right{}, page_back{}, page_forward{};
   std::string column_sound, exit_sound, close_sound, row_sound, page_sound;
@@ -151,6 +193,11 @@ struct RecordsScript : TownBasics {
   // left out of the achievement rate so it starts at 0%.
   std::vector<int> unscored_events;
   ConventionStyle convention;
+  // The help line scrolling along the top (0x34d83, 0x1fb364), the same
+  // over every view.
+  std::optional<TickerStyle> help;
+  std::string help_text;
+  std::optional<RecordTrophies> trophies;
 };
 
 // Throws std::runtime_error naming the member at fault.

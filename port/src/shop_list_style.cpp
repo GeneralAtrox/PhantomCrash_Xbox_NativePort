@@ -98,6 +98,14 @@ PopWindow parse_pop_window(const json::JsonValue &value) {
   if (value.find("caps") != nullptr) {
     pop.caps = member(value, "caps", sprite_array<2>);
   }
+  if (const auto *grow = value.find("grow_caps")) {
+    const auto &rows = grow->array();
+    if (rows.size() != 2) {
+      throw std::runtime_error("grow_caps needs 2 numbers");
+    }
+    pop.grow_caps =
+        std::array{static_cast<float>(rows[0].number()), static_cast<float>(rows[1].number())};
+  }
   return pop;
 }
 

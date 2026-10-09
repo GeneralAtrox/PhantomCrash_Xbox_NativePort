@@ -4,6 +4,7 @@
 // more often; walls and shut doors take an impact and the ray flies on
 // (0x098eda cases 1 and 5). Let go, the beam fades out where it was.
 #include "phantomcrash/battle_weapons.hpp"
+#include "phantomcrash/robot_parts.hpp"
 #include "phantomcrash/stage_collision.hpp"
 #include "phantomcrash/stage_doors.hpp"
 
@@ -15,6 +16,8 @@ namespace {
 // 0x17beec: the beam counts up to 8 frames held (60 Hz), then shows fully
 // white; let go, it counts back down and is released at zero.
 constexpr float beam_fade_seconds = 8.0F / 60.0F;
+constexpr float beam_step_seconds = 1.0F / battle_ticks_per_second;
+constexpr float beam_step_slack = 1e-4F; // float error in summed frame times
 
 } // namespace
 
@@ -32,6 +35,11 @@ void Armory::hold_beam(const WeaponTuning &weapon, const int owner, const int sl
   beam->holding = true;
 }
 
+bool Armory::beam_live(const int owner, const int slot) const {
+  return std::ranges::any_of(
+      beams_, [&](const Beam &beam) { return beam.owner == owner && beam.slot == slot; });
+}
+
 void Armory::tick_beams(const float seconds, const std::vector<Target> &targets,
                         const StageCollision &stage, std::vector<WeaponHit> &hits,
                         const StageDoors *doors) {
@@ -40,13 +48,21 @@ void Armory::tick_beams(const float seconds, const std::vector<Target> &targets,
     if (!beam.holding) {
       beam.held -= seconds;
       beam.tip.reset();
+      beam.step_left = 0.0F;
       continue;
     }
     beam.held = std::min(beam.held + seconds, beam_fade_seconds);
+    // The tip steps once a battle tick (30 Hz), so it reaches a robot, and
+    // hits it, no more often than the original's.
+    beam.step_left -= seconds;
+    if (beam.step_left > beam_step_slack) {
+      continue;
+    }
+    beam.step_left = std::max(beam.step_left + beam_step_seconds, 0.0F);
     // The tip moves like a shot, from where it was to where it is now.
     const Vec3 from = beam.origin;
     const Vec3 before = beam.tip.value_or(from);
-    beam.length = std::min(beam.length + weapon.speed * seconds, weapon.range);
+    beam.length = std::min(beam.length + weapon.speed * beam_step_seconds, weapon.range);
     const Vec3 tip = from + beam.direction * beam.length;
     beam.reach = beam.length;
     beam.tip = tip;

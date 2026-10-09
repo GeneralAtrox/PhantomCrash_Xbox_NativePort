@@ -7,6 +7,7 @@
 #include "desktop_town_map.hpp"
 #include "desktop_name_entry.hpp"
 #include "desktop_pepper_guide.hpp"
+#include "desktop_sprite_text.hpp"
 #include "desktop_talk.hpp"
 #include "desktop_training.hpp"
 #include "desktop_training_robots.hpp"
@@ -67,6 +68,7 @@ ScreenRunner::ScreenRunner(SDL_Renderer *renderer, const DataRoots &roots, const
   }
   if (const auto font = converted_table(roots, "tables/font.json")) {
     font_ = parse_glyph_font(*font);
+    load_sprite_text(textures_, roots, font_);
   }
   if (const auto music = converted_table(roots, "tables/music.json")) {
     credits_ = parse_music_credits(*music);

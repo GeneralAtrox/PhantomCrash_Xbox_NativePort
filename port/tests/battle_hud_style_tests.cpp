@@ -12,6 +12,8 @@
 #include "phantomcrash/battle_weapons.hpp"
 #include "phantomcrash/data_roots.hpp"
 #include "phantomcrash/json.hpp"
+#include "phantomcrash/sprite_shapes.hpp"
+#include "phantomcrash/sprite_text.hpp"
 
 using namespace phantomcrash;
 
@@ -197,4 +199,66 @@ TEST_CASE("messages slide in, rise a step for each newer one and fade out") {
     log.update(1.0F);
   }
   CHECK(log.entries().empty());
+}
+
+TEST_CASE("the shipped sprite text names plain atlas lettering and a shadow") {
+  const SpriteTextTable table = parse_sprite_text_table(shipped("ui/sprite_text.json"));
+  CHECK(table.shadow.alpha > 0.0F);
+  CHECK(close_to(table.shadow.offset[0], 1.0F));
+  CHECK(table.shadow.colour == 0x000000U);
+  bool money = false;
+  bool for_sale = false;
+  for (const SpriteTextStyle &entry : table.replacements) {
+    CHECK(!entry.text.empty());
+    if (entry.font.empty()) {
+      // Atlas-font lettering is the common HUD art's.
+      CHECK(entry.source.image == "textures/scroll/common_2d_tex/1.png");
+    } else {
+      CHECK(table.fonts.contains(entry.font));
+    }
+    money = money || (entry.text == "MONEY" && close_to(entry.source.rect[0], 400.0F));
+    if (entry.text == "For Sale!") {
+      // Erased along the plate's leaning edge, the italic lettering upright.
+      for_sale = entry.erase_slant.has_value() && close_to(*entry.erase_slant, 0.4F) &&
+                 close_to(entry.slant, 0.15F);
+    }
+  }
+  CHECK(money);
+  CHECK(for_sale);
+}
+
+TEST_CASE("the shipped sprite shapes outline boxes inside their sprites") {
+  const std::vector<SpriteShape> shapes = parse_sprite_shapes(shipped("ui/sprite_shapes.json"));
+  REQUIRE(!shapes.empty());
+  for (const SpriteShape &shape : shapes) {
+    REQUIRE(!shape.outlines.empty());
+    const float width = shape.rect[2] - shape.rect[0];
+    const float height = shape.rect[3] - shape.rect[1];
+    for (const ShapeOutline &outline : shape.outlines) {
+      const auto columns = static_cast<float>(outline.count[0] - 1);
+      const auto rows = static_cast<float>(outline.count[1] - 1);
+      CHECK(outline.box[0] >= 0.0F);
+      CHECK(outline.box[1] >= 0.0F);
+      CHECK(outline.box[2] + outline.step[0] * columns <= width);
+      CHECK(outline.box[3] + outline.step[1] * rows <= height);
+    }
+  }
+}
+
+TEST_CASE("a shape's contour moves its edge and corners by the distance") {
+  ShapeOutline outline;
+  outline.box = {0.0F, 0.0F, 20.0F, 10.0F};
+  outline.radius = 2.0F;
+  // Outward the corners round by as much; inward they turn square.
+  const auto outer = shape_contour(outline, outline.box, 1.0F, 4);
+  REQUIRE(outer.size() == 20U);
+  CHECK(close_to(outer[0][0], -1.0F));
+  CHECK(close_to(outer[0][1], 2.0F));
+  CHECK(close_to(outer[4][0], 2.0F));
+  CHECK(close_to(outer[4][1], -1.0F));
+  const auto inner = shape_contour(outline, outline.box, -3.0F, 4);
+  CHECK(close_to(inner[0][0], 3.0F));
+  CHECK(close_to(inner[0][1], 3.0F));
+  CHECK(close_to(inner[10][0], 17.0F));
+  CHECK(close_to(inner[10][1], 7.0F));
 }

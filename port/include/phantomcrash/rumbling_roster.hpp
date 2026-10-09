@@ -60,6 +60,7 @@ struct RosterStatus {
   std::string name;
   bool eliminated{};
   RosterSource source{RosterSource::member};
+  std::string tag; // the pilot's name tag, as its robot's marker shows it
 };
 
 // 0x06cf5a: draws each area's roster anew when it is not for today's

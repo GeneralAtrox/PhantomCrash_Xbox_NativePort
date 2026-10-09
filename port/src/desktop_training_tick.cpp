@@ -11,7 +11,6 @@ constexpr int optic_mode = 2;
 } // namespace
 
 void TrainingScreen::tick_battle(const InputFrame &input, const float seconds) {
-  const TrainingBattle &setup = script_.battle;
   const LessonStep *step = tutorial_.step();
   const bool practising = free_play_ || tutorial_.practising();
   // A scene walks the robot, or a boss's entrance holds it (0x082e60).
@@ -22,13 +21,13 @@ void TrainingScreen::tick_battle(const InputFrame &input, const float seconds) {
   FireControl fire;
   if (!locked) {
     // The tutorial's lessons keep BEGINNER MODE off (0x0817a8).
-    control = battle_control(input, setup.buttons, free_play_ ? nullptr : step, standard_controls_,
-                             beginner_ && free_play_);
-    fire = battle_fire(input, setup.buttons);
+    control = battle_control(view_changed(input, controls_), buttons_, free_play_ ? nullptr : step,
+                             standard_controls_, beginner_ && free_play_);
+    fire = battle_fire(input, buttons_);
     fire.camouflage = fire.camouflage && (free_play_ || mode_ == optic_mode);
   }
   if (!jump_armed_) {
-    jump_armed_ = (input.held & setup.buttons.jump) == 0;
+    jump_armed_ = (input.held & buttons_.jump) == 0;
     control.jump = false;
   }
   if (!online()) {
@@ -64,6 +63,7 @@ void TrainingScreen::tick_battle(const InputFrame &input, const float seconds) {
   }
   if (scene_ && !online()) {
     scene_->scene().observe(*battle_);
+    observe_defeat();
     std::ranges::move(scene_->scene().take_sounds(), std::back_inserter(sounds_));
     if (auto music = scene_->scene().take_music()) {
       cue_music_ = std::move(*music);

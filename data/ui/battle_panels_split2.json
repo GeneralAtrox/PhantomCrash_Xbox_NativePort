@@ -3,8 +3,8 @@
   {"source": {"image": "textures/scroll/game_vs_tex/0.png", "rect": [400, 344, 464, 360]}, "text": "WEAPON LOST"},
   {"source": {"image": "textures/scroll/game_vs_tex/0.png", "rect": [400, 360, 464, 376]}, "text": "WEAPON LOST"},
   {"source": {"image": "textures/scroll/game_vs_tex/0.png", "rect": [400, 264, 504, 280]}, "text": "MISSILE ALERT"},
-  {"source": {"image": "textures/scroll/game_vs_tex/0.png", "rect": [400, 216, 488, 240]}, "stroke_width": 0.8, "centered": true, "text": "SYS DURABILITY\nDOWN 50%", "colour": "#ffc823"},
-  {"source": {"image": "textures/scroll/game_vs_tex/0.png", "rect": [136, 344, 224, 368]}, "stroke_width": 0.8, "centered": true, "text": "SYS DURABILITY\nDOWN 75%", "colour": "#ff6060"},
+  {"source": {"image": "textures/scroll/game_vs_tex/0.png", "rect": [400, 216, 488, 240]}, "stroke_width": 0.8, "centered": true, "line_pitch": 8, "text": "SYS DURABILITY\nDOWN 50%", "colour": "#ffc823"},
+  {"source": {"image": "textures/scroll/game_vs_tex/0.png", "rect": [136, 344, 224, 368]}, "stroke_width": 0.8, "centered": true, "line_pitch": 8, "text": "SYS DURABILITY\nDOWN 75%", "colour": "#ff6060"},
   {"source": {"image": "textures/scroll/game_vs_tex/0.png", "rect": [200, 280, 328, 312]}, "text": "DURABILITY", "region": [8, 2, 75, 14], "colour": "#b0ff20"},
   {"source": {"image": "textures/scroll/game_vs_tex/0.png", "rect": [0, 376, 120, 392]}, "text": "O.C TIME", "region": [3, 3, 50, 14], "colour": "#b0ff20"}
  ],

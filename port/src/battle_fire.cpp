@@ -13,14 +13,11 @@ namespace {
 // A homing missile's rounds leave 10 frames apart (0x09b4ed).
 constexpr float missile_round_seconds = 10.0F / part_frames_per_second;
 
-// Missiles and grenades wait for the fire control's lock; guns and melee
-// weapons use the target at once.
-bool needs_lock_time(const WeaponTuning &weapon) {
-  return weapon.kind == WeaponKind::missile || weapon.kind == WeaponKind::grenade;
-}
-
 // A strike motion's frames when the robot has no timing table for it (the
 // port's earlier values: armed half a second, over in 0.8).
+// Float error in a cooldown counted down by frame times.
+constexpr float cooldown_slack = 1e-4F;
+
 constexpr float fallback_strike_armed_frames = 30.0F;
 constexpr float fallback_strike_last_frames = 48.0F;
 
@@ -191,9 +188,11 @@ void Battle::fire_weapons(const int index, const FireControl &fire, const float 
   const std::vector<Target> bodies = targets();
   std::vector<WeaponHit> hits;
   for (std::size_t slot = 0; slot < weapon_slots; ++slot) {
-    robot.cooldown[slot] = std::max(0.0F, robot.cooldown[slot] - seconds);
+    robot.cooldown[slot] =
+        robot.cooldown[slot] - seconds < cooldown_slack ? 0.0F : robot.cooldown[slot] - seconds;
     Magazine &magazine = robot.magazines[slot];
-    magazine.tick(seconds);
+    const bool beam_live = armory_.beam_live(index, static_cast<int>(slot));
+    magazine.tick(seconds, !beam_live);
     // Optional, off by default: an empty weapon refills after a while
     // (port choice; the original refills only from supply pickups).
     if (settings_.ammo_refill_seconds > 0.0F && magazine.empty() && !magazine.recharging() &&
@@ -238,6 +237,13 @@ void Battle::fire_weapons(const int index, const FireControl &fire, const float 
       continue;
     }
     const bool beam = weapon != nullptr && weapon->hud_kind == hud_kind::beam;
+    // 0x09ba08: a new beam starts only on a full charge; one still held or
+    // fading carries on while a round is left.
+    if (beam && magazine.limited() && magazine.ammo < magazine.max &&
+        !armory_.beam_live(index, static_cast<int>(slot))) {
+      robot.firing[slot] = false;
+      continue;
+    }
     if (beam && fire.fire[slot] && allowed && robot.cooldown[slot] > 0.0F && !magazine.empty() &&
         !muzzle_blocked(robot, mount)) {
       // Between pulls the beam stays on its muzzle (0x09b9fe).

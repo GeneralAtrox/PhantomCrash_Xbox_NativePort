@@ -105,6 +105,12 @@ struct SceneTuning {
   float still_step{0.01F};         // less a battle tick holds the leg motion (0x199f78)
   float left_armour{0.25F};        // armour share that picks chatter 0x1c over 9 (0x199fd4)
   float gone_shield_frames{30.0F}; // a computer robot in its gate, the exit walked (0x08a496)
+  // A boss a player shoots down holds the battle this long (0x089861:
+  // robot +0x2750), the First Ranker longer, while the camera watches it
+  // from no farther than defeat_watch (0x089bb9 calls 0x07e538 with 10).
+  float defeat_frames{180.0F};
+  float first_ranker_defeat_frames{240.0F};
+  float defeat_watch{10.0F};
   std::string ready_sound{"battle_ready"};     // sys bank entry 0 (0x013085)
   std::string go_sound{"battle_go"};           // sys bank entry 1
   std::string play_in_music{"battle_play_in"}; // track 16, 9PLAYIN
@@ -173,7 +179,26 @@ public:
   }
   // The player's scene or a boss's: the controls, the HUD and the camera wait.
   [[nodiscard]] bool scripted() const noexcept {
-    return active() || cinematic();
+    return active() || cinematic() || defeat_ >= 0;
+  }
+  // A boss shot down by a player's robot (0x07675e puts it in state 0x13,
+  // battle_scene_defeat.cpp): the bars slide in and the battle waits
+  // `frames` and for its line to end (set_defeat_line). A ranker's ends the
+  // battle (`ends`, 0x089d1b); another boss's gives the battle back.
+  void start_defeat(int robot, float frames, bool ends);
+  void set_defeat_line(bool speaking) noexcept {
+    defeat_speaking_ = speaking;
+  }
+  // The boss whose defeat the camera watches, or -1.
+  [[nodiscard]] int defeat_robot() const noexcept {
+    return defeat_;
+  }
+  // A defeat that ends the battle has played out.
+  [[nodiscard]] bool defeat_over() const noexcept {
+    return defeat_over_;
+  }
+  [[nodiscard]] bool defeat_holds() const noexcept {
+    return defeat_ >= 0 && !defeat_over_;
   }
   // The scene on screen now: a boss's entrance, the player's entrance or
   // exit (robot -1), or else a VS rider's walk out of its gate; its state
@@ -247,6 +272,8 @@ private:
   void start_robot_exit(Battle &battle, RobotEntrance &entry, int gate);
   void walk_robot_exit(Battle &battle, RobotEntrance &entry, float seconds, float step);
   void hold_still(Battle &battle, int index) const;
+  // battle_scene_defeat.cpp
+  void tick_defeat(float step);
 
   BattleSceneTables tables_;
   SceneTuning tuning_;
@@ -266,6 +293,11 @@ private:
   float letterbox_way_{};                  // +1 sliding in, -1 out
   std::vector<std::pair<int, int>> lines_; // chatter to raise: robot, event
   bool finished_{};
+  int defeat_{-1};      // the boss in its defeat (state 0x13), or -1
+  float defeat_left_{}; // its frames still to play (+0x2750)
+  bool defeat_ends_{};  // a ranker's: the battle ends with it
+  bool defeat_over_{};  // ... and it has
+  bool defeat_speaking_{};
   std::vector<std::string> sounds_;
   std::optional<std::string> music_;
 };

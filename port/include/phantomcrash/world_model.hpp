@@ -36,6 +36,9 @@ struct ModelTexture {
 struct ModelMaterial {
   int base_texture{-1}; // index into ModelData::textures, -1 for none
   int normal_texture{-1};
+  // Stage 1 flag 0x80 (program 0x1a, reflect.xvu and reflect.xpu): a second
+  // texture added to the base before lighting, at the world normal's x and z.
+  int reflect_texture{-1};
   std::array<float, 4> base_colour{1, 1, 1, 1};
   AlphaMode alpha{AlphaMode::opaque};
   float alpha_cutoff{0.5F};

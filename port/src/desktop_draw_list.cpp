@@ -1,5 +1,8 @@
 #include "desktop_draw_list.hpp"
 
+#include "desktop_display_text.hpp"
+
+#include "desktop_sprite_text.hpp"
 #include "desktop_text.hpp"
 
 #include <SDL3/SDL.h>
@@ -47,8 +50,71 @@ void DrawList::text(const int layer, std::vector<GlyphQuad> glyphs, const std::u
                        }});
 }
 
+void DrawList::shaded_text(const int layer, std::vector<GlyphQuad> glyphs,
+                           const std::uint32_t colour) {
+  commands_.push_back({layer, [this, glyphs = std::move(glyphs), colour] {
+                         if (const SpriteText *text = textures_.sprite_text();
+                             text != nullptr && text->shadow().alpha > 0.0F) {
+                           const TextShadow &shadow = text->shadow();
+                           auto under = glyphs;
+                           for (auto &glyph : under) {
+                             glyph.x += shadow.offset[0];
+                             glyph.y += shadow.offset[1];
+                           }
+                           draw_glyphs(textures_, font_, under, viewport_, shadow.colour,
+                                       std::nullopt, shadow.alpha);
+                         }
+                         draw_glyphs(textures_, font_, glyphs, viewport_, colour);
+                       }});
+}
+
+void DrawList::label(const int layer, std::string text, const std::string &font,
+                     const std::array<float, 4> &box, const std::uint32_t colour,
+                     const std::optional<TextShadow> &shadow, const float shadow_blur) {
+  commands_.push_back(
+      {layer, [this, text = std::move(text), font, box, colour, shadow, shadow_blur] {
+         const SpriteText *table = textures_.sprite_text();
+         const DisplayFont *display = table != nullptr ? table->display_font(font) : nullptr;
+         if (display != nullptr && textures_.display_text().available(*display)) {
+           const auto pixels =
+               viewport_.to_pixels(box[0], box[1], box[2] - box[0], box[3] - box[1]);
+           DisplayEdge edge;
+           if (shadow) {
+             edge.shadow = *shadow;
+             edge.shadow->offset = {shadow->offset[0] * viewport_.scale,
+                                    shadow->offset[1] * viewport_.scale};
+             edge.shadow_blur = shadow_blur * viewport_.scale;
+           }
+           if (textures_.display_text().draw(*display, text,
+                                             {pixels.x, pixels.y, pixels.width, pixels.height},
+                                             DisplayLayout{}, colour, 1.0F, edge)) {
+             return;
+           }
+         }
+         const float top = (box[1] + box[3] - font_.cell) * 0.5F;
+         auto glyphs = layout_run(font_, glyph_run(font_, text), box[0], top);
+         if (shadow && shadow->alpha > 0.0F) {
+           auto under = glyphs;
+           for (auto &glyph : under) {
+             glyph.x += shadow->offset[0];
+             glyph.y += shadow->offset[1];
+           }
+           draw_glyphs(textures_, font_, under, viewport_, shadow->colour, std::nullopt,
+                       shadow->alpha);
+         }
+         draw_glyphs(textures_, font_, glyphs, viewport_, colour);
+       }});
+}
+
 void DrawList::ticker(const TickerStyle &style, const std::vector<int> &run, const double seconds) {
-  text(style.layer, place_ticker(font_, run, style, seconds), style.colour, style.clip);
+  // Scrolled by whole output pixels, so every glyph moves by the same
+  // pixels and none is rounded apart from its neighbours.
+  double shown = seconds + viewport_.tick_lag;
+  const double pixels_per_second = static_cast<double>(style.speed) * viewport_.scale;
+  if (pixels_per_second > 0.0) {
+    shown = std::round(shown * pixels_per_second) / pixels_per_second;
+  }
+  text(style.layer, place_ticker(font_, run, style, shown), style.colour, style.clip);
 }
 
 void DrawList::message_box(const MessageBox &box) {

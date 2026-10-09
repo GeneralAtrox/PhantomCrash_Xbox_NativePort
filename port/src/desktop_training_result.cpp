@@ -34,11 +34,13 @@ void TrainingScreen::update_result(const double seconds) {
     }
   } else if ((coop_match_ ? coop_match_->players[coop_slot_].won
                           : live_world_ && live_world_->player_won()) &&
-             std::ranges::none_of(battle_->robots(), [](const Combatant &r) { return r.dying; })) {
+             std::ranges::none_of(battle_->robots(), [](const Combatant &r) { return r.dying; }) &&
+             !(scene_ && scene_->scene().defeat_holds())) {
     outcome_ = MatchOutcome::win;
-    // The First Ranker's first clear stands a while first (0x089861).
+    // The First Ranker's first clear stands a while first (0x089861);
+    // a boss's defeat scene, which is that wait, has already stood it.
     victory_hold_ -= static_cast<float>(seconds);
-    done_ = victory_hold_ <= 0.0F;
+    done_ = victory_hold_ <= 0.0F || (scene_ && scene_->scene().defeat_over());
   }
 }
 

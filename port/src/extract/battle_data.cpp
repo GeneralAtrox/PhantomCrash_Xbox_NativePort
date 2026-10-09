@@ -28,6 +28,10 @@ constexpr std::uint32_t chatter_lines = 0x1B3520;
 constexpr int chatter_table_count = 67;
 constexpr std::uint32_t chatter_events = 0x23;
 constexpr std::uint32_t chatter_gates = 0x203848;
+// The Area Rankers' defeat lines, by area (0x089861 reads them by the
+// contest's area, save +0x6104 / 2, and 0x091f29 starts them).
+constexpr std::uint32_t ranker_defeat_lines = 0x2431B4;
+constexpr int ranker_defeat_count = 3;
 constexpr std::pair<const char *, std::uint32_t> chatter_chances[]{
     {"player", 0x203890}, {"team_two", 0x203920}, {"computer", 0x2039B0}};
 
@@ -157,34 +161,38 @@ Json chatter_tables(const XbeImage &image, const GameTables &tables) {
   Json scripts = array();
   std::map<std::uint32_t, std::size_t> by_address;
   std::map<std::string, std::size_t> by_content;
+  const auto script_at = [&](const std::uint32_t address) {
+    if (!by_address.contains(address)) {
+      Json commands = event_commands(image, tables, address);
+      // Equal scripts at different addresses are written once.
+      const std::string key = dumps(commands, {-1, false, false});
+      auto [found, added] = by_content.try_emplace(key, scripts.array().size());
+      if (added) {
+        push(scripts, std::move(commands));
+      }
+      by_address[address] = found->second;
+    }
+    return integer(by_address[address]);
+  };
   Json line_tables = array();
   for (int table = 0; table < chatter_table_count; ++table) {
     Json entries = array();
     for (std::uint32_t event = 0; event < chatter_events; ++event) {
       const std::uint32_t address =
           image.u32(chatter_lines + (static_cast<std::uint32_t>(table) * chatter_events + event) * 4);
-      if (address == 0) {
-        push(entries, null());
-        continue;
-      }
-      if (!by_address.contains(address)) {
-        Json commands = event_commands(image, tables, address);
-        // Equal scripts at different addresses are written once.
-        const std::string key = dumps(commands, {-1, false, false});
-        auto [found, added] = by_content.try_emplace(key, scripts.array().size());
-        if (added) {
-          push(scripts, std::move(commands));
-        }
-        by_address[address] = found->second;
-      }
-      push(entries, integer(by_address[address]));
+      push(entries, address == 0 ? null() : script_at(address));
     }
     push(line_tables, std::move(entries));
+  }
+  Json defeats = array();
+  for (const std::uint32_t address : image.u32s(ranker_defeat_lines, ranker_defeat_count)) {
+    push(defeats, address == 0 ? null() : script_at(address));
   }
   return object({{"gates", integers(image.i16s(chatter_gates, chatter_events))},
                  {"chances", chances},
                  {"scripts", scripts},
-                 {"tables", line_tables}});
+                 {"tables", line_tables},
+                 {"ranker_defeats", defeats}});
 }
 
 } // namespace phantomcrash::extract

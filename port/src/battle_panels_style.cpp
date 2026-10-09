@@ -179,24 +179,7 @@ BattlePanelsStyle parse_battle_panels_style(const json::JsonValue &document) {
   BattlePanelsStyle out;
   if (const auto *replacements = document.find("text_replacements")) {
     for (const auto &entry : replacements->array()) {
-      BattlePanelTextStyle text;
-      text.source = sprite(entry, "source");
-      text.text = entry.string_or("text", "");
-      if (const auto *region = entry.find("region")) {
-        const auto &box = region->array();
-        if (box.size() != 4) {
-          throw std::runtime_error("HUD text region needs 4 coordinates");
-        }
-        text.region = std::array<float, 4>{
-            static_cast<float>(box[0].number()), static_cast<float>(box[1].number()),
-            static_cast<float>(box[2].number()), static_cast<float>(box[3].number())};
-      }
-      if (entry.find("colour")) {
-        text.colour = colour(entry, "colour", 0xffffff);
-      }
-      text.stroke_width = std::clamp(number(entry, "stroke_width", 0.0F), 0.0F, 2.0F);
-      text.centered = entry.boolean_or("centered", false);
-      out.text_replacements.push_back(std::move(text));
+      out.text_replacements.push_back(parse_sprite_text_style(entry));
     }
   }
   out.widescreen = document.string_or("layout", "widescreen") != "4:3";

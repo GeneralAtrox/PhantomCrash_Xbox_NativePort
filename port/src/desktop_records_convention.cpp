@@ -9,8 +9,11 @@
 namespace phantomcrash {
 namespace {
 
-// The venue grid's large cell, the area ranker (0x330d1).
+// The venue grid's large cell, the area ranker (0x330d1), after its four
+// columns of class contests in two rows.
 constexpr int area_ranker_column = 4;
+constexpr int venue_class_rows = 2;
+constexpr int area_ranker_slot = area_ranker_column * venue_class_rows;
 
 Sprite placed(Sprite sprite, const std::array<float, 2> &at) {
   sprite.position = at;
@@ -78,6 +81,9 @@ void RecordsScreen::draw_champion(DrawList &list, const int contest, const int s
 void RecordsScreen::draw_grid(DrawList &list) const {
   const ConventionStyle &style = records_.script().convention;
   const bool regulation = records_.view() == RecordsView::regulation;
+  if (const auto &backdrop = records_.venue().backdrop) {
+    list.sprite(*backdrop);
+  }
   list.sprite(regulation ? style.regulation.grid : style.grid);
   const float growing = growing_after(style.growth, records_.view_seconds());
   list.sprite(grown_panel(style.panel, growing, style.growth.from_scale));
@@ -91,6 +97,7 @@ void RecordsScreen::draw_grid(DrawList &list) const {
   if (growing > 0.0F) {
     return;
   }
+  draw_cells(list);
   for (const Sprite &hint : style.hint) {
     list.sprite(hint);
   }
@@ -114,6 +121,82 @@ void RecordsScreen::draw_grid(DrawList &list) const {
     }
   }
   draw_champion(list, records_.selected_contest(), records_.slot());
+}
+
+// 0x33660 and 0x3472d: a won cell is darkened under its trophy; in
+// REGULATION a cell with no contest is darkened and marked NO CONVENTION.
+void RecordsScreen::draw_cells(DrawList &list) const {
+  const auto &trophies = records_.script().trophies;
+  if (!trophies) {
+    return;
+  }
+  const bool regulation = records_.view() == RecordsView::regulation;
+  const ConventionRegulation &pages = records_.script().convention.regulation;
+  const int columns = regulation ? pages.columns : area_ranker_column;
+  const int rows = regulation ? pages.rows : venue_class_rows;
+  for (int row = 0; row < rows; ++row) {
+    for (int column = 0; column < columns; ++column) {
+      const int slot = regulation ? column + (row + records_.regulation_page() * rows) * columns
+                                  : column + row * columns;
+      const int contest = records_.slot_contest(slot);
+      const std::array<float, 2> at{
+          trophies->won_cell.position[0] + trophies->cell_step * static_cast<float>(column),
+          trophies->won_cell.position[1] + trophies->cell_step * static_cast<float>(row)};
+      if (regulation && contest == no_contest) {
+        list.sprite(placed(trophies->won_cell, at));
+        list.sprite(placed(trophies->no_convention, at));
+      } else if (records_.won(contest)) {
+        list.sprite(placed(trophies->won_cell, at));
+      }
+    }
+  }
+  if (!regulation && records_.won(records_.slot_contest(area_ranker_slot))) {
+    list.sprite(trophies->area_won_cell);
+  }
+}
+
+std::vector<TrophyPlace> RecordsScreen::trophy_places() const {
+  std::vector<TrophyPlace> places;
+  const auto &trophies = records_.script().trophies;
+  if (!trophies) {
+    return places;
+  }
+  const ConventionStyle &style = records_.script().convention;
+  if (records_.view() == RecordsView::convention) {
+    // 0x34451: behind the FIRST RANKER plate once the menu has slid in.
+    if (records_.view_seconds() >= style.slide_seconds &&
+        records_.won(style.first_ranker_contest)) {
+      places.push_back(
+          {trophies->first_ranker_node, trophies->first_ranker, trophies->first_ranker_tilt});
+    }
+    return places;
+  }
+  if (growing_after(style.growth, records_.view_seconds()) > 0.0F) {
+    return places;
+  }
+  if (records_.view() == RecordsView::regulation) {
+    const ConventionRegulation &pages = style.regulation;
+    const int per_page = pages.columns * pages.rows;
+    for (int cell = 0; cell < per_page; ++cell) {
+      const int contest = records_.slot_contest(cell + records_.regulation_page() * per_page);
+      const auto index = static_cast<std::size_t>(cell);
+      if (records_.won(contest) && index < trophies->regulation_cells.size()) {
+        places.push_back({trophies->regulation_nodes[index], trophies->regulation_cells[index]});
+      }
+    }
+    return places;
+  }
+  for (std::size_t cell = 0; cell < trophies->class_cells.size(); ++cell) {
+    if (records_.won(records_.slot_contest(static_cast<int>(cell)))) {
+      places.push_back({trophies->class_node, trophies->class_cells[cell]});
+    }
+  }
+  const auto venue = static_cast<std::size_t>(records_.venue_index());
+  if (records_.won(records_.slot_contest(area_ranker_slot)) &&
+      venue < trophies->area_nodes.size()) {
+    places.push_back({trophies->area_nodes[venue], trophies->area_ranker});
+  }
+  return places;
 }
 
 void RecordsScreen::draw_convention(DrawList &list) const {

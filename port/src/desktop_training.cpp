@@ -40,8 +40,13 @@ TrainingScreen::TrainingScreen(TextureCache &textures, const GlyphFont &font,
   day_ = context.day;
   standard_controls_ = context.standard_controls;
   beginner_ = context.beginner;
+  controls_ = context.controls;
+  buttons_ = context.script.battle.buttons;
+  apply_button_config(buttons_, controls_);
   match_results_ = context.match_results;
   victory_hold_ = context.victory_hold_seconds;
+  ranker_ = context.ranker;
+  ranker_area_ = context.ranker_area;
   coop_match_ = context.coop_match;
   coop_slot_ = context.coop_slot;
   online_exit_ = context.online_exit;
