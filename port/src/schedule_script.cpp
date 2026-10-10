@@ -101,6 +101,9 @@ ScheduleScript parse_schedule(const json::JsonValue &document) {
     script.scroll_step_seconds = required(document, "scroll_step_seconds").number();
     script.info = member(document, "info", parse_contest_info);
     script.ticker = member(document, "ticker", parse_ticker);
+    if (const auto *skip = document.find("skip")) {
+      script.skip = parse_day_skip(*skip);
+    }
     if (script.columns <= 0 || script.scroll_step_seconds <= 0.0 ||
         script.venues.size() != schedule_venues) {
       throw std::runtime_error("needs columns, a scroll step above 0 and three venues");

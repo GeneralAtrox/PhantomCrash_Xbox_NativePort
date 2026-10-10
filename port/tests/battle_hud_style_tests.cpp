@@ -262,3 +262,27 @@ TEST_CASE("a shape's contour moves its edge and corners by the distance") {
   CHECK(close_to(inner[10][0], 17.0F));
   CHECK(close_to(inner[10][1], 7.0F));
 }
+
+TEST_CASE("a path outline reads its offset contour, shade direction and shaded stops") {
+  const auto shapes = parse_sprite_shapes(json::parse(R"({"shapes": [{
+    "image": "plate.png", "rect": [0, 0, 32, 32], "outlines": [{
+      "path": "M 0 0 L 10 0 L 10 10 L 0 10 Z", "offset": [1, 2], "shade_toward": [1, 1],
+      "stops": [[-1, "#102030", 0.5, "#405060", 0.25], [0, "#ffffff"]]}]}]})"));
+  REQUIRE(shapes.size() == 1U);
+  const ShapeOutline &outline = shapes[0].outlines.at(0);
+  REQUIRE(outline.path.size() == 4U);
+  CHECK(close_to(outline.box[0], 1.0F));
+  CHECK(close_to(outline.box[3], 12.0F));
+  REQUIRE(outline.shade_toward.has_value());
+  CHECK(close_to((*outline.shade_toward)[0], std::sqrt(0.5F)));
+  CHECK(outline.stops[0].shade_colour == 0x405060U);
+  CHECK(close_to(outline.stops[0].shade_alpha, 0.25F));
+  CHECK(close_to(outline.stops[1].shade_alpha, outline.stops[1].alpha));
+  // Inward each corner moves along its bisector, into the square.
+  const auto inner = shape_contour(outline, outline.box, -1.0F, 4);
+  REQUIRE(inner.size() == 4U);
+  CHECK(close_to(inner[0][0], 2.0F));
+  CHECK(close_to(inner[0][1], 3.0F));
+  CHECK(close_to(inner[2][0], 10.0F));
+  CHECK(close_to(inner[2][1], 11.0F));
+}

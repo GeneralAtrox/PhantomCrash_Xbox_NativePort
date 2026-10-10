@@ -23,6 +23,7 @@ add_library(phantomcrash_core
   src/game_data.cpp
   src/json.cpp
   src/json_access.cpp
+  src/json_classes.cpp
   src/jukebox.cpp
   src/location_frame.cpp
   src/music_spectrum.cpp
@@ -110,6 +111,8 @@ add_library(phantomcrash_core
   src/contests.cpp
   src/schedule.cpp
   src/schedule_script.cpp
+  src/schedule_skip.cpp
+  src/day_skip.cpp
   src/contest_info.cpp
   src/rumbling_rules.cpp
   src/rumbling_script.cpp
@@ -229,6 +232,7 @@ add_library(phantomcrash_core
   src/motion_source.cpp
   src/sound_config.cpp
   src/sprite_layer.cpp
+  src/sprite_lines.cpp
   src/sprite_shapes.cpp
   src/sprite_text.cpp
   src/story_event_script.cpp
@@ -302,6 +306,7 @@ if(BUILD_TESTING)
     tests/town_map_tests.cpp
     tests/name_entry_tests.cpp
     tests/option_screen_tests.cpp
+    tests/sprite_lines_tests.cpp
     tests/option_tests.cpp
     tests/battle_tests.cpp
     tests/battle_ai_tests.cpp
@@ -332,6 +337,8 @@ if(BUILD_TESTING)
     tests/split_screen_tests.cpp
     tests/garage_tests.cpp
     tests/town_screen_tests.cpp
+    tests/day_skip_tests.cpp
+    tests/json_classes_tests.cpp
     tests/records_tests.cpp
     tests/battle_music_tests.cpp
     tests/sonic_amp_tests.cpp
@@ -526,6 +533,7 @@ if(PHANTOMCRASH_BUILD_DESKTOP)
     src/desktop_battle_sights.cpp
     src/desktop_battle_panels.cpp
     src/desktop_battle_panel_text.cpp
+    src/desktop_sprite_lines.cpp
     src/desktop_sprite_shapes.cpp
     src/desktop_sprite_text.cpp
     src/desktop_display_text.cpp

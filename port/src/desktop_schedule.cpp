@@ -29,9 +29,10 @@ Sprite placed(Sprite sprite, const float x, const float y) {
 ScheduleScreen::ScheduleScreen(TextureCache &textures, const GlyphFont &font, ScheduleScript script,
                                const ContestTables &contests, const std::string &from,
                                const std::string &back, const FrameStyle &frame,
-                               const std::vector<MusicCredit> &credits, QuestSave quest)
+                               const std::vector<MusicCredit> &credits, QuestSave quest,
+                               const MessageBoxStyle &box)
     : TownScreen(textures, font, script, from, frame, credits, quest), contests_(contests),
-      fee_font_(frame.hud.font), schedule_(std::move(script), contests, quest, back) {
+      fee_font_(frame.hud.font), schedule_(std::move(script), contests, quest, back, from, box) {
   const ScheduleScript &data = schedule_.script();
   static_cast<void>(textures_.get(data.cell_image));
   static_cast<void>(textures_.get(data.day_digits.image));
@@ -126,8 +127,12 @@ void ScheduleScreen::draw_days(DrawList &list) const {
 void ScheduleScreen::draw_cursor(DrawList &list) const {
   const ScheduleScript &data = schedule_.script();
   list.sprite(data.exit);
-  if (schedule_.row() == Schedule::exit_row) {
+  if (schedule_.row() == Schedule::exit_row && schedule_.button() == Schedule::exit_button) {
     list.sprite(placed(data.exit_selected, data.exit.position[0], data.exit.position[1]));
+  } else if (schedule_.row() == Schedule::exit_row) {
+    // SKIP TO DAY keeps the day it wakes on marked.
+    const int column = schedule_.column();
+    list.sprite(placed(data.cursor_day, cell(column, 0)[0], data.cursor_day_y));
   } else if (!schedule_.popup().is_open() && !schedule_.scrolling()) {
     const auto [x, y] = cell(schedule_.column(), schedule_.row());
     list.sprite(placed(data.cursor_frame, x, y));
@@ -159,6 +164,25 @@ void ScheduleScreen::draw_popup(DrawList &list) const {
   }
 }
 
+void ScheduleScreen::draw_skip(DrawList &list) const {
+  const DaySkipScript &skip = schedule_.script().skip;
+  if (skip.enabled && schedule_.quest().cleared) {
+    const EnemyLevelTag &tag = skip.tag;
+    list.label(tag.layer, enemy_level_text(tag, schedule_.quest().laps), tag.font, tag.box,
+               tag.colour, tag.shadow, tag.shadow_blur);
+  }
+  if (!schedule_.skip_offered()) {
+    return;
+  }
+  list.sprite(skip.button);
+  if (schedule_.row() == Schedule::exit_row && schedule_.button() == Schedule::skip_button) {
+    list.sprite(placed(skip.button_selected, skip.button.position[0], skip.button.position[1]));
+  }
+  if (schedule_.box().is_open()) {
+    list.message_box(schedule_.box());
+  }
+}
+
 void ScheduleScreen::draw(const Viewport &viewport) {
   draw_town(viewport, schedule_.seconds(), schedule_.black_alpha(), [this](DrawList &list) {
     draw_cells(list);
@@ -167,6 +191,7 @@ void ScheduleScreen::draw(const Viewport &viewport) {
     if (schedule_.popup().is_open()) {
       draw_popup(list);
     }
+    draw_skip(list);
     const Contest *contest = contests_.contest(schedule_.selected_contest());
     if (contest != nullptr && !schedule_.scrolling()) {
       list.ticker(schedule_.script().ticker, glyph_run(font_, contest->name),

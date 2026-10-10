@@ -101,6 +101,8 @@ public:
   }
 
 private:
+  // The row whose bar the mouse is over.
+  [[nodiscard]] std::optional<int> pointed_row(const InputFrame &input) const;
   void assign(int action, int button_index);
   void sound(const std::string &name);
 

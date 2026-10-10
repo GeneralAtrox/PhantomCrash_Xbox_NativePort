@@ -1,5 +1,7 @@
 #include "phantomcrash/sprite_text.hpp"
 
+#include "phantomcrash/json_classes.hpp"
+
 #include <algorithm>
 #include <stdexcept>
 #include <string_view>
@@ -37,6 +39,7 @@ SpriteTextStyle parse_sprite_text_style(const json::JsonValue &entry) {
   if (const auto *colour = entry.find("colour")) {
     text.colour = parse_colour(colour->string());
   }
+  text.opacity = std::clamp(number(entry, "opacity", 1.0F), 0.0F, 1.0F);
   text.stroke_width = std::clamp(number(entry, "stroke_width", 0.0F), 0.0F, 2.0F);
   text.centered = entry.boolean_or("centered", false);
   text.line_pitch = std::max(number(entry, "line_pitch", 0.0F), 0.0F);
@@ -102,9 +105,10 @@ SpriteTextTable parse_sprite_text_table(const json::JsonValue &document) {
       table.fonts[name] = std::move(font);
     }
   }
+  const auto *classes = document.find("classes");
   if (const auto *replacements = document.find("replacements")) {
     for (const auto &entry : replacements->array()) {
-      table.replacements.push_back(parse_sprite_text_style(entry));
+      table.replacements.push_back(parse_sprite_text_style(json::with_classes(entry, classes)));
     }
   }
   return table;

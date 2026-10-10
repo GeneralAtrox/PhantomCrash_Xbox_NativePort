@@ -7,10 +7,12 @@
 
 #include "phantomcrash/contest_info.hpp"
 #include "phantomcrash/contests.hpp"
+#include "phantomcrash/day_skip.hpp"
 #include "phantomcrash/glyph_font.hpp"
 #include "phantomcrash/location_frame.hpp"
 #include "phantomcrash/menu_cursor.hpp"
 #include "phantomcrash/menu_screen.hpp"
+#include "phantomcrash/message_box.hpp"
 #include "phantomcrash/settings.hpp"
 #include "phantomcrash/sprite_layer.hpp"
 #include "phantomcrash/town_screen.hpp"
@@ -63,6 +65,7 @@ struct ScheduleScript : TownBasics {
   double scroll_step_seconds{0.05};
   ContestInfoStyle info;
   TickerStyle ticker;
+  DaySkipScript skip;
 };
 
 // Throws std::runtime_error naming the member at fault.
@@ -79,10 +82,13 @@ struct ScheduleColumn {
 class Schedule final {
 public:
   static constexpr int exit_row = schedule_venues;
+  static constexpr int exit_button = 0;
+  static constexpr int skip_button = 1; // beside EXIT, when offered
 
-  // `back` is where EXIT returns to: the place it was opened from.
+  // `back` is where EXIT returns to: the place it was opened from. SKIP TO
+  // DAY is offered when `from` is one of the skip's places.
   Schedule(ScheduleScript script, const ContestTables &contests, const QuestSave &quest,
-           std::string back);
+           std::string back, const std::string &from = {}, MessageBoxStyle box = {});
 
   void update(double tick_seconds, const InputFrame &input);
 
@@ -113,6 +119,28 @@ public:
   [[nodiscard]] bool won(int contest) const;
   // The contest under the cursor, or no_contest.
   [[nodiscard]] int selected_contest() const;
+  // EXIT or SKIP TO DAY on the bottom row.
+  [[nodiscard]] int button() const noexcept {
+    return button_;
+  }
+  [[nodiscard]] bool skip_offered() const noexcept {
+    return skip_offered_;
+  }
+  // The day SKIP TO DAY wakes on: the cursor's column's.
+  [[nodiscard]] int skip_day() const noexcept {
+    return first_day_ + column_;
+  }
+  // The skip's question or notice.
+  [[nodiscard]] const MessageBox &box() const noexcept {
+    return box_;
+  }
+  [[nodiscard]] const QuestSave &quest() const noexcept {
+    return quest_;
+  }
+  // The quest with the skipped nights slept, once leaving to sleep the last.
+  [[nodiscard]] const QuestSave *skipped_quest() const noexcept {
+    return skipped_ && fade_.done() ? &quest_ : nullptr;
+  }
   [[nodiscard]] double ticker_seconds() const noexcept {
     return ticker_seconds_;
   }
@@ -141,6 +169,9 @@ public:
 
 private:
   void handle_input(double tick_seconds, const InputFrame &input);
+  // The bottom row: EXIT, or SKIP TO DAY's question.
+  void press_button();
+  void update_box(double tick_seconds, const InputFrame &input);
   void scroll(int days);
   void step_scroll(double tick_seconds);
 
@@ -162,6 +193,12 @@ private:
   double ticker_seconds_{};
   double seconds_{};
   SoundQueue sounds_;
+  QuestSave quest_;
+  bool skip_offered_{};
+  int button_{exit_button};
+  MessageBox box_;
+  DaySkipPlan plan_;
+  bool skipped_{};
 };
 
 } // namespace phantomcrash

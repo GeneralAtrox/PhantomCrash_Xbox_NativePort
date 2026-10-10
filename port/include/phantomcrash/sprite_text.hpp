@@ -30,6 +30,7 @@ struct SpriteTextStyle {
   std::string text;
   std::optional<std::array<float, 4>> region;
   std::optional<std::uint32_t> colour;
+  float opacity{1.0F};  // the ink's own alpha, for translucent lettering
   float stroke_width{}; // extra glyph weight in canvas units
   bool centered{};
   // The original lettering's line pitch in source pixels; 0 fits the rect.

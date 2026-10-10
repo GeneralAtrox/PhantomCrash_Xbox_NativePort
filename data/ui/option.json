@@ -17,11 +17,12 @@
  "cursor_repeat": { "delay": 0.4, "interval": 0.1 },
  "sounds": { "move": "cursor", "select": "confirm" },
  "layers": [
-  { "id": "background", "image": "textures/scroll/option_tex/0.png", "rect": [0, 0, 640, 480], "layer": 1 }
+  { "id": "background", "image": "textures/scroll/option_tex/0.png", "rect": [0, 0, 640, 480], "layer": 1 , "extend_edges": "both",
+ "edge_bands_left": [[0, 95], [414, 480]], "edge_bands_right": [[0, 95], [376, 480]]}
  ],
  "help": { "position": [0, 72], "clip": [0, 0, 640, 480], "colour": "#f0f0f0", "speed": 60, "lead": 270, "trail": 36, "layer": 263 },
  "now_playing": { "format": "《 {title} : {artist} 》", "position": [0, 419], "clip": [0, 419, 396, 437], "colour": "#ffffff", "speed": 60, "trail": 45, "layer": 263 },
- "meter": [434, 395],
+ "meter": [435, 396],
  "default_cursor": "vibration",
  "cancel_cursor": "exit",
  "items": [

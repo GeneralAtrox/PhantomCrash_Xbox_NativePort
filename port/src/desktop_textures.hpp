@@ -19,7 +19,9 @@
 namespace phantomcrash {
 
 class SharpText;
+class SpriteLineSet;
 class SpriteShapes;
+struct SpriteLines;
 class SpriteText;
 
 // Lettering erased from atlas art: `region` (rect-relative LTRB), each row
@@ -73,10 +75,15 @@ public:
   [[nodiscard]] SpriteShapes *sprite_shapes();
   // Whole strings in installed display fonts (desktop_display_text.hpp).
   [[nodiscard]] DisplayText &display_text();
-  // `rect` of `file` with the lettering in each area erased (desktop_textures_erase.cpp).
-  // Null when the image is missing.
+  // The painted lines drawn again over the art (desktop_sprite_lines.hpp),
+  // loaded on first use; null while the outlines are (sprite_shapes()).
+  [[nodiscard]] SpriteLineSet *sprite_lines();
+  // `rect` of `file` with the lettering in each area erased, and with
+  // `lines` painted lines when given (desktop_textures_erase.cpp). Null when
+  // the image is missing.
   [[nodiscard]] SDL_Texture *erased(const std::string &file, const std::array<float, 4> &rect,
-                                    const std::vector<EraseArea> &areas);
+                                    const std::vector<EraseArea> &areas,
+                                    const SpriteLines *lines = nullptr);
 
 private:
   SDL_Renderer *renderer_{};
@@ -87,6 +94,8 @@ private:
   std::unique_ptr<SpriteText> sprite_text_;
   std::unique_ptr<SpriteShapes> sprite_shapes_;
   bool shapes_loaded_{};
+  std::unique_ptr<SpriteLineSet> sprite_lines_;
+  bool lines_loaded_{};
   std::unique_ptr<DisplayText> display_text_;
   std::map<std::string, SDL_Texture *> erased_;
   bool sharp_enabled_{true};

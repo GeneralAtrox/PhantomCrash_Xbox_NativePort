@@ -51,8 +51,13 @@ void TrainingScreen::seat_riders(const std::optional<PartTables> &parts,
         rider.name, static_cast<int>(rider_index), setup.player_start, setup.player_heading,
         rider.robot.weapons, robot_hp(script_, parts, name, rider.robot, true));
     battle_->robot(index).piloted = true;
+    battle_->robot(index).player_number = rider.port;
     battle_->set_tag(index, pilot_tag(parts, rider.robot.pilot));
     battle_->set_combat(index, robot_combat(script_, parts, garage, name, rider.robot));
+  }
+  // Each rider's controller port is the 1P-4P label the others see on it.
+  if (!setup.riders.empty()) {
+    battle_->robot(battle_->player_index()).player_number = setup.riders.front().port;
   }
   battle_->set_versus(true);
 }

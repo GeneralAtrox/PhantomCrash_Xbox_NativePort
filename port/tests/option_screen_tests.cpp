@@ -169,6 +169,40 @@ TEST_CASE("button config choices flip, DEFAULT restores the buttons, EXIT leaves
   CHECK(finish(menu) == "option");
 }
 
+TEST_CASE("button config follows the mouse over its bars") {
+  auto menu = button_config();
+  const auto &script = menu.script();
+  // The middle of row `index`'s bar, or `offset` into it.
+  const auto on_row = [&](const std::size_t index, const std::array<float, 2> offset = {0, 0}) {
+    const ButtonRow &row = script.rows[index];
+    const Sprite &bar = row.bar_normal.value_or(script.bar_normal);
+    const float half_x = (bar.rect[2] - bar.rect[0]) * 0.5F;
+    return std::array{row.bar[0] + (offset[0] > 0 ? offset[0] : half_x),
+                      row.bar[1] + (offset[1] > 0 ? offset[1] : 13.0F)};
+  };
+  const auto mouse = [&](const std::array<float, 2> at, const bool click) {
+    InputFrame input{0, 0, 1};
+    input.pointer = at;
+    input.pointer_moved = true;
+    input.clicked = click;
+    menu.update(tick, input);
+    return menu.take_sounds();
+  };
+  CHECK((mouse(on_row(2), false) == Sounds{"cursor"}));
+  CHECK(menu.cursor() == 2);
+  // A click on a choice row steps its value; on the left arrow, back.
+  CHECK((mouse(on_row(0), true) == Sounds{"cursor", "cursor"}));
+  CHECK(menu.choice(0) == 1);
+  const auto &arrow = script.left_arrow.front();
+  static_cast<void>(mouse({script.rows[0].left_arrow[0] + (arrow.rect[2] - arrow.rect[0]) * 0.5F,
+                           script.rows[0].left_arrow[1] + (arrow.rect[3] - arrow.rect[1]) * 0.5F},
+                          true));
+  CHECK(menu.choice(0) == 0);
+  // A click on EXIT leaves.
+  CHECK((mouse(on_row(script.rows.size() - 1), true) == Sounds{"cursor", "confirm"}));
+  CHECK(finish(menu) == "option");
+}
+
 TEST_CASE("screen adjust moves the picture within its range") {
   auto menu = screen_adjust();
   CHECK((tap(menu, button::right) == Sounds{"adjust"}));
@@ -214,7 +248,8 @@ TEST_CASE("sub-screen parsing names the entry at fault") {
 }
 
 TEST_CASE("OPTION, SOUND CONFIG and BUTTON CONFIG place the CURRENT MUSIC meter") {
-  const std::array<float, 2> slot{434.0F, 395.0F};
+  // The top left of the band's first painted slot, so the bars cover the slots.
+  const std::array<float, 2> slot{435.0F, 396.0F};
   CHECK(parse_option(shipped_document("ui/option.json")).meter == slot);
   CHECK(parse_sound_config(shipped_document("ui/sound_config.json")).meter == slot);
   CHECK(parse_button_config(shipped_document("ui/button_config.json")).meter == slot);

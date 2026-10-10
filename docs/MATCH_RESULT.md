@@ -1,7 +1,10 @@
 # Match result
 
 RUMBLING and Quick Rental now end when the player's robot dies, when the
-player leaves, or when the player defeats the contest champion. RESULT owns
+player leaves, or when the player defeats a ranker. Defeating another
+contest's champion does not end the battle (its defeat scene gives the
+battle back, `0x089d1b`): the player fights on, and leaving afterwards is a
+Win, as the champion grades up to 40 shootdowns imply. RESULT owns
 a snapshot of the final battle view, so the live world cannot move its backdrop
 or restart combat under the receipt. Training and test drives return to their
 own caller on death, without charging a rumbling repair bill.

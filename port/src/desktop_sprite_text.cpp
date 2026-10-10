@@ -1,5 +1,7 @@
 #include "desktop_sprite_text.hpp"
 #include "desktop_display_text.hpp"
+#include "desktop_sprite_lines.hpp"
+#include "desktop_sprite_shapes.hpp"
 #include "desktop_text.hpp"
 
 #include <SDL3/SDL.h>
@@ -157,28 +159,26 @@ bool fits(const std::array<float, 4> &r, const Placement &at) {
          r[3] > r[1];
 }
 
-// The sprite's art with every label's lettering erased; false when it cannot
-// be made.
+// The sprite's art with every label's lettering erased, or its outline
+// (data/ui/sprite_shapes.json) where it has one; false when it cannot be made.
 bool draw_erased(TextureCache &textures, const Sprite &sprite,
                  const std::span<const SpriteTextStyle> styles, const Viewport &viewport,
                  const float alpha, const Placement &at) {
+  const SpriteShapes *shapes = textures.sprite_shapes();
+  if (const SpriteShape *shape = shapes != nullptr ? shapes->find(sprite) : nullptr) {
+    const auto pixels = viewport.to_pixels(at.x, at.y, at.width * at.sx, at.height * at.sy);
+    draw_sprite_shape(textures.renderer(), *shape,
+                      {pixels.x, pixels.y, pixels.width, pixels.height}, sprite.colour, alpha);
+    return true;
+  }
   std::vector<EraseArea> areas;
   for (const auto &style : styles) {
     areas.push_back({style.erase_region.value_or(region_of(style, at)), style.erase_fill,
                      style.erase_slant.value_or(style.slant)});
   }
-  SDL_Texture *art = textures.erased(sprite.image, sprite.rect, areas);
-  if (art == nullptr) {
-    return false;
-  }
-  SDL_SetTextureColorMod(art, static_cast<Uint8>(sprite.colour >> 16U),
-                         static_cast<Uint8>(sprite.colour >> 8U),
-                         static_cast<Uint8>(sprite.colour));
-  SDL_SetTextureAlphaMod(art, static_cast<Uint8>(std::clamp(alpha, 0.0F, 1.0F) * 255 + 0.5F));
   const auto pixels = viewport.to_pixels(at.x, at.y, at.width * at.sx, at.height * at.sy);
-  const SDL_FRect target{pixels.x, pixels.y, pixels.width, pixels.height};
-  SDL_RenderTexture(textures.renderer(), art, nullptr, &target);
-  return true;
+  return draw_clean_art(textures, sprite, areas, viewport, alpha,
+                        {pixels.x, pixels.y, pixels.width, pixels.height});
 }
 
 // One label's text in its display font over its region.
@@ -213,8 +213,9 @@ void draw_label(TextureCache &textures, const DisplayFont &font, const Sprite &s
   if (at.sy > 0) {
     layout.slant *= at.sx / at.sy;
   }
-  static_cast<void>(textures.display_text().draw(
-      font, style.text, {box.x, box.y, box.width, box.height}, layout, colour, alpha, edge));
+  static_cast<void>(textures.display_text().draw(font, style.text,
+                                                 {box.x, box.y, box.width, box.height}, layout,
+                                                 colour, alpha * style.opacity, edge));
 }
 
 // Painted lettering redrawn in a display font over its erased art; false
@@ -273,16 +274,23 @@ bool draw_sprite_text(TextureCache &textures, const GlyphFont &font, const Sprit
     return draw_sprite_text(textures, font, sprite, styles.front(), viewport, alpha, shadow);
   }
   // Several labels on one sprite: display lettering over the art with all
-  // of it erased, or the art as it is when any label cannot be drawn so.
+  // of it erased (or none of the art, when every label is art false), or
+  // the art as it is when any label cannot be drawn so. A sprite with an
+  // outline has no art left to erase: the outline stands in for all of it.
   const Placement at = place(sprite);
+  const SpriteShapes *shapes = textures.sprite_shapes();
+  const bool outlined = shapes != nullptr && shapes->find(sprite) != nullptr;
   std::vector<const DisplayFont *> fonts;
+  bool art = false;
   for (const auto &style : styles) {
-    fonts.push_back(style.erase ? display_font(textures, style) : nullptr);
+    fonts.push_back(style.erase || !style.art || outlined ? display_font(textures, style)
+                                                          : nullptr);
     if (fonts.back() == nullptr || !fits(region_of(style, at), at)) {
       return false;
     }
+    art = art || style.art;
   }
-  if (!draw_erased(textures, sprite, styles, viewport, alpha, at)) {
+  if (art && !draw_erased(textures, sprite, styles, viewport, alpha, at)) {
     return false;
   }
   for (std::size_t i = 0; i < styles.size(); ++i) {

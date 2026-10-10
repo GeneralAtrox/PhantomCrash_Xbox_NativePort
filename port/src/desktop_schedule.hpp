@@ -18,7 +18,8 @@ class ScheduleScreen final : public TownScreen {
 public:
   ScheduleScreen(TextureCache &textures, const GlyphFont &font, ScheduleScript script,
                  const ContestTables &contests, const std::string &from, const std::string &back,
-                 const FrameStyle &frame, const std::vector<MusicCredit> &credits, QuestSave quest);
+                 const FrameStyle &frame, const std::vector<MusicCredit> &credits, QuestSave quest,
+                 const MessageBoxStyle &box);
 
   void tick(const InputFrame &input, double tick_seconds) override;
   void draw(const Viewport &viewport) override;
@@ -31,12 +32,18 @@ public:
   [[nodiscard]] std::string next() const override {
     return schedule_.next();
   }
+  // Set only once SKIP TO DAY leaves to sleep the last night.
+  [[nodiscard]] const QuestSave *quest_save() const override {
+    return schedule_.skipped_quest();
+  }
 
 private:
   void draw_cells(DrawList &list) const;
   void draw_days(DrawList &list) const;
   void draw_cursor(DrawList &list) const;
   void draw_popup(DrawList &list) const;
+  // SKIP TO DAY beside EXIT, its question, and the opponents' level raise.
+  void draw_skip(DrawList &list) const;
   // The top-left of a cell on the canvas.
   [[nodiscard]] std::array<float, 2> cell(int column, int row) const;
 

@@ -18,7 +18,7 @@
  ],
  "frame": {
   "hud": true,
-  "meter": [434, 395],
+  "meter": [435, 396],
   "now_playing": {"format": "《 {title} : {artist} 》", "position": [0, 419], "clip": [0, 419, 396, 437], "colour": "#ffffff", "speed": 60, "trail": 45, "layer": 263}
  },
  "opening": {"strip_seconds": 0.3333, "plate_seconds": 0.3333, "plate_from": -400},

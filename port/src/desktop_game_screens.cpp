@@ -62,6 +62,7 @@ GameScreens::GameScreens(TextureCache &textures, const DataRoots &roots, const G
   use_reticle_sizes(uplift_, hud);
   assemble_.paint_swatches = buy_module_.paint_swatches;
   assemble_.emblem_swatches = buy_module_.emblem_swatches;
+  schedule_.skip.sleep = sleep_;
   if (const auto town = converted_table(roots, "tables/town.json")) {
     contests_ = parse_contest_tables(*town);
   }
@@ -284,7 +285,7 @@ std::unique_ptr<Screen> GameScreens::make(const std::string &name, const std::st
   if (name == "schedule") {
     return std::make_unique<ScheduleScreen>(textures_, font_, schedule_, contests_, from,
                                             resolve(schedule_.exit_to, place_before), frame_,
-                                            credits_, quest);
+                                            credits_, quest, message_box_);
   }
   if (name == "records") {
     return std::make_unique<RecordsScreen>(textures_, font_, records_, contests_,

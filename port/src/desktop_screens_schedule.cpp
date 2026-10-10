@@ -27,6 +27,18 @@ bool ScreenRunner::tick_schedule(const InputFrame &input, const double seconds) 
   }
   tell_music(false);
   if (schedule_overlay_->done()) {
+    // SKIP TO DAY leaves the origin for the sleep screen, with the nights
+    // before the last already slept.
+    if (const QuestSave *skipped = schedule_overlay_->quest_save()) {
+      quest_ = *skipped;
+      const std::string next = schedule_overlay_->next();
+      schedule_overlay_.reset();
+      screen_->set_paused(false);
+      SDL_Log("Schedule shortcut: skipped to day %d; %s passes the last night", quest_.day + 1,
+              next.c_str());
+      show(next);
+      return true;
+    }
     schedule_overlay_.reset();
     screen_->set_paused(false);
     SDL_Log("Schedule shortcut: close to=%s day=%d; same origin resumed", name_.c_str(),

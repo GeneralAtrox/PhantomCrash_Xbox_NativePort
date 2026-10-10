@@ -25,6 +25,12 @@ void TrainingScreen::update_result(const double seconds) {
   if (!match_results_ || !battle_) {
     return;
   }
+  const bool won =
+      coop_match_ ? coop_match_->players[coop_slot_].won : live_world_ && live_world_->player_won();
+  // Only a ranker's defeat ends the battle (0x089d1b); after another
+  // contest's champion it goes on, and leaving it later is the win (the
+  // original grades champion wins up to 40 shootdowns).
+  const bool win_ends = coop_match_ != nullptr || ranker_ != RankerContest::none;
   if (!battle_->player().alive) {
     outcome_ = MatchOutcome::retire;
     done_ = death_finished;
@@ -32,8 +38,9 @@ void TrainingScreen::update_result(const double seconds) {
       SDL_Log("Result: player death presentation completed after %.3f seconds",
               battle_->player().death_seconds);
     }
-  } else if ((coop_match_ ? coop_match_->players[coop_slot_].won
-                          : live_world_ && live_world_->player_won()) &&
+  } else if (won && !win_ends) {
+    outcome_ = MatchOutcome::win;
+  } else if (won &&
              std::ranges::none_of(battle_->robots(), [](const Combatant &r) { return r.dying; }) &&
              !(scene_ && scene_->scene().defeat_holds())) {
     outcome_ = MatchOutcome::win;

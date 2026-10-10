@@ -1,8 +1,6 @@
-# Windows release
-
-Version 0.5.8 brings sharp lettering and vector frames on the menus, the
-module shop's extra stats, the BATTLE MUSIC programmer's animation, boss
-entrance and defeat scenes, the Area Rankers' themes and lighting fixes.
+Version 0.5.9 draws the remaining menu lettering sharp on every UI page,
+including the shops, Keep SV, VS MODE and its results, and adds SKIP TO DAY
+to the garage's schedule.
 
 This is a work-in-progress Windows x64 port. The ZIP includes
 `phantomcrash_port.exe`, the game data installer `phantomcrash_extract.exe`,
@@ -56,6 +54,27 @@ opens the Class D rental shortcut (`rumbling_d_night_rental` for the night
 one); it uses and saves the current quest.
 
 ## Included changes
+
+0.5.9 changes:
+
+- The lettering still baked into menu art is drawn as sharp text: the
+  garage, Club Wired, Plus Tech and Wild Machines titles, SYSTEM, KEEP SV
+  (pills, pop-ups, damage and empty tags), BATTLE MUSIC's programs and
+  prompts, ASSEMBLE and CUSTOMIZE (parameter tables, SV-NAME / CHIP /
+  COLOR / STICKER, Equipment Imperfection, Underkill, Overweight), the
+  dealers' greetings and the chip, module and used-SV shops (including
+  Square / Oblong / V-Oblong), RUMBLING, SCREEN ADJUST, the hangar's
+  slanted numbers and VS MODE's entry, Scoobee and area screens.
+- VS battles draw YOU WIN / YOU LOSE / DRAW and the RETRY / SELECT AREA /
+  SELECT SV / EXIT menu sharp, and each rider's 1P-4P tag shows over its
+  robot.
+- Ruled lines in tables are drawn as vector lines
+  (`data/ui/sprite_lines.json`). Sharp-UI entries share settings through
+  named classes, so a look is changed in one place.
+- The schedule opened from the garage offers SKIP TO DAY beside EXIT: it
+  sleeps through to the chosen day after a YES/NO question
+  (`data/ui/schedule.json` `skip`).
+- BUTTON CONFIG rows can be picked with the mouse.
 
 0.5.8 changes:
 

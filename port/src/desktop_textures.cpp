@@ -1,6 +1,7 @@
 #include "desktop_textures.hpp"
 #include "desktop_display_text.hpp"
 #include "desktop_sharp_text.hpp"
+#include "desktop_sprite_lines.hpp"
 #include "desktop_sprite_shapes.hpp"
 #include "desktop_sprite_text.hpp"
 
@@ -123,6 +124,14 @@ SpriteShapes *TextureCache::sprite_shapes() {
   return sprite_shapes_ && sharp_enabled_ && recording_ == nullptr ? sprite_shapes_.get() : nullptr;
 }
 
+SpriteLineSet *TextureCache::sprite_lines() {
+  if (!lines_loaded_) {
+    lines_loaded_ = true;
+    sprite_lines_ = load_sprite_lines(roots_);
+  }
+  return sprite_lines_ && sharp_enabled_ && recording_ == nullptr ? sprite_lines_.get() : nullptr;
+}
+
 DisplayText &TextureCache::display_text() {
   if (!display_text_) {
     display_text_ = std::make_unique<DisplayText>(renderer_, roots_);
@@ -225,6 +234,29 @@ bool draw_as_shape(TextureCache &textures, const Sprite &sprite, const Viewport 
   return true;
 }
 
+// Art with thin lines painted into it, the lines erased and drawn again
+// over it at the output resolution.
+bool draw_as_lines(TextureCache &textures, const Sprite &sprite, const Viewport &viewport,
+                   const double seconds, const float opacity, const std::uint32_t colour) {
+  const SpriteLineSet *lines =
+      sprite.angle == 0.0F && !sprite.flip_x ? textures.sprite_lines() : nullptr;
+  if (lines == nullptr || lines->find(sprite) == nullptr) {
+    return false;
+  }
+  Sprite placed = sprite;
+  placed.colour = multiply_colours(sprite.colour, colour);
+  bool drawn = false;
+  for (const auto &quad : place_sprite(sprite, seconds)) {
+    const auto pixels = viewport.to_pixels(quad.x, quad.y, quad.width, quad.height);
+    if (!draw_clean_art(textures, placed, {}, viewport, opacity,
+                        {pixels.x, pixels.y, pixels.width, pixels.height})) {
+      return drawn;
+    }
+    drawn = true;
+  }
+  return drawn;
+}
+
 } // namespace
 
 void draw_sprite(TextureCache &textures, const Sprite &sprite, const Viewport &viewport,
@@ -235,7 +267,8 @@ void draw_sprite(TextureCache &textures, const Sprite &sprite, const Viewport &v
     return;
   }
   if (draw_as_text(textures, sprite, viewport, seconds, opacity, colour) ||
-      draw_as_shape(textures, sprite, viewport, seconds, opacity, colour)) {
+      draw_as_shape(textures, sprite, viewport, seconds, opacity, colour) ||
+      draw_as_lines(textures, sprite, viewport, seconds, opacity, colour)) {
     return;
   }
   if (!sprite.fallback.empty()) {

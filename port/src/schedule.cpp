@@ -23,16 +23,22 @@ bool contains(const std::vector<int> &values, const int value) {
   return std::ranges::find(values, value) != values.end();
 }
 
+bool contains_place(const std::vector<std::string> &places, const std::string &place) {
+  return !place.empty() && std::ranges::find(places, place) != places.end();
+}
+
 } // namespace
 
 Schedule::Schedule(ScheduleScript script, const ContestTables &contests, const QuestSave &quest,
-                   std::string back)
+                   std::string back, const std::string &from, MessageBoxStyle box)
     : script_(std::move(script)), contests_(contests), won_(quest.won_contests),
       game_cleared_(quest.cleared), back_(std::move(back)),
       fade_(script_.fade_in, script_.fade_out),
       columns_repeat_(script_.repeat_delay, script_.repeat_interval),
       rows_repeat_(script_.repeat_delay, script_.repeat_interval), first_day_(wrap_day(quest.day)),
-      popup_(script_.info.growth) {}
+      popup_(script_.info.growth), quest_(quest),
+      skip_offered_(script_.skip.enabled && contains_place(script_.skip.from, from)),
+      box_(std::move(box)) {}
 
 bool Schedule::won(const int contest) const {
   return contains(won_, contest);
@@ -102,13 +108,18 @@ void Schedule::update(const double tick_seconds, const InputFrame &input) {
   seconds_ += tick_seconds;
   ticker_seconds_ += tick_seconds;
   popup_.update(tick_seconds);
+  box_.update(tick_seconds);
   const bool ready = fade_.update(tick_seconds);
   if (phase_ != phase_still) {
     step_scroll(tick_seconds);
     return;
   }
   if (ready && !fade_.leaving()) {
-    handle_input(tick_seconds, input);
+    if (box_.is_open()) {
+      update_box(tick_seconds, input);
+    } else {
+      handle_input(tick_seconds, input);
+    }
   }
 }
 
@@ -119,8 +130,13 @@ void Schedule::handle_input(const double tick_seconds, const InputFrame &raw) {
       if (popup_.grown()) {
         input.pressed |= script_.cancel_buttons;
       }
+    } else if (skip_offered_ && shop_hit(input, script_.skip.button)) {
+      row_ = exit_row;
+      button_ = skip_button;
+      input.pressed |= script_.confirm_buttons;
     } else if (shop_hit(input, script_.exit)) {
       row_ = exit_row;
+      button_ = exit_button;
       input.pressed |= script_.confirm_buttons;
     } else {
       for (int column = 0; column < script_.columns; ++column) {
@@ -153,8 +169,7 @@ void Schedule::handle_input(const double tick_seconds, const InputFrame &raw) {
   }
   if (input.any_pressed(script_.confirm_buttons)) {
     if (row_ == exit_row) {
-      sounds_.play(script_.select_sound);
-      fade_.leave(back_);
+      press_button();
     } else if (selected_contest() != no_contest) {
       sounds_.play(script_.select_sound);
       popup_.open();
@@ -162,15 +177,26 @@ void Schedule::handle_input(const double tick_seconds, const InputFrame &raw) {
     return;
   }
   if (input.any_pressed(script_.cancel_buttons)) {
-    if (row_ != exit_row) {
+    if (row_ != exit_row || button_ != exit_button) {
       sounds_.play(script_.exit_sound);
     }
     row_ = exit_row;
+    button_ = exit_button;
     return;
   }
   bool fresh = false;
   const int rows = exit_row + 1;
-  if (row_ != exit_row) {
+  if (row_ == exit_row && skip_offered_) {
+    // Left and right go towards the button on that side.
+    const int step = columns_repeat_.step(tick_seconds, input, script_.left, script_.right, fresh);
+    const bool skip_left = script_.skip.button.position[0] < script_.exit.position[0];
+    const int moved = std::clamp(button_ + (skip_left ? -step : step), exit_button, skip_button);
+    if (moved != button_) {
+      sounds_.play(script_.move_sound);
+      button_ = moved;
+      return;
+    }
+  } else if (row_ != exit_row) {
     const int step = columns_repeat_.step(tick_seconds, input, script_.left, script_.right, fresh);
     if (step != 0) {
       sounds_.play(script_.move_sound);

@@ -1,6 +1,7 @@
 #include "phantomcrash/button_config.hpp"
 
 #include "phantomcrash/json_fields.hpp"
+#include "phantomcrash/shop_pointer.hpp"
 
 #include <algorithm>
 #include <stdexcept>
@@ -11,6 +12,11 @@ namespace {
 
 using json::numbers;
 using json::required;
+
+Sprite placed(Sprite sprite, const std::array<float, 2> &position) {
+  sprite.position = position;
+  return sprite;
+}
 
 // One sprite per bindable button, keyed by the button's name.
 std::array<Sprite, control_action_count> per_button(const json::JsonValue &value,
@@ -162,6 +168,18 @@ void ButtonConfigMenu::assign(const int action, const int button_index) {
   }
 }
 
+std::optional<int> ButtonConfigMenu::pointed_row(const InputFrame &input) const {
+  // From the bottom up: each bar's clear lower edge lies under the next row.
+  for (int index = static_cast<int>(script_.rows.size()) - 1; input.pointer && index >= 0;
+       --index) {
+    const ButtonRow &row = script_.rows[static_cast<std::size_t>(index)];
+    if (shop_hit(input, placed(row.bar_normal.value_or(script_.bar_normal), row.bar))) {
+      return index;
+    }
+  }
+  return std::nullopt;
+}
+
 void ButtonConfigMenu::update(const double tick_seconds, const InputFrame &input) {
   if (done()) {
     return;
@@ -172,9 +190,17 @@ void ButtonConfigMenu::update(const double tick_seconds, const InputFrame &input
     return;
   }
   const int count = static_cast<int>(script_.rows.size());
+  // The mouse (a port addition): moving onto a row's bar moves the cursor
+  // there, and a click on it confirms it, or on a choice row steps its
+  // value (back on the left arrow).
+  const std::optional<int> pointed = pointed_row(input);
   bool fresh = false;
   const int step = repeat_.step(tick_seconds, input, button::up, button::down, fresh);
-  if (const int moved = move_cursor(cursor_, step, fresh, count); moved != cursor_) {
+  int target = move_cursor(cursor_, step, fresh, count);
+  if (pointed && (input.pointer_moved || input.clicked)) {
+    target = *pointed;
+  }
+  if (const int moved = target; moved != cursor_) {
     cursor_ = moved;
     help_.restart(cursor_);
     choice_repeat_.reset();
@@ -184,8 +210,11 @@ void ButtonConfigMenu::update(const double tick_seconds, const InputFrame &input
   const ButtonRow &row = script_.rows[static_cast<std::size_t>(cursor_)];
   if (row.kind == ButtonRowKind::choice) {
     int &value = *game_value(options_, row.option);
-    const int horizontal =
-        choice_repeat_.step(tick_seconds, input, button::left, button::right, fresh);
+    int horizontal = choice_repeat_.step(tick_seconds, input, button::left, button::right, fresh);
+    if (input.clicked && pointed == cursor_) {
+      horizontal = shop_hit(input, placed(script_.left_arrow.front(), row.left_arrow)) ? -1 : 1;
+      fresh = true;
+    }
     if (const int moved = move_cursor(value, horizontal, fresh, 2); moved != value) {
       value = moved;
       sound(script_.move_sound);
@@ -202,7 +231,7 @@ void ButtonConfigMenu::update(const double tick_seconds, const InputFrame &input
 
   // Confirm makes no sound of its own here (0xdf310); DEFAULT and EXIT play
   // the select sound.
-  if (input.any_pressed(script_.confirm_buttons)) {
+  if (input.any_pressed(script_.confirm_buttons) || (input.clicked && pointed == cursor_)) {
     if (row.kind == ButtonRowKind::reset) {
       sound(script_.select_sound);
       options_.controls.bindings = ControlOptions{}.bindings;

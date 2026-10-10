@@ -55,7 +55,11 @@
    "image": "textures/scroll/record_tex/0.png",
    "rect": [0, 0, 640, 480],
    "position": [0, 0],
-   "layer": 1
+   "layer": 1,
+   "extend_edges": "both",
+   "edge_inset": [1, 1],
+   "edge_bands": [[0, 95], [376, 480]],
+   "edge_bands_left": [[0, 95], [414, 480]]
   }
  ],
  "menu": {
@@ -991,7 +995,7 @@
  },
  "frame": {
   "hud": true,
-  "meter": [434, 395],
+  "meter": [435, 396],
   "now_playing": {
    "format": "《 {title} : {artist} 》",
    "position": [0, 419],
