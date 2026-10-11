@@ -3,6 +3,7 @@
 #include "desktop_host.hpp"
 #include "desktop_online_assets.hpp"
 #include "desktop_online_input_check.hpp"
+#include "phantomcrash/added_chips.hpp"
 #include "desktop_online_factory.hpp"
 #include "desktop_wreck_collision.hpp"
 #include "phantomcrash/robot_combat.hpp"
@@ -21,11 +22,11 @@ void check(const bool condition, const char *message) {
 }
 
 json::JsonValue converted(const DataRoots &roots, const char *name) {
-  const auto path = roots.find_asset(name);
-  if (!path) {
+  auto table = read_converted_table(roots, name);
+  if (!table) {
     throw std::runtime_error(std::string("Online resource check requires ") + name);
   }
-  return json::read_file(*path);
+  return std::move(*table);
 }
 
 void append(std::vector<std::uint32_t> &out, const Mat4 &matrix) {

@@ -1,6 +1,5 @@
-Version 0.5.9 draws the remaining menu lettering sharp on every UI page,
-including the shops, Keep SV, VS MODE and its results, and adds SKIP TO DAY
-to the garage's schedule.
+Version 0.5.10 adds three new CHIPs, Cat V, Cat VI and Cat VII, sold in
+Wild Machines' BUY CHIP beside the original's.
 
 This is a work-in-progress Windows x64 port. The ZIP includes
 `phantomcrash_port.exe`, the game data installer `phantomcrash_extract.exe`,
@@ -54,6 +53,18 @@ opens the Class D rental shortcut (`rumbling_d_night_rental` for the night
 one); it uses and saves the current quest.
 
 ## Included changes
+
+0.5.10 changes:
+
+- Three new CHIPs join the original's 96: Cat V (Norwegian Forest Cat),
+  Cat VI (Maine Coon) and Cat VII (Ragdoll), each with the five cat
+  personalities' chatter, a green monitor-look face like the original
+  animals and stats of its own. BUY CHIP offers one of them every day
+  beside the usual stock.
+- They are base game data (`data/tables/added_chips.json`, faces under
+  `data/assets/textures/chips/`, help text in `data/ui/chip_shop.json`),
+  joined to the converted tables as they load; no re-install of the game
+  data is needed. S.L.A.I. mode is unchanged.
 
 0.5.9 changes:
 

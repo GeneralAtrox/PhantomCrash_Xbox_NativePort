@@ -12,6 +12,7 @@ add_library(phantomcrash_core
   src/location_menu.cpp
   src/location_menu_script.cpp
   src/data_roots.cpp
+  src/added_chips.cpp
   src/slai_content.cpp
   src/event_player.cpp
   src/frame_rate.cpp
@@ -369,6 +370,7 @@ if(BUILD_TESTING)
     tests/robot_tests.cpp
     tests/robot_combat_tests.cpp
     tests/robot_parts_tests.cpp
+    tests/added_chips_tests.cpp
     tests/weapon_reach_tests.cpp
     tests/tutorial_tests.cpp
     tests/post_process_tests.cpp

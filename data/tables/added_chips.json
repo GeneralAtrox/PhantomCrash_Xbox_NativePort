@@ -1,0 +1,98 @@
+{
+ "notes": [
+  "CHIPs the port adds after the original's 96 (indices 0-95). docs/CUSTOM_CHIPS.md explains how to recreate or add one: the face picture, the stats and the chatter.",
+  "Each family becomes one record per entry of \"chatter\" (the personality table in tables/chatter.json), numbered on from first_index in this order: Cat V 96-100, Cat VI 101-105, Cat VII 106-110. Saves and shop days name CHIPs by number, so only ever append families or personalities at the end.",
+  "\"stats\" are the original record fields (inner/outer sight shape and size curves, track, lock_frames, weight, critical_percent, dodge_percent = Repulsion Shield chance, knockdown_resistance, price), as in the converted tables/parts.json. A curve is base at level 0, base+mid at its knee and base+top at level 99.",
+  "\"shop\" adds one BUY CHIP offer to the given rotating shop day (0-23, garage.json chip_lineups), naming the family and its personality. The shop help texts are ui/chip_shop.json chip_help at the same index.",
+  "Not applied to S.L.A.I.'s tables, which are another game's."
+ ],
+ "first_index": 96,
+ "families": [
+  {
+   "name": "Cat V",
+   "breed": "Norwegian Forest Cat",
+   "face": "textures/chips/cat_v.png",
+   "chatter": [0, 1, 2, 3, 4],
+   "traits": "Black; very playful; hunts flies very well (track 3, lock 8 frames); would never attack a human and uses the softest touch (low critical); very fast (best Repulsion Shield, 1% rising to 10.5%); indoor cat, so not a survivor (low knockdown resistance).",
+   "stats": {
+    "inner_shape": 0,
+    "inner_value": {"base": 200, "mid": 490, "top": 700, "knee": 50, "low_scale": -1},
+    "track": 3,
+    "outer_shape": 1,
+    "outer_value": {"base": 70, "mid": 945, "top": 1350, "knee": 50, "low_scale": -1},
+    "lock_frames": 8,
+    "weight": {"base": 22.0, "mid": 0.0, "top": 0.0, "knee": 50, "low_scale": -1},
+    "critical_percent": {"base": 0.5, "mid": 2.45, "top": 3.5, "knee": 50, "low_scale": -1},
+    "dodge_percent": {"base": 1.0, "mid": 6.65, "top": 9.5, "knee": 60, "low_scale": -1},
+    "knockdown_resistance": {"base": 2.0, "mid": 6.3, "top": 9.0, "knee": 60, "low_scale": -1},
+    "price": {"base": 6500, "mid": 262500, "top": 775000, "knee": 50, "low_scale": 1}
+   }
+  },
+  {
+   "name": "Cat VI",
+   "breed": "Maine Coon",
+   "face": "textures/chips/cat_vi.png",
+   "chatter": [0, 1, 2, 3, 4],
+   "traits": "Orange; playful but can get aggressive (highest cat critical); very talkative (help text only; chatter is the shared cat set); hunts flies as well as Cat V (track 3, lock 8 frames); hyperactive fast (Repulsion Shield close to Cat V); small for a Maine Coon (low knockdown resistance, Cat IV weight). Price x1.15 of the other cats.",
+   "stats": {
+    "inner_shape": 0,
+    "inner_value": {"base": 200, "mid": 490, "top": 700, "knee": 50, "low_scale": -1},
+    "track": 3,
+    "outer_shape": 1,
+    "outer_value": {"base": 70, "mid": 945, "top": 1350, "knee": 50, "low_scale": -1},
+    "lock_frames": 8,
+    "weight": {"base": 20.1, "mid": 0.0, "top": 0.0, "knee": 50, "low_scale": -1},
+    "critical_percent": {"base": 2.0, "mid": 5.6, "top": 8.0, "knee": 50, "low_scale": -1},
+    "dodge_percent": {"base": 1.0, "mid": 6.3, "top": 9.0, "knee": 60, "low_scale": -1},
+    "knockdown_resistance": {"base": 1.5, "mid": 5.6, "top": 8.0, "knee": 60, "low_scale": -1},
+    "price": {"base": 7475, "mid": 301875, "top": 891250, "knee": 50, "low_scale": 1}
+   }
+  },
+  {
+   "name": "Cat VII",
+   "breed": "Ragdoll",
+   "face": "textures/chips/cat_vii.png",
+   "chatter": [0, 1, 2, 3, 4],
+   "traits": "Grey; cuddly and playful when they want to be (Repulsion Shield starts at 0.5% and climbs late to 10.5%, level with Cat V); a princess in demands (price x1.3); lazy (track 1, lock 22 frames); strokes things with the paws (lowest critical); a big cat (heaviest, best knockdown resistance).",
+   "stats": {
+    "inner_shape": 0,
+    "inner_value": {"base": 200, "mid": 490, "top": 700, "knee": 50, "low_scale": -1},
+    "track": 1,
+    "outer_shape": 1,
+    "outer_value": {"base": 70, "mid": 945, "top": 1350, "knee": 50, "low_scale": -1},
+    "lock_frames": 22,
+    "weight": {"base": 24.0, "mid": 0.0, "top": 0.0, "knee": 50, "low_scale": -1},
+    "critical_percent": {"base": 0.5, "mid": 2.1, "top": 3.0, "knee": 50, "low_scale": -1},
+    "dodge_percent": {"base": 0.5, "mid": 4.0, "top": 10.0, "knee": 60, "low_scale": -1},
+    "knockdown_resistance": {"base": 3.5, "mid": 10.5, "top": 15.0, "knee": 60, "low_scale": -1},
+    "price": {"base": 8450, "mid": 341250, "top": 1007500, "knee": 50, "low_scale": 1}
+   }
+  }
+ ],
+ "shop": [
+  {"day": 0, "chip": "Cat V", "chatter": 0, "level": 0},
+  {"day": 1, "chip": "Cat VI", "chatter": 0, "level": 0},
+  {"day": 2, "chip": "Cat VII", "chatter": 0, "level": 0},
+  {"day": 3, "chip": "Cat V", "chatter": 1, "level": 0},
+  {"day": 4, "chip": "Cat VI", "chatter": 1, "level": 0},
+  {"day": 5, "chip": "Cat VII", "chatter": 1, "level": 0},
+  {"day": 6, "chip": "Cat V", "chatter": 2, "level": 0},
+  {"day": 7, "chip": "Cat VI", "chatter": 2, "level": 0},
+  {"day": 8, "chip": "Cat VII", "chatter": 2, "level": 0},
+  {"day": 9, "chip": "Cat V", "chatter": 3, "level": 0},
+  {"day": 10, "chip": "Cat VI", "chatter": 3, "level": 0},
+  {"day": 11, "chip": "Cat VII", "chatter": 3, "level": 0},
+  {"day": 12, "chip": "Cat V", "chatter": 4, "level": 0},
+  {"day": 13, "chip": "Cat VI", "chatter": 4, "level": 0},
+  {"day": 14, "chip": "Cat VII", "chatter": 4, "level": 0},
+  {"day": 15, "chip": "Cat V", "chatter": 0, "level": 0},
+  {"day": 16, "chip": "Cat VI", "chatter": 0, "level": 0},
+  {"day": 17, "chip": "Cat VII", "chatter": 0, "level": 0},
+  {"day": 18, "chip": "Cat V", "chatter": 1, "level": 0},
+  {"day": 19, "chip": "Cat VI", "chatter": 1, "level": 0},
+  {"day": 20, "chip": "Cat VII", "chatter": 1, "level": 0},
+  {"day": 21, "chip": "Cat V", "chatter": 2, "level": 0},
+  {"day": 22, "chip": "Cat VI", "chatter": 2, "level": 0},
+  {"day": 23, "chip": "Cat VII", "chatter": 2, "level": 0}
+ ]
+}

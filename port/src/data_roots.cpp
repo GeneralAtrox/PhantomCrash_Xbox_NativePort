@@ -67,13 +67,13 @@ DataRoots::DataRoots(std::filesystem::path data, std::filesystem::path mods,
 DataRoots DataRoots::standard(const std::filesystem::path &root) {
   return DataRoots(root / "data", root / "mods",
                    {root / "mods", root / "artifacts" / "europe" / "assets",
-                    root / "artifacts" / "europe" / "files" / "Media"});
+                    root / "artifacts" / "europe" / "files" / "Media", root / "data" / "assets"});
 }
 
 DataRoots DataRoots::shipped(const std::filesystem::path &root) {
   return DataRoots(root / "data", {},
                    {root / "artifacts" / "europe" / "assets",
-                    root / "artifacts" / "europe" / "files" / "Media"});
+                    root / "artifacts" / "europe" / "files" / "Media", root / "data" / "assets"});
 }
 
 DataRoots DataRoots::configured(const std::filesystem::path &root, bool slai) {
@@ -129,6 +129,11 @@ std::filesystem::path DataRoots::asset(std::string_view relative) const {
     message += " " + root.string();
   }
   throw std::runtime_error(message);
+}
+
+bool DataRoots::has_document(std::string_view relative) const {
+  std::error_code error;
+  return std::filesystem::is_regular_file(data_ / checked_relative(relative), error);
 }
 
 json::JsonValue DataRoots::document(std::string_view relative) const {

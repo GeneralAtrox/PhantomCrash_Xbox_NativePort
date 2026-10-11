@@ -1,0 +1,30 @@
+{
+  "notes": [
+    "Recipes for the port's added CHIP faces (scripts/make_chip_face.py, docs/CUSTOM_CHIPS.md).",
+    "photo: the source photograph. crop: [left, top, right, bottom] in photo pixels, a square round the head and ruff, ears included.",
+    "matte: 'lawn' keys out grass, sky and cardboard behind a dark animal; 'outline' cuts along `outline`, a polygon in units of the crop scaled to 512x512 (0,0 top left), refined to the fur within 12 units either side.",
+    "despill_green: also clamp green to the larger of red and blue (a photo taken on a lawn).",
+    "gamma: the tone curve over the fur, 1 for none; under 1 opens up dark fur (a black cat).",
+    "output: where the face goes; data/assets/... is found by the game as the path after assets/."
+  ],
+  "faces": [
+    {"name": "Cat V", "breed": "Norwegian Forest Cat", "photo": "source-art/chips/cat_v.webp",
+     "crop": [1090, 95, 1799, 804], "matte": "lawn", "despill_green": true, "gamma": 0.62,
+     "output": "data/assets/textures/chips/cat_v.png"},
+    {"name": "Cat VI", "breed": "Maine Coon", "photo": "source-art/chips/cat_vi.webp",
+     "crop": [40, 110, 1011, 1081], "matte": "outline", "gamma": 0.78,
+     "outline": [[0, 512], [0, 262], [30, 232], [48, 190], [56, 130], [62, 85], [68, 58], [86, 95],
+                 [106, 135], [128, 166], [165, 172], [210, 168], [255, 170], [300, 174], [342, 182],
+                 [372, 150], [405, 110], [440, 70], [468, 38], [490, 18], [487, 50], [478, 90],
+                 [470, 125], [460, 165], [446, 205], [452, 240], [462, 280], [490, 325], [512, 335],
+                 [512, 512]],
+     "output": "data/assets/textures/chips/cat_vi.png"},
+    {"name": "Cat VII", "breed": "Ragdoll", "photo": "source-art/chips/cat_vii.webp",
+     "crop": [150, 240, 650, 740], "matte": "outline", "gamma": 0.8,
+     "outline": [[150, 512], [120, 470], [95, 430], [74, 390], [62, 350], [53, 300], [52, 250],
+                 [60, 212], [74, 180], [88, 150], [80, 105], [78, 60], [82, 46], [100, 58], [125, 75],
+                 [155, 95], [200, 90], [260, 86], [320, 88], [362, 92], [395, 70], [425, 52], [442, 44],
+                 [436, 70], [428, 95], [460, 98], [490, 100], [512, 104], [512, 512]],
+     "output": "data/assets/textures/chips/cat_vii.png"}
+  ]
+}

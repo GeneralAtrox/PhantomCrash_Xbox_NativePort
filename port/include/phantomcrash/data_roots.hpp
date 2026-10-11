@@ -19,7 +19,8 @@ public:
             std::vector<std::filesystem::path> asset_roots);
 
   // The layout of a source checkout or install rooted at `root`:
-  // data/, mods/, artifacts/europe/assets/, artifacts/europe/files/Media/.
+  // data/, mods/, artifacts/europe/assets/, artifacts/europe/files/Media/,
+  // then data/assets/ (pictures the port adds, such as new CHIP faces).
   [[nodiscard]] static DataRoots standard(const std::filesystem::path &root);
   [[nodiscard]] static DataRoots configured(const std::filesystem::path &root, bool slai);
   // As standard, without mods/: the shipped data and the converted assets.
@@ -38,9 +39,15 @@ public:
   // data/<relative> with mods/data/<relative> merged on top (json::merge),
   // unless there is no mods folder.
   [[nodiscard]] json::JsonValue document(std::string_view relative) const;
+  // Whether data/<relative> exists.
+  [[nodiscard]] bool has_document(std::string_view relative) const;
 
   [[nodiscard]] const std::vector<std::filesystem::path> &asset_roots() const {
     return asset_roots_;
+  }
+  // S.L.A.I.'s content replaces the original's tables (configured with slai).
+  [[nodiscard]] bool slai() const {
+    return !content_.empty();
   }
 
 private:

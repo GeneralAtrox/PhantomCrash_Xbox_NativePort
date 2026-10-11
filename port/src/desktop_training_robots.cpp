@@ -1,5 +1,6 @@
 #include "desktop_training_robots.hpp"
 
+#include "phantomcrash/added_chips.hpp"
 #include "phantomcrash/stage_fixes.hpp"
 
 #include <SDL3/SDL.h>
@@ -7,13 +8,13 @@
 namespace phantomcrash {
 
 std::optional<PartTables> load_part_tables(const DataRoots &roots) {
-  const auto file = roots.find_asset(part_tables_asset);
-  if (!file) {
-    SDL_Log("%s is missing; convert the robots again", part_tables_asset);
-    return std::nullopt;
-  }
   try {
-    return parse_part_tables(json::read_file(*file));
+    const auto table = read_converted_table(roots, part_tables_asset);
+    if (!table) {
+      SDL_Log("%s is missing; convert the robots again", part_tables_asset);
+      return std::nullopt;
+    }
+    return parse_part_tables(*table);
   } catch (const std::exception &error) {
     SDL_Log("%s: %s", part_tables_asset, error.what());
   }
@@ -21,13 +22,13 @@ std::optional<PartTables> load_part_tables(const DataRoots &roots) {
 }
 
 std::optional<GarageTables> load_garage_tables(const DataRoots &roots) {
-  const auto file = roots.find_asset("tables/garage.json");
-  if (!file) {
-    SDL_Log("tables/garage.json is missing; robots fit no modules");
-    return std::nullopt;
-  }
   try {
-    return parse_garage_tables(json::read_file(*file));
+    const auto table = read_converted_table(roots, "tables/garage.json");
+    if (!table) {
+      SDL_Log("tables/garage.json is missing; robots fit no modules");
+      return std::nullopt;
+    }
+    return parse_garage_tables(*table);
   } catch (const std::exception &error) {
     SDL_Log("tables/garage.json: %s", error.what());
   }

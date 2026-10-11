@@ -15,14 +15,15 @@
 #include "desktop_sleep.hpp"
 #include "desktop_sonic_amp.hpp"
 #include "desktop_sv_spec.hpp"
+#include "phantomcrash/added_chips.hpp"
 
 #include <SDL3/SDL_log.h>
 
 namespace phantomcrash {
 
 std::optional<json::JsonValue> converted_table(const DataRoots &roots, const char *relative) {
-  if (const auto path = roots.find_asset(relative)) {
-    return json::read_file(*path);
+  if (auto table = read_converted_table(roots, relative)) {
+    return table;
   }
   SDL_Log("Table %s is missing; convert the game files again", relative);
   return std::nullopt;

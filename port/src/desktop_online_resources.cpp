@@ -1,15 +1,16 @@
 #include "desktop_online_factory.hpp"
+#include "phantomcrash/added_chips.hpp"
 #include "phantomcrash/stage_fixes.hpp"
 #include <stdexcept>
 
 namespace phantomcrash {
 namespace {
 json::JsonValue converted(const DataRoots &roots, const std::string &name) {
-  const auto path = roots.find_asset(name);
-  if (!path) {
+  auto table = read_converted_table(roots, name);
+  if (!table) {
     throw std::runtime_error("Online battle requires converted asset: " + name);
   }
-  return json::read_file(*path);
+  return std::move(*table);
 }
 } // namespace
 

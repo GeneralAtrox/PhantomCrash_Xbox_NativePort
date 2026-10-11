@@ -101,7 +101,8 @@ Compatibility content_fingerprint(const std::filesystem::path &executable,
   folders.push_back(root / "data");
   for (const auto &folder : folders) {
     if (!std::filesystem::is_directory(folder)) {
-      if (folder == root / "mods" || folder == root / "artifacts/europe/files/Media") {
+      if (folder == root / "mods" || folder == root / "artifacts/europe/files/Media" ||
+          folder == root / "data" / "assets") {
         continue;
       }
       throw std::runtime_error("Online play requires " + folder.string());

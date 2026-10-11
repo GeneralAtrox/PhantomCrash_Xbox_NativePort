@@ -1,5 +1,6 @@
 #include "ai_sim_world.hpp"
 
+#include "phantomcrash/added_chips.hpp"
 #include "phantomcrash/enemy_path.hpp"
 #include "phantomcrash/garage.hpp"
 #include "phantomcrash/robot.hpp"
@@ -28,11 +29,11 @@ constexpr float steer_gain = 2.0F;
 constexpr float walk_cone = 0.7F;
 
 json::JsonValue converted(const DataRoots &roots, const char *relative) {
-  const auto path = roots.find_asset(relative);
-  if (!path) {
+  auto table = read_converted_table(roots, relative);
+  if (!table) {
     throw std::runtime_error(std::string(relative) + " is missing; convert the game files");
   }
-  return json::read_file(*path);
+  return std::move(*table);
 }
 
 template <typename Parse>
