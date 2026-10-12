@@ -56,9 +56,12 @@ std::unique_ptr<Screen> ScreenRunner::make_menu(const std::string &name, const s
 // with the time, and LOAD GAME makes a slot's game the one kept. Before
 // anything is saved, LOAD GAME's first slot holds the kept game.
 std::unique_ptr<Screen> ScreenRunner::make_save_load(const std::string &name,
-                                                     const std::string &from) {
+                                                     const std::string &from,
+                                                     const QuestSave *live) {
   const LoadGameScript &base = name == "save_game" ? save_game_ : load_game_;
-  const MenuEntry entry = entered(name, base, from);
+  // Over a screen (the HUD's SAVE button), EXIT goes back to it, with the
+  // day and money shown, and SAVE's usual way back is left as it was.
+  const MenuEntry entry = live != nullptr ? MenuEntry{from, true} : entered(name, base, from);
   LoadGameScript script = base;
   script.exit_to = entry.exit_to;
   if (cooperative()) {
@@ -81,17 +84,20 @@ std::unique_ptr<Screen> ScreenRunner::make_save_load(const std::string &name,
       quest_.live_epoch = 0; // the live RUMBLING takes up the save's opponents
     }
   };
-  hooks.save = [this](const int slot) -> std::optional<QuestSave> {
+  hooks.save = [this, live = live != nullptr ? std::optional{*live} : std::nullopt](
+                   const int slot) mutable -> std::optional<QuestSave> {
     if (slot < 0 || slot >= static_cast<int>(save_slots_.size())) {
       return std::nullopt;
     }
-    quest_.saved = local_time_text();
-    save_slots_[static_cast<std::size_t>(slot)] = quest_;
-    return quest_;
+    QuestSave &saving = live ? *live : quest_;
+    saving.saved = local_time_text();
+    save_slots_[static_cast<std::size_t>(slot)] = saving;
+    return saving;
   };
   return std::make_unique<LoadGameScreen>(textures_, font_, game_->part_tables(), std::move(script),
-                                          std::move(slots), message_box_, frame_, credits_, quest_,
-                                          entry.hud, std::move(hooks), save_slots_unreadable_);
+                                          std::move(slots), message_box_, frame_, credits_,
+                                          live != nullptr ? *live : quest_, entry.hud,
+                                          std::move(hooks), save_slots_unreadable_);
 }
 
 } // namespace phantomcrash

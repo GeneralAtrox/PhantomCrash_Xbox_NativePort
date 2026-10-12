@@ -263,9 +263,9 @@ void WorldRenderer::draw_one(const Draw &draw, const bool sky, const StageLighti
   const auto sampler_of = [&](const int texture) -> ID3D11SamplerState * {
     return texture >= 0 ? model.samplers[static_cast<std::size_t>(texture)].Get() : nullptr;
   };
-  const bool painted =
-      draw.paint != nullptr && material.base_texture >= 0 &&
-      (material.part_paint || model.paintable[static_cast<std::size_t>(material.base_texture)]);
+  const bool painted = draw.paint != nullptr && material.base_texture >= 0 &&
+                       (material.part_paint || draw.item->paint_any ||
+                        model.paintable[static_cast<std::size_t>(material.base_texture)]);
   // A reflect stage's texture takes the normal map's slot (none has both).
   const int second =
       material.reflect_texture >= 0 ? material.reflect_texture : material.normal_texture;
@@ -291,6 +291,10 @@ void WorldRenderer::draw_one(const Draw &draw, const bool sky, const StageLighti
   constants.has_base = views[0] != nullptr ? 1.0F : 0.0F;
   constants.has_normal = views[1] != nullptr ? 1.0F : 0.0F;
   constants.reflect_modes[0] = material.reflect_texture >= 0 && views[1] != nullptr ? 1.0F : 0.0F;
+  constants.reflect_modes[1] = draw.item->sheen;
+  if (const auto &label = draw.item->label_colour) {
+    constants.label_colour = {(*label)[0], (*label)[1], (*label)[2], 1.0F};
+  }
   constants.alpha_test = material.alpha == AlphaMode::mask ? 1.0F : 0.0F;
   // A blended batch that writes depth (grated stairs, fences) keeps its
   // invisible texels out of the depth buffer, so the faces behind its gaps,

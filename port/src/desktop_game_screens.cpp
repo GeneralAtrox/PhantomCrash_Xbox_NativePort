@@ -53,7 +53,7 @@ GameScreens::GameScreens(TextureCache &textures, const DataRoots &roots, const G
       robot_preview_(parse_robot_preview(roots.document("ui/robot_preview.json"))),
       rumbling_(parse_rumbling(roots.document("ui/rumbling.json"))),
       rumbling_rules_(parse_rumbling_rules(roots.document("world/rumbling.json"))),
-      part_stats_(parse_part_stats(roots.document("ui/part_stats.json"))),
+      part_stats_(load_part_stats(roots)),
       message_box_(parse_message_box(roots.document("ui/message_box.json"))),
       keep_sv_(parse_keep_sv(roots.document("ui/keep_sv.json"))),
       vs_mode_(parse_vs_mode(roots.document("ui/vs_mode.json"))) {

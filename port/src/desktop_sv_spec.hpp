@@ -36,6 +36,7 @@ private:
   void draw_window(DrawList &list) const;
   void draw_vehicle(DrawList &list) const;
   void draw_weapons(DrawList &list) const;
+  void draw_combat(DrawList &list) const;
 
   SvSpec logic_;
   RobotPreview preview_;

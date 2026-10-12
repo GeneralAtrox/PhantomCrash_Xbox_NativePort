@@ -3341,7 +3341,6 @@
   "parameters": {
     "pickup_range": 25,
     "pickup_money_ability": 31,
-    "pickup_money_last_kind": 3,
     "pickup_timeout": 5.0,
     "pickup_full_speed_angle": 0.261799395,
     "pickup_slow_distance": 5.0,

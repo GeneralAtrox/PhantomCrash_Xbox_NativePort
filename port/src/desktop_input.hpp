@@ -9,6 +9,7 @@
 
 #include <array>
 #include <optional>
+#include <string>
 #include <vector>
 
 namespace phantomcrash {
@@ -25,6 +26,8 @@ namespace phantomcrash {
 // Settings > Keyboard / Controller Controls edits these defaults and the
 // mouse sensitivity. Mouse: relative aim and left/right arm fire in battle;
 // F10 releases it for menus. Elsewhere, pointer/clicks serve the town map.
+// While a screen takes text (set_text_mode), the keys that type, Backspace
+// and Enter give InputFrame::typed, erased and text_submit instead.
 // Ports (the VS mode's players): the keyboard is port 1 and the gamepads the
 // next ones; with four gamepads they take the four ports, the keyboard
 // sharing the first.
@@ -39,6 +42,7 @@ public:
   void configure(const HostControls &controls);
   // Hold Alt for the window menus; F10 releases until the game is clicked.
   void capture_mouse(SDL_Window *window, bool gameplay, bool window_ui = false);
+  void set_text_mode(SDL_Window *window, bool on);
   // A tap of `buttons` on `port` for the next logic tick (scripted smoke
   // runs); a port pressed this way counts as connected from then on.
   void press(Buttons buttons, int port = 0);
@@ -118,6 +122,13 @@ private:
   std::optional<std::array<float, 2>> scripted_pointer_;
   bool scripted_moved_{};
   bool scripted_click_{};
+  bool text_mode_{};
+  std::string typed_;
+  int erased_{};
+  bool text_submit_{};
 };
+
+// Alt+Enter or F11: the window's fullscreen switch.
+[[nodiscard]] bool is_fullscreen_toggle(const SDL_Event &event);
 
 } // namespace phantomcrash

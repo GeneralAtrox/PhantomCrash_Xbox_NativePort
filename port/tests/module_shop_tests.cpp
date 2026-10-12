@@ -3,6 +3,7 @@
 
 #include "test_support.hpp"
 
+#include "phantomcrash/battle_weapons.hpp"
 #include "phantomcrash/data_roots.hpp"
 #include "phantomcrash/module_shop.hpp"
 
@@ -289,4 +290,104 @@ TEST_CASE("selling: a fitted part is refused, the rest sold; the Gold Bar at its
   CHECK(logic.message() == "none");
   tap(logic, script.confirm_buttons);
   CHECK(logic.view() == ModuleShopView::categories);
+}
+
+namespace {
+
+// A shop with a gatling gun (arm 0, typed) and a beam (arm 1, untyped).
+Shop armed() {
+  Shop shop;
+  shop.parts.arm_weapons.assign(2, WeaponRecord{});
+  WeaponRecord &gun = shop.parts.arm_weapons[0];
+  gun.name = "Gatling";
+  gun.kind = hud_kind::machine_gun;
+  gun.fire_frames = 2;
+  gun.knockdown.base = 12.0F;
+  WeaponRecord &beam = shop.parts.arm_weapons[1];
+  beam.index = 1;
+  beam.name = "Beam";
+  beam.kind = hud_kind::beam;
+  beam.fire_frames = 10;
+  shop.table.weapon_types.arm = {"GATLING GUN"};
+  return shop;
+}
+
+const ExtraStatLine *line_labelled(const std::vector<ExtraStatLine> &lines,
+                                   const std::string &label) {
+  for (const ExtraStatLine &line : lines) {
+    if (line.label == label) {
+      return &line;
+    }
+  }
+  return nullptr;
+}
+
+} // namespace
+
+TEST_CASE("a weapon's TYPE line comes from weapon_types.json, lettered") {
+  const Shop shop = armed();
+  const auto lines = extra_stats(shop.table, shop.parts, shop.garage, {GoodsKind::arm, 0, 0});
+  REQUIRE(lines.size() == 1);
+  CHECK(lines[0].label == "TYPE");
+  CHECK(lines[0].value == "GATLING GUN");
+  CHECK(lines[0].lettered);
+  // A record the table has no type for shows no line.
+  CHECK(extra_stats(shop.table, shop.parts, shop.garage, {GoodsKind::arm, 1, 0}).empty());
+  // The shipped table types every record of both lists.
+  const WeaponTypes types = parse_weapon_types(
+      DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT).document("ui/weapon_types.json"));
+  CHECK(types.arm.size() >= 70);
+  CHECK(types.shoulder.size() >= 60);
+}
+
+TEST_CASE("a weapon's second page: the battle's values, none at 0") {
+  const Shop shop = armed();
+  const auto gun = detail_stats(shop.table, shop.parts, shop.garage, {GoodsKind::arm, 0, 0});
+  const ExtraStatLine *rate = line_labelled(gun, "FIRE RATE");
+  REQUIRE(rate != nullptr);
+  // fire_frames 2: a round every other battle tick, 15 a second.
+  CHECK(rate->value == "15.0");
+  const ExtraStatLine *knockdown = line_labelled(gun, "KNOCKDOWN");
+  REQUIRE(knockdown != nullptr);
+  CHECK(knockdown->value == "12");
+  CHECK(line_labelled(gun, "SPREAD") == nullptr);
+  CHECK(line_labelled(gun, "BLAST DAMAGE") == nullptr);
+  CHECK(line_labelled(gun, "STUN") == nullptr);
+  // A beam is held, not fired shot by shot.
+  const auto beam = detail_stats(shop.table, shop.parts, shop.garage, {GoodsKind::arm, 1, 0});
+  CHECK(line_labelled(beam, "FIRE RATE") == nullptr);
+  CHECK(detail_stats(shop.table, shop.parts, shop.garage, {GoodsKind::body, 0, 0}).empty());
+}
+
+TEST_CASE("left and right turn a weapon's details page, only a weapon's") {
+  const Shop shop = armed();
+  Garage owned;
+  owned.add_stock({PartKind::body, 0, 0, "BODY-B", -1});
+  owned.add_stock({PartKind::arm, 0, 0, "Gatling", -1});
+  ModuleShop logic = selling(shop, owned);
+  const ModuleShopScript &script = logic.script();
+  tap(logic, script.right);
+  REQUIRE(script.categories[static_cast<std::size_t>(logic.category())].kind == GoodsKind::arm);
+  tap(logic, script.confirm_buttons);
+  REQUIRE(logic.view() == ModuleShopView::list);
+  CHECK(logic.has_details());
+  CHECK(!logic.details_page());
+  tap(logic, script.right);
+  CHECK(logic.details_page());
+  tap(logic, script.left);
+  CHECK(!logic.details_page());
+  tap(logic, script.right);
+  CHECK(logic.view() == ModuleShopView::list);
+  // Leaving and coming back starts on the first page.
+  tap(logic, script.cancel_buttons);
+  tap(logic, script.confirm_buttons);
+  CHECK(!logic.details_page());
+  // A body has no second page: right does nothing.
+  tap(logic, script.cancel_buttons);
+  tap(logic, script.left);
+  tap(logic, script.confirm_buttons);
+  REQUIRE(logic.view() == ModuleShopView::list);
+  CHECK(!logic.has_details());
+  tap(logic, script.right);
+  CHECK(!logic.details_page());
 }

@@ -60,7 +60,7 @@ SimData::SimData(const std::filesystem::path &root) : roots(DataRoots::standard(
   parts = parse_part_tables(converted(roots, "tables/parts.json"));
   garage = parse_garage_tables(converted(roots, "tables/garage.json"));
   rules = parse_rumbling_rules(roots.document("world/rumbling.json"));
-  part_stats = parse_part_stats(roots.document("ui/part_stats.json"));
+  part_stats = load_part_stats(roots);
   training = parse_training(roots.document("world/training.json"));
   test_drive = parse_test_drive(roots.document("world/test_drive.json"));
   rumbling_battle = parse_rumbling_battle(roots.document("world/rumbling.json"));

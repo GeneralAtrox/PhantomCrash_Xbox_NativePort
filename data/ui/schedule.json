@@ -615,12 +615,12 @@
  },
  "skip": {
   "notes": [
-   "The port's SKIP TO DAY (not in the original), offered beside EXIT (to its left, clear of the CURRENT MUSIC band) when the schedule is opened from the places in 'from'. Left/right on the EXIT row choose between the two; a click picks either.",
+   "The port's SKIP TO DAY (not in the original), offered beside EXIT (to its left, clear of the CURRENT MUSIC band) when the schedule is opened from the places in 'from' (\"*\": everywhere, the day on any screen's HUD included; the screen's unsaved changes, a shop's purchases, go along). Left/right on the EXIT row choose between the two; a click picks either.",
    "It skips to the day of the cursor's last column: confirm asks the question (message_box.json's YES/NO window; NO is chosen first when the calendar would start over on a cleared game), YES sleeps every night but the last and leaves for 'to', the sleep screen, which passes the last one and wakes in the garage. Today itself shows the 'nothing' notice.",
    "In the lines, {day} is the day woken on, {days} the days passing (day_words for one and several), {level} the opponents' level raise now and {next} after the lap. Each lap of the 60-day calendar on a cleared game raises every opponent's level by one (sleep.json, + 0x604c).",
    "enemy_level: the raise, drawn while the game is cleared, in a sprite_text.json display font fitted to the canvas box."
   ],
-  "from": ["garage"],
+  "from": ["*"],
   "to": "sleep",
   "normal": {"id": "skip", "image": "textures/scroll/schedule_tex/0.png", "rect": [520, 672, 640, 712], "position": [133, 349], "layer": 259},
   "selected": {"id": "skip_lit", "image": "textures/scroll/schedule_tex/0.png", "rect": [640, 672, 760, 712], "position": [133, 349], "layer": 259},

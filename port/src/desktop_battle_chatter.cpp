@@ -119,11 +119,12 @@ std::unique_ptr<ChatterWindow> load_chatter_window(TextureCache &textures, const
   return nullptr;
 }
 
-ChatterSpeaker chip_speaker(const ChipRecord &chip, std::string player_name) {
+ChatterSpeaker chip_speaker(const ChipRecord &chip, const std::string &chip_name,
+                            std::string player_name) {
   ChatterSpeaker speaker;
   speaker.table = chip.chatter;
   speaker.kind = ChatterKind::player;
-  speaker.robot_name = chip.name;
+  speaker.robot_name = chip_name.empty() ? chip.name : chip_name;
   speaker.pilot_name = std::move(player_name);
   speaker.robot_face = chip.face;
   return speaker;

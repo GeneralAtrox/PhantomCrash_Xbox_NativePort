@@ -104,6 +104,28 @@ TEST_CASE("the mouse turns no faster than the stick, at the legs' turn rate") {
   CHECK(std::abs(mouse.heading() - radians(90)) < 1e-3F); // the rest follows, and no more
 }
 
+TEST_CASE("moving the mouse back reverses the turn at once, dropping what was left") {
+  MovementTuning tuning;
+  tuning.turn_degrees_per_second = 60.0F;
+  RobotMover mouse(tuning);
+  mouse.place({}, 0.0F);
+  InputFrame swipe;
+  swipe.mouse_aim = {radians(90), 0};
+  mouse.tick(battle_control(swipe, BattleButtons{}, nullptr, true), 1.0F / 30.0F);
+  for (int tick = 0; tick < 14; ++tick) {
+    mouse.tick(RobotControl{}, 1.0F / 30.0F);
+  }
+  const float turned = mouse.heading(); // 30 degrees, with 60 still to turn
+  InputFrame back;
+  back.mouse_aim = {-radians(1), 0};
+  mouse.tick(battle_control(back, BattleButtons{}, nullptr, true), 1.0F / 30.0F);
+  CHECK(mouse.heading() < turned);
+  for (int tick = 0; tick < 30; ++tick) {
+    mouse.tick(RobotControl{}, 1.0F / 30.0F);
+  }
+  CHECK(std::abs(mouse.heading() - (turned - radians(1))) < 1e-3F);
+}
+
 TEST_CASE("left stick and AD strafe while right stick turns the whole robot") {
   MovementTuning tuning;
   tuning.dash_hold_seconds = 10;

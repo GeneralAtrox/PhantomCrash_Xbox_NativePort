@@ -174,6 +174,11 @@ AssembleDetails parse_details(const json::JsonValue &value) {
   details.totals = member(value, "totals", parse_totals);
   details.picture_at = numbers<2>(required(value, "picture_at"), "picture_at");
   details.picture_layer = integer_of(value, "picture_layer");
+  if (const json::JsonValue *extras = value.find("extra_stats")) {
+    details.extra_stats = parse_extra_stats_style(*extras);
+    details.extra_title_rows = number_of(*extras, "title_rows");
+    details.extra_rows_top = number_of(*extras, "rows_top");
+  }
   if (details.fade_seconds <= 0.0) {
     throw std::runtime_error("details: fade_seconds must be above 0");
   }

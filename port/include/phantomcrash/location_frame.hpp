@@ -6,6 +6,7 @@
 #include "phantomcrash/settings.hpp"
 #include "phantomcrash/sort_hints.hpp"
 #include "phantomcrash/sprite_layer.hpp"
+#include "phantomcrash/sprite_shapes.hpp"
 
 #include <array>
 #include <cstdint>
@@ -53,6 +54,17 @@ struct NumberStyle {
 [[nodiscard]] NumberFont parse_number_font(const json::JsonValue &value);
 [[nodiscard]] NumberStyle parse_number_style(const json::JsonValue &value);
 
+// The HUD's SAVE button (a port addition): drawn just after the day, in the
+// bar's black, `offset` from the "DAY-" label's top-left so it moves with it, as
+// vector outlines over a `size` box in canvas units; `lit` while the mouse
+// is over it. A click opens SAVE over the screen.
+struct HudSaveButton {
+  std::array<float, 2> offset{};
+  std::array<float, 2> size{};
+  std::vector<ShapeOutline> normal;
+  std::vector<ShapeOutline> lit;
+};
+
 // The day and money in the top left of the town screens (0xb1ba5 and
 // 0xb1d37): "DAY-" and the day from 01, the money and "NY".
 struct HudStyle {
@@ -62,9 +74,12 @@ struct HudStyle {
   NumberStyle day;
   NumberStyle money;
   Sprite money_unit;
+  std::optional<HudSaveButton> save_button;
 };
 
 [[nodiscard]] std::vector<Sprite> hud_sprites(const HudStyle &style, const QuestSave &quest);
+// The SAVE button's box (canvas left, top, right, bottom), when it has one.
+[[nodiscard]] std::optional<std::array<float, 4>> hud_save_box(const HudStyle &style);
 // An amount as the money writer puts it (0xb1d37, the shops' prices and
 // fees): `shown` NY in `style`, then "NY" one past its right edge.
 [[nodiscard]] std::vector<Sprite> money_sprites(const HudStyle &hud, const NumberStyle &style,
@@ -150,6 +165,9 @@ struct FramePlacement {
   // "hud_at": {"day": [x, y], "money": [x, y]}: a mod's own place. The original
   // has none: 0xb1b56 and 0xb1cdd ignore the coordinates they are passed.
   std::optional<HudPlacement> hud_at;
+  // "save_offset": [x, y]: the SAVE button's offset from the day here, where
+  // the screen's bar keeps its black elsewhere (a port addition).
+  std::optional<std::array<float, 2>> save_offset;
   bool riding_plate{};
   std::optional<float> riding_plate_y; // the plate's height when not the style's (0x6dd74's y)
   // A plate of the screen's own in place of the style's (RUMBLING's, 0x6db03's last argument 1).

@@ -1,5 +1,5 @@
 // SV SPEC: the robot a hangar or an offer makes, the vehicle's lines, the
-// weapons' page and turning between the pages.
+// weapons' and combat pages and turning between the pages.
 
 #include "test_support.hpp"
 
@@ -38,6 +38,12 @@ PartTables tables() {
   parts.legs[0].jump.base = 20.0F;
   parts.chips.assign(1, ChipRecord{});
   parts.chips[0].name = "CHIP";
+  parts.chips[0].critical_percent.base = 12.0F;
+  parts.chips[0].dodge_percent.base = 30.0F;
+  parts.chips[0].knockdown_resistance.base = 5.0F;
+  parts.chips[0].lock_frames = 30;
+  parts.chips[0].track = 500;
+  parts.legs[0].knockback_resistance.base = 25.0F;
   parts.arm_weapons.assign(1, WeaponRecord{});
   parts.arm_weapons[0].name = "GUN";
   return parts;
@@ -71,7 +77,7 @@ void tap(SvSpec &logic, const Buttons buttons) {
 
 } // namespace
 
-TEST_CASE("sv_spec.json reads the window, both pages and the lines") {
+TEST_CASE("sv_spec.json reads the window, the three pages and the lines") {
   const SvSpecScript script = shipped_script();
   CHECK(script.scene == 36);
   CHECK(script.exit_to == "back");
@@ -81,6 +87,27 @@ TEST_CASE("sv_spec.json reads the window, both pages and the lines") {
   CHECK(script.weapon_slots[0] == PartSlot::right_arm);
   CHECK(script.maker_icons.size() == 6);
   CHECK(!script.pages[0].help.empty());
+  REQUIRE(script.pages.size() == 3);
+  CHECK(script.pages[0].kind == SpecPageKind::vehicle);
+  CHECK(script.pages[1].kind == SpecPageKind::weapons);
+  CHECK(script.pages[2].kind == SpecPageKind::combat);
+  CHECK(!script.pages[2].panel.has_value());
+  CHECK(script.combat_rows.size() == 8);
+  CHECK(script.combat_rows[0].stat == CombatStat::mortal_shot);
+}
+
+TEST_CASE("the combat page: the CHIP's chances, lock and aim, the legs' knockback") {
+  const PartTables parts = tables();
+  const GarageTables garage;
+  const PartStatsTable table = shipped_table();
+  SvSpec logic(shipped_script(), hangar_spec(owned(), 1), parts, garage, table, "hangar");
+  CHECK(std::abs(logic.value(CombatStat::mortal_shot) - 12.0) < 1e-3);
+  CHECK(std::abs(logic.value(CombatStat::repulsion_shield) - 30.0) < 1e-3);
+  CHECK(std::abs(logic.value(CombatStat::knockdown_resistance) - 5.0) < 1e-3);
+  CHECK(std::abs(logic.value(CombatStat::knockback_resistance) - 25.0) < 1e-3);
+  CHECK(std::abs(logic.value(CombatStat::lock_time) - 0.5) < 1e-3);
+  CHECK(logic.value(CombatStat::aim_speed) == 500.0);
+  CHECK(logic.value(CombatStat::laser_reduction) == 0.0);
 }
 
 TEST_CASE("a hangar's spec: its speeds under the load, its weapons, its maker") {
@@ -124,7 +151,14 @@ TEST_CASE("left and right turn the page; cancel goes back") {
   tap(logic, script.right);
   CHECK(logic.page() == 1);
   CHECK(logic.help_text() == script.pages[1].help);
+  tap(logic, script.right);
+  CHECK(logic.page() == 2);
+  CHECK(logic.page_kind() == SpecPageKind::combat);
+  tap(logic, script.right);
+  CHECK(logic.page() == 0);
   tap(logic, script.left);
+  CHECK(logic.page() == 2);
+  tap(logic, script.right);
   CHECK(logic.page() == 0);
   tap(logic, script.cancel_buttons);
   settle(logic, 2.0);

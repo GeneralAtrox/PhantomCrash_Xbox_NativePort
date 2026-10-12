@@ -47,6 +47,8 @@ private:
   void draw_list(DrawList &list) const;
   void draw_details(DrawList &list, const ShopGoods &line) const;
   void draw_picture(DrawList &list, const Goods &goods) const;
+  void draw_second_page(DrawList &list, const std::vector<ExtraStatLine> &lines, const Sprite &art,
+                        PartStatsStyle stats) const;
   void draw_totals(DrawList &list, const ShopGoods &line, float alpha) const;
   void draw_value(DrawList &list, double before, double after, int decimals, float right, float y,
                   float alpha) const;

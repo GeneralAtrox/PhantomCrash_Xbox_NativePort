@@ -40,24 +40,31 @@ void draw_extra_stats(DrawList &list, const GlyphFont &font, const ExtraStatsSty
   // move up with it.
   const float squeeze = names.size ? (*names.size)[1] / (names.rect[3] - names.rect[1]) : 1.0F;
   const std::array<float, 2> ink{style.ink[0] * squeeze, style.ink[1] * squeeze};
+  const float unit_left =
+      style.unit_gap > 0.0F ? stats.right + style.unit_gap : left + style.unit_left;
   for (std::size_t index = 0; index < lines.size(); ++index) {
     const ExtraStatLine &line = lines[index];
     const float step = stats.step * static_cast<float>(printed + index);
     const float top = names.position[1] + step;
     list.label(names.layer, line.label, style.font,
-               {left + style.label_left, top + ink[0], left + style.unit_left - 2.0F,
-                top + ink[1]},
+               {left + style.label_left, top + ink[0], unit_left - 2.0F, top + ink[1]},
                style.colour, style.shadow, style.shadow_blur);
     if (!line.unit.empty()) {
       list.label(names.layer, line.unit, style.font,
-                 {left + style.unit_left, top + ink[0], left + (names.rect[2] - names.rect[0]),
-                  top + ink[1]},
-                 style.colour, style.shadow, style.shadow_blur);
+                 {unit_left, top + ink[0], left + (names.rect[2] - names.rect[0]), top + ink[1]},
+                 style.colour, style.shadow, style.shadow_blur, DisplayLayout{.capitals = true});
     }
-    const std::vector<int> run = glyph_run(font, line.value);
-    list.text(stats.layer,
-              layout_run(font, run, stats.right - run_width(font, run), values_top + step),
-              stats.colour);
+    if (line.lettered) {
+      // Words, not digits: lettered as the labels are, against the values' right.
+      list.label(names.layer, line.value, style.font,
+                 {left + style.text_left, top + ink[0], stats.right, top + ink[1]}, style.colour,
+                 style.shadow, style.shadow_blur, DisplayLayout{.right = true});
+    } else {
+      const std::vector<int> run = glyph_run(font, line.value);
+      list.text(stats.layer,
+                layout_run(font, run, stats.right - run_width(font, run), values_top + step),
+                stats.colour);
+    }
     // The separator under the line, cut from under the art's first line.
     Sprite separator = names;
     separator.rect[1] = names.rect[1] + style.line_rows[0];

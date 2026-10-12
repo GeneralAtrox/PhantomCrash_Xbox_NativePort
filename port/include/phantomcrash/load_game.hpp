@@ -165,6 +165,10 @@ private:
   void write();
   void answer(double tick_seconds, const InputFrame &input);
   void move(double tick_seconds, const InputFrame &input);
+  // The selectable slot or EXIT under the mouse (a port addition).
+  static constexpr int exit_choice = -1;
+  [[nodiscard]] std::optional<int> pointed_choice(const InputFrame &input) const;
+  void point_at(int choice);
 
   LoadGameScript script_;
   std::vector<SaveSlot> slots_;

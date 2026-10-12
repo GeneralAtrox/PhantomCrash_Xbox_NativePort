@@ -18,7 +18,8 @@ constexpr int colour_levels = 256;
 
 } // namespace
 
-DesktopSupply::DesktopSupply(WorldRenderer &world, const SupplyLook &look, const int stage)
+DesktopSupply::DesktopSupply(WorldRenderer &world, const SupplyLook &look, const int stage,
+                             const std::vector<SupplyKind> &kinds)
     : look_(look), parts_(look.models[static_cast<std::size_t>(stage & 1)]) {
   model_ = world.model(look_.pickups && !look_.pickups->carrier_model.empty()
                            ? look_.pickups->carrier_model
@@ -36,6 +37,9 @@ DesktopSupply::DesktopSupply(WorldRenderer &world, const SupplyLook &look, const
       pickup_models_[parity] = model;
       pickup_nodes_[parity] = converter_mesh_nodes(*other);
     }
+  }
+  for (const SupplyKind &kind : kinds) {
+    kind_images_.push_back(world.texture(kind.look.image));
   }
   counter_images_.fill(-1);
   if (look_.pickups) {
@@ -185,7 +189,8 @@ void DesktopSupply::add_items(const SupplyDrop &drop, std::vector<WorldItem> &it
       continue;
     }
     // 0x069d52 takes the crate from the day or the night model at random
-    // every frame.
+    // every frame. The S.L.A.I. crates draw the original's kinds alone.
+    const SupplyKindLook *kind = kind_look(drop, pickup.kind);
     const std::size_t first = items.size();
     if (counter_model_ >= 0 && pickup.kind >= 0 && pickup.kind < supply_kind_count &&
         counter_images_[static_cast<std::size_t>(pickup.kind)] >= 0) {
@@ -211,16 +216,24 @@ void DesktopSupply::add_items(const SupplyDrop &drop, std::vector<WorldItem> &it
       }
     } else {
       const auto parity = static_cast<std::size_t>(random_() & 1U);
-      add_pickup_mesh(parity, look_.models[parity].first_pickup + pickup.kind,
+      add_pickup_mesh(parity, look_.models[parity].first_pickup + crate_of(pickup.kind, kind),
                       scaling(Vec3{scale, scale, scale}) * translation(pickup.position), items);
+      dress_crate(pickup.kind, kind, first, items);
     }
     if (!split_screen || (look_.pickups && look_.pickups->pulse)) {
       continue;
     }
+    // A kind's own tint blinks in place of its effect's colour.
     const float pulse = SupplyDrop::blink(pickup) * look_.tint_pulse + look_.tint_base;
-    const auto &tint = look_.glow_colours[static_cast<std::size_t>(effect_of(drop, pickup.kind))];
+    const auto &tint =
+        kind != nullptr && kind->tint
+            ? *kind->tint
+            : look_.glow_colours[static_cast<std::size_t>(effect_of(drop, pickup.kind))];
     for (std::size_t index = first; index < items.size(); ++index) {
       items[index].colour = {tint[0] * pulse, tint[1] * pulse, tint[2] * pulse, 1.0F};
+      if (auto &label = items[index].label_colour) {
+        *label = {(*label)[0] * pulse, (*label)[1] * pulse, (*label)[2] * pulse};
+      }
     }
   }
 }
@@ -244,8 +257,10 @@ void DesktopSupply::add_sprites(const SupplyDrop &drop, const Vec3 eye,
     glow.texture = glow_texture_;
     glow.position =
         distance > 0.0F ? pickup.position + toward * (look_.glow_pull / distance) : pickup.position;
-    glow.size = look_.glow_size * 0.5F; // grid_mdl spans -0.5 to 0.5
-    const auto &colour = look_.glow_colours[static_cast<std::size_t>(effect_of(drop, pickup.kind))];
+    const SupplyKindLook *kind = kind_look(drop, pickup.kind);
+    // grid_mdl spans -0.5 to 0.5
+    glow.size = look_.glow_size * 0.5F * (kind != nullptr ? kind->glow_scale : 1.0F);
+    const auto colour = glow_colour(drop, pickup.kind);
     glow.colour = {colour[0], colour[1], colour[2], SupplyDrop::blink(pickup) * look_.glow_alpha};
     sprites.push_back(glow);
   }
@@ -307,13 +322,14 @@ std::unique_ptr<DesktopSupply> load_supply(WorldRenderer *world, const DataRoots
   SDL_Log("Supply routes: stage=%d routes=%zu imported=%d", tuning.stage, settings.routes.size(),
           settings.stage_routes);
   const SupplyLook look = settings.look;
+  const std::vector<SupplyKind> kinds = settings.kinds;
   if (!battle.cooperative() || !battle.supply()) {
     battle.set_supply(std::move(settings));
   }
   if (world == nullptr || !world->available()) {
     return nullptr;
   }
-  auto view = std::make_unique<DesktopSupply>(*world, look, tuning.stage);
+  auto view = std::make_unique<DesktopSupply>(*world, look, tuning.stage, kinds);
   try {
     view->set_lights(light_sources(roots, "supply", tuning.stage & 1));
   } catch (const std::exception &error) {
@@ -328,13 +344,22 @@ std::unique_ptr<DesktopSupply> load_supply(WorldRenderer *world, const DataRoots
 
 void gather_supply_sounds(const Battle &battle, const SupplyLook &look,
                           std::vector<WorldSound> &sounds) {
+  const SupplyDrop *drop = battle.supply();
   for (const BattleEvent &event : battle.events()) {
     if (event.robot != battle.player_index()) {
       continue;
     }
     if (event.kind == BattleEventKind::supply) {
-      // 0x066e50, for player robots, at the robot.
-      sounds.push_back({look.take_sound, battle.player().aim_origin(), AudioBus::pickups});
+      // 0x066e50, for player robots, at the robot; a kind may name its own.
+      const SupplyKindLook *kind =
+          drop != nullptr ? DesktopSupply::kind_look(*drop, event.slot) : nullptr;
+      if (kind == nullptr || kind->take_sounds.empty()) {
+        sounds.push_back({look.take_sound, battle.player().aim_origin(), AudioBus::pickups});
+        continue;
+      }
+      for (const std::string &name : kind->take_sounds) {
+        sounds.push_back({name, battle.player().aim_origin(), AudioBus::pickups});
+      }
     }
   }
 }

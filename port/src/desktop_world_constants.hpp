@@ -44,9 +44,10 @@ struct DrawConstants {
   std::array<float, 4> material_modes{}; // specular, texture add, texture alpha, original
   std::array<std::array<float, 4>, 2> source_directions{};
   std::array<std::array<float, 4>, 2> source_colours{};
-  std::array<float, 4> reflect_modes{}; // reflect stage, unused x3
+  std::array<float, 4> reflect_modes{}; // reflect stage, sheen, unused x2
+  std::array<float, 4> label_colour{};  // lettering's RGB, enabled
 };
-static_assert(sizeof(DrawConstants) == 304);
+static_assert(sizeof(DrawConstants) == 320);
 
 template <typename T>
 void upload(ID3D11DeviceContext *context, ID3D11Buffer *buffer, const T &data) {

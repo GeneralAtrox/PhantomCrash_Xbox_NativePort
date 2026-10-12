@@ -5,6 +5,7 @@
 
 #include <cmath>
 
+#include "phantomcrash/data_roots.hpp"
 #include "phantomcrash/json.hpp"
 #include "phantomcrash/fixed_step.hpp"
 #include "phantomcrash/supply_drop.hpp"
@@ -31,7 +32,10 @@ SupplySettings test_settings() {
   route.drop = 2;
   route.leave = 3;
   settings.routes.push_back(route);
-  settings.chances = {0.0F, 0.0F, 0.0F, 0.0F, 1.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F};
+  for (SupplyKind &kind : settings.kinds) {
+    kind.chance = 0.0F;
+  }
+  settings.kinds[4].chance = 1.0F;
   return settings;
 }
 
@@ -199,4 +203,67 @@ TEST_CASE("dropship travel follows the original 30 Hz movement step at any prese
     }
   }
   CHECK(std::abs(uncapped.carrier().position.x - source.carrier().position.x) < 0.46F);
+}
+
+TEST_CASE("supply kinds append after the original's with their own looks") {
+  const SupplySettings settings = parse_supply_settings(json::parse(R"({
+    "kinds": [{"effect": "money", "amount": 1}, {"effect": "money", "amount": 2},
+              {"effect": "money", "amount": 3}, {"effect": "money", "amount": 4},
+              {"effect": "repair", "amount": 0.2}, {"effect": "repair", "amount": 0.3},
+              {"effect": "repair", "amount": 0.4}, {"effect": "ammo", "amount": 0.5},
+              {"effect": "ammo", "amount": 0.6}, {"effect": "ammo", "amount": 0.7},
+              {"effect": "money", "amount": 100000, "chance": 0.0025, "crate": 3,
+               "image": "textures/supply/money_1000000.png", "tint": "#FFD54A",
+               "label_tint": [0.5, 0, 0], "sheen": 1, "glow_scale": 1.5, "glow_cycle": 0.75,
+               "take_sounds": ["supply_take", "spin_pay"]}]})"));
+  REQUIRE(settings.kinds.size() == 11);
+  // An original kind without a chance keeps the original's.
+  CHECK(near(settings.kinds[1].chance, 0.12F));
+  CHECK(!settings.kinds[1].look.tint && settings.kinds[1].look.image.empty());
+  const SupplyKind &jackpot = settings.kinds[10];
+  CHECK(jackpot.effect == SupplyEffect::money && near(jackpot.amount, 100000.0F));
+  CHECK(near(jackpot.chance, 0.0025F) && jackpot.look.crate == 3);
+  REQUIRE(jackpot.look.tint.has_value());
+  CHECK(near((*jackpot.look.tint)[0], 1.0F) && near((*jackpot.look.tint)[1], 0xd5 / 255.0F) &&
+        near((*jackpot.look.tint)[2], 0x4a / 255.0F));
+  CHECK(jackpot.look.label_tint.has_value() && near((*jackpot.look.label_tint)[0], 0.5F));
+  CHECK(near(jackpot.look.glow_scale, 1.5F) && near(jackpot.look.glow_cycle, 0.75F));
+  CHECK(jackpot.look.take_sounds.size() == 2);
+  CHECK_THROWS(parse_supply_settings(json::parse(R"({"kinds": []})")));
+  CHECK_THROWS(parse_supply_settings(json::parse(R"({"kinds": [{"tint": "gold"}]})")));
+  CHECK_THROWS(parse_supply_settings(json::parse(R"({"kinds": [{"crate": 10}]})")));
+  CHECK_THROWS(parse_supply_settings(json::parse(R"({"chances": [1, 0]})")));
+}
+
+TEST_CASE("an appended kind is rolled and taken like the original's") {
+  SupplySettings settings = test_settings();
+  settings.kinds[4].chance = 0.0F;
+  settings.kinds.push_back(SupplyKind{SupplyEffect::money, 100000.0F, 1.0F});
+  SupplyDrop drop(settings, 7);
+  for (int step = 0; step < 2000 && drop.pickups().empty(); ++step) {
+    drop.tick(tick, flat);
+  }
+  REQUIRE(!drop.pickups().empty());
+  CHECK(drop.pickups()[0].kind == 10);
+}
+
+TEST_CASE("the shipped supply kinds keep the original ten and add the money tiers") {
+  const auto roots = DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT);
+  const auto training = roots.document("world/training.json");
+  const auto settings = parse_supply_settings(*training.find("battle")->find("supply"));
+  REQUIRE(settings.kinds.size() == 13);
+  float total = 0.0F;
+  for (const SupplyKind &kind : settings.kinds) {
+    total += kind.chance;
+  }
+  CHECK(near(total, 1.0F));
+  const SupplySettings original;
+  for (std::size_t kind = 0; kind < original.kinds.size(); ++kind) {
+    CHECK(settings.kinds[kind].effect == original.kinds[kind].effect);
+    CHECK(settings.kinds[kind].amount == original.kinds[kind].amount);
+  }
+  CHECK(settings.kinds[12].amount == 100000.0F && near(settings.kinds[12].chance, 0.0025F));
+  for (const std::size_t kind : {3U, 10U, 11U, 12U}) {
+    CHECK(roots.find_asset(settings.kinds[kind].look.image).has_value());
+  }
 }

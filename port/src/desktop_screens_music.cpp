@@ -45,8 +45,8 @@ void ScreenRunner::tell_music(const bool always) {
   if (always || file != told_music_) {
     told_music_ = std::move(file);
     screen_->set_music(told_music_);
-    if (schedule_overlay_) {
-      schedule_overlay_->set_music(told_music_);
+    if (overlay_) {
+      overlay_->set_music(told_music_);
     }
   }
 }
@@ -126,7 +126,7 @@ void ScreenRunner::hear_music(const double tick_seconds) {
   } else {
     spectrum_.silence();
   }
-  (schedule_overlay_ ? schedule_overlay_ : screen_)->hear_music(spectrum_.levels());
+  (overlay_ ? overlay_ : screen_)->hear_music(spectrum_.levels());
 }
 
 } // namespace phantomcrash

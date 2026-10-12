@@ -56,6 +56,7 @@ TownMapScript parse_town_map(const json::JsonValue &document) {
     const auto &buttons = required(document, "buttons");
     script.back_buttons = buttons_from_json(required(buttons, "back"));
     script.forward_buttons = buttons_from_json(required(buttons, "forward"));
+    script.follow_screen = buttons.boolean_or("follow_screen", false);
     const auto &sounds = required(document, "sounds");
     script.place_sound = required(sounds, "place").string();
     script.spin_sound = sounds.string_or("spin", "");

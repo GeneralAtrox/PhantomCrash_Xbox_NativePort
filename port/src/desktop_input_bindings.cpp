@@ -60,6 +60,14 @@ void DesktopInput::configure(const HostControls &controls) {
 }
 
 Buttons DesktopInput::key_button(const SDL_Scancode key) const {
+  // Typing, the letters, digits, punctuation, space, Backspace and Enter
+  // keys press nothing; Escape, Tab and the arrows still do.
+  const bool types = (key >= SDL_SCANCODE_A && key <= SDL_SCANCODE_SLASH &&
+                      key != SDL_SCANCODE_ESCAPE && key != SDL_SCANCODE_TAB) ||
+                     (key >= SDL_SCANCODE_KP_DIVIDE && key <= SDL_SCANCODE_KP_PERIOD);
+  if (text_mode_ && types) {
+    return 0;
+  }
   Buttons mask{};
   for (const Binding &binding : bindings_) {
     if (std::ranges::find(binding.keys, key) != binding.keys.end()) {

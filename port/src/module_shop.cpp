@@ -202,6 +202,7 @@ void ModuleShop::open_category() {
   }
   in_list_ = true;
   view_ = ModuleShopView::list;
+  details_page_ = false;
   list_seconds_ = 0.0;
   repeat_.reset();
   refresh_help();
@@ -237,6 +238,9 @@ void ModuleShop::list_input(const double tick_seconds, const InputFrame &input) 
       sound(script_.move_sound);
       refresh_help();
     }
+    return;
+  }
+  if (turn_details(input)) {
     return;
   }
   if (input.any_pressed(script_.cancel_buttons)) {

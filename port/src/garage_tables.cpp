@@ -210,15 +210,20 @@ std::string part_name(const PartTables &parts, const GarageTables &garage, const
 
 void add_module_bonuses(CombatStats &combat, const GarageTables &garage,
                         const std::vector<int> &modules) {
-  float active_frames = 0, charge_frames = 0;
+  float active_frames = 0, charge_frames = 0, laser_reduction = 0;
   for (const int id : modules) {
     if (const ModuleRecord *module = at(garage.modules, id)) {
       active_frames += module->active_frames;
       charge_frames += module->charge_frames;
       combat.critical_percent += module->critical_percent;
       combat.knockdown_resistance += module->knockdown_resistance;
+      laser_reduction += static_cast<float>(module->laser_reduction);
     }
   }
+  // 0x075d4a: robot +0x4544, the modules' +0x20 added, kept to 0..100 and
+  // made a share of a beam's damage.
+  constexpr float full_reduction = 100.0F;
+  combat.beam_resistance = std::clamp(laser_reduction, 0.0F, full_reduction) / full_reduction;
   // 0x814d7 sums module +0x22/+0x24 before 0x74db0 initializes O.C timers.
   constexpr float display_frames_per_second = 60.0F;
   combat.camouflage_seconds = std::max(active_frames, 0.0F) / display_frames_per_second;

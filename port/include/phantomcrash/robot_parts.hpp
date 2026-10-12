@@ -186,14 +186,14 @@ struct PartTables {
 
 // What a robot's chip and legs give it in a fight, as the damage rules
 // (0x0988e1) read them: the chip's block (0x075d4a) and the legs' +0x7c.
-// The fitted modules add to the critical and knockdown resistance
-// (add_module_bonuses in garage_tables.hpp).
+// The fitted modules add to the critical and knockdown resistance and give
+// the beam resistance (add_module_bonuses in garage_tables.hpp).
 struct CombatStats {
   float critical_percent{};     // a hit it lands doubles when rand(0..100) is below
   float dodge_chance{};         // 0..1: a hit on it misses when rand(0..1) is below
   float knockdown_resistance{}; // taken off a weapon's knockdown chance
   float knockback_resistance{}; // percent of a knockback it shrugs off
-  float beam_resistance{};      // 0..1 of a beam's damage it shrugs off
+  float beam_resistance{};      // 0..1 of a beam's damage it shrugs off (+0x4544)
   // Negative means no module data: use the scripted battle defaults.
   float camouflage_seconds{-1.0F};
   float camouflage_recharge_seconds{-1.0F};

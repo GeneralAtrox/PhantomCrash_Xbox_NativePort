@@ -148,8 +148,6 @@ void ModuleShopScreen::draw_chosen(DrawList &list, const ShopGoods &line) const 
     names.size =
         std::array{names.rect[2] - names.rect[0], (names.rect[3] - names.rect[1]) * fit.squeeze};
   }
-  list.sprite(names);
-  const auto lines = part_stats(logic_.table(), logic_.parts(), logic_.garage(), goods);
   PartStatsStyle stats = style.stats;
   stats.step = fit.step;
   if (module && style.module_stats_right > 0.0F) {
@@ -157,10 +155,17 @@ void ModuleShopScreen::draw_chosen(DrawList &list, const ShopGoods &line) const 
   }
   const float values_top =
       (module ? style.module_stats_top : style.stats_top) - fit.raise - fit.lift;
-  draw_part_stats(list, font_, stats, lines, goods, values_top);
-  if (script.extra_stats) {
-    draw_extra_stats(list, font_, *script.extra_stats, chosen_extras(&line), names, lines.size(),
-                     stats, values_top);
+  if (const auto page = second_page(&line); !page.empty()) {
+    // The second page letters its own lines where the art's would be.
+    draw_extra_stats(list, font_, *script.extra_stats, page, names, 0, stats, values_top);
+  } else {
+    list.sprite(names);
+    const auto lines = part_stats(logic_.table(), logic_.parts(), logic_.garage(), goods);
+    draw_part_stats(list, font_, stats, lines, goods, values_top);
+    if (script.extra_stats) {
+      draw_extra_stats(list, font_, *script.extra_stats, chosen_extras(&line), names, lines.size(),
+                       stats, values_top);
+    }
   }
   // STOCK MODULE shows no price.
   if (script.mode != ModuleShopMode::stock) {
@@ -197,22 +202,38 @@ void ModuleShopScreen::draw_chosen(DrawList &list, const ShopGoods &line) const 
 ModuleShopScreen::DetailsFit ModuleShopScreen::details_fit(const ShopGoods *line) const {
   const ShopGoodsList &style = logic_.script().list;
   DetailsFit fit{0.0F, 0.0F, style.stats.step, 1.0F, 0.0F};
-  const auto extras = static_cast<float>(chosen_extras(line).size());
-  fit.grow = style.stats.step * extras;
-  const auto &extra = logic_.script().extra_stats;
-  if (extras == 0.0F || line->goods.kind == GoodsKind::module || !extra ||
-      extra->part_step <= 0.0F) {
+  if (line == nullptr) {
     return fit;
   }
   const auto printed = static_cast<float>(
       part_stats(logic_.table(), logic_.parts(), logic_.garage(), line->goods).size());
+  // The lines shown: the art's and its extras, or the second page's.
+  const auto page = static_cast<float>(second_page(line).size());
+  const float shown = page > 0.0F ? page : printed + static_cast<float>(chosen_extras(line).size());
+  const float extras = shown - printed;
+  fit.grow = style.stats.step * std::max(extras, 0.0F);
+  const auto &extra = logic_.script().extra_stats;
+  if (extras <= 0.0F || line->goods.kind == GoodsKind::module || !extra ||
+      extra->part_step <= 0.0F) {
+    return fit;
+  }
   fit.step = extra->part_step;
-  fit.squeeze = extra->part_step / style.stats.step;
-  fit.grow = std::max(0.0F, (printed + extras) * fit.step - printed * style.stats.step);
+  if (extra->part_lines > 0 && shown > static_cast<float>(extra->part_lines)) {
+    fit.step *= static_cast<float>(extra->part_lines) / shown;
+  }
+  fit.squeeze = fit.step / style.stats.step;
+  fit.grow = std::max(0.0F, shown * fit.step - printed * style.stats.step);
   fit.raise = extra->part_raise;
   // The squeezed art's separators come up from under each line's value.
   fit.lift = extra->line_rows[0] * (1.0F - fit.squeeze);
   return fit;
+}
+
+std::vector<ExtraStatLine> ModuleShopScreen::second_page(const ShopGoods *line) const {
+  if (line == nullptr || !logic_.details_page()) {
+    return {};
+  }
+  return detail_stats(logic_.table(), logic_.parts(), logic_.garage(), line->goods);
 }
 
 // The chosen goods' extra stat lines; none without the style for them.
@@ -261,6 +282,11 @@ void ModuleShopScreen::draw_list(DrawList &list) const {
     if (line != nullptr &&
         (line->goods.kind == GoodsKind::paint || line->goods.kind == GoodsKind::emblem)) {
       list.sprite(style.swatch_frame);
+    }
+    if (logic_.has_details()) {
+      for (const Sprite &arrow : script.extra_stats->page_arrows) {
+        list.sprite(shifted(arrow, 0.0F, -fit.raise));
+      }
     }
   }
   if (open) {

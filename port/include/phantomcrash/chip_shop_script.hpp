@@ -2,6 +2,7 @@
 #include "phantomcrash/level_control.hpp"
 
 #include "phantomcrash/battle_hud_style.hpp"
+#include "phantomcrash/chip_spec_rows.hpp"
 #include "phantomcrash/glyph_font.hpp"
 #include "phantomcrash/input.hpp"
 #include "phantomcrash/json.hpp"
@@ -115,7 +116,8 @@ struct ChipDialog {
   std::vector<Sprite> pops;
   float pop_thin{0.05F}; // a pop's height while it widens
   ChipSpecPanel spec;
-  std::vector<ShopIcon> options; // BUY or SELL, then CANCEL; none uplifting
+  std::optional<ChipSpecRows> rows; // the taller panel in rows (a port addition)
+  std::vector<ShopIcon> options;    // BUY or SELL, then CANCEL; none uplifting
   std::optional<ChipLevelWindow> level;
 };
 

@@ -5,10 +5,12 @@
 #include "phantomcrash/input.hpp"
 #include "phantomcrash/json.hpp"
 #include "phantomcrash/sprite_layer.hpp"
+#include "phantomcrash/sprite_text.hpp"
 #include "phantomcrash/town_screen.hpp"
 
 #include <array>
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -31,10 +33,54 @@ struct SpecRow {
   int decimals{};
 };
 
-// One of the two pages: its panel and the help line saying how to turn to
-// the other.
+// A line of the COMBAT page (a port addition): what the robot brings to a
+// fight, which the original shows nowhere but in the CHIP shop.
+enum class CombatStat {
+  mortal_shot,          // the CHIP's critical chance and the modules', percent
+  repulsion_shield,     // the CHIP's dodge chance, percent (0x075d4a: 0..100)
+  knockdown_resistance, // the CHIP's and the modules', percent
+  knockback_resistance, // the legs', percent
+  laser_reduction,      // the modules', percent (0x0b9eef)
+  charge_time,          // the modules' O.C charge times added, seconds
+  lock_time,            // the CHIP's lock, seconds
+  aim_speed,            // the CHIP's reticle speed (0..999)
+};
+
+struct CombatRow {
+  CombatStat stat{CombatStat::mortal_shot};
+  std::string label;
+  std::string unit;
+  int decimals{};
+  // The unit's ink, top and bottom in the line, where it is not the
+  // label's (lower case sits lower: the art's "sec").
+  std::optional<std::array<float, 2>> unit_ink;
+};
+
+// The COMBAT page's lettering: labels and units in a sprite_text.json
+// display font, as the other pages' art letters them. `origin` is the
+// panel's top-left; label_x, unit_x and ink are from it and from each
+// line's top, the lines `values_step` apart as the vehicle page's.
+struct CombatLettering {
+  std::string font;
+  std::string unit_font;
+  std::uint32_t colour{0xffffff};
+  std::optional<TextShadow> shadow;
+  float shadow_blur{};
+  std::array<float, 2> origin{};
+  std::array<float, 2> label_x{};
+  std::array<float, 2> unit_x{};
+  std::array<float, 2> ink{};
+};
+
+// What a page shows: the original's vehicle and weapons pages, and the
+// port's combat page.
+enum class SpecPageKind { vehicle, weapons, combat };
+
+// A page: its panel art (none for the combat page, which letters its own)
+// and the help line saying how to turn to the others.
 struct SpecPage {
-  Sprite panel;
+  SpecPageKind kind{SpecPageKind::vehicle};
+  std::optional<Sprite> panel;
   std::string help;
 };
 
@@ -56,7 +102,7 @@ struct SvSpecScript : TownBasics {
   std::vector<Sprite> maker_icons;
   std::array<Sprite, 2> arrows;
   std::vector<Sprite> close_hint;
-  std::array<SpecPage, 2> pages;
+  std::vector<SpecPage> pages; // right turns to the next, left to the one before
 
   // Page 0: the lines right-aligned from `top`, `step` apart.
   std::vector<SpecRow> rows;
@@ -75,6 +121,10 @@ struct SvSpecScript : TownBasics {
   std::string none_text;
   std::uint32_t none_colour{0xffffff};
   int weapon_layer{};
+
+  // The combat page's lines, their values placed as the vehicle page's.
+  std::vector<CombatRow> combat_rows;
+  CombatLettering combat_lettering;
 
   TickerStyle help_style;
 };

@@ -23,6 +23,7 @@
  "sounds": { "move": "cursor", "move_x": "adjust", "select": "confirm", "page": "page", "delete": "delete" },
  "buttons": { "delete": "x", "space": "y", "page_back": "left_trigger", "page_forward": "right_trigger" },
  "max_length": 8,
+ "keyboard": { "aliases": { "-": "ー", ".": "・", "*": "★", "[": "『", "]": "』", "^": "↑" } },
  "pages": [
   {
    "id": "alphabet",

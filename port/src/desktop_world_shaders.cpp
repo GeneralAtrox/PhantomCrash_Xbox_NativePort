@@ -52,7 +52,8 @@ cbuffer Draw : register(b1) {
   float4 material_modes; // specular, texture add, texture alpha, original
   float4 source_directions[2];
   float4 source_colours[2];
-  float4 reflect_modes;  // reflect stage (normal_texture), unused x3
+  float4 reflect_modes;  // reflect stage (normal_texture), sheen, unused x2
+  float4 label_colour;   // where the texture's alpha is below 1, when w is set
 };
 
 struct VertexIn {
@@ -124,7 +125,14 @@ SamplerState normal_sampler : register(s1);
 SamplerState scene_sampler : register(s2);
 
 float4 ps_main(VertexOut input, bool front : SV_IsFrontFace) : SV_Target {
-  float4 colour = input.colour * base_colour;
+  // A supply crate's lettering (the texture's alpha below 1) takes the label
+  // colour in place of the body's.
+  bool labelled = label_colour.w > 0.5 && has_base > 0.5;
+  float3 tint = base_colour.rgb;
+  if (labelled) {
+    tint = lerp(label_colour.rgb, tint, base_texture.Sample(base_sampler, input.uv).a);
+  }
+  float4 colour = float4(input.colour.rgb * tint, input.colour.a * base_colour.a);
   float3 highlight = 0.0;
   float3 n = normalize(input.normal) * (front ? 1.0 : -1.0);
   if ((unlit < 0.5 || local_light > 0.5) && rainbow.z < 0.5) {
@@ -150,8 +158,16 @@ float4 ps_main(VertexOut input, bool front : SV_IsFrontFace) : SV_Target {
       highlight = sun_colour * specular;
     }
   }
+  if (reflect_modes.y > 0.0) {
+    // Port sheen (the supply drops' metal crates): a rim toward the eye and
+    // the sun's glint, in the item's own colour.
+    float3 toward_eye = normalize(eye - input.world_position);
+    float rim = pow(1.0 - saturate(dot(n, toward_eye)), 2.0);
+    float glint = pow(saturate(dot(n, normalize(toward_eye - sun_direction))), 24.0);
+    highlight += reflect_modes.y * base_colour.rgb * (rim * 0.6 + glint * sun_colour);
+  }
   if (local_light > 0.5) {
-    colour.rgb += input.colour.rgb * base_colour.rgb * local_lighting(input.world_position, n);
+    colour.rgb += input.colour.rgb * tint * local_lighting(input.world_position, n);
   }
   if (has_base > 0.5) {
     float4 texel = base_texture.Sample(base_sampler, input.uv);
@@ -166,7 +182,7 @@ float4 ps_main(VertexOut input, bool front : SV_IsFrontFace) : SV_Target {
     } else {
       colour.rgb = material_modes.y > 0.5 ? saturate(colour.rgb + texel.rgb)
                                           : colour.rgb * texel.rgb;
-      if (material_modes.z > 0.5) {
+      if (material_modes.z > 0.5 && !labelled) {
         colour.a = material_modes.w > 0.5 ? texel.a * base_colour.a : colour.a * texel.a;
       }
     }

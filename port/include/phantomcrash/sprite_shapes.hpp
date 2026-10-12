@@ -73,6 +73,9 @@ struct SpriteShape {
 };
 
 [[nodiscard]] std::vector<SpriteShape> parse_sprite_shapes(const json::JsonValue &document);
+// A list of outlines as a shape's "outlines" give them (no classes), for
+// shapes drawn on their own rather than over an atlas sprite.
+[[nodiscard]] std::vector<ShapeOutline> parse_shape_outlines(const json::JsonValue &list);
 
 // The outline's edge moved `distance` texels outward (inward when
 // negative): `segments` + 1 points per corner, clockwise from the top-left

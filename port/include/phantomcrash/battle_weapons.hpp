@@ -134,6 +134,18 @@ struct Magazine {
   return weapon.kind == WeaponKind::missile || weapon.kind == WeaponKind::grenade;
 }
 
+// The record aim mode (+0x1e) that locks: 0x09a663 gives a shoulder weapon
+// lock sights (0x05289d's boxes, closing over the lock time, the lock-on
+// warning and sound) only for it, the missiles. A grenade launcher (4) has
+// none and fires along its mount.
+inline constexpr int lock_on_aim_mode = 2;
+
+// Whether the weapon has lock sights; a weapon without a record keeps its
+// kind's (missiles and grenades).
+[[nodiscard]] inline bool lock_sights(const WeaponTuning &weapon) {
+  return weapon.aim_mode < 0 ? needs_lock_time(weapon) : weapon.aim_mode == lock_on_aim_mode;
+}
+
 // {"handgun": {"kind": "gun", ...}, ...}; throws on an unknown kind.
 [[nodiscard]] std::map<std::string, WeaponTuning>
 parse_weapon_tunings(const json::JsonValue &value);

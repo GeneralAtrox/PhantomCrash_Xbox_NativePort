@@ -38,18 +38,19 @@ PartTables tables() {
   return parts;
 }
 
-// Hangar 1: body 2 at level 3, legs 1, CHIP 4, the rifle in the first arm
+// Hangar 1: body 2 at level 3, legs 1, CHIP 4 named Tin, the rifle in the first arm
 // slot, the blade in the second and the mortar on the right backpack.
 Garage owned() {
   Garage garage = new_game_garage(garage_new_game_hangars);
   Hangar &bay = garage.hangars[1];
   bay.paint = 7;
-  const auto fit = [&](const PartSlot slot, const PartKind kind, const int id, const int level) {
-    bay.parts[static_cast<std::size_t>(slot)] = garage.add_stock({kind, id, level, "", 1});
+  const auto fit = [&](const PartSlot slot, const PartKind kind, const int id, const int level,
+                       const std::string &name = "") {
+    bay.parts[static_cast<std::size_t>(slot)] = garage.add_stock({kind, id, level, name, 1});
   };
   fit(PartSlot::body, PartKind::body, 2, 3);
   fit(PartSlot::legs, PartKind::legs, 1, 0);
-  fit(PartSlot::chip, PartKind::chip, 4, 2);
+  fit(PartSlot::chip, PartKind::chip, 4, 2, "Tin");
   fit(PartSlot::right_arm, PartKind::arm, 0, 0);
   fit(PartSlot::left_arm, PartKind::arm, 1, 5);
   fit(PartSlot::left_shoulder, PartKind::shoulder, 0, 0);
@@ -99,6 +100,7 @@ TEST_CASE("the ridden robot becomes the training ground's player") {
   const TrainingRobot &player = script.battle.player;
   CHECK(player.chip == 4);
   CHECK(player.chip_level == 2);
+  CHECK(player.chip_name == "Tin"); // the chatter's name for the robot
   CHECK(player.body_level == 3);
   CHECK(player.weapons[static_cast<std::size_t>(WeaponSlot::right_shoulder)].empty());
   const auto &weapons = script.battle.settings.weapons;

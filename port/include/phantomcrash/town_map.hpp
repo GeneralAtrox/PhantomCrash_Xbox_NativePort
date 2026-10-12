@@ -45,9 +45,10 @@ struct TownMapScript : MenuBasics {
   double bob_y_seconds{64.0 / 60.0};  // and up and down over this
   double pop_seconds{8.0 / 60.0};     // a sign grows, the rider moves, appears or goes
   std::vector<TownPlace> places;
-  Buttons back_buttons{};                          // the cursor steps back (to the lower number)
-  Buttons forward_buttons{};                       // and forward
-  std::string place_sound;                         // played with move_sound on a move
+  Buttons back_buttons{};    // the cursor steps back (to the lower number)
+  Buttons forward_buttons{}; // and forward,
+  bool follow_screen{};      // or to the neighbour further left / right on the map
+  std::string place_sound;   // played with move_sound on a move
   std::map<std::string, std::string> start_places; // screen before -> place
   int spin_pay{10};                                // NY for each full turn of the rider,
   int spin_limit{100};                             // until this much has been paid in the game
@@ -117,6 +118,7 @@ private:
   [[nodiscard]] std::optional<Sprite> unturned_rider() const;
   [[nodiscard]] std::optional<int> place_at(std::array<float, 2> point, bool names) const;
   void sound(const std::string &name);
+  [[nodiscard]] int stepped_place(int step) const;
   void move_to(int next, bool wrapped);
   void follow_mouse(const InputFrame &input, int step);
   void spin(std::array<float, 2> pointer);

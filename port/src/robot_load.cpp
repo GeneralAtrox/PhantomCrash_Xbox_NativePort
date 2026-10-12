@@ -162,7 +162,11 @@ MovementTuning loaded_movement(const PartTables &tables, const RobotLoadout &loa
       base.dash_speed > 0.0F ? base.dash_back_speed / base.dash_speed : 1.0F;
   // 0x08e6b6 / 0x08f2da move a flagged model by its motion's root, whose
   // stride the table holds a frame; without a stride of its own the robot
-  // takes the table's.
+  // takes the table's. An unflagged model (0 in the table, as the rollers)
+  // moves at its speed even when its clip's root drifts a little (+0x64,
+  // +0x6c clear).
+  base.walk_stride = base.walk_stride && walk_motion > 0.0F;
+  base.dash_stride = base.dash_stride && dash_motion > 0.0F;
   if (walk_motion > 0.0F && !base.walk_stride) {
     base.walk_speed = walk_motion * part_frames_per_second;
     base.back_speed = base.walk_speed * back_share;

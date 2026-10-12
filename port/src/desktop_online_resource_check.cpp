@@ -129,7 +129,7 @@ int check_online_resources(const DataRoots &roots) {
   const auto garage = parse_garage_tables(converted(roots, "tables/garage.json"));
   const auto contests = parse_contest_tables(converted(roots, "tables/town.json"));
   const auto rules = parse_rumbling_rules(roots.document("world/rumbling.json"));
-  const auto stats = parse_part_stats(roots.document("ui/part_stats.json"));
+  const auto stats = load_part_stats(roots);
   const auto training = parse_training(roots.document("world/training.json"));
   const auto drive = parse_test_drive(roots.document("world/test_drive.json"));
   const RegulationCheck regulation{rules, parts, garage, stats};

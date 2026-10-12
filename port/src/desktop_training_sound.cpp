@@ -55,7 +55,7 @@ void TrainingScreen::gather_sounds(const float seconds) {
   for (std::size_t slot = 0; slot < weapon_slots; ++slot) {
     const auto *weapon = player.weapons[slot];
     // Only a lock sight's countdown completes a lock (0x051045).
-    const int target = player.alive && weapon && needs_lock_time(*weapon) ? player.locks[slot] : -1;
+    const int target = player.alive && weapon && lock_sights(*weapon) ? player.locks[slot] : -1;
     acquired = acquired || (target >= 0 && target != heard_locks_[slot]);
     heard_locks_[slot] = target;
   }
@@ -102,6 +102,9 @@ std::vector<std::string> TrainingScreen::sound_preloads() const {
        {&scenes.doors.move_sound, &scenes.doors.open_sound, &scenes.ready_sound, &scenes.go_sound,
         &script_.battle.supply.look.take_sound}) {
     files.push_back(*name);
+  }
+  for (const SupplyKind &kind : script_.battle.supply.kinds) {
+    files.insert(files.end(), kind.look.take_sounds.begin(), kind.look.take_sounds.end());
   }
   return files;
 }

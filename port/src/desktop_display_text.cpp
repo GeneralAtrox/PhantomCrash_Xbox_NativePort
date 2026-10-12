@@ -22,6 +22,7 @@ constexpr int largest_em = 1024;
 // A text's ink as white with its coverage for alpha, cropped to the ink.
 struct Coverage {
   int width{}, height{};
+  int top{}; // the ink's top below the line's
   std::vector<std::uint8_t> rgba;
 };
 
@@ -115,6 +116,7 @@ struct DisplayText::Impl {
       TextOutW(dc, em, em / 2, line.c_str(), static_cast<int>(line.size()));
       GdiFlush();
       crop(static_cast<const std::uint8_t *>(bits), width, height, out);
+      out.top -= em / 2;
       SelectObject(dc, previous_bitmap);
     }
     if (bitmap != nullptr) {
@@ -141,6 +143,7 @@ struct DisplayText::Impl {
     }
     out.width = right - left + 1;
     out.height = bottom - top + 1;
+    out.top = top;
     out.rgba.assign(static_cast<std::size_t>(out.width) * out.height * 4, 255);
     for (int y = 0; y < out.height; ++y) {
       for (int x = 0; x < out.width; ++x) {
@@ -232,6 +235,7 @@ const DisplayText::Raster *DisplayText::raster(const DisplayFont &font, const st
   SDL_SetTextureScaleMode(raster.texture, SDL_SCALEMODE_LINEAR);
   raster.width = static_cast<float>(coverage.width);
   raster.height = static_cast<float>(coverage.height);
+  raster.top = static_cast<float>(coverage.top);
   return &raster;
 }
 
@@ -256,19 +260,30 @@ bool DisplayText::draw(const DisplayFont &font, const std::string &text, const S
             .first;
   }
   const auto [ink_w, ink_h] = measured->second;
-  const float scale = stretch ? room_h / ink_h : std::min(room_w / ink_w, room_h / ink_h);
+  // Capitals fill the box's height; the text keeps its size beside them.
+  const Raster *capital = layout.capitals ? raster(font, "H", measuring_em) : nullptr;
+  const float tall = capital != nullptr ? capital->height : ink_h;
+  const float scale = stretch ? room_h / ink_h : std::min(room_w / ink_w, room_h / tall);
   const int em =
       std::clamp(static_cast<int>(std::lround(measuring_em * scale)), smallest_em, largest_em);
   const Raster *ink = raster(font, text, em);
   if (ink == nullptr) {
     return false;
   }
+  if (capital != nullptr) {
+    capital = raster(font, "H", em);
+  }
   // Hinting can leave the ink a pixel off the fitted size; never past the box.
-  const float fit = std::min({1.0F, room_w / ink->width, room_h / ink->height});
+  const float fit = std::min(
+      {1.0F, room_w / ink->width, room_h / (capital != nullptr ? capital->height : ink->height)});
   const float w = stretch ? room_w : ink->width * fit;
   const float h = stretch ? room_h : ink->height * fit;
-  const float x = layout.centered ? box.x + (box.w - w) / 2 : box.x + inset;
-  const float y = box.y + (box.h - h) / 2;
+  const float x = layout.centered ? box.x + (box.w - w) / 2
+                  : layout.right  ? box.x + box.w - w - inset
+                                  : box.x + inset;
+  const float y = capital != nullptr ? box.y + (box.h - capital->height * fit) / 2 +
+                                           (ink->top - capital->top) * fit
+                                     : box.y + (box.h - h) / 2;
   const float bottom = box.y + box.h;
   const auto put = [&](const float dx, const float dy, const std::uint32_t tint, const float a) {
     SDL_SetTextureColorMod(ink->texture, static_cast<Uint8>(tint >> 16U),

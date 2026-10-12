@@ -168,6 +168,16 @@ std::vector<Sprite> hud_sprites(const HudStyle &style, const QuestSave &quest) {
   return sprites;
 }
 
+std::optional<std::array<float, 4>> hud_save_box(const HudStyle &style) {
+  if (!style.save_button) {
+    return std::nullopt;
+  }
+  const HudSaveButton &button = *style.save_button;
+  const float left = style.day_label.position[0] + button.offset[0];
+  const float top = style.day_label.position[1] + button.offset[1];
+  return std::array{left, top, left + button.size[0], top + button.size[1]};
+}
+
 std::vector<Sprite> money_sprites(const HudStyle &hud, const NumberStyle &style,
                                   const std::int64_t shown, const int layer) {
   std::vector<Sprite> sprites = number_sprites(hud.font, style, shown, layer);
@@ -232,6 +242,22 @@ std::vector<Sprite> meter_sprites(const MeterStyle &style, const std::array<floa
   return sprites;
 }
 
+namespace {
+
+HudSaveButton parse_save_button(const json::JsonValue &value) {
+  HudSaveButton button;
+  button.offset = numbers<2>(required(value, "offset"), "offset");
+  button.size = numbers<2>(required(value, "size"), "size");
+  if (button.size[0] <= 0 || button.size[1] <= 0) {
+    throw std::runtime_error("save_button: size must be positive");
+  }
+  button.normal = parse_shape_outlines(required(value, "normal"));
+  button.lit = parse_shape_outlines(required(value, "lit"));
+  return button;
+}
+
+} // namespace
+
 FrameStyle parse_frame_style(const json::JsonValue &document) {
   try {
     FrameStyle style;
@@ -242,6 +268,9 @@ FrameStyle parse_frame_style(const json::JsonValue &document) {
     style.hud.day = member(hud, "day", parse_number_style);
     style.hud.money = member(hud, "money", parse_number_style);
     style.hud.money_unit = member(hud, "money_unit", parse_sprite);
+    if (hud.find("save_button") != nullptr) {
+      style.hud.save_button = member(hud, "save_button", parse_save_button);
+    }
     style.meter = member(document, "meter", parse_meter_style);
     style.riding_plate = member(document, "riding_plate", parse_riding_plate);
     style.sort_hints = member(document, "sort_hints", parse_sort_hints);
@@ -256,6 +285,9 @@ FramePlacement parse_frame_placement(const json::JsonValue &value) {
   placement.hud = value.boolean_or("hud", true);
   if (const auto *hud_at = value.find("hud_at")) {
     placement.hud_at = parse_hud_placement(*hud_at);
+  }
+  if (const auto *offset = value.find("save_offset")) {
+    placement.save_offset = numbers<2>(*offset, "save_offset");
   }
   placement.riding_plate = value.boolean_or("riding_plate", false);
   if (const auto *y = value.find("riding_plate_y")) {

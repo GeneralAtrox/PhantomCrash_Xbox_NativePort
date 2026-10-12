@@ -66,8 +66,10 @@ float Battle::hit_damage(const WeaponHit &hit, Combatant &victim) {
     damage *= behind_factor;
     chatter(victim, chatter_event::hit_from_behind);
   }
+  // 0x0988e1: a beam loses the share the modules' laser reduction takes,
+  // the share's damage truncated before it comes off (0x1138ec).
   if (hit.weapon != nullptr && hit.weapon->hud_kind == hud_kind::beam) {
-    damage *= 1.0F - std::clamp(victim.combat.beam_resistance, 0.0F, 1.0F);
+    damage -= std::trunc(damage * std::clamp(victim.combat.beam_resistance, 0.0F, 1.0F));
   }
   const bool attacker = hit.attacker >= 0 && hit.attacker < static_cast<int>(robots_.size());
   const float critical =

@@ -89,6 +89,9 @@ public:
   }
   [[nodiscard]] std::optional<MenuPresence> coop_presence(const std::string &screen) const;
   [[nodiscard]] bool mouse_aim() const;
+  [[nodiscard]] bool wants_text() const {
+    return !overlay_ && screen_ && screen_->wants_text();
+  }
   // Each controller port's motors for this tick (rumble.hpp): off without
   // the vibration option.
   [[nodiscard]] std::array<RumbleMotors, controller_ports> rumble() const {
@@ -179,11 +182,16 @@ private:
   void configure_coop_menu();
   [[nodiscard]] std::unique_ptr<Screen> make_coop();
   [[nodiscard]] std::unique_ptr<Screen> make_coop_battle(const RumblingEntry &entry);
-  [[nodiscard]] std::unique_ptr<Screen> make_save_load(const std::string &name,
-                                                       const std::string &from);
-  // A temporary Schedule keeps the originating screen and all its state alive.
-  bool tick_schedule(const InputFrame &input, double seconds);
-  std::unique_ptr<Screen> schedule_overlay_;
+  // `live`, when given, is the game SAVE writes: the HUD's SAVE button opens
+  // it over a screen whose changes are not yet handed back.
+  [[nodiscard]] std::unique_ptr<Screen>
+  make_save_load(const std::string &name, const std::string &from, const QuestSave *live = nullptr);
+  // A temporary Schedule (the day's SKIP TO DAY) or SAVE (the HUD's SAVE
+  // button) keeps the originating screen and all its state alive.
+  bool tick_overlay(const InputFrame &input, double seconds);
+  bool open_overlay(const InputFrame &input);
+  std::unique_ptr<Screen> overlay_;
+  std::string overlay_name_;
   // Story events play between screens unless `events` is false.
   void show(const std::string &name, bool events = true);
   // The screen's music, unless it keeps the track playing.

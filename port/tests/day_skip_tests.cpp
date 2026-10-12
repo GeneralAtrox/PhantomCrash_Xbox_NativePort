@@ -138,10 +138,17 @@ TEST_CASE("SKIP TO DAY asks with NO first across a lap and stays on NO") {
   CHECK(schedule.skipped_quest() == nullptr);
 }
 
-TEST_CASE("SKIP TO DAY is not offered away from the garage, nor for today") {
+TEST_CASE("SKIP TO DAY is offered from every place unless 'from' lists others, nor for today") {
   const ContestTables contests = no_contests();
   QuestSave quest;
-  Schedule club = shipped_schedule(contests, quest, "club_wired");
+  CHECK(shipped_schedule(contests, quest, "wild_machines_buy_chip").skip_offered());
+  CHECK(shipped_schedule(contests, quest, "club_wired").skip_offered());
+
+  const DataRoots roots = shipped();
+  ScheduleScript garage_only = parse_schedule(roots.document("ui/schedule.json"));
+  garage_only.skip.from = {"garage"};
+  Schedule club(garage_only, contests, quest, "garage", "club_wired",
+                parse_message_box(roots.document("ui/message_box.json")));
   settle(club);
   CHECK(!club.skip_offered());
   tap(club, button::b);

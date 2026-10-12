@@ -133,6 +133,9 @@ ChipDialog parse_dialog(const json::JsonValue &value) {
   dialog.pops = member(value, "pops", parse_sprites);
   dialog.pop_thin = number_of(value, "pop_thin");
   dialog.spec = member(value, "spec", parse_spec);
+  if (const auto *rows = value.find("rows")) {
+    dialog.rows = parse_chip_spec_rows(*rows);
+  }
   return dialog;
 }
 

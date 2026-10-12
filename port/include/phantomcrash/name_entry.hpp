@@ -79,6 +79,9 @@ struct NameEntryScript : MenuBasics {
   std::string page_sound;
   std::string delete_sound;
   int max_length{8};
+  // The keyboard (a port addition): a typed character with no key of its
+  // own types the key named here, ahead of its full-width form.
+  std::map<std::string, std::string> typed_aliases;
   std::vector<NameEntryPage> pages; // the last is End
   int columns{};
   int rows{};
@@ -172,6 +175,11 @@ public:
     return static_cast<float>(page_alpha_);
   }
   [[nodiscard]] float cursor_alpha() const noexcept;
+  // Whether the keyboard types into the name now: faded in, not leaving and
+  // without the notice open.
+  [[nodiscard]] bool takes_text() const noexcept {
+    return !done() && !fade_.fading_in() && !fade_.leaving() && !box_.is_open();
+  }
 
 private:
   [[nodiscard]] int end_page() const noexcept {
@@ -186,6 +194,8 @@ private:
   void move_tabs(double tick_seconds, const InputFrame &input);
   void page_buttons(double tick_seconds, const InputFrame &input);
   void change_page(int page);
+  void keyboard(const InputFrame &input);
+  void type_key(const std::string &character);
   void type(const std::string &character);
   void finish();
   void sound(const std::string &name);

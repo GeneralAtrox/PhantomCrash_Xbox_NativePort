@@ -11,6 +11,7 @@
 #include <optional>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace phantomcrash {
@@ -25,6 +26,9 @@ struct SharpTextStyle {
   float em{18.0F};
   float baseline{15.0F};
   float pen_x{};
+  // Atlas glyphs that are the game's own art in Shift-JIS symbol places
+  // (faces, zodiac signs, tools, kanji): drawn from the atlas as they are.
+  std::unordered_set<int> pictures;
 };
 
 [[nodiscard]] SharpTextStyle parse_sharp_text(const json::JsonValue &document);

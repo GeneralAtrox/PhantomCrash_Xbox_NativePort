@@ -1,5 +1,6 @@
 #include "phantomcrash/load_game.hpp"
 #include "phantomcrash/money.hpp"
+#include "phantomcrash/shop_pointer.hpp"
 
 #include <algorithm>
 
@@ -74,7 +75,12 @@ void LoadGame::update(const double tick_seconds, const InputFrame &input) {
   if (!fade_.update(tick_seconds) || fade_.leaving()) {
     return;
   }
-  const bool confirmed = input.any_pressed(script_.confirm_buttons);
+  // The mouse (a port addition): a click on a notice's OK closes it as
+  // confirm does.
+  const bool confirmed =
+      input.any_pressed(script_.confirm_buttons) ||
+      (input.clicked && box_.is_open() && box_.kind() == MessageBox::Kind::notice && box_.grown() &&
+       shop_hit(input, box_.style().ok.normal));
   switch (phase_) {
   case Phase::no_records:
     if (confirmed) {
@@ -102,9 +108,14 @@ void LoadGame::update(const double tick_seconds, const InputFrame &input) {
   case Phase::exit:
     break;
   }
-  // The cursor moves first, then confirm, then cancel (0x28842).
+  // The cursor moves first, then confirm, then cancel (0x28842). Pointing at
+  // a slot or EXIT moves the cursor there, and a click confirms it.
   move(tick_seconds, input);
-  if (confirmed) {
+  const std::optional<int> pointed = pointed_choice(input);
+  if (pointed && (input.pointer_moved || input.clicked)) {
+    point_at(*pointed);
+  }
+  if (confirmed || (input.clicked && pointed)) {
     sound(script_.select_sound);
     confirm();
   } else if (phase_ == Phase::slots && input.any_pressed(script_.cancel_buttons)) {
@@ -141,6 +152,39 @@ void LoadGame::move(const double tick_seconds, const InputFrame &input) {
   if (const int moved = move_cursor(row, step, fresh, 2); moved != row) {
     phase_ = moved == 1 ? Phase::exit : Phase::slots;
     sound(script_.row_sound);
+  }
+}
+
+std::optional<int> LoadGame::pointed_choice(const InputFrame &input) const {
+  if (!input.pointer) {
+    return std::nullopt;
+  }
+  if (shop_hit(input, script_.exit.normal)) {
+    return exit_choice;
+  }
+  for (int index = 0; index < static_cast<int>(slots_.size()); ++index) {
+    if (slots_[index].selectable && shop_hit(input, script_.slots[index].plate)) {
+      return index;
+    }
+  }
+  return std::nullopt;
+}
+
+void LoadGame::point_at(const int choice) {
+  if (choice == exit_choice) {
+    if (phase_ != Phase::exit) {
+      phase_ = Phase::exit;
+      sound(script_.row_sound);
+    }
+    return;
+  }
+  if (phase_ == Phase::exit) {
+    phase_ = Phase::slots;
+    slot_ = choice;
+    sound(script_.row_sound);
+  } else if (choice != slot_) {
+    slot_ = choice;
+    sound(script_.slot_sound);
   }
 }
 
@@ -201,7 +245,22 @@ void LoadGame::answer(const double tick_seconds, const InputFrame &input) {
     }
     return;
   }
-  if (input.any_pressed(script_.confirm_buttons)) {
+  // A click on YES or NO answers with it.
+  bool clicked = false;
+  if (input.clicked) {
+    const MessageBoxStyle &style = box_.style();
+    const int choice = shop_hit(input, style.yes.normal)  ? 0
+                       : shop_hit(input, style.no.normal) ? 1
+                                                          : -1;
+    if (choice >= 0) {
+      clicked = true;
+      if (choice != box_.choice()) {
+        box_.set_choice(choice);
+        sound(script_.slot_sound);
+      }
+    }
+  }
+  if (input.any_pressed(script_.confirm_buttons) || clicked) {
     sound(script_.select_sound);
     if (box_.choice() == 0) {
       write();

@@ -23,8 +23,10 @@ bool contains(const std::vector<int> &values, const int value) {
   return std::ranges::find(values, value) != values.end();
 }
 
+// "*" stands for every place.
 bool contains_place(const std::vector<std::string> &places, const std::string &place) {
-  return !place.empty() && std::ranges::find(places, place) != places.end();
+  return !place.empty() && (std::ranges::find(places, place) != places.end() ||
+                            std::ranges::find(places, "*") != places.end());
 }
 
 } // namespace

@@ -27,8 +27,9 @@ struct SpecRobot {
 [[nodiscard]] SpecRobot record_spec(const RobotRecord &robot, const PartTables &parts,
                                     const GarageTables &garage);
 
-// SV SPEC (scene 36): the vehicle's page and the weapons' page, left and
-// right turning between them; cancel goes back to where it was opened from.
+// SV SPEC (scene 36): the vehicle's page and the weapons' page, and the
+// port's combat page; right turns to the next, left to the one before;
+// cancel goes back to where it was opened from.
 class SvSpec final : public TownLogic {
 public:
   SvSpec(SvSpecScript script, SpecRobot robot, const PartTables &parts, const GarageTables &garage,
@@ -45,9 +46,12 @@ public:
   [[nodiscard]] const RobotTotals &totals() const noexcept {
     return totals_;
   }
-  // 0 the vehicle, 1 the weapons.
+  // The page shown, an index into the script's pages.
   [[nodiscard]] int page() const noexcept {
     return page_;
+  }
+  [[nodiscard]] SpecPageKind page_kind() const {
+    return script_.pages[static_cast<std::size_t>(page_)].kind;
   }
   [[nodiscard]] const std::string &help_text() const {
     return script_.pages[static_cast<std::size_t>(page_)].help;
@@ -58,6 +62,8 @@ public:
 
   // A vehicle line's value, in the units it shows.
   [[nodiscard]] double value(SpecStat stat) const;
+  // A combat line's value, as the fight takes it (CombatStats).
+  [[nodiscard]] double value(CombatStat stat) const;
   // The weapon in a slot's name; none when the slot is empty.
   [[nodiscard]] std::optional<std::string> weapon(PartSlot slot) const;
   // The body's maker, whose badge shows; -1 without a body.
@@ -73,6 +79,8 @@ private:
   std::string exit_to_;
   RobotTotals totals_;
   LegsSpeeds speeds_;
+  CombatStats combat_;
+  ChipStats chip_;
   int page_{};
   double help_seconds_{};
 };

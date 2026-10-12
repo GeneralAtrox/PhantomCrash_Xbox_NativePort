@@ -154,7 +154,7 @@ ScreenRunner::ScreenRunner(SDL_Renderer *renderer, const DataRoots &roots, const
 }
 
 ScreenRunner::~ScreenRunner() {
-  schedule_overlay_.reset();
+  overlay_.reset();
   screen_.reset(); // before the world it may draw with
   pending_result_.reset();
 }
@@ -273,13 +273,13 @@ std::unique_ptr<Screen> ScreenRunner::make(const std::string &name, const std::s
 
 void ScreenRunner::tick(const InputFrame &raw_input, const double tick_seconds) {
   InputFrame input = raw_input;
-  const auto &active = schedule_overlay_ ? schedule_overlay_ : screen_;
+  const auto &active = overlay_ ? overlay_ : screen_;
   if (input.right_clicked && active->mouse_menu_back()) {
     input.pressed |= button::b;
     input.ports[0].pressed |= button::b;
-    SDL_Log("Menu mouse: right-click B on %s", schedule_overlay_ ? "schedule" : name_.c_str());
+    SDL_Log("Menu mouse: right-click B on %s", overlay_ ? overlay_name_.c_str() : name_.c_str());
   }
-  if (tick_schedule(input, tick_seconds)) {
+  if (tick_overlay(input, tick_seconds)) {
     return;
   }
   hear_music(tick_seconds);
@@ -363,7 +363,7 @@ const std::vector<VsScoobee> &ScreenRunner::vs_scoobees() const {
 }
 
 void ScreenRunner::advance(const double elapsed_seconds) {
-  (schedule_overlay_ ? schedule_overlay_ : screen_)->advance(elapsed_seconds);
+  (overlay_ ? overlay_ : screen_)->advance(elapsed_seconds);
   audio_.update();
 }
 
@@ -381,13 +381,13 @@ void ScreenRunner::draw(const Viewport &viewport) {
   if (world_) {
     world_->set_post_process(post_process_);
   }
-  (schedule_overlay_ ? schedule_overlay_ : screen_)->draw(viewport);
+  (overlay_ ? overlay_ : screen_)->draw(viewport);
 }
 
 void ScreenRunner::set_paused(const bool paused) {
-  screen_->set_paused(paused || bool(schedule_overlay_));
-  if (schedule_overlay_) {
-    schedule_overlay_->set_paused(paused);
+  screen_->set_paused(paused || bool(overlay_));
+  if (overlay_) {
+    overlay_->set_paused(paused);
   }
   audio_.set_gameplay_paused(screen_->gameplay_paused());
   audio_.set_paused(paused);

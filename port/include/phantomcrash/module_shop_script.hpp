@@ -1,5 +1,6 @@
 #pragma once
 
+#include "phantomcrash/extra_stats_style.hpp"
 #include "phantomcrash/glyph_font.hpp"
 #include "phantomcrash/input.hpp"
 #include "phantomcrash/json.hpp"
@@ -52,29 +53,6 @@ struct ShopSidePanel {
 
 // Wild Machines' BUY MODULE and SELL MODULE (data/ui/module_shop.json),
 // and STOCK MODULE (data/ui/stock_module.json).
-// Extra stat lines (part_stats.hpp) below a module's printed ones, each a
-// stats step lower, the details windows growing a step for each. Places are
-// in source pixels of the labels' art (module_names), from its left and
-// from the top of a line.
-struct ExtraStatsStyle {
-  std::string font; // a data/ui/sprite_text.json display font; the game's font without it
-  std::uint32_t colour{0xffffff};
-  std::optional<TextShadow> shadow;
-  float shadow_blur{};
-  float label_left{};
-  float unit_left{};
-  std::array<float, 2> ink{};       // the lettering's top and bottom in a line
-  std::array<float, 2> line_rows{}; // the separator's rows in the labels' art
-  // A part's details with extra lines (a leg's) fit above the screen's
-  // CURRENT MUSIC plate: the window, its picture and lines move up by
-  // part_raise and the lines close up to part_step apart, the labels' art
-  // squeezed with them. 0 leaves them as the original's.
-  float part_raise{};
-  float part_step{};
-};
-
-[[nodiscard]] ExtraStatsStyle parse_extra_stats_style(const json::JsonValue &value);
-
 struct ModuleShopScript : TownBasics {
   ModuleShopMode mode{ModuleShopMode::buy};
   Buttons left{}, right{}, up{}, down{};

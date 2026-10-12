@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <utility>
+#include <vector>
 
 namespace phantomcrash {
 
@@ -32,6 +33,20 @@ SvSpec::SvSpec(SvSpecScript script, SpecRobot robot, const PartTables &parts,
   totals_ = robot_totals(table, parts_, garage_, robot_.garage, fitted());
   const RobotLoadout loadout = hangar_loadout(robot_.garage, fitted());
   speeds_ = legs_speeds(parts_, loadout, load_stats(parts_, loadout));
+  // The fight's stats as a battle builds them: the CHIP's and the legs',
+  // then the fitted modules' added.
+  combat_ =
+      combat_stats(parts_, loadout.chip, loadout.chip_level, loadout.legs, loadout.legs_level);
+  std::vector<int> modules;
+  for (const int stock : fitted().modules) {
+    if (const auto entry = robot_.garage.stock.find(stock); entry != robot_.garage.stock.end()) {
+      modules.push_back(entry->second.id);
+    }
+  }
+  add_module_bonuses(combat_, garage_, modules);
+  if (const ChipRecord *chip = parts_.chip(loadout.chip)) {
+    chip_ = chip_stats(*chip, loadout.chip_level);
+  }
 }
 
 const Hangar &SvSpec::fitted() const {
@@ -60,8 +75,10 @@ void SvSpec::update(const double tick_seconds, const InputFrame &raw_input) {
   if (!advance(tick_seconds)) {
     return;
   }
-  if (input.any_pressed(script_.left) || input.any_pressed(script_.right)) {
-    page_ = 1 - page_;
+  const int pages = static_cast<int>(script_.pages.size());
+  const bool back = input.any_pressed(script_.left);
+  if (pages > 1 && (back || input.any_pressed(script_.right))) {
+    page_ = (page_ + (back ? pages - 1 : 1)) % pages;
     help_seconds_ = 0.0;
     sound(script_.page_sound);
     return;
@@ -90,6 +107,29 @@ double SvSpec::value(const SpecStat stat) const {
     return totals_.capacity;
   case SpecStat::sockets:
     return totals_.sockets;
+  }
+  return 0.0;
+}
+
+double SvSpec::value(const CombatStat stat) const {
+  constexpr double percent = 100.0;
+  switch (stat) {
+  case CombatStat::mortal_shot:
+    return combat_.critical_percent;
+  case CombatStat::repulsion_shield:
+    return combat_.dodge_chance * percent;
+  case CombatStat::knockdown_resistance:
+    return combat_.knockdown_resistance;
+  case CombatStat::knockback_resistance:
+    return combat_.knockback_resistance;
+  case CombatStat::laser_reduction:
+    return totals_.laser_reduction;
+  case CombatStat::charge_time:
+    return std::max(totals_.charge_seconds, 0.0);
+  case CombatStat::lock_time:
+    return chip_.lock_frames / part_frames_per_second;
+  case CombatStat::aim_speed:
+    return chip_.track;
   }
   return 0.0;
 }

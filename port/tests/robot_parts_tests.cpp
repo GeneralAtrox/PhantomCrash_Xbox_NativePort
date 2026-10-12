@@ -220,6 +220,22 @@ TEST_CASE("fitted modules add their critical and knockdown resistance to the chi
   CHECK(near(stats.dodge_chance, 1.0F));
 }
 
+TEST_CASE("fitted modules' laser reductions add up to the beam resistance, at most all of it") {
+  const PartTables tables = parse_part_tables(json::parse(stats_json));
+  const GarageTables garage = parse_garage_tables(
+      json::parse(R"({"robots": [], "dealer_lineups": [], "paints": [], "emblems": [], "modules": [
+    {"name": "10mm Armor Unit", "price": 10, "laser_reduction": 30},
+    {"name": "Ivory Fortune God", "price": 10, "laser_reduction": 45},
+    {"name": "Cat Statue", "price": 10, "robot_4538": 24}]})"));
+  CombatStats stats = combat_stats(tables, 0, 0, 0, 0);
+  CHECK(stats.beam_resistance == 0.0F); // the CHIP gives none
+  add_module_bonuses(stats, garage, {0, 2});
+  CHECK(near(stats.beam_resistance, 0.30F));
+  CombatStats stacked = combat_stats(tables, 0, 0, 0, 0);
+  add_module_bonuses(stacked, garage, {0, 1, 1});
+  CHECK(near(stacked.beam_resistance, 1.0F)); // 30 + 45 + 45 kept to 100
+}
+
 TEST_CASE("a beam's charge recharges from empty to full over its recharge time") {
   Magazine beam;
   beam.reset(10, 2.0F);

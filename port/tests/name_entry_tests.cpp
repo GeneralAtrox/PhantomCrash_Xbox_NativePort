@@ -1,5 +1,5 @@
-// NAME ENTRY: typing, deleting, pages, the End tab, the no-name notice, the
-// animation, and the quest save it writes.
+// NAME ENTRY: typing (from the pad and the keyboard), deleting, pages, the
+// End tab, the no-name notice, the animation, and the quest save it writes.
 
 #include "test_support.hpp"
 
@@ -48,6 +48,17 @@ NameEntry ready_entry(const std::string &name = "") {
 
 bool heard(const std::vector<std::string> &sounds, const std::string &name) {
   return std::ranges::find(sounds, name) != sounds.end();
+}
+
+// The keyboard's text for one tick, then a quiet tick.
+void type_text(NameEntry &entry, const std::string &typed, const int erased = 0,
+               const bool submit = false) {
+  InputFrame input{0, 0, 1};
+  input.typed = typed;
+  input.erased = erased;
+  input.text_submit = submit;
+  entry.update(tick, input);
+  entry.update(tick, InputFrame{0, 0, 1});
 }
 
 } // namespace
@@ -177,6 +188,49 @@ TEST_CASE("ending with a name fades out to Club Wired with the name saved") {
   CHECK(entry.done());
   CHECK(entry.next() == "club_wired");
   CHECK(entry.save().player_name == "\xef\xbc\xa1\xef\xbc\xa1");
+}
+
+TEST_CASE("typed keys find their full-width characters and move the cursor there") {
+  NameEntry entry = make_entry();
+  CHECK(!entry.takes_text());
+  run(entry, 0.6);
+  CHECK(entry.takes_text());
+  type_text(entry, "Ab1");
+  const std::vector<std::string> typed{"\xef\xbc\xa1", "\xef\xbd\x82", "\xef\xbc\x91"};
+  CHECK(entry.name() == typed);
+  CHECK(entry.page() == 0);
+  CHECK(entry.row() == 0);
+  CHECK(entry.column() == 10);
+  CHECK(heard(entry.take_sounds(), "confirm"));
+  // ? is on Symbols, - types the long-vowel bar its alias names, a space
+  // types the game's space, and keys the pages lack type nothing.
+  type_text(entry, "?- #");
+  CHECK(entry.page() == 1);
+  CHECK(entry.previous_page() == 0);
+  REQUIRE(entry.name().size() == 6);
+  CHECK(entry.name()[3] == "\xef\xbc\x9f");
+  CHECK(entry.name()[4] == "\xe3\x83\xbc");
+  CHECK(entry.name()[5] == space);
+}
+
+TEST_CASE("Backspace deletes and Enter ends the entry with the typed name") {
+  NameEntry entry = ready_entry();
+  type_text(entry, "Rex");
+  type_text(entry, "", 1);
+  CHECK(entry.name().size() == 2);
+  CHECK(heard(entry.take_sounds(), "delete"));
+  type_text(entry, "", 0, true);
+  CHECK(!entry.takes_text());
+  run(entry, 0.6);
+  CHECK(entry.done());
+  CHECK(entry.save().player_name == "\xef\xbc\xb2\xef\xbd\x85");
+}
+
+TEST_CASE("Enter without a name opens the notice, which takes no text") {
+  NameEntry entry = ready_entry();
+  type_text(entry, "  ", 0, true);
+  CHECK(entry.box().is_open());
+  CHECK(!entry.takes_text());
 }
 
 TEST_CASE("the name box grows once the controls box slides in") {

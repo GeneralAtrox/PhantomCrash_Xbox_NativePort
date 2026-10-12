@@ -60,10 +60,10 @@ void SupplyDrop::load() {
     pickup.life = settings_.lifetime_ticks;
     const float value = roll(random_);
     float total = 0.0F;
-    for (int kind = 0; kind < supply_kind_count; ++kind) {
-      total += settings_.chances[static_cast<std::size_t>(kind)];
+    for (std::size_t kind = 0; kind < settings_.kinds.size(); ++kind) {
+      total += settings_.kinds[kind].chance;
       if (value < total) {
-        pickup.kind = kind;
+        pickup.kind = static_cast<int>(kind);
         break;
       }
     }

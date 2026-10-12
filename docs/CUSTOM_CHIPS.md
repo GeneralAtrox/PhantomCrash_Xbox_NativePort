@@ -107,13 +107,17 @@ converted `parts.json` writes them:
 | --- | --- |
 | `inner_shape`, `inner_value` | aiming sight shape (0 square, 1 wide, 2 tall) and size curve |
 | `outer_shape`, `outer_value` | lock-on sight shape and size curve |
-| `track` | 0..999, how fast the reticle follows a target |
-| `lock_frames` | a lock takes this many 60 Hz frames |
-| `critical_percent` | chance of a critical hit |
+| `track` | 0..999, how fast the reticle follows a target (**Aim Speed**) |
+| `lock_frames` | a lock takes this many 60 Hz frames (**Lock On Time**, in seconds) |
+| `critical_percent` | chance of a critical hit, shown as **Mortal Shot** |
 | `dodge_percent` | chance of the **Repulsion Shield** (the help texts' name for it) |
-| `knockdown_resistance` | resistance to being knocked down |
+| `knockdown_resistance` | resistance to being knocked down (**Knockdown Resist**) |
 | `weight` | hundredths of a tonne (22.0 shows as 0.22 t in the shop) |
 | `price` | the shop price curve (shown x10 in NY) |
+
+BUY CHIP, SELL CHIP and UPLIFT list the bold names with their values in the
+CHIP dialog; the rows, their order and their layout are the dialog's `rows`
+in `data/ui/chip_shop.json` and `data/ui/uplift.json`.
 
 A curve is `{base, mid, top, knee, low_scale}` (`LevelCurve::value`): `base`
 at level 0, `base + mid` at level `knee`, `base + top` at level 99, linear in
@@ -122,7 +126,7 @@ the original does.
 
 The original cats (Cat I-IV) share the sights (wide lock-on, square aiming
 sight, same size curves), knockdown 3 -> 15, weight 20.1 and price; they
-differ only in track, lock time, critical and shield (table below). The added
+differ only in track, lock time, Mortal Shot and shield (table below). The added
 cats keep the cat sights, price curve shape and knees, and move the other
 stats from the owner's description of the animal:
 
@@ -130,7 +134,7 @@ stats from the owner's description of the animal:
 | --- | --- |
 | Hunts flies well / is fast | higher `track`, fewer `lock_frames` |
 | Very fast, agile | higher `dodge_percent` (Repulsion Shield) |
-| Aggressive / gentle, soft touch | higher / lower `critical_percent` |
+| Aggressive / gentle, soft touch | higher / lower `critical_percent` (Mortal Shot) |
 | Big, sturdy / small, indoor | higher / lower `knockdown_resistance`, `weight` |
 | Demanding, rare | higher `price` |
 | Lazy | lower `track`, more `lock_frames` |
@@ -138,7 +142,7 @@ stats from the owner's description of the animal:
 
 Resulting values (level 0 -> level 99):
 
-| | Track | Lock | Critical % | Shield % | Knockdown | Weight | Price (base) |
+| | Track | Lock | Mortal Shot % | Shield % | Knockdown | Weight | Price (base) |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Cat I, Cat II | 1 | 12 | 2.0 -> 7.5 | 0.5 -> 7.5 | 3.0 -> 15.0 | 20.1 | 6500 |
 | Cat III | 1 | 14 | 1.0 -> 6.5 | 0.5 -> 8.0 | 3.0 -> 15.0 | 20.1 | 6500 |

@@ -270,7 +270,8 @@ void BattleSights::draw_locks(const View &view, const Battle &battle) {
     const WeaponTuning *weapon = player.weapons[slot];
     const bool arm = key >= 2;
     int target = player.lock_candidates[slot];
-    if (weapon == nullptr || (arm && weapon->kind != WeaponKind::melee) || target < 0 ||
+    if (weapon == nullptr || (arm && weapon->kind != WeaponKind::melee) ||
+        (!arm && !lock_sights(*weapon)) || target < 0 ||
         target >= static_cast<int>(battle.robots().size()) ||
         !view.on_screen(battle.robots()[static_cast<std::size_t>(target)].centre(height)) ||
         !battle.target_visible(player, battle.robots()[static_cast<std::size_t>(target)])) {

@@ -192,10 +192,16 @@ ExtraStatsStyle parse_extra_stats_style(const json::JsonValue &value) {
   }
   style.label_left = number_of(value, "label_left");
   style.unit_left = number_of(value, "unit_left");
+  style.unit_gap = static_cast<float>(value.number_or("unit_gap", 0.0));
+  style.text_left = static_cast<float>(value.number_or("text_left", style.label_left));
   style.ink = numbers<2>(required(value, "ink"), "ink");
   style.line_rows = numbers<2>(required(value, "line_rows"), "line_rows");
   style.part_raise = static_cast<float>(value.number_or("part_raise", 0.0));
   style.part_step = static_cast<float>(value.number_or("part_step", 0.0));
+  style.part_lines = static_cast<int>(value.number_or("part_lines", 0.0));
+  if (value.find("page_arrows") != nullptr) {
+    style.page_arrows = member(value, "page_arrows", parse_sprites);
+  }
   return style;
 }
 

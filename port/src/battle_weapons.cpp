@@ -172,8 +172,14 @@ void Armory::fire(const WeaponTuning &weapon, const int owner, const int team, c
   // Shoulder aim modes 0/1 follow the crosshair/tracked reticle (0x098bb7).
   // Their pose already supplies that barrel direction; a retained lock outside
   // the sight must not redirect the projectile after the barrel has aimed.
-  const bool sight_aimed = weapon.part && weapon.part->table == WeaponTable::shoulder &&
-                           (weapon.aim_mode == 0 || weapon.aim_mode == 1) && !weapon.homing;
+  const bool shoulder = weapon.part && weapon.part->table == WeaponTable::shoulder;
+  const bool sight_aimed =
+      shoulder && (weapon.aim_mode == 0 || weapon.aim_mode == 1) && !weapon.homing;
+  // A shoulder weapon without lock sights (a grenade launcher) fires along
+  // its mount, whatever the fire control holds.
+  if (shoulder && !lock_sights(weapon)) {
+    locked = nullptr;
+  }
   Vec3 direction = aim;
   if (locked != nullptr && !sight_aimed) {
     direction = normalize(locked->centre - muzzle);

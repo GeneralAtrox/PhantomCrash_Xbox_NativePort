@@ -68,7 +68,7 @@ void ScreenRunner::show(const std::string &name, const bool events) {
   if (screen_ && screen_->gameplay_paused()) {
     audio_.set_gameplay_paused(false); // Tools > Level Select may replace a paused battle.
   }
-  schedule_overlay_.reset();
+  overlay_.reset();
   std::string target = name;
   if (target == "new_game" || target == "title" || name_ == "sleep") {
     story_match_ = {};

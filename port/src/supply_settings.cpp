@@ -32,6 +32,84 @@ SupplyEffect effect_named(const std::string &name) {
   throw std::runtime_error("Unknown supply effect " + name);
 }
 
+// A colour as "#rrggbb" or [r, g, b] in 0..1.
+SupplyColour colour(const JsonValue &value, const char *name) {
+  if (!value.is_string()) {
+    return json::numbers<3>(value, name);
+  }
+  const std::string &text = value.string();
+  if (text.size() != 7 || text[0] != '#' ||
+      text.find_first_not_of("0123456789abcdefABCDEF", 1) != std::string::npos) {
+    throw std::runtime_error(std::string("supply kinds: ") + name + " is not #rrggbb: " + text);
+  }
+  const auto packed = std::stoul(text.substr(1), nullptr, 16);
+  return {static_cast<float>((packed >> 16) & 255) / 255.0F,
+          static_cast<float>((packed >> 8) & 255) / 255.0F,
+          static_cast<float>(packed & 255) / 255.0F};
+}
+
+std::optional<SupplyColour> optional_colour(const JsonValue &value, const char *name) {
+  const JsonValue *found = value.find(name);
+  return found != nullptr ? std::optional{colour(*found, name)} : std::nullopt;
+}
+
+SupplyKindLook parse_kind_look(const JsonValue &value) {
+  SupplyKindLook look;
+  look.image = value.string_or("image", "");
+  look.crate = static_cast<int>(value.number_or("crate", look.crate));
+  if (look.crate >= supply_kind_count) {
+    throw std::runtime_error("supply kinds: crate " + std::to_string(look.crate) +
+                             " is not one of the original's");
+  }
+  look.tint = optional_colour(value, "tint");
+  look.label_tint = optional_colour(value, "label_tint");
+  look.glow = optional_colour(value, "glow");
+  look.glow_scale = static_cast<float>(value.number_or("glow_scale", look.glow_scale));
+  look.glow_cycle = static_cast<float>(value.number_or("glow_cycle", look.glow_cycle));
+  look.sheen = static_cast<float>(value.number_or("sheen", look.sheen));
+  if (const JsonValue *sounds = value.find("take_sounds")) {
+    for (const JsonValue &sound : sounds->array()) {
+      look.take_sounds.push_back(sound.string());
+    }
+  }
+  return look;
+}
+
+// "kinds" (any number, appended after the original's ten) and, for older
+// data, "chances" giving every kind's chance in order.
+void parse_kinds(const JsonValue &value, SupplySettings &s) {
+  const std::vector<SupplyKind> original = s.kinds;
+  if (const JsonValue *kinds = value.find("kinds")) {
+    const auto &list = kinds->array();
+    if (list.empty()) {
+      throw std::runtime_error("supply kinds: none listed");
+    }
+    s.kinds.assign(list.size(), SupplyKind{});
+    for (std::size_t index = 0; index < list.size(); ++index) {
+      SupplyKind &kind = s.kinds[index];
+      const float chance = index < original.size() ? original[index].chance : 0.0F;
+      kind.effect = effect_named(list[index].string_or("effect", "money"));
+      kind.amount = static_cast<float>(list[index].number_or("amount", 0.0));
+      kind.chance = static_cast<float>(list[index].number_or("chance", chance));
+      kind.look = parse_kind_look(list[index]);
+    }
+  }
+  if (const JsonValue *chances = value.find("chances")) {
+    const auto &list = chances->array();
+    if (list.size() != s.kinds.size()) {
+      throw std::runtime_error("supply chances: expected " + std::to_string(s.kinds.size()));
+    }
+    for (std::size_t index = 0; index < list.size(); ++index) {
+      s.kinds[index].chance = static_cast<float>(list[index].number());
+    }
+  }
+  for (const SupplyKind &kind : s.kinds) {
+    if (kind.chance < 0.0F) {
+      throw std::runtime_error("supply kinds: a chance is negative");
+    }
+  }
+}
+
 SupplyModel parse_model(const JsonValue &value, SupplyModel model) {
   const auto mesh = [&](const char *key, const int fallback) {
     return static_cast<int>(value.number_or(key, fallback));
@@ -160,19 +238,7 @@ SupplySettings parse_supply_settings(const JsonValue &value) {
   s.wreck_keep = number("wreck_keep", s.wreck_keep);
   s.wreck_sink = number("wreck_sink", s.wreck_sink);
   s.wreck_ticks = number("wreck_ticks", s.wreck_ticks);
-  if (const JsonValue *chances = value.find("chances")) {
-    s.chances = json::numbers<supply_kind_count>(*chances, "chances");
-  }
-  if (const JsonValue *kinds = value.find("kinds")) {
-    const auto &list = kinds->array();
-    if (list.size() != supply_kind_count) {
-      throw std::runtime_error("supply kinds: expected " + std::to_string(supply_kind_count));
-    }
-    for (std::size_t index = 0; index < list.size(); ++index) {
-      s.kinds[index].effect = effect_named(list[index].string_or("effect", "money"));
-      s.kinds[index].amount = static_cast<float>(list[index].number_or("amount", 0.0));
-    }
-  }
+  parse_kinds(value, s);
   if (const JsonValue *look = value.find("look")) {
     s.look = parse_look(*look);
   }

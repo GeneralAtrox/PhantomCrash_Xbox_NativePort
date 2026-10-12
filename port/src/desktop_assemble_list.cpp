@@ -3,6 +3,7 @@
 #include "desktop_assemble.hpp"
 
 #include "desktop_draw_list.hpp"
+#include "desktop_extra_stats.hpp"
 #include "desktop_part_stats.hpp"
 #include "desktop_shop_list.hpp"
 
@@ -87,16 +88,56 @@ void AssembleScreen::draw_details(DrawList &list, const ShopGoods &line) const {
   const bool lasers =
       line.goods.kind == GoodsKind::module && reduces_lasers(logic_.garage(), line.goods);
   const std::size_t labels = lasers && cell.labels.size() > 1 ? 1 : 0;
-  list.sprite(cell.labels[labels], t);
+  const Sprite &art = cell.labels[labels];
+  const std::vector<ExtraStatLine> page =
+      logic_.details_page() ? logic_.details_lines() : std::vector<ExtraStatLine>{};
+  if (page.empty()) {
+    list.sprite(art, t);
+  } else {
+    // The second page keeps only the art's title.
+    Sprite title = art;
+    title.rect[3] = title.rect[1] + details.extra_title_rows;
+    list.sprite(title, t);
+  }
+  if (logic_.has_details()) {
+    for (const Sprite &arrow : details.extra_stats->page_arrows) {
+      list.sprite(arrow, t);
+    }
+  }
   if (t < 1.0F) {
     return;
   }
   PartStatsStyle stats = script.list.stats;
   stats.right = cell.stats_right;
+  stats.pair_gap = details.totals.pair_gap;
+  if (!page.empty()) {
+    draw_second_page(list, page, art, stats);
+    draw_picture(list, line.goods);
+    return;
+  }
   const auto lines = part_stats(logic_.table(), logic_.parts(), logic_.garage(), line.goods);
   draw_part_stats(list, font_, stats, lines, line.goods, script.list.stats_top);
   draw_picture(list, line.goods);
   draw_totals(list, line, t);
+}
+
+// The second page's lines from the first line's place in the labels' art
+// down over the totals', closing up when there are more than fit.
+void AssembleScreen::draw_second_page(DrawList &list, const std::vector<ExtraStatLine> &lines,
+                                      const Sprite &art, PartStatsStyle stats) const {
+  const AssembleScript &script = logic_.script();
+  const AssembleDetails &details = script.details;
+  Sprite names = art;
+  names.rect[1] += details.extra_rows_top;
+  names.position[1] += details.extra_rows_top;
+  const float room = names.rect[3] - names.rect[1];
+  const float step = std::min(stats.step, room / static_cast<float>(lines.size()));
+  if (step < stats.step) {
+    names.size = std::array{names.rect[2] - names.rect[0], room * step / stats.step};
+  }
+  stats.step = step;
+  draw_extra_stats(list, font_, *details.extra_stats, lines, names, 0, stats,
+                   script.list.stats_top);
 }
 
 // 0x0179ed: the value as it would be, right-aligned, with an arrow up or
@@ -160,8 +201,9 @@ void AssembleScreen::draw_totals(DrawList &list, const ShopGoods &line, const fl
       draw_value(list, after.chip_level, after.chip_level, decimals, cell.totals_right, y, alpha);
       break;
     case TotalRow::overclock:
-      draw_value(list, before.charge_seconds, after.charge_seconds, decimals, cell.totals_right, y,
-                 alpha);
+      // The charge time stops at 0 (an Accelerator alone cuts it below).
+      draw_value(list, std::max(0.0, before.charge_seconds), std::max(0.0, after.charge_seconds),
+                 decimals, cell.totals_right, y, alpha);
       draw_value(list, before.active_seconds, after.active_seconds, decimals,
                  cell.totals_right - style.pair_gap, y, alpha);
       break;

@@ -78,6 +78,9 @@ public:
   [[nodiscard]] double sides_seconds() const noexcept {
     return sides_seconds_;
   }
+  // Where a side of the pair is now against its place, as it rises out of
+  // the cell and parts (assemble_pointer.cpp).
+  [[nodiscard]] std::array<float, 2> side_shift(int side) const;
 
   // The list shows (under the details, a notice or a question when open).
   [[nodiscard]] bool list_open() const noexcept {
@@ -94,6 +97,16 @@ public:
   }
   [[nodiscard]] double details_seconds() const noexcept {
     return details_seconds_;
+  }
+  // The chosen part's second page of details (assemble_details.cpp): its
+  // extra stat lines, none without the style for them; and whether it
+  // shows instead of the first.
+  [[nodiscard]] std::vector<ExtraStatLine> details_lines() const;
+  [[nodiscard]] bool has_details() const {
+    return !details_lines().empty();
+  }
+  [[nodiscard]] bool details_page() const {
+    return details_page_ && has_details();
   }
   [[nodiscard]] bool can_fit(const ShopGoods &line) const;
   [[nodiscard]] bool fitted_here(const ShopGoods &line) const;
@@ -125,6 +138,12 @@ private:
   void sides_input(double tick_seconds, const InputFrame &input);
   void list_input(double tick_seconds, const InputFrame &input);
   void details_input(const InputFrame &input);
+  InputFrame pointer_input(InputFrame input);
+  void grid_pointer(InputFrame &input);
+  void sides_pointer(InputFrame &input);
+  void list_pointer(InputFrame &input);
+  void details_pointer(InputFrame &input) const;
+  bool turn_details(const InputFrame &input);
   void question_input(double tick_seconds, const InputFrame &input);
   void choose_cell();
   void open_list();
@@ -152,6 +171,7 @@ private:
   GoodsList list_;
   double list_seconds_{};
   double details_seconds_{};
+  bool details_page_{};
   int naming_hangar_{-1};
   std::string message_;
   int choice_{1};

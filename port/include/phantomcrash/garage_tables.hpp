@@ -102,7 +102,8 @@ struct GarageTables {
                                     PartKind kind, int id);
 
 // Adds each fitted module's critical and knockdown resistance to the CHIP's,
-// with no cap (0x075d4a); a missing module adds nothing.
+// with no cap, and sets the beam resistance from their laser reductions
+// added, kept to 0..100 percent (0x075d4a); a missing module adds nothing.
 void add_module_bonuses(CombatStats &combat, const GarageTables &garage,
                         const std::vector<int> &modules);
 

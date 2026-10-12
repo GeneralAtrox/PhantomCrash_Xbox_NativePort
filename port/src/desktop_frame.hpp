@@ -37,6 +37,11 @@ public:
   }
   void draw(DrawList &list, const QuestSave &quest) const;
   [[nodiscard]] bool day_clicked(const InputFrame &input, const QuestSave &quest) const;
+  // The HUD's SAVE button, once a tick from a screen that offers it: lit
+  // while the mouse is over it, and true when it was clicked. The button
+  // shows only on screens that ask, so it is never drawn where it does
+  // nothing.
+  bool save_clicked(const InputFrame &input);
   [[nodiscard]] const FrameStyle &style() const noexcept {
     return style_;
   }
@@ -44,6 +49,9 @@ public:
   void preload(TextureCache &textures) const;
 
 private:
+  // The day and money where this screen puts them, the SAVE button with them.
+  [[nodiscard]] HudStyle hud() const;
+
   const GlyphFont &font_;
   const FrameStyle &style_;
   const std::vector<MusicCredit> &credits_;
@@ -54,6 +62,8 @@ private:
   std::vector<int> credit_run_;
   double credit_seconds_{};
   double plate_seconds_{-1.0}; // since the plate started; negative until then
+  bool save_shown_{};
+  bool save_lit_{};
 };
 
 // A frame of only a menu's CURRENT MUSIC band: its meter and credit.

@@ -47,6 +47,8 @@ private:
   void draw_rows(DrawList &list) const;
   void draw_chosen(DrawList &list, const ShopGoods &line) const;
   [[nodiscard]] std::vector<ExtraStatLine> chosen_extras(const ShopGoods *line) const;
+  // The details' second page while it shows; none otherwise.
+  [[nodiscard]] std::vector<ExtraStatLine> second_page(const ShopGoods *line) const;
   // How the chosen goods' details sit with their extra lines.
   struct DetailsFit {
     float grow{};     // canvas pixels the details windows grow down

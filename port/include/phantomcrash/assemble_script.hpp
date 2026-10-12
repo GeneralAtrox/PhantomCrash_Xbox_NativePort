@@ -1,5 +1,6 @@
 #pragma once
 
+#include "phantomcrash/extra_stats_style.hpp"
 #include "phantomcrash/glyph_font.hpp"
 #include "phantomcrash/input.hpp"
 #include "phantomcrash/json.hpp"
@@ -125,6 +126,13 @@ struct AssembleDetails {
   // 0x03cbc3: the CHIP's face, paint or emblem picture of the part shown.
   std::array<float, 2> picture_at{};
   int picture_layer{};
+  // A part's second page (a port addition): its extra stat lines
+  // (part_stats.hpp "extras" and "details") lettered over the labels' art
+  // below its title, in place of its lines and the totals; left and right
+  // turn to it. Places are in source pixels of the cell's labels' art.
+  std::optional<ExtraStatsStyle> extra_stats;
+  float extra_title_rows{}; // the art kept above the lines: its title
+  float extra_rows_top{};   // the first line's top
 };
 
 // The hangar's ASSEMBLE (data/ui/assemble.json).

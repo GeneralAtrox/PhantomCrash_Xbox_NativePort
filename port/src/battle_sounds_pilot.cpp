@@ -26,7 +26,7 @@ bool locked_on(const std::vector<Combatant> &robots, const std::size_t index) {
     }
     for (std::size_t slot = 0; slot < weapon_slots; ++slot) {
       const WeaponTuning *weapon = robot.weapons[slot];
-      if (weapon != nullptr && !robot.lost[slot] && needs_lock_time(*weapon) &&
+      if (weapon != nullptr && !robot.lost[slot] && lock_sights(*weapon) &&
           robot.lock_candidates[slot] == static_cast<int>(index)) {
         return true;
       }

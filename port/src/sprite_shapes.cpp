@@ -186,6 +186,17 @@ ShapeOutline parse_outline(const json::JsonValue &value) {
 
 } // namespace
 
+std::vector<ShapeOutline> parse_shape_outlines(const json::JsonValue &list) {
+  std::vector<ShapeOutline> outlines;
+  for (const auto &outline : list.array()) {
+    outlines.push_back(parse_outline(outline));
+  }
+  if (outlines.empty()) {
+    throw std::runtime_error("shape needs at least one outline");
+  }
+  return outlines;
+}
+
 std::vector<SpriteShape> parse_sprite_shapes(const json::JsonValue &document) {
   std::vector<SpriteShape> shapes;
   const auto *list = document.find("shapes");

@@ -125,6 +125,10 @@ TEST_CASE("the load sets the leg motions' rates and the speeds with them") {
   const MovementTuning rolled = loaded_movement(tables, roller, load, strides);
   CHECK(close_to(rolled.dash_speed, legs_speeds(tables, roller, load).dash / 3.6F));
   CHECK(rolled.dash_motion_rate == 1.0F);
+  // A measured root drift does not make an unflagged motion move the robot:
+  // the rollers' clips wobble a few thousandths a second and would stall it.
+  CHECK(rolled.walk_stride);
+  CHECK(!rolled.dash_stride);
   LoadStats overloaded = load;
   overloaded.speed_factor = 0.000001F;
   const MovementTuning slow = loaded_movement(tables, roller, overloaded, strides);

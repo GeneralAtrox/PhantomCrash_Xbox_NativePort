@@ -5,6 +5,7 @@
 #include <array>
 #include <cstdint>
 #include <optional>
+#include <string>
 #include <string_view>
 
 namespace phantomcrash {
@@ -88,6 +89,11 @@ struct InputFrame {
   bool mouse_double_clicked{};
   float mouse_wheel{};              // positive: scroll up; consumed once per logic tick
   std::optional<int> dialog_choice; // a visible YES/NO button clicked by the desktop
+  // The keyboard's text while a screen takes it (Screen::wants_text): the
+  // characters typed (UTF-8), Backspaces and Enter, in place of its buttons.
+  std::string typed;
+  int erased{};
+  bool text_submit{};
 
   [[nodiscard]] bool any_pressed(Buttons mask) const {
     return (pressed & mask) != 0;

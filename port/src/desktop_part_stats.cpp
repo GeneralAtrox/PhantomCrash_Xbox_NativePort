@@ -36,7 +36,10 @@ void draw_part_stats(DrawList &list, const GlyphFont &font, const PartStatsStyle
       scale = std::min(scale, comparison->width / width);
     }
     auto quads = layout_run(font, run, 0, 0);
-    const float left = style.right - run_width(font, run) * scale;
+    // O.C ACTIVE paired on CHARGE's line, which comes next.
+    const bool paired = style.pair_gap > 0.0F && line.row == StatRow::active_time;
+    const float right = paired ? style.right - style.pair_gap : style.right;
+    const float left = right - run_width(font, run) * scale;
     for (auto &quad : quads) {
       quad.x = left + quad.x * scale;
       quad.y = y + quad.y * scale + font.cell * (1.0F - scale) * 0.5F;
@@ -51,7 +54,9 @@ void draw_part_stats(DrawList &list, const GlyphFont &font, const PartStatsStyle
       word.position = {style.right + style.sign_offset, y};
       list.sprite(word);
     }
-    y += style.step;
+    if (!paired) {
+      y += style.step;
+    }
   }
 }
 

@@ -99,6 +99,7 @@ void NameEntry::update(const double tick_seconds, const InputFrame &input) {
   }
   animate(tick_seconds);
   controls(tick_seconds, input);
+  keyboard(input);
 }
 
 void NameEntry::animate(const double tick_seconds) {

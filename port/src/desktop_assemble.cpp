@@ -47,8 +47,15 @@ void AssembleScreen::show_robot() {
   preview_.show(preview_robot(garage, garage.hangars[static_cast<std::size_t>(hangar)]));
 }
 
-void AssembleScreen::tick(const InputFrame &input, const double tick_seconds) {
-  logic_.update(tick_seconds, input);
+void AssembleScreen::tick(const InputFrame &raw_input, const double tick_seconds) {
+  const AssembleScript &script = logic_.script();
+  // The mouse on the sort hints over an open list, and on the boxes' YES,
+  // NO and OK; the rest in the logic (assemble_pointer.cpp).
+  const InputFrame input =
+      logic_.view() == AssembleView::list && logic_.list_seconds() >= script.list.window.seconds
+          ? sort_pointer(raw_input, script.sort_name, script.sort_price)
+          : raw_input;
+  logic_.update(tick_seconds, notice_.pointer_input(input, script.confirm_buttons));
   tick_frame(tick_seconds, logic_.faded_in());
   notice_.update(logic_.message(), logic_.view() == AssembleView::question, logic_.choice(),
                  logic_.script().messages, tick_seconds);
@@ -196,14 +203,11 @@ void AssembleScreen::draw_panel(DrawList &list) const {
 // parts; the chosen side lit.
 void AssembleScreen::draw_sides(DrawList &list) const {
   const AssembleSides &sides = *logic_.cell().sides;
-  const float t = static_cast<float>(std::clamp(logic_.sides_seconds() / sides.seconds, 0.0, 1.0));
-  const float rise = std::clamp(t * 2.0F, 0.0F, 1.0F) * sides.rise;
-  const float spread = std::clamp((t - 0.5F) * 2.0F, 0.0F, 1.0F) * sides.spread;
   for (std::size_t side = 0; side < 2; ++side) {
-    const float dx = side == 0 ? spread : -spread;
-    list.sprite(shifted(sides.plain[side], dx, -rise));
+    const auto [dx, dy] = logic_.side_shift(static_cast<int>(side));
+    list.sprite(shifted(sides.plain[side], dx, dy));
     if (static_cast<int>(side) == logic_.side()) {
-      list.sprite(shifted(sides.lit[side], dx, -rise));
+      list.sprite(shifted(sides.lit[side], dx, dy));
     }
   }
 }

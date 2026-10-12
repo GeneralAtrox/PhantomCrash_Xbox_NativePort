@@ -22,7 +22,9 @@ namespace phantomcrash {
 // glow, and the burst each take sends to the robot.
 class DesktopSupply final {
 public:
-  DesktopSupply(WorldRenderer &world, const SupplyLook &look, int stage);
+  // `kinds` (the drop's) gives the pictures of the kinds that name one.
+  DesktopSupply(WorldRenderer &world, const SupplyLook &look, int stage,
+                const std::vector<SupplyKind> &kinds = {});
 
   [[nodiscard]] bool ready() const noexcept {
     return model_ >= 0;
@@ -43,6 +45,8 @@ public:
   // Starts this tick's takes' bursts in `effects` and keeps the bursts in
   // flight heading for their robots (0x066e50, 0x0880ad).
   void tick(const Battle &battle, EffectSystem *effects);
+  // Pickup type `type`'s look in the drop's settings, or null.
+  [[nodiscard]] static const SupplyKindLook *kind_look(const SupplyDrop &drop, int type);
 
 private:
   struct Burst {
@@ -51,6 +55,14 @@ private:
   };
   // The glow colour and the burst level of pickup type `type`.
   [[nodiscard]] int effect_of(const SupplyDrop &drop, int type) const;
+  // desktop_supply_kinds.cpp: the kinds' own looks.
+  // The original crate pickup type `type` is drawn with.
+  [[nodiscard]] static int crate_of(int type, const SupplyKindLook *kind);
+  // Gives the crate's pieces from `first` on the kind's picture and colours.
+  void dress_crate(int type, const SupplyKindLook *kind, std::size_t first,
+                   std::vector<WorldItem> &items) const;
+  // The glow's colour (its hue turning when the kind cycles it).
+  [[nodiscard]] std::array<float, 3> glow_colour(const SupplyDrop &drop, int type) const;
 
   void add_mesh(int mesh, const Mat4 &world, std::vector<WorldItem> &items) const;
   // Where the flying carrier's mesh is drawn: a turned door, the spinner or
@@ -70,6 +82,7 @@ private:
   int counter_model_{-1};
   int carrier_light_model_{-1};
   std::array<int, supply_kind_count> counter_images_{};
+  std::vector<int> kind_images_; // by kind, -1 for none
   unsigned counter_seen_{};
   int glow_texture_{-1};
   std::vector<Burst> bursts_;

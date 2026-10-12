@@ -33,7 +33,7 @@ struct EnemyLevelTag {
 
 struct DaySkipScript {
   bool enabled{};                // false without a "skip" entry: no button
-  std::vector<std::string> from; // the places the schedule offers it from
+  std::vector<std::string> from; // the places the schedule offers it from; "*" for all
   std::string to;                // the screen that sleeps the last night
   Sprite button, button_selected;
   // Lines of the question; "{day}" is the day skipped to, "{days}" the

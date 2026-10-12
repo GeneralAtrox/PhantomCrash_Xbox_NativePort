@@ -163,6 +163,7 @@ add_library(phantomcrash_core
   src/used_sv.cpp
   src/used_sv_pointer.cpp
   src/chip_shop_script.cpp
+  src/chip_spec_rows.cpp
   src/chip_shop.cpp
   src/chip_shop_pointer.cpp
   src/chip_uplift.cpp
@@ -181,11 +182,14 @@ add_library(phantomcrash_core
   src/assemble_script.cpp
   src/assemble_fitting.cpp
   src/assemble.cpp
+  src/assemble_details.cpp
+  src/assemble_pointer.cpp
   src/sv_spec.cpp
   src/sv_spec_script.cpp
   src/test_drive.cpp
   src/robot_totals.cpp
   src/module_shop.cpp
+  src/module_shop_details.cpp
   src/module_shop_pointer.cpp
   src/music_library.cpp
   src/music_program.cpp
@@ -196,6 +200,7 @@ add_library(phantomcrash_core
   src/message_box.cpp
   src/motion.cpp
   src/name_entry.cpp
+  src/name_entry_keyboard.cpp
   src/name_entry_script.cpp
   src/option_menu.cpp
   src/option_script.cpp
@@ -349,6 +354,7 @@ if(BUILD_TESTING)
     tests/dealer_tests.cpp
     tests/used_sv_tests.cpp
     tests/chip_shop_tests.cpp
+    tests/chip_spec_rows_tests.cpp
     tests/chip_uplift_tests.cpp
     tests/tune_shop_tests.cpp
     tests/hangar_menu_tests.cpp
@@ -612,7 +618,7 @@ if(PHANTOMCRASH_BUILD_DESKTOP)
     src/desktop_screens_rumbling.cpp
     src/desktop_screens_music.cpp
     src/desktop_screens_finale.cpp
-    src/desktop_screens_schedule.cpp
+    src/desktop_screens_overlay.cpp
     src/desktop_screens_menus.cpp
     src/desktop_screens_battle.cpp
     src/desktop_settings_menu.cpp
@@ -670,6 +676,7 @@ if(PHANTOMCRASH_BUILD_DESKTOP)
     src/desktop_part_stats.cpp
     src/desktop_extra_stats.cpp
     src/desktop_chip_dialog.cpp
+    src/desktop_chip_spec_rows.cpp
     src/desktop_records_convention.cpp
     src/desktop_records_trophies.cpp
     src/desktop_schedule.cpp
@@ -683,6 +690,7 @@ if(PHANTOMCRASH_BUILD_DESKTOP)
     src/desktop_town_screen.cpp
     src/desktop_cockpit.cpp
     src/desktop_supply.cpp
+    src/desktop_supply_kinds.cpp
     src/desktop_effects.cpp
     src/desktop_source_particles.cpp
     src/desktop_source_projectiles.cpp

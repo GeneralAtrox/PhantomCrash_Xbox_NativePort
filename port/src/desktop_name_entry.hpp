@@ -31,6 +31,9 @@ public:
   [[nodiscard]] bool day_clicked(const InputFrame &input) const override {
     return frame_.day_clicked(input, entry_.save());
   }
+  bool save_clicked(const InputFrame &input) override {
+    return frame_.save_clicked(input);
+  }
   void set_music(const std::string &file) override {
     frame_.set_music(file);
   }
@@ -39,6 +42,9 @@ public:
   }
   [[nodiscard]] std::vector<std::string> take_sounds() override {
     return entry_.take_sounds();
+  }
+  [[nodiscard]] bool wants_text() const override {
+    return entry_.takes_text();
   }
   [[nodiscard]] bool done() const override {
     return entry_.done();

@@ -324,7 +324,7 @@
   },
   "ammo_refill_seconds": 0,
   "supply": {
-   "notes": "FreePlay's supply drops (0x066940; the stage's routes are tables/battle_scenes.json supply_routes). Counts are in the original's 30 Hz ticks: the carrier flies 'speed' of a route segment a tick, opens its hatch on the drop segment and lets its pickups fall drop_ticks apart; a landed pickup waits lifetime_ticks. 'chances' are the kinds' odds (stages 6 and 7, set 6 of the table at 0x24b3cc); each kind gives money (credits), repair (a share of the armour) or ammo (a share of one weapon's magazine). A shot within carrier_radius brings the carrier down and pays its shooter shot_bounty; an explosion plays immediately and cargo still carried is removed, while already falling or landed pickups survive. The wreck keeps wreck_keep of its horizontal speed and sinks wreck_sink a tick until it contacts the stage or wreck_ticks pass, then explodes again. A shot within pickup_radius bursts a pickup. 'look' names the meshes of each stage parity's model (resource 207 even, 208 odd).",
+   "notes": "FreePlay's supply drops (0x066940; the stage's routes are tables/battle_scenes.json supply_routes). Counts are in the original's 30 Hz ticks: the carrier flies 'speed' of a route segment a tick, opens its hatch on the drop segment and lets its pickups fall drop_ticks apart; a landed pickup waits lifetime_ticks. each kind's 'chance' is its odds (stages 6 and 7, set 6 of the table at 0x24b3cc) and it gives money (credits), repair (a share of the armour) or ammo (a share of one weapon's magazine). A shot within carrier_radius brings the carrier down and pays its shooter shot_bounty; an explosion plays immediately and cargo still carried is removed, while already falling or landed pickups survive. The wreck keeps wreck_keep of its horizontal speed and sinks wreck_sink a tick until it contacts the stage or wreck_ticks pass, then explodes again. A shot within pickup_radius bursts a pickup. 'look' names the meshes of each stage parity's model (resource 207 even, 208 odd).",
    "speed": 0.03,
    "pickups": 3,
    "drop_ticks": 50,
@@ -335,18 +335,21 @@
    "wreck_keep": 0.6,
    "wreck_sink": 0.3,
    "wreck_ticks": 500,
-   "chances": [0.08, 0.12, 0.08, 0.02, 0.15, 0.1, 0.1, 0.06, 0.15, 0.14],
+   "kinds_notes": "Each pickup rolls one kind by 'chance'; a pickup's kind is its place in this list, so only ever append. Money 'amount' is in stored units (tens of NY): 10000 shows as 100,000 NY. The first ten are the original's (its chances, except 1,000 NY at 0.0625 for the port's three top tiers); the look fields are the port's (docs/SUPPLY_BOXES.md): 'image' a crate picture drawn on original crate 'crate', 'tint' its body colour and 'label_tint' its lettering's, 'glow' (else the tint), 'glow_scale', 'glow_cycle' hue turns a second, 'sheen' and 'take_sounds'.",
    "kinds": [
-    { "effect": "money", "amount": 100 },
-    { "effect": "money", "amount": 500 },
-    { "effect": "money", "amount": 1000 },
-    { "effect": "money", "amount": 10000 },
-    { "effect": "repair", "amount": 0.1 },
-    { "effect": "repair", "amount": 0.3 },
-    { "effect": "repair", "amount": 0.5 },
-    { "effect": "ammo", "amount": 0.3 },
-    { "effect": "ammo", "amount": 0.5 },
-    { "effect": "ammo", "amount": 1.0 }
+    { "effect": "money", "amount": 100, "chance": 0.0625 },
+    { "effect": "money", "amount": 500, "chance": 0.12 },
+    { "effect": "money", "amount": 1000, "chance": 0.08 },
+    { "effect": "money", "amount": 10000, "chance": 0.02, "image": "textures/supply/money_100000.png", "tint": "#8A4FFF", "label_tint": "#FFFFFF" },
+    { "effect": "repair", "amount": 0.1, "chance": 0.15 },
+    { "effect": "repair", "amount": 0.3, "chance": 0.1 },
+    { "effect": "repair", "amount": 0.5, "chance": 0.1 },
+    { "effect": "ammo", "amount": 0.3, "chance": 0.06 },
+    { "effect": "ammo", "amount": 0.5, "chance": 0.15 },
+    { "effect": "ammo", "amount": 1.0, "chance": 0.14 },
+    { "effect": "money", "amount": 25000, "chance": 0.01, "crate": 3, "image": "textures/supply/money_250000.png", "tint": "#FF8A1E", "label_tint": "#FFFFFF" },
+    { "effect": "money", "amount": 50000, "chance": 0.005, "crate": 3, "image": "textures/supply/money_500000.png", "tint": "#FFC83A", "label_tint": "#4A2A08", "sheen": 0.6 },
+    { "effect": "money", "amount": 100000, "chance": 0.0025, "crate": 3, "image": "textures/supply/money_1000000.png", "tint": "#FFD54A", "label_tint": "#B01818", "sheen": 1.0, "glow_scale": 1.5, "glow_cycle": 0.75, "take_sounds": ["supply_take", "spin_pay"] }
    ],
    "look": {
     "models": [

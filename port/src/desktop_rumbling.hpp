@@ -43,6 +43,9 @@ public:
   [[nodiscard]] const QuestSave *quest_save() const override {
     return logic_.done() ? &logic_.quest() : nullptr;
   }
+  [[nodiscard]] const QuestSave *pending_quest() const override {
+    return &logic_.quest();
+  }
   [[nodiscard]] const RumblingEntry *rumbling_entry() const override {
     return logic_.done() && logic_.entry() ? &*logic_.entry() : nullptr;
   }

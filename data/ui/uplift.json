@@ -89,6 +89,30 @@
    {"id": "2731", "image": "textures/scroll/uplift_tex/1.png", "rect": [576, 480, 776, 640], "position": [492, 224], "layer": 259, "centered": true}
   ],
   "pop_thin": 0.05,
+  "rows": {
+   "notes": "A port addition: the fire control as rows in a taller panel. The window, preview and stats box grow by grow canvas units with their tops raise higher, keeping window_caps, preview_caps and box_caps rows of their art whole and stretching the middle (the stats box's from its empty box_plain rows). Rows start rows_top below the stats box art's top; each is row_height tall with a separator (the art's line rows) at its foot, a divider block divider_height tall with the art's divider rows. Range rows show the reticle's size, washed in its preview colour (tint_alpha: wash, left strip). Positions are canvas units from the stats box art's left; ink is a label's ink top and bottom below its row's top. Digits are the number font at digit_scale, right-aligned.",
+   "raise": 16, "grow": 16,
+   "window_caps": [24, 30], "preview_caps": [34, 34], "box_caps": [12, 18], "box_plain": [20, 30],
+   "line": [46, 47], "divider": [89, 92],
+   "preview_pop": 0, "box_pop": 1,
+   "rows_top": 11, "row_height": 19, "divider_height": 8,
+   "font": "helvetica_italic", "label_colour": "#c6c7c6", "label_left": [14, 18],
+   "axis_ink": [8, 13], "x_at": [98, 134], "y_at": [142, 178],
+   "value_right": 170, "unit_left": 174, "digit_scale": 0.533, "digit_top": 5,
+   "value_colour": "#ffffff", "changed_colour": "#ffcb00",
+   "swatch": {"image": "textures/scroll/common_2d_tex/1.png", "rect": [30, 21, 34, 25]},
+   "tint_span": [12, 186], "tint_alpha": [0.19, 0.86], "strip_width": 3,
+   "rows": [
+    {"label": "Aiming Range", "ink": [7.5, 14.7], "range": "inner", "tint": "#ff00b5"},
+    {"label": "Lock On Range", "ink": [7.5, 14.7], "range": "outer", "tint": "#0dffba"},
+    {"divider": true},
+    {"label": "Mortal Shot", "ink": [7.5, 13], "stat": "mortal_shot", "unit": "%", "unit_ink": [5.5, 13]},
+    {"label": "Repulsion Shield", "ink": [7.5, 14.7], "stat": "repulsion_shield", "unit": "%", "unit_ink": [5.5, 13]},
+    {"label": "Lock On Time", "ink": [7.5, 13], "stat": "lock_time", "decimals": 2, "unit": "s", "unit_ink": [7.3, 13]},
+    {"label": "Aim Speed", "ink": [7.5, 14.7], "stat": "aim_speed"},
+    {"label": "Knockdown Resist", "ink": [7.5, 13], "stat": "knockdown_resistance", "decimals": 1, "unit": "%", "unit_ink": [5.5, 13]}
+   ]
+  },
   "spec": {
    "labels": {"id": "2737", "image": "textures/scroll/uplift_tex/1.png", "rect": [776, 480, 976, 640], "position": [392, 144], "layer": 260},
    "inner_shapes": [

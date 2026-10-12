@@ -255,3 +255,122 @@ TEST_CASE("ARM asks for a side first; NAME leaves for NAME ENTRY with the hangar
   CHECK(logic.next() == "name_entry");
   CHECK(logic.naming_hangar() == 0);
 }
+
+TEST_CASE("left and right turn a part's details to its extra lines, only a part's with any") {
+  Bench bench;
+  bench.parts.legs[0].knockback_resistance.base = 30.0F;
+  Assemble logic(shipped_script(), bench.quest, bench.parts, bench.garage, bench.table, 0);
+  settle(logic);
+  const AssembleScript &script = logic.script();
+  REQUIRE(script.details.extra_stats.has_value());
+  tap(logic, script.down);
+  REQUIRE(logic.cell().item == AssembleItem::legs);
+  tap(logic, script.confirm_buttons);
+  tap(logic, script.confirm_buttons);
+  REQUIRE(logic.view() == AssembleView::details);
+  REQUIRE(logic.chosen()->goods.id == 0);
+  const auto lines = logic.details_lines();
+  REQUIRE(lines.size() == 1);
+  CHECK(lines[0].label == "KNOCKBACK RESIST");
+  CHECK(lines[0].value == "30");
+  CHECK(!logic.details_page());
+  tap(logic, script.right);
+  CHECK(logic.details_page());
+  CHECK(logic.view() == AssembleView::details);
+  tap(logic, script.left);
+  CHECK(!logic.details_page());
+  tap(logic, script.right);
+  // Opening the details again starts on the first page.
+  tap(logic, script.cancel_buttons);
+  tap(logic, script.confirm_buttons);
+  REQUIRE(logic.view() == AssembleView::details);
+  CHECK(!logic.details_page());
+  // A body has no extra lines: right does nothing.
+  tap(logic, script.cancel_buttons);
+  tap(logic, script.cancel_buttons);
+  tap(logic, script.up);
+  REQUIRE(logic.cell().item == AssembleItem::body);
+  tap(logic, script.confirm_buttons);
+  tap(logic, script.confirm_buttons);
+  REQUIRE(logic.view() == AssembleView::details);
+  CHECK(!logic.has_details());
+  tap(logic, script.right);
+  CHECK(!logic.details_page());
+  CHECK(logic.view() == AssembleView::details);
+}
+
+namespace {
+
+// A click at the middle of `sprite`, moved by (dx, dy).
+InputFrame click_on(const Sprite &sprite, const float dx = 0.0F, const float dy = 0.0F) {
+  const auto size = sprite.size.value_or(
+      std::array{sprite.rect[2] - sprite.rect[0], sprite.rect[3] - sprite.rect[1]});
+  const float x = sprite.position[0] + dx + (sprite.centered ? 0.0F : size[0] * 0.5F);
+  const float y = sprite.position[1] + dy + (sprite.centered ? 0.0F : size[1] * 0.5F);
+  InputFrame input;
+  input.pointer = std::array{x, y};
+  input.clicked = true;
+  return input;
+}
+
+void click(Assemble &logic, const InputFrame &input) {
+  logic.update(tick, input);
+  settle(logic, 0.5);
+}
+
+} // namespace
+
+TEST_CASE("the mouse fits a part: a cell, a line, then the line in its details") {
+  Bench bench;
+  Assemble logic(shipped_script(), bench.quest, bench.parts, bench.garage, bench.table, 0);
+  settle(logic);
+  const AssembleScript &script = logic.script();
+  const auto legs =
+      static_cast<std::size_t>(script.cell_for(AssembleItem::legs) - script.cells.data());
+  click(logic, click_on(script.cells[legs].icon));
+  REQUIRE(logic.cell().item == AssembleItem::legs);
+  REQUIRE(logic.view() == AssembleView::list);
+  settle(logic, 1.0);
+  tap(logic, script.down);
+  REQUIRE(logic.goods_list().row() == 1);
+  click(logic, click_on(script.list.cursor));
+  CHECK(logic.goods_list().row() == 0);
+  REQUIRE(logic.view() == AssembleView::details);
+  settle(logic, 1.0);
+  click(logic, click_on(script.list.cursor));
+  CHECK(logic.view() == AssembleView::list);
+  CHECK(logic.fitted().part(PartSlot::legs) != -1);
+  // A click on BACK goes back to the grid.
+  REQUIRE(!script.list.cancel_hint.empty());
+  click(logic, click_on(script.list.cancel_hint.front()));
+  CHECK(logic.view() == AssembleView::grid);
+}
+
+TEST_CASE("the mouse chooses ARM's side, and answers DIS's question") {
+  Bench bench;
+  bench.put(GoodsKind::body, bench.stock.body);
+  Assemble logic(shipped_script(), bench.quest, bench.parts, bench.garage, bench.table, 0);
+  settle(logic);
+  const AssembleScript &script = logic.script();
+  const auto arm =
+      static_cast<std::size_t>(script.cell_for(AssembleItem::arm) - script.cells.data());
+  click(logic, click_on(script.cells[arm].icon));
+  REQUIRE(logic.view() == AssembleView::sides);
+  settle(logic, 1.0);
+  const auto [dx, dy] = logic.side_shift(1);
+  click(logic, click_on(logic.cell().sides->plain[1], dx, dy));
+  CHECK(logic.side() == 1);
+  CHECK(logic.view() == AssembleView::list);
+  tap(logic, script.cancel_buttons, 2);
+  REQUIRE(logic.view() == AssembleView::grid);
+  const auto dis =
+      static_cast<std::size_t>(script.cell_for(AssembleItem::dismantle) - script.cells.data());
+  click(logic, click_on(script.cells[dis].icon));
+  REQUIRE(logic.view() == AssembleView::question);
+  InputFrame yes{script.confirm_buttons, script.confirm_buttons, 1};
+  yes.dialog_choice = 0;
+  logic.update(tick, yes);
+  settle(logic);
+  CHECK(logic.view() == AssembleView::grid);
+  CHECK(logic.fitted().part(PartSlot::body) == -1);
+}

@@ -92,6 +92,12 @@ public:
     return list_.scroll();
   }
   [[nodiscard]] const ShopGoods *chosen() const;
+  // The chosen goods have a second page of details (a weapon's), and it
+  // shows instead of the first (module_shop_details.cpp).
+  [[nodiscard]] bool has_details() const;
+  [[nodiscard]] bool details_page() const noexcept {
+    return details_page_ && has_details();
+  }
   // How long the list has been open, for its windows popping open.
   [[nodiscard]] double list_seconds() const noexcept {
     return list_seconds_;
@@ -112,6 +118,8 @@ public:
 
 private:
   InputFrame pointer_input(InputFrame input);
+  bool turn_details(const InputFrame &input);
+  void details_pointer(InputFrame &input) const;
   enum class After { list, categories };
 
   void grid_input(double tick_seconds, const InputFrame &input);
@@ -145,6 +153,7 @@ private:
   double picture_seconds_{};
   double strip_seconds_{};
   GoodsList list_;
+  bool details_page_{};
   double list_seconds_{};
   std::string message_;
   After after_{After::list};

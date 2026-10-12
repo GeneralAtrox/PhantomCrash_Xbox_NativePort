@@ -153,7 +153,7 @@ void Battle::update_lock(Combatant &robot, const std::size_t slot, const float s
   robot.locks[slot] = held ? candidate : -1;
   // 0x051045: a missile lock just made on a player's robot warns it (robot
   // 0 is the player's).
-  if (robot.locks[slot] == 0 && before != 0 && needs_lock_time(*weapon)) {
+  if (robot.locks[slot] == 0 && before != 0 && lock_sights(*weapon)) {
     chatter(robot, chatter_event::locked_on);
   }
 }

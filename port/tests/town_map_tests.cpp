@@ -77,6 +77,31 @@ TEST_CASE("the town map's cursor steps round the places and waits for the rider"
   CHECK(map.place() == 7); // round past the start
 }
 
+TEST_CASE("the town map's left and right follow the screen along the bottom") {
+  TownMap map = town("sonic_amp");
+  REQUIRE(map.place() == 4);
+  run(map, 0.6);
+  press(map, button::left);
+  CHECK(map.place() == 3); // PlusTech, to the left
+  run(map, 0.2);
+  press(map, button::right);
+  run(map, 0.2);
+  press(map, button::right);
+  CHECK(map.place() == 5); // Ventuno, to the right
+  run(map, 0.2);
+  press(map, button::right);
+  CHECK(map.place() == 6); // up to Kojima, further right
+}
+
+TEST_CASE("the town map keeps the original's number order without follow_screen") {
+  TownMapScript script = shipped();
+  script.follow_screen = false;
+  TownMap map(std::move(script), "sonic_amp", {});
+  run(map, 0.6);
+  press(map, button::left);
+  CHECK(map.place() == 5); // the next number, Ventuno, to the right
+}
+
 TEST_CASE("the town map's sign grows once the map has faded in") {
   TownMap map = town("garage");
   CHECK(!map.sign());

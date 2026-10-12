@@ -28,6 +28,10 @@ struct DisplayLayout {
   bool centered{};
   bool stretch{};
   float slant{};
+  bool right{}; // against the box's right edge
+  // Sized and set as the font's capitals are, rather than fitted by its own
+  // ink: lowercase stays smaller and sits on the capitals' line ("m", "m/s").
+  bool capitals{};
 };
 
 // Whole strings drawn from an installed outline font (DisplayFont) at the
@@ -52,6 +56,7 @@ private:
   struct Raster {
     SDL_Texture *texture{};
     float width{}, height{}; // the ink, in pixels
+    float top{};             // the ink's top below the line's
   };
   struct Impl; // the platform's rasterizer
   [[nodiscard]] const std::string *face(const DisplayFont &font);

@@ -214,7 +214,11 @@ holding L or R (Q/E) fast-forwards. The scripts are the converted
 `data\story\talk.json`. Then NAME ENTRY opens:
 
 - the D-pad moves over the Alphabet and Symbols grids and the tab row;
-- A types, X deletes, Y adds a space, L/R change page and B jumps to End.
+- A types, X deletes, Y adds a space, L/R change page and B jumps to End;
+- or type on the keyboard: each key types its full-width character and the
+  cursor jumps to it (`keyboard.aliases` in `data\ui\name_entry.json` maps
+  keys the grids lack, such as `-` to the long bar), Backspace deletes and
+  Enter ends the entry. The arrows and Esc still move and jump to End.
 
 Ending with no name shows the original's "No input." notice. Otherwise the
 name is saved with the settings, event 49 plays, and Pepper's guide opens:
@@ -277,7 +281,10 @@ maker's legs take the body's own body bones, and another maker's arms and
 back weapons hang from the body's maker's mounts (`robot_preview.json`'s
 maker tables). Gold is fitted here. A line's details show
 its own stats and the whole robot's before and after, with arrows, and
-confirm fits it or takes it off. A body with fewer socket holes takes the
+confirm fits it or takes it off. Left and right turn a part with extra
+stats to a second page (a port addition): a weapon's type and hidden
+stats, a module's or CHIP's mortal shot and resistances, a leg's knockback
+resistance. A body with fewer socket holes takes the
 modules off. NAME names the hangar's Scoobee in NAME ENTRY. SV SPEC
 (`data\ui\sv_spec.json`, `--start sv_spec`) shows the SV chosen where it
 was opened from (a hangar, ASSEMBLE, a dealer's or the used SVs' offer):
@@ -361,7 +368,10 @@ BUY MODULE and SELL MODULE): a grid of categories (bodies, legs, arm and
 backpack weapons, options, colouring patterns, stickers), the day's goods
 or the player's in a list, and the chosen one's stats (the lines by kind
 are in `part_stats.json`), bought into the stock or sold for half their
-price. The shops share the notice box, the stats panel and the windows
+price. A weapon's panel adds its type (`weapon_types.json`, by record) and,
+on a second page that left, right or a click turns to, the battle's
+values the original never shows: fire rate, range, shot speed, spread,
+homing, blast, stun, knockback and knockdown. The shops share the notice box, the stats panel and the windows
 popping open. PlusTech's UPLIFT (`uplift.json`) shows the player's CHIPs on
 SELL CHIP's cards and raises the chosen one's level for the difference in
 price. CUSTOMIZE (`customize.json`) lists the player's bodies, legs and

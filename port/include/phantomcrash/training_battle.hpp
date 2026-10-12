@@ -30,7 +30,8 @@ struct TrainingRobot {
   float hp{100.0F}; // without the part tables, or when armour_from_parts is off
   int chip{-1};
   int chip_level{};
-  int body_level{}; // the body's and legs' (script.robots) levels
+  std::string chip_name; // the name the player gave the CHIP; empty: its record's
+  int body_level{};      // the body's and legs' (script.robots) levels
   int legs_level{};
   int pilot{-1}; // a pilot record (0x1c9920); its tag labels the marker
   bool boss{};   // a boss (loadout +0x70 1): a drone enters with the boss's scene

@@ -19,7 +19,7 @@
 namespace phantomcrash {
 
 bool ScreenRunner::mouse_aim() const {
-  return !schedule_overlay_ && screen_ && screen_->mouse_aim();
+  return !overlay_ && screen_ && screen_->mouse_aim();
 }
 
 std::unique_ptr<Screen> ScreenRunner::make_battle(const std::string &name) {

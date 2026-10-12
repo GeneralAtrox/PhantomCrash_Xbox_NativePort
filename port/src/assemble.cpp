@@ -103,7 +103,8 @@ void Assemble::refresh_help() {
   }
 }
 
-void Assemble::update(const double tick_seconds, const InputFrame &input) {
+void Assemble::update(const double tick_seconds, const InputFrame &raw_input) {
+  const InputFrame input = pointer_input(raw_input);
   if (done()) {
     return;
   }
@@ -288,11 +289,15 @@ void Assemble::list_input(const double tick_seconds, const InputFrame &input) {
   sound(script_.select_sound);
   view_ = AssembleView::details;
   details_seconds_ = 0.0;
+  details_page_ = false;
   refresh_help();
 }
 
 // 0x01b482: confirm fits the line (sys 29), cancel goes back to the list.
 void Assemble::details_input(const InputFrame &input) {
+  if (turn_details(input)) {
+    return;
+  }
   if (input.any_pressed(script_.confirm_buttons)) {
     fit_chosen();
     return;
@@ -324,6 +329,9 @@ void Assemble::fit_chosen() {
 // 0x01ade0: YES takes everything off (sys 41), NO goes back (sys 5);
 // cancel moves to NO.
 void Assemble::question_input(const double tick_seconds, const InputFrame &input) {
+  if (input.dialog_choice) {
+    choice_ = std::clamp(*input.dialog_choice, 0, 1);
+  }
   bool fresh = false;
   if (const int step = across_.step(tick_seconds, input, script_.left, script_.right, fresh)) {
     if (const int moved = std::clamp(choice_ + step, 0, 1); moved != choice_) {

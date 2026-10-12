@@ -66,6 +66,22 @@ void TownMap::move_to(const int next, const bool wrapped) {
   help_seconds_ = 0.0;
 }
 
+// A forward step (+1) goes to the next number and a back step to the one
+// before; following the screen, forward takes whichever of the two
+// neighbours stands further left and back the one further right.
+int TownMap::stepped_place(const int step) const {
+  const int count = static_cast<int>(script_.places.size());
+  const int next = move_cursor(place_, step, true, count);
+  if (!script_.follow_screen) {
+    return next;
+  }
+  const int other = move_cursor(place_, -step, true, count);
+  const float next_x = script_.places[static_cast<std::size_t>(next)].rider[0];
+  const float other_x = script_.places[static_cast<std::size_t>(other)].rider[0];
+  const bool other_is_wanted = step > 0 ? other_x < next_x : other_x > next_x;
+  return other_is_wanted ? other : next;
+}
+
 void TownMap::update(const double tick_seconds, const InputFrame &input) {
   seconds_ += tick_seconds;
   help_seconds_ += tick_seconds;
@@ -83,15 +99,15 @@ void TownMap::update(const double tick_seconds, const InputFrame &input) {
     return;
   }
   // The cursor counts down the places (0x6d1cd on 7 - place, flags 0x1f:
-  // sideways, always wrapping) and waits while the rider travels. A place
+  // sideways, always wrapping), or follows the screen, and waits while the
+  // rider travels. A place
   // the mouse moved onto is taken once he has arrived.
   bool fresh = false;
   const int step =
       repeat_.step(tick_seconds, input, script_.back_buttons, script_.forward_buttons, fresh);
   follow_mouse(input, step);
-  const int count = static_cast<int>(script_.places.size());
   if (step != 0 && !moving()) {
-    const int next = move_cursor(place_, step, true, count);
+    const int next = stepped_place(step);
     if (next != place_) {
       move_to(next, std::abs(next - place_) >= 2);
     }

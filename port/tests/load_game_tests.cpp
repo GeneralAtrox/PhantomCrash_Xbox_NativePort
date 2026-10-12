@@ -45,7 +45,41 @@ void press(LoadGame &menu, const Buttons buttons) {
   menu.update(tick, InputFrame{0, 0, 1});
 }
 
+// The mouse at `sprite`'s middle, moved there and optionally clicked.
+void point(LoadGame &menu, const Sprite &sprite, const bool click) {
+  const auto size = sprite.size.value_or(
+      std::array{sprite.rect[2] - sprite.rect[0], sprite.rect[3] - sprite.rect[1]});
+  InputFrame input{0, 0, 1};
+  input.pointer = std::array{sprite.position[0] + (sprite.centered ? 0 : size[0] / 2),
+                             sprite.position[1] + (sprite.centered ? 0 : size[1] / 2)};
+  input.pointer_moved = true;
+  input.clicked = click;
+  menu.update(tick, input);
+}
+
 } // namespace
+
+TEST_CASE("the mouse points at the slots and EXIT and clicks them and the notices") {
+  LoadGame menu = shipped(one_game());
+  run(menu, 0.6);
+  static_cast<void>(menu.take_sounds());
+  const LoadGameScript &script = menu.script();
+  point(menu, script.slots[2].plate, false);
+  CHECK(menu.slot() == 2);
+  CHECK(menu.phase() == LoadGame::Phase::slots);
+  point(menu, script.exit.normal, false);
+  CHECK(menu.phase() == LoadGame::Phase::exit);
+  point(menu, script.slots[0].plate, false);
+  CHECK(menu.phase() == LoadGame::Phase::slots);
+  CHECK(menu.slot() == 0);
+  CHECK((menu.take_sounds() == std::vector<std::string>{"adjust", "cursor", "cursor"}));
+  point(menu, script.slots[0].plate, true);
+  CHECK(menu.phase() == LoadGame::Phase::loaded);
+  run(menu, 0.6);
+  point(menu, menu.box().style().ok.normal, true);
+  run(menu, 0.6);
+  CHECK(menu.next() == "garage");
+}
 
 TEST_CASE("with no save LOAD GAME shows only its notice, and confirm leaves") {
   LoadGame menu = shipped(std::vector<SaveSlot>(3));
@@ -190,6 +224,30 @@ TEST_CASE("SAVE writes an empty slot at once and asks before writing over one") 
   CHECK(menu.phase() == LoadGame::Phase::saved);
 }
 
+TEST_CASE("SAVE's overwrite question answers a click on YES or NO") {
+  int written = 0;
+  SaveLoadHooks hooks;
+  hooks.save = [&](int) -> std::optional<QuestSave> {
+    ++written;
+    return QuestSave{};
+  };
+  LoadGame menu(parse_load_game(roots().document("ui/save_game.json")), one_game(),
+                parse_message_box(roots().document("ui/message_box.json")), hooks);
+  run(menu, 0.6);
+  const MessageBoxStyle &style = menu.box().style();
+  point(menu, menu.script().slots[0].plate, true);
+  REQUIRE(menu.phase() == LoadGame::Phase::question);
+  run(menu, 0.5);
+  point(menu, style.no.normal, true);
+  CHECK(menu.phase() == LoadGame::Phase::slots);
+  CHECK(written == 0);
+  point(menu, menu.script().slots[0].plate, true);
+  run(menu, 0.5);
+  point(menu, style.yes.normal, true);
+  CHECK(menu.phase() == LoadGame::Phase::saved);
+  CHECK(written == 1);
+}
+
 TEST_CASE("SAVE tells of a failed write; EXIT goes back to the SYSTEM menu") {
   LoadGame menu(parse_load_game(roots().document("ui/save_game.json")), std::vector<SaveSlot>(3),
                 parse_message_box(roots().document("ui/message_box.json")));
@@ -231,4 +289,32 @@ TEST_CASE("LOAD GAME takes the chosen slot's game") {
   press(menu, button::a);
   CHECK(loaded == 0);
   CHECK(menu.phase() == LoadGame::Phase::loaded);
+}
+
+TEST_CASE("a screen's frame can give the HUD's SAVE button its own offset from the day") {
+  const json::JsonValue document = roots().document("ui/garage.json");
+  const json::JsonValue *frame = document.find("frame");
+  REQUIRE(frame != nullptr);
+  CHECK(parse_frame_placement(*frame).save_offset.has_value());
+}
+
+TEST_CASE(
+    "the HUD's SAVE button sits between the day and the widest money, and moves with the day") {
+  const HudStyle hud = parse_frame_style(roots().document("ui/frame.json")).hud;
+  const auto box = hud_save_box(hud);
+  REQUIRE(box.has_value());
+  CHECK((*box)[0] > hud.day.right[0]);
+  float money_left = hud.money.right[0];
+  for (const auto &sprite : number_sprites(hud.font, hud.money, 999'999'999, hud.layer)) {
+    money_left = std::min(money_left, sprite.position[0]);
+  }
+  CHECK((*box)[2] < money_left);
+  CHECK(!hud.save_button->normal.empty());
+  CHECK(hud.save_button->lit.size() == hud.save_button->normal.size());
+
+  const HudStyle moved = placed_hud(hud, {{100, 20}, {300, 20}});
+  const auto moved_box = hud_save_box(moved);
+  REQUIRE(moved_box.has_value());
+  CHECK((*moved_box)[0] - 100 == (*box)[0] - hud.day_label.position[0]);
+  CHECK((*moved_box)[1] - 20 == (*box)[1] - hud.day_label.position[1]);
 }

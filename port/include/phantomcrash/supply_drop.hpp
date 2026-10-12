@@ -32,9 +32,34 @@ using SupplyContact = std::function<std::optional<Vec3>(Vec3, Vec3, float)>;
 // (0x06acc9), or a share of one weapon's magazine (0x06ad29).
 enum class SupplyEffect { money, repair, ammo };
 
+using SupplyColour = std::array<float, 3>;
+
+// How a kind is drawn (port addition; docs/SUPPLY_BOXES.md). By default a
+// kind is the original's crate of its own number, untinted, glowing in its
+// effect's colour. `image` replaces the crate's picture, drawn on crate
+// `crate`'s mesh; `tint` multiplies the picture and `label_tint` takes its
+// place where the picture's alpha is below 1 (the lettering). The glow takes
+// `glow` (else the tint, else the effect's colour), is glow_scale times as
+// big and turns through every hue glow_cycle times a second. `sheen` adds a
+// metal glint in the tint. A take plays `take_sounds` (none: the look's
+// take_sound).
+struct SupplyKindLook {
+  std::string image;
+  int crate{-1}; // -1: its own number's (an added kind: crate 0)
+  std::optional<SupplyColour> tint;
+  std::optional<SupplyColour> label_tint;
+  std::optional<SupplyColour> glow;
+  float glow_scale{1.0F};
+  float glow_cycle{};
+  float sheen{};
+  std::vector<std::string> take_sounds;
+};
+
 struct SupplyKind {
   SupplyEffect effect{SupplyEffect::money};
   float amount{}; // credits, or the share of the armour or magazine
+  float chance{}; // of each pickup carried
+  SupplyKindLook look;
 };
 
 // A pickup a robot took: what it gives, its type (0x21c378's index) and
@@ -52,6 +77,8 @@ struct SupplyRoute {
   int leave{};   // the segment it turns away on
 };
 
+// The original's kinds, each with its own crate in the carrier models;
+// data may append more (SupplySettings::kinds).
 inline constexpr int supply_kind_count = 10;
 
 struct SupplyPickupPulse {
@@ -164,16 +191,19 @@ struct SupplySettings {
   float blink_fast_ticks{60.0F}; // blinks at its fastest from this much life left
   float blink_fast{15.0F};       // blink rate then; before, lifetime / life left
   float blink_step{0.05F};       // of the blink's half cycle a tick, at rate 1
-  // The chance of each pickup kind (0x066b91 rolls per pickup; stages 6 and
-  // 7 take set 6 of the table at 0x24b3cc) and what each kind gives.
-  std::array<float, supply_kind_count> chances{0.08F, 0.12F, 0.08F, 0.02F, 0.15F,
-                                               0.1F,  0.1F,  0.06F, 0.15F, 0.14F};
-  std::array<SupplyKind, supply_kind_count> kinds{
-      SupplyKind{SupplyEffect::money, 100.0F},  SupplyKind{SupplyEffect::money, 500.0F},
-      SupplyKind{SupplyEffect::money, 1000.0F}, SupplyKind{SupplyEffect::money, 10000.0F},
-      SupplyKind{SupplyEffect::repair, 0.1F},   SupplyKind{SupplyEffect::repair, 0.3F},
-      SupplyKind{SupplyEffect::repair, 0.5F},   SupplyKind{SupplyEffect::ammo, 0.3F},
-      SupplyKind{SupplyEffect::ammo, 0.5F},     SupplyKind{SupplyEffect::ammo, 1.0F}};
+  // What each pickup kind gives and its chance (0x066b91 rolls per pickup;
+  // stages 6 and 7 take set 6 of the table at 0x24b3cc). A pickup's kind is
+  // its index here, so data only ever appends kinds.
+  std::vector<SupplyKind> kinds{SupplyKind{SupplyEffect::money, 100.0F, 0.08F},
+                                SupplyKind{SupplyEffect::money, 500.0F, 0.12F},
+                                SupplyKind{SupplyEffect::money, 1000.0F, 0.08F},
+                                SupplyKind{SupplyEffect::money, 10000.0F, 0.02F},
+                                SupplyKind{SupplyEffect::repair, 0.1F, 0.15F},
+                                SupplyKind{SupplyEffect::repair, 0.3F, 0.1F},
+                                SupplyKind{SupplyEffect::repair, 0.5F, 0.1F},
+                                SupplyKind{SupplyEffect::ammo, 0.3F, 0.06F},
+                                SupplyKind{SupplyEffect::ammo, 0.5F, 0.15F},
+                                SupplyKind{SupplyEffect::ammo, 1.0F, 0.14F}};
   std::vector<SupplyRoute> routes; // the stage's; none: no supply drops
   bool stage_routes{};             // includes an explicitly empty imported stage route list
   SupplyLook look;

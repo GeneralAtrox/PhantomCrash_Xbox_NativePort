@@ -67,8 +67,9 @@ load_chatter_window(TextureCache &textures, const GlyphFont &font, const DataRoo
                     const TalkTables &talk, EventTuning tuning, const TrainingBattle &setup);
 
 // A player's robot speaks from its chip's line table with its chip's name
-// and face; the pilot's name is the player's and there is no pilot face
-// (0x049552, 0x06d663).
-[[nodiscard]] ChatterSpeaker chip_speaker(const ChipRecord &chip, std::string player_name);
+// (the one the player gave it, else its record's) and face; the pilot's name
+// is the player's and there is no pilot face (0x049552, 0x06d663).
+[[nodiscard]] ChatterSpeaker chip_speaker(const ChipRecord &chip, const std::string &chip_name,
+                                          std::string player_name);
 
 } // namespace phantomcrash

@@ -159,6 +159,13 @@ NameEntryScript parse_name_entry(const json::JsonValue &document) {
       throw std::runtime_error("max_length must be at least 1");
     }
     parse_pages(document, script);
+    if (const auto *keyboard = document.find("keyboard")) {
+      if (const auto *aliases = keyboard->find("aliases")) {
+        for (const auto &[typed, key] : aliases->object()) {
+          script.typed_aliases[typed] = key.string();
+        }
+      }
+    }
     script.no_name = parse_lines(required(document, "no_name"));
     if (const auto *animation = document.find("animation")) {
       script.animation = parse_animation(*animation);

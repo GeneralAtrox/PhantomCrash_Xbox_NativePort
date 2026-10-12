@@ -19,7 +19,7 @@ OnlineBattleResources::OnlineBattleResources(SDL_Renderer *renderer, DataRoots d
       parts(parse_part_tables(converted(roots, "tables/parts.json"))),
       garage(parse_garage_tables(converted(roots, "tables/garage.json"))),
       contests(parse_contest_tables(converted(roots, "tables/town.json"))),
-      stats(parse_part_stats(roots.document("ui/part_stats.json"))),
+      stats(load_part_stats(roots)),
       rules(parse_rumbling_rules(roots.document("world/rumbling.json"))),
       training(parse_training(roots.document("world/training.json"))),
       drive(parse_test_drive(roots.document("world/test_drive.json"))),

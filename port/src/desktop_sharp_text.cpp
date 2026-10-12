@@ -32,6 +32,11 @@ SharpTextStyle parse_sharp_text(const json::JsonValue &document) {
   style.em = static_cast<float>(document.number_or("em", style.em));
   style.baseline = static_cast<float>(document.number_or("baseline", style.baseline));
   style.pen_x = static_cast<float>(document.number_or("pen_x", style.pen_x));
+  if (const auto *pictures = document.find("pictures")) {
+    for (const auto &glyph : pictures->array()) {
+      style.pictures.insert(static_cast<int>(glyph.number()));
+    }
+  }
   return style;
 }
 
@@ -272,7 +277,11 @@ bool SharpText::draw(const GlyphFont &font, const SDL_FRect &source, const SDL_F
   if (x + source.w > font.cell + slack || y + source.h > font.cell + slack) {
     return false;
   }
-  const Slot *found = slot(font, static_cast<int>(row) * font.columns + static_cast<int>(column));
+  const int glyph = static_cast<int>(row) * font.columns + static_cast<int>(column);
+  if (style_.pictures.contains(glyph)) {
+    return false;
+  }
+  const Slot *found = slot(font, glyph);
   if (found == nullptr) {
     return false;
   }

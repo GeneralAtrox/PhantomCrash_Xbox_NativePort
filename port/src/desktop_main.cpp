@@ -186,11 +186,7 @@ int run(const Options &options) {
     while (SDL_PollEvent(&event)) {
       if (event.type == SDL_EVENT_QUIT) {
         running = false;
-      } else if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat &&
-                 (event.key.scancode == SDL_SCANCODE_F11 ||
-                  ((event.key.scancode == SDL_SCANCODE_RETURN ||
-                    event.key.scancode == SDL_SCANCODE_KP_ENTER) &&
-                   (event.key.mod & SDL_KMOD_ALT)))) {
+      } else if (is_fullscreen_toggle(event)) {
         menu.set_fullscreen(!menu.settings().fullscreen);
       } else if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat &&
                  event.key.scancode == SDL_SCANCODE_F9) {
@@ -201,6 +197,7 @@ int run(const Options &options) {
     // Native menu interaction can change focus/capture while SDL pumps events.
     input.capture_mouse(host.window(), screens.mouse_aim() && host.focused() && !smoke,
                         menu.frame_active());
+    input.set_text_mode(host.window(), screens.wants_text() && host.focused() && !smoke);
     if (!smoke) {
       update_slai_menu(menu, root, configuration);
     }

@@ -7,6 +7,10 @@
 
 #include <SDL3_image/SDL_image.h>
 
+#include <algorithm>
+#include <array>
+#include <cmath>
+#include <utility>
 #include <vector>
 
 namespace phantomcrash {
@@ -293,20 +297,33 @@ void draw_sprite(TextureCache &textures, const Sprite &sprite, const Viewport &v
   const SDL_FRect rect{left, top, right - left, bottom - top};
   // Scaled up, filtering at a quad's edge reaches past its rectangle into
   // the atlas neighbours (a line along a face part, a seam between window
-  // pieces). Inset the rectangle so the edge pixels sample inside it:
-  // nothing texel for texel, as the original draws, up to half a texel
-  // when stretched far (the title's 8-texel bands).
-  const auto inset = [](const float pixels, const float texels) {
-    const float scale = texels > 1.0F ? pixels / texels : 1.0F;
-    return scale > 1.0F ? 0.5F - 0.5F / scale : 0.0F;
+  // pieces, a dark line down the garage menu titles' left edge). Inset each
+  // edge so the pixel centre nearest it samples at least half a texel
+  // inside: nothing texel for texel, as the original draws, up to half a
+  // texel when stretched far (the title's 8-texel bands). The edge's place
+  // between pixel centres counts, as a quad rarely starts on a whole pixel.
+  const auto insets = [](const float start, const float pixels, const float texels) {
+    if (texels <= 1.0F || pixels <= texels) {
+      return std::array<float, 2>{};
+    }
+    const float end = start + pixels;
+    // From each edge to the first and last pixel centre the quad covers.
+    const float lead = std::ceil(start - 0.5F) + 0.5F - start;
+    const float trail = end - (std::ceil(end - 0.5F) - 0.5F);
+    const float per_pixel = texels / pixels;
+    return std::array<float, 2>{std::max(0.0F, 0.5F - lead * per_pixel),
+                                std::max(0.0F, 0.5F - trail * per_pixel)};
   };
   for (const auto &quad : place_sprite(sprite, seconds)) {
     const auto pixels = viewport.to_pixels(quad.x, quad.y, quad.width, quad.height);
     SDL_FRect target{pixels.x, pixels.y, pixels.width, pixels.height};
-    const float inset_x = inset(pixels.width, rect.w);
-    const float inset_y = inset(pixels.height, rect.h);
-    SDL_FRect source{rect.x + inset_x, rect.y + inset_y, rect.w - 2.0F * inset_x,
-                     rect.h - 2.0F * inset_y};
+    auto inset_x = insets(pixels.x, pixels.width, rect.w);
+    if (sprite.flip_x) {
+      std::swap(inset_x[0], inset_x[1]);
+    }
+    const auto inset_y = insets(pixels.y, pixels.height, rect.h);
+    SDL_FRect source{rect.x + inset_x[0], rect.y + inset_y[0], rect.w - inset_x[0] - inset_x[1],
+                     rect.h - inset_y[0] - inset_y[1]};
     if (sprite.angle == 0.0F && !sprite.flip_x) {
       draw_sprite_edges(textures, texture, sprite, viewport, source, target);
       record_quad(textures, texture, source, target);

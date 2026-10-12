@@ -42,9 +42,24 @@ void DesktopInput::handle(const SDL_Event &event) {
       capture_mouse(mouse_window_, mouse_gameplay_, mouse_window_ui_);
       break;
     }
+    if (text_mode_ && event.key.scancode == SDL_SCANCODE_BACKSPACE) {
+      ++erased_; // held, it repeats
+      break;
+    }
+    if (text_mode_ && !event.key.repeat && !(event.key.mod & SDL_KMOD_ALT) &&
+        (event.key.scancode == SDL_SCANCODE_RETURN ||
+         event.key.scancode == SDL_SCANCODE_KP_ENTER)) {
+      text_submit_ = true;
+      break;
+    }
     // Alt combinations belong to the window (Alt+Enter, Alt+F4).
     if (!event.key.repeat && !(event.key.mod & SDL_KMOD_ALT)) {
       latched_[0] |= key_button(event.key.scancode);
+    }
+    break;
+  case SDL_EVENT_TEXT_INPUT:
+    if (text_mode_) {
+      typed_ += event.text.text;
     }
     break;
   case SDL_EVENT_MOUSE_MOTION:
@@ -267,7 +282,41 @@ InputFrame DesktopInput::sample(const bool focused, const Viewport &viewport) {
   pointer_moved_ = false;
   clicked_ = false;
   double_clicked_ = false;
+  if (focused) {
+    frame.typed = std::move(typed_);
+    frame.erased = erased_;
+    frame.text_submit = text_submit_;
+  }
+  typed_.clear();
+  erased_ = 0;
+  text_submit_ = false;
   return frame;
+}
+
+void DesktopInput::set_text_mode(SDL_Window *window, const bool on) {
+  if (on == text_mode_ || window == nullptr) {
+    return;
+  }
+  text_mode_ = on;
+  if (on) {
+    SDL_StartTextInput(window);
+  } else {
+    SDL_StopTextInput(window);
+  }
+  // Keys held across the switch must not type or press.
+  typed_.clear();
+  erased_ = 0;
+  text_submit_ = false;
+  latched_ = {};
+}
+
+bool is_fullscreen_toggle(const SDL_Event &event) {
+  if (event.type != SDL_EVENT_KEY_DOWN || event.key.repeat) {
+    return false;
+  }
+  const SDL_Scancode key = event.key.scancode;
+  return key == SDL_SCANCODE_F11 || ((key == SDL_SCANCODE_RETURN || key == SDL_SCANCODE_KP_ENTER) &&
+                                     (event.key.mod & SDL_KMOD_ALT));
 }
 
 } // namespace phantomcrash

@@ -58,6 +58,35 @@ void SvSpecScreen::draw_vehicle(DrawList &list) const {
   }
 }
 
+// The combat page (a port addition): each line's label and unit lettered as
+// the vehicle page's art letters them, its value placed as theirs are.
+void SvSpecScreen::draw_combat(DrawList &list) const {
+  const SvSpecScript &script = logic_.script();
+  const CombatLettering &lettering = script.combat_lettering;
+  const float left = lettering.origin[0];
+  float top = lettering.origin[1];
+  float y = script.values_top;
+  for (const CombatRow &row : script.combat_rows) {
+    const auto box = [&](const std::array<float, 2> &x, const std::array<float, 2> &ink) {
+      return std::array{left + x[0], top + ink[0], left + x[1], top + ink[1]};
+    };
+    list.label(script.value_layer, row.label, lettering.font, box(lettering.label_x, lettering.ink),
+               lettering.colour, lettering.shadow, lettering.shadow_blur);
+    if (!row.unit.empty()) {
+      list.label(script.value_layer, row.unit, lettering.unit_font,
+                 box(lettering.unit_x, row.unit_ink.value_or(lettering.ink)), lettering.colour,
+                 lettering.shadow, lettering.shadow_blur);
+    }
+    const std::vector<int> run =
+        glyph_run(font_, stat_text({StatRow::level, logic_.value(row.stat), row.decimals}));
+    list.text(script.value_layer,
+              layout_run(font_, run, script.values_right - run_width(font_, run), y),
+              script.value_colour);
+    top += script.values_step;
+    y += script.values_step;
+  }
+}
+
 // 0x03b82e: each slot's weapon, or Not Equip in red.
 void SvSpecScreen::draw_weapons(DrawList &list) const {
   const SvSpecScript &script = logic_.script();
@@ -75,17 +104,25 @@ void SvSpecScreen::draw(const Viewport &viewport) {
     const SvSpecScript &script = logic_.script();
     draw_window(list);
     preview_.draw(list, viewport, textures_.renderer());
-    list.sprite(script.pages[static_cast<std::size_t>(logic_.page())].panel);
+    if (const auto &panel = script.pages[static_cast<std::size_t>(logic_.page())].panel) {
+      list.sprite(*panel);
+    }
     for (const Sprite &arrow : script.arrows) {
       list.sprite(arrow);
     }
     for (const Sprite &hint : script.close_hint) {
       list.sprite(hint);
     }
-    if (logic_.page() == 0) {
+    switch (logic_.page_kind()) {
+    case SpecPageKind::vehicle:
       draw_vehicle(list);
-    } else {
+      break;
+    case SpecPageKind::weapons:
       draw_weapons(list);
+      break;
+    case SpecPageKind::combat:
+      draw_combat(list);
+      break;
     }
     list.ticker(script.help_style, glyph_run(font_, logic_.help_text()), logic_.help_seconds());
   });

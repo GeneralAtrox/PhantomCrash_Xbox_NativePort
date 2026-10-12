@@ -142,6 +142,7 @@ TrainingScript test_drive_training(const TrainingScript &base, const TestDriveSc
   if (const StockItem *chip = entry(PartSlot::chip)) {
     player.chip = chip->id;
     player.chip_level = chip->level;
+    player.chip_name = chip->name;
   }
   player.modules.clear();
   for (const int stock : bay.modules) {

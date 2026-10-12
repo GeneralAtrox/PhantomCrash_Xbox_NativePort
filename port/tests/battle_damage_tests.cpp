@@ -1,5 +1,6 @@
-// The damage rules (0x0988e1): hits from behind, dodges, criticals that
-// knock off weapons, knockback, and a homing missile's rounds one at a time.
+// The damage rules (0x0988e1): hits from behind, laser reduction, dodges,
+// criticals that knock off weapons, knockback, and a homing missile's
+// rounds one at a time.
 
 #include "test_support.hpp"
 
@@ -20,6 +21,8 @@ BattleSettings damage_settings() {
     "arena": {"half_size": 100},
     "weapons": {
       "handgun": {"kind": "gun", "damage": 40, "cooldown": 5, "speed": 300},
+      "laser": {"kind": "gun", "hud_kind": 5, "damage": 25, "cooldown": 5, "speed": 300,
+                "range": 100},
       "breaker": {"kind": "gun", "damage": 40, "cooldown": 5, "speed": 300,
                   "knockdown_percent": 200},
       "pusher": {"kind": "gun", "damage": 1, "cooldown": 5, "speed": 300, "knockback": 30},
@@ -44,6 +47,15 @@ struct Range {
 
   [[nodiscard]] const Combatant &victim() const {
     return battle.robots()[static_cast<std::size_t>(target)];
+  }
+
+  // Holds a beam's trigger until it first hits the target, for a second at most.
+  void hold_beam() {
+    FireControl fire;
+    fire.fire[0] = true;
+    for (int i = 0; i < 60 && victim().hp == full && victim().invulnerable == 0.0F; ++i) {
+      battle.tick({}, fire, tick);
+    }
   }
 
   // Fires once and runs until the target is hit or a second has passed.
@@ -74,6 +86,20 @@ TEST_CASE("a shot from behind does three times the damage") {
   Range turned("handgun", 0.0F); // facing away, the way the shot flies
   turned.shoot();
   CHECK(std::fabs(turned.victim().hp - (full - 120.0F)) < 1e-3F);
+}
+
+TEST_CASE("laser reduction takes its share off a beam, the share's damage truncated") {
+  Range range("laser", pi);
+  CombatStats shielded;
+  shielded.beam_resistance = 0.3F;
+  range.battle.set_combat(range.target, shielded);
+  range.hold_beam();
+  CHECK(std::fabs(range.victim().hp - (full - 18.0F)) < 1e-3F); // 25 - trunc(7.5)
+
+  Range plain("handgun", pi); // not a beam: the reduction does nothing
+  plain.battle.set_combat(plain.target, shielded);
+  plain.shoot();
+  CHECK(std::fabs(plain.victim().hp - (full - 40.0F)) < 1e-3F);
 }
 
 TEST_CASE("a dodge misses and leaves the robot untouchable for a while") {

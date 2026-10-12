@@ -1,5 +1,6 @@
-Version 0.5.10 adds three new CHIPs, Cat V, Cat VI and Cat VII, sold in
-Wild Machines' BUY CHIP beside the original's.
+Version 0.5.11 adds three rare money boxes to the supply drops, up to a
+1,000,000 NY jackpot, with colours set in data, and shows more of each
+part's stats.
 
 This is a work-in-progress Windows x64 port. The ZIP includes
 `phantomcrash_port.exe`, the game data installer `phantomcrash_extract.exe`,
@@ -53,6 +54,37 @@ opens the Class D rental shortcut (`rumbling_d_night_rental` for the night
 one); it uses and saves the current quest.
 
 ## Included changes
+
+0.5.11 changes:
+
+- The supply carrier can drop three new money boxes: 250,000 NY (1%),
+  500,000 NY (0.5%) and a 1,000,000 NY jackpot (0.25%) whose glow cycles
+  through every colour and whose pickup plays the payout sting. The
+  100,000 NY box turns violet, 250,000 orange, 500,000 and 1,000,000 gold
+  with a metal sheen. The 1,000 NY box gives up the 1.75% they take.
+- Box kinds are a list in `data/world/training.json` (`battle.supply.kinds`):
+  each sets its chance, effect and amount, and may set its own picture,
+  body and lettering colours (`#rrggbb`), glow, sheen and pickup sounds.
+  New crate pictures are in `data/assets/textures/supply/`; see
+  `docs/SUPPLY_BOXES.md`. Computer robots treat every money box alike.
+- Left and right turn a part's details to a second page in ASSEMBLE and the
+  module shops: a weapon's type and hidden values (fire rate, range, shot
+  speed, spread, homing, blast, stun, knockback, knockdown), a module's or
+  CHIP's mortal shot and resistances, a leg's knockback resistance
+  (`data/ui/weapon_types.json`, `part_stats.json`).
+- BUY CHIP and UPLIFT show a CHIP's fire control as rows in a taller panel:
+  aiming and lock-on range tinted as in the preview, mortal shot, repulsion
+  shield, lock-on time, aim speed and knockdown resistance.
+- SV SPEC pages between the vehicle's and the weapons' specs.
+- NAME ENTRY takes the keyboard: typing a character jumps to its key and
+  types it; Backspace deletes and Enter ends the entry.
+- The mouse works in ASSEMBLE and in LOAD and SAVE (slots, EXIT, OK, YES
+  and NO). A SAVE button on the top bar opens SAVE. SKIP TO DAY is offered
+  from every place. The town map's left and right follow the screen.
+- Moving the mouse back reverses a turn at once. Laser reduction takes its
+  share off a beam truncated, as the original does; a shoulder weapon
+  without lock sights (a grenade launcher) fires along its mount; legs
+  without root motion move at their table speed.
 
 0.5.10 changes:
 

@@ -39,10 +39,16 @@ void Battle::ai_pickup(Combatant &drone, const float seconds) {
       }
     }
     // Original selects the nearest first, then rejects money for ability >=31
-    // (except in a showcase, quest +0x618c 1).
+    // (except in a showcase, quest +0x618c 1). The original tests the kind's
+    // number (money is 0..3); the port its effect, so added kinds count.
+    const auto &kinds = supply_->settings().kinds;
+    const auto money = [&](const int kind) {
+      return kind >= 0 && kind < static_cast<int>(kinds.size()) &&
+             kinds[static_cast<std::size_t>(kind)].effect == SupplyEffect::money;
+    };
     if (candidate < 0 ||
         (!settings_.ai.showcase && s.ability >= data.value("pickup_money_ability") &&
-         pickups[candidate].kind <= data.value("pickup_money_last_kind"))) {
+         money(pickups[candidate].kind))) {
       return;
     }
     s.pickup = candidate;

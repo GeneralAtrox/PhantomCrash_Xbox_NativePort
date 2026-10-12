@@ -108,7 +108,8 @@ void TrainingScreen::build_battle(const TrainingContext &context) {
   if (const ChipRecord *chip = parts ? parts->chip(setup.player.chip) : nullptr) {
     hud_->set_fire_control(chip_stats(*chip, setup.player.chip_level));
     if (chatter_) {
-      chatter_->set_speaker(player_index_, chip_speaker(*chip, context.player_name));
+      chatter_->set_speaker(player_index_,
+                            chip_speaker(*chip, setup.player.chip_name, context.player_name));
     }
   }
   if (world_ == nullptr || !world_->available() || context.robots == nullptr ||

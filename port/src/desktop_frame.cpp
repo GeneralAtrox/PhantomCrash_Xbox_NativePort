@@ -83,11 +83,19 @@ FramePlacement credit_band(const MenuTickers &tickers) {
   return placement;
 }
 
+HudStyle LocationFrame::hud() const {
+  HudStyle hud = placement_.hud_at ? placed_hud(style_.hud, *placement_.hud_at) : style_.hud;
+  if (hud.save_button && placement_.save_offset) {
+    hud.save_button->offset = *placement_.save_offset;
+  }
+  return hud;
+}
+
 bool LocationFrame::day_clicked(const InputFrame &input, const QuestSave &quest) const {
   if (!placement_.hud || !input.clicked || !input.pointer) {
     return false;
   }
-  const HudStyle hud = placement_.hud_at ? placed_hud(style_.hud, *placement_.hud_at) : style_.hud;
+  const HudStyle hud = this->hud();
   auto sprites = number_sprites(hud.font, hud.day, quest.day + 1, hud.layer);
   sprites.push_back(hud.day_label);
   // Include the space between DAY- and its digits as one mouse target.
@@ -106,10 +114,19 @@ bool LocationFrame::day_clicked(const InputFrame &input, const QuestSave &quest)
          (*input.pointer)[1] < bottom;
 }
 
+bool LocationFrame::save_clicked(const InputFrame &input) {
+  const HudStyle hud = this->hud();
+  const auto box = placement_.hud ? hud_save_box(hud) : std::nullopt;
+  save_shown_ = box.has_value();
+  save_lit_ = box && input.pointer && (*input.pointer)[0] >= (*box)[0] &&
+              (*input.pointer)[0] < (*box)[2] && (*input.pointer)[1] >= (*box)[1] &&
+              (*input.pointer)[1] < (*box)[3];
+  return save_lit_ && input.clicked;
+}
+
 void LocationFrame::draw(DrawList &list, const QuestSave &quest) const {
   if (placement_.hud) {
-    const HudStyle hud =
-        placement_.hud_at ? placed_hud(style_.hud, *placement_.hud_at) : style_.hud;
+    const HudStyle hud = this->hud();
     const auto &day = hud.day_label;
     const float height = day.size ? (*day.size)[1] : day.rect[3] - day.rect[1];
     hud_text(list, font_, "DAY-" + hud_number(hud, hud.day, quest.day + 1), day.position[0],
@@ -123,6 +140,10 @@ void LocationFrame::draw(DrawList &list, const QuestSave &quest) const {
         unit.size.value_or(std::array{unit.rect[2] - unit.rect[0], unit.rect[3] - unit.rect[1]});
     hud_text(list, font_, "NY", unit.position[0], unit.position[1], size[0], size[1], false,
              unit.layer, unit.colour);
+    if (const auto box = hud_save_box(hud); box && save_shown_) {
+      const HudSaveButton &button = *hud.save_button;
+      list.shape(hud.layer, save_lit_ ? button.lit : button.normal, *box);
+    }
   }
   // The plate shows only while a Scoobee is ridden (0x1d4a4).
   if (placement_.riding_plate && plate_seconds_ >= 0.0 && !quest.riding.empty()) {

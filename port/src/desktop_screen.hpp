@@ -58,6 +58,12 @@ public:
   [[nodiscard]] virtual bool day_clicked(const InputFrame & /*input*/) const {
     return false;
   }
+  // The HUD's SAVE button (a port addition), once a tick: lights it under
+  // the mouse and says whether it was clicked. Only screens showing the
+  // day and money offer it.
+  virtual bool save_clicked(const InputFrame & /*input*/) {
+    return false;
+  }
   virtual void set_movie_gain(float /*gain*/) {}
   [[nodiscard]] virtual AudioBus sound_bus() const {
     return AudioBus::ui;
@@ -67,6 +73,10 @@ public:
   }
   [[nodiscard]] virtual bool mouse_menu_back() const {
     return !mouse_aim();
+  }
+  // Whether the keyboard types text into this screen now (InputFrame::typed).
+  [[nodiscard]] virtual bool wants_text() const {
+    return false;
   }
 
   // The music track this screen wants (empty: silence; "keep": whatever
@@ -124,6 +134,12 @@ public:
   }
   [[nodiscard]] virtual const QuestSave *session_save() const {
     return quest_save();
+  }
+  // The game as this screen has it now, changes it hands back only as it
+  // closes included (a shop's purchases), for SAVE opened over it; null
+  // when it keeps none of its own.
+  [[nodiscard]] virtual const QuestSave *pending_quest() const {
+    return nullptr;
   }
   // The parts-stock entry NAME ENTRY names when it comes next (a dealer's
   // new CHIP, 0x3ad84), or -1.

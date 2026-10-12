@@ -77,6 +77,14 @@ struct WorldItem {
   bool local_light{true};
   // rainbow.xvu phase and vertical UV scroll, recorded with the world frame.
   std::optional<std::array<float, 2>> rainbow;
+  // The supply drops' crates (port addition): `paint` replaces whatever
+  // texture each material draws, not texture 0's alone; where the texture's
+  // alpha is below 1 (lettering) `label_colour` takes the place of `colour`
+  // (the texture's alpha then cuts nothing); `sheen` adds a metal glint in
+  // the item's colour.
+  bool paint_any{};
+  std::optional<std::array<float, 3>> label_colour;
+  float sheen{};
 };
 
 // A picture in the world that faces the camera, or runs along a streak from

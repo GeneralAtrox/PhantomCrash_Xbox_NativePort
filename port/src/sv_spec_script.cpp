@@ -8,6 +8,7 @@
 
 #include <map>
 #include <stdexcept>
+#include <utility>
 
 namespace phantomcrash {
 namespace {
@@ -40,6 +41,37 @@ SpecStat stat_named(const std::string &name) {
     throw std::runtime_error("no vehicle line is named " + name);
   }
   return found->second;
+}
+
+CombatStat combat_stat_named(const std::string &name) {
+  static const std::map<std::string, CombatStat> stats{
+      {"mortal_shot", CombatStat::mortal_shot},
+      {"repulsion_shield", CombatStat::repulsion_shield},
+      {"knockdown_resistance", CombatStat::knockdown_resistance},
+      {"knockback_resistance", CombatStat::knockback_resistance},
+      {"laser_reduction", CombatStat::laser_reduction},
+      {"charge_time", CombatStat::charge_time},
+      {"lock_time", CombatStat::lock_time},
+      {"aim_speed", CombatStat::aim_speed},
+  };
+  const auto found = stats.find(name);
+  if (found == stats.end()) {
+    throw std::runtime_error("no combat line is named " + name);
+  }
+  return found->second;
+}
+
+SpecPageKind page_named(const std::string &name) {
+  if (name == "vehicle") {
+    return SpecPageKind::vehicle;
+  }
+  if (name == "weapons") {
+    return SpecPageKind::weapons;
+  }
+  if (name == "combat") {
+    return SpecPageKind::combat;
+  }
+  throw std::runtime_error("no page shows " + name);
 }
 
 PartSlot slot_named(const std::string &name) {
@@ -77,12 +109,45 @@ void parse_window(const json::JsonValue &document, SvSpecScript &script) {
   script.arrows = {arrows[0], arrows[1]};
   script.close_hint = member(document, "close_hint", parse_sprites);
   const auto &pages = required(document, "pages").array();
-  if (pages.size() != script.pages.size()) {
-    throw std::runtime_error("pages: needs the vehicle's and the weapons'");
+  if (pages.empty()) {
+    throw std::runtime_error("pages: needs one at least");
   }
   for (std::size_t index = 0; index < pages.size(); ++index) {
-    script.pages[index].panel = member(pages[index], "panel", parse_sprite);
-    script.pages[index].help = required(pages[index], "help").string();
+    SpecPage page;
+    // Without "show", the original's order: the vehicle's, then the weapons'.
+    page.kind = index == 0 ? SpecPageKind::vehicle : SpecPageKind::weapons;
+    if (const auto *show = pages[index].find("show")) {
+      page.kind = page_named(show->string());
+    }
+    if (pages[index].find("panel") != nullptr) {
+      page.panel = member(pages[index], "panel", parse_sprite);
+    }
+    page.help = required(pages[index], "help").string();
+    script.pages.push_back(std::move(page));
+  }
+}
+
+void parse_combat(const json::JsonValue &value, SvSpecScript &script) {
+  CombatLettering &lettering = script.combat_lettering;
+  lettering.font = required(value, "font").string();
+  lettering.unit_font = value.string_or("unit_font", lettering.font);
+  lettering.colour = colour_of(value, "colour");
+  if (const auto *shadow = value.find("shadow")) {
+    lettering.shadow = parse_text_shadow(*shadow);
+    lettering.shadow_blur = static_cast<float>(shadow->number_or("blur", 0.0));
+  }
+  lettering.origin = numbers<2>(required(value, "origin"), "origin");
+  lettering.label_x = numbers<2>(required(value, "label_x"), "label_x");
+  lettering.unit_x = numbers<2>(required(value, "unit_x"), "unit_x");
+  lettering.ink = numbers<2>(required(value, "ink"), "ink");
+  for (const json::JsonValue &row : required(value, "rows").array()) {
+    CombatRow line{combat_stat_named(required(row, "stat").string()),
+                   required(row, "label").string(), row.string_or("unit", ""),
+                   static_cast<int>(row.number_or("decimals", 0))};
+    if (const auto *ink = row.find("unit_ink")) {
+      line.unit_ink = numbers<2>(*ink, "unit_ink");
+    }
+    script.combat_rows.push_back(std::move(line));
   }
 }
 
@@ -130,6 +195,14 @@ SvSpecScript parse_sv_spec(const json::JsonValue &document) {
     parse_window(document, script);
     parse_vehicle(required(document, "vehicle"), script);
     parse_weapons(required(document, "weapons"), script);
+    if (const auto *combat = document.find("combat")) {
+      parse_combat(*combat, script);
+    }
+    for (const SpecPage &page : script.pages) {
+      if (page.kind == SpecPageKind::combat && script.combat_rows.empty()) {
+        throw std::runtime_error("pages: a combat page needs the combat lines");
+      }
+    }
     script.help_style = member(document, "help", parse_ticker);
     return script;
   } catch (const std::exception &error) {
