@@ -60,6 +60,7 @@ struct SupplyKind {
   float amount{}; // credits, or the share of the armour or magazine
   float chance{}; // of each pickup carried
   SupplyKindLook look;
+  std::optional<float> special_chance; // on the red carrier (none: `chance`)
 };
 
 // A pickup a robot took: what it gives, its type (0x21c378's index) and
@@ -164,6 +165,32 @@ struct SupplyLook {
   std::string take_sound{"supply_take"}; // battle_player 0x26, to a player's robot
 };
 
+// The red carrier (port addition; docs/SUPPLY_BOXES.md): once `streak`
+// carriers in a row are shot down before dropping anything, the next comes
+// tinted `tint` and `scale` times as big, pays shot_bounty when shot down
+// and drops a pickup onto each of `spots` (x, z), drop_ticks apart, each
+// kind rolled by its special_chance. A streak of 0 or no spots: never.
+struct SupplySpecial {
+  int streak{};
+  SupplyColour tint{0.9F, 0.1F, 0.1F};
+  float scale{1.0F};
+  float drop_ticks{12.0F};
+  std::vector<std::array<float, 2>> spots;
+  float shot_bounty{1000.0F};
+  std::string arrive_sound; // named sound (data/audio/sfx.json) as it sets out
+};
+
+// The rescue (port addition; docs/SUPPLY_BOXES.md): a player's robot below
+// armour_share of its armour as a carrier sets out is brought a repair box
+// giving at least min_repair, first out of the hatch, gliding toward the
+// robot as it falls by up to `glide` across a tick so that it lands as near
+// the robot as it can. An armour_share of 0: never.
+struct SupplyRescue {
+  float armour_share{};
+  float min_repair{0.5F};
+  float glide{1.5F};
+};
+
 struct SupplySettings {
   float tick_rate{30.0F};       // the battle's logic rate the counts below run at
   float speed{0.03F};           // of a segment a tick (0x066940)
@@ -177,6 +204,10 @@ struct SupplySettings {
   float rest_height{1.0F};      // a landed pickup's height above the ground
   float lifetime_ticks{900.0F}; // how long a landed pickup waits
   float reach{1.0F};            // taken within a robot's radius and this (0x0673db)
+  // An ammo box refills the weapon with the smallest share of its magazine
+  // left (port addition, "ammo_to": "emptiest"); the original picks one of
+  // those short of rounds at random (0x06ad29).
+  bool ammo_emptiest{};
   // Shots (0x067603): one brings the carrier down within carrier_radius and
   // pays its shooter shot_bounty (0x047ed9); one bursts a pickup within
   // pickup_radius. The wreck keeps wreck_keep of its speed and sinks
@@ -207,6 +238,8 @@ struct SupplySettings {
   std::vector<SupplyRoute> routes; // the stage's; none: no supply drops
   bool stage_routes{};             // includes an explicitly empty imported stage route list
   SupplyLook look;
+  SupplySpecial special;
+  SupplyRescue rescue;
 };
 
 // data/world/training.json "supply"; missing values keep the original's.
@@ -216,6 +249,11 @@ struct SupplySettings {
 [[nodiscard]] std::vector<SupplyRoute> parse_supply_routes(const json::JsonValue &document,
                                                            int stage);
 [[nodiscard]] std::vector<SupplyRoute> parse_supply_route_list(const json::JsonValue &value);
+// The weapon an ammo box refills, given the share of its magazine each
+// weapon short of rounds has left: the emptiest (the first of equals) or,
+// as the original, one at random.
+[[nodiscard]] std::size_t pick_ammo_slot(const std::vector<float> &shares, bool emptiest,
+                                         std::minstd_rand &random);
 // The point `along` (0..1) a cubic Bezier segment (0x067dd6).
 [[nodiscard]] Vec3 bezier_point(const std::array<Vec3, 4> &segment, float along);
 
@@ -226,9 +264,11 @@ struct SupplyPickup {
   Vec3 position;
   int kind{};
   SupplyState state{SupplyState::carried};
-  float wait{};  // ticks before it may fall
-  float life{};  // ticks left once landed
-  float blink{}; // the blink's phase, 0..pi
+  float wait{};   // ticks before it may fall
+  float life{};   // ticks left once landed
+  float blink{};  // the blink's phase, 0..pi
+  int spot{-1};   // the red carrier's: the special spot it falls onto
+  int target{-1}; // a rescue box's: the robot it glides toward
 };
 
 struct SupplyCarrier {
@@ -238,6 +278,8 @@ struct SupplyCarrier {
   float spin{};
   bool parked{};
   bool wrecked{}; // shot down, falling
+  float scale{1.0F};
+  std::optional<SupplyColour> tint; // the red carrier's
 };
 
 class SupplyDrop final {
@@ -253,6 +295,12 @@ public:
   // `ground` answers the ground's height under a point.
   void tick(float seconds, const std::function<float(Vec3)> &ground,
             const SupplyContact &contact = {});
+  // Where each robot stands, in the battle's order, and the robots calling
+  // for a rescue box; the next carrier to set out brings them one each.
+  void watch(std::vector<Vec3> robots, std::vector<int> rescue);
+  // The kind a rescue box is: the weakest repair giving at least
+  // min_repair, else the strongest repair; -1 with no repair kind.
+  [[nodiscard]] int rescue_kind() const;
   // The pickup a robot whose collision sphere is centred at `centre` with
   // `radius` touches, taken; its kind, or nothing.
   [[nodiscard]] std::optional<SupplyTaken> take(Vec3 centre, float radius);
@@ -263,6 +311,24 @@ public:
   }
   bool shoot_carrier();
   void shoot_pickup(std::size_t index);
+  // The carrier's reach for shots and contact, and what bringing it down pays.
+  [[nodiscard]] float carrier_radius() const noexcept {
+    return settings_.carrier_radius * carrier_.scale;
+  }
+  [[nodiscard]] float shot_bounty() const noexcept {
+    return special_ ? settings_.special.shot_bounty : settings_.shot_bounty;
+  }
+  // Whether this trip is the red carrier's, the carriers shot down empty in
+  // a row toward it, and whether it set out this tick (cleared on asking).
+  [[nodiscard]] bool special() const noexcept {
+    return special_;
+  }
+  [[nodiscard]] int streak() const noexcept {
+    return streak_;
+  }
+  [[nodiscard]] bool take_special_arrival() noexcept {
+    return std::exchange(arrived_, false);
+  }
   // The wreck's crash this tick (0x06828e sets off effect 0x3f there).
   [[nodiscard]] std::optional<Vec3> take_crash() noexcept {
     return std::exchange(crash_, std::nullopt);
@@ -294,6 +360,11 @@ private:
   void work_hatch(float ticks);
   void fall(float ticks, const std::function<float(Vec3)> &ground, const SupplyContact &contact);
   void park();
+  void start_special();
+  void steer_to_spot(SupplyPickup &pickup, float ticks, const std::function<float(Vec3)> &ground);
+  void load_rescue();
+  void glide_to_target(SupplyPickup &pickup, float ticks, const std::function<float(Vec3)> &ground);
+  [[nodiscard]] int roll_kind(float value) const;
   void tick_pickups(float ticks, const std::function<float(Vec3)> &ground);
   [[nodiscard]] Mat4 carrier_frame() const;
 
@@ -311,6 +382,11 @@ private:
   float wreck_left_{}; // ticks
   std::optional<Vec3> crash_;
   std::vector<Vec3> bursts_;
+  int streak_{};             // carriers shot down in a row before dropping anything
+  bool special_{};           // this trip is the red carrier's
+  bool arrived_{};           // the red carrier set out, not yet reported
+  std::vector<Vec3> robots_; // where each robot stands (watch)
+  std::vector<int> rescue_;  // the robots calling for a rescue box
 };
 
 } // namespace phantomcrash

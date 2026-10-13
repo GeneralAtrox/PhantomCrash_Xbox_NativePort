@@ -68,6 +68,7 @@ private:
   // Where the flying carrier's mesh is drawn: a turned door, the spinner or
   // with the body.
   [[nodiscard]] Mat4 mesh_world(const SupplyCarrier &carrier, int mesh) const;
+  [[nodiscard]] static Mat4 carrier_frame(const SupplyCarrier &carrier);
   // The day or night model's mesh (0x069d52 draws each pickup from either).
   void add_pickup_mesh(std::size_t parity, int mesh, const Mat4 &world,
                        std::vector<WorldItem> &items) const;

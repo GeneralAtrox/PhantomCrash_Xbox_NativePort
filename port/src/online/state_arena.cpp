@@ -29,6 +29,7 @@ void StateInspector::write(online::StateWriter &out, const RobotWrecks &v) {
 
 void StateInspector::write(online::StateWriter &out, const SupplyDrop &v) {
   out(v.settings_, v.random_, v.carrier_, v.pickups_, v.route_, v.segment_, v.along_, v.phase_,
-      v.hatch_, v.shootable_, v.velocity_, v.wreck_left_, v.crash_, v.bursts_);
+      v.hatch_, v.shootable_, v.velocity_, v.wreck_left_, v.crash_, v.bursts_, v.streak_,
+      v.special_, v.arrived_, v.robots_, v.rescue_);
 }
 } // namespace phantomcrash

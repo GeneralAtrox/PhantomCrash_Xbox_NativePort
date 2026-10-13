@@ -267,3 +267,24 @@ TEST_CASE("the shipped supply kinds keep the original ten and add the money tier
     CHECK(roots.find_asset(settings.kinds[kind].look.image).has_value());
   }
 }
+
+TEST_CASE("an ammo box refills the emptiest weapon, or as the original one at random") {
+  std::minstd_rand random(1);
+  CHECK(pick_ammo_slot({0.9F, 0.2F, 0.5F}, true, random) == 1);
+  CHECK(pick_ammo_slot({0.4F, 0.6F, 0.4F}, true, random) == 0); // the first of equals
+  // A second box, after the first filled the emptiest, goes to the next.
+  CHECK(pick_ammo_slot({0.9F, 0.5F}, true, random) == 1);
+  bool picked[3]{};
+  for (int index = 0; index < 60; ++index) {
+    picked[pick_ammo_slot({0.9F, 0.2F, 0.5F}, false, random)] = true;
+  }
+  CHECK(picked[0] && picked[1] && picked[2]);
+
+  CHECK(!SupplySettings{}.ammo_emptiest);
+  CHECK(parse_supply_settings(json::parse(R"({"ammo_to": "emptiest"})")).ammo_emptiest);
+  CHECK(!parse_supply_settings(json::parse(R"({"ammo_to": "random"})")).ammo_emptiest);
+  CHECK_THROWS(parse_supply_settings(json::parse(R"({"ammo_to": "fullest"})")));
+  const auto roots = DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT);
+  const auto training = roots.document("world/training.json");
+  CHECK(parse_supply_settings(*training.find("battle")->find("supply")).ammo_emptiest);
+}

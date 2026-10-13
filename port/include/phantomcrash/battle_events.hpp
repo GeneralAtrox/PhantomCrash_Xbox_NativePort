@@ -42,7 +42,8 @@ enum class BattleEventKind {
   destroyed,
   effect,
   damaged,
-  fence_contact
+  fence_contact,
+  special_carrier // the red supply carrier set out (port addition)
 };
 
 struct BattleEvent {

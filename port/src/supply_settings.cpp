@@ -92,6 +92,9 @@ void parse_kinds(const JsonValue &value, SupplySettings &s) {
       kind.amount = static_cast<float>(list[index].number_or("amount", 0.0));
       kind.chance = static_cast<float>(list[index].number_or("chance", chance));
       kind.look = parse_kind_look(list[index]);
+      if (const JsonValue *special = list[index].find("special_chance")) {
+        kind.special_chance = static_cast<float>(special->number());
+      }
     }
   }
   if (const JsonValue *chances = value.find("chances")) {
@@ -104,10 +107,35 @@ void parse_kinds(const JsonValue &value, SupplySettings &s) {
     }
   }
   for (const SupplyKind &kind : s.kinds) {
-    if (kind.chance < 0.0F) {
+    if (kind.chance < 0.0F || kind.special_chance.value_or(0.0F) < 0.0F) {
       throw std::runtime_error("supply kinds: a chance is negative");
     }
   }
+}
+
+// "special": the red carrier.
+SupplySpecial parse_special(const JsonValue &value) {
+  SupplySpecial special;
+  const auto number = [&](const char *key, const float fallback) {
+    return static_cast<float>(value.number_or(key, fallback));
+  };
+  special.streak = std::max(static_cast<int>(value.number_or("streak", special.streak)), 0);
+  if (const JsonValue *tint = value.find("tint")) {
+    special.tint = colour(*tint, "tint");
+  }
+  special.scale = std::max(number("scale", special.scale), 0.01F);
+  special.drop_ticks = std::max(number("drop_ticks", special.drop_ticks), 0.0F);
+  special.shot_bounty = number("shot_bounty", special.shot_bounty);
+  special.arrive_sound = value.string_or("arrive_sound", "");
+  if (const JsonValue *spots = value.find("spots")) {
+    for (const JsonValue &spot : spots->array()) {
+      special.spots.push_back(json::numbers<2>(spot, "spots"));
+    }
+  }
+  if (special.spots.size() > 64) {
+    throw std::runtime_error("supply special: at most 64 spots");
+  }
+  return special;
 }
 
 SupplyModel parse_model(const JsonValue &value, SupplyModel model) {
@@ -229,6 +257,13 @@ SupplySettings parse_supply_settings(const JsonValue &value) {
   s.rest_height = number("rest_height", s.rest_height);
   s.lifetime_ticks = number("lifetime_ticks", s.lifetime_ticks);
   s.reach = number("reach", s.reach);
+  if (const JsonValue *ammo_to = value.find("ammo_to")) {
+    const std::string &to = ammo_to->string();
+    if (to != "emptiest" && to != "random") {
+      throw std::runtime_error("supply ammo_to is not emptiest or random: " + to);
+    }
+    s.ammo_emptiest = to == "emptiest";
+  }
   s.blink_fast_ticks = number("blink_fast_ticks", s.blink_fast_ticks);
   s.blink_fast = number("blink_fast", s.blink_fast);
   s.blink_step = number("blink_step", s.blink_step);
@@ -239,6 +274,15 @@ SupplySettings parse_supply_settings(const JsonValue &value) {
   s.wreck_sink = number("wreck_sink", s.wreck_sink);
   s.wreck_ticks = number("wreck_ticks", s.wreck_ticks);
   parse_kinds(value, s);
+  if (const JsonValue *special = value.find("special")) {
+    s.special = parse_special(*special);
+  }
+  if (const JsonValue *rescue = value.find("rescue")) {
+    s.rescue.armour_share =
+        std::clamp(static_cast<float>(rescue->number_or("armour_share", 0.0)), 0.0F, 1.0F);
+    s.rescue.min_repair = static_cast<float>(rescue->number_or("min_repair", s.rescue.min_repair));
+    s.rescue.glide = std::max(static_cast<float>(rescue->number_or("glide", s.rescue.glide)), 0.0F);
+  }
   if (const JsonValue *look = value.find("look")) {
     s.look = parse_look(*look);
   }

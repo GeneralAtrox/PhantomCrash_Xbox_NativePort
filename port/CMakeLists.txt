@@ -103,6 +103,8 @@ add_library(phantomcrash_core
   src/effect_glow.cpp
   src/shadow_volume.cpp
   src/supply_drop.cpp
+  src/supply_special.cpp
+  src/supply_rescue.cpp
   src/supply_settings.cpp
   src/battle_supply.cpp
   src/battle_watch.cpp
@@ -339,6 +341,8 @@ if(BUILD_TESTING)
     tests/cockpit_tests.cpp
     tests/optical_camouflage_tests.cpp
     tests/supply_drop_tests.cpp
+    tests/supply_special_tests.cpp
+    tests/supply_rescue_tests.cpp
     tests/supply_destruction_tests.cpp
     tests/split_screen_tests.cpp
     tests/garage_tests.cpp

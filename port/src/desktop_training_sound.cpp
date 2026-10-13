@@ -106,6 +106,9 @@ std::vector<std::string> TrainingScreen::sound_preloads() const {
   for (const SupplyKind &kind : script_.battle.supply.kinds) {
     files.insert(files.end(), kind.look.take_sounds.begin(), kind.look.take_sounds.end());
   }
+  if (!script_.battle.supply.special.arrive_sound.empty()) {
+    files.push_back(script_.battle.supply.special.arrive_sound);
+  }
   return files;
 }
 

@@ -34,6 +34,7 @@ void SupplyDrop::start_route() {
   carrier_.parked = false;
   carrier_.wrecked = false;
   shootable_ = true;
+  start_special();
   load();
 }
 
@@ -50,24 +51,42 @@ void SupplyDrop::park() {
 }
 
 // 0x066ccd, 0x066b91: each pickup carried, the first free to fall at once
-// and the others drop_ticks after the one before; each kind rolled.
+// and the others drop_ticks after the one before; each kind rolled. The red
+// carrier carries one for each of its spots.
 void SupplyDrop::load() {
-  pickups_.assign(static_cast<std::size_t>(settings_.pickups), SupplyPickup{});
+  const SupplySpecial &special = settings_.special;
+  const std::size_t count =
+      special_ ? special.spots.size() : static_cast<std::size_t>(settings_.pickups);
+  pickups_.assign(count, SupplyPickup{});
   std::uniform_real_distribution<float> roll(0.0F, 1.0F);
   for (std::size_t index = 0; index < pickups_.size(); ++index) {
     SupplyPickup &pickup = pickups_[index];
-    pickup.wait = index == 0 ? 0.0F : settings_.drop_ticks;
+    const float between = special_ ? special.drop_ticks : settings_.drop_ticks;
+    pickup.wait = index == 0 ? 0.0F : between;
     pickup.life = settings_.lifetime_ticks;
-    const float value = roll(random_);
-    float total = 0.0F;
-    for (std::size_t kind = 0; kind < settings_.kinds.size(); ++kind) {
-      total += settings_.kinds[kind].chance;
-      if (value < total) {
-        pickup.kind = static_cast<int>(kind);
-        break;
-      }
+    pickup.kind = roll_kind(roll(random_));
+    pickup.spot = special_ ? static_cast<int>(index) : -1;
+  }
+  load_rescue();
+}
+
+// The first kind whose running total of chances passes `value`; past them
+// all, the first kind with a chance (kind 0 in the original's roll).
+int SupplyDrop::roll_kind(const float value) const {
+  int fallback = -1;
+  float total = 0.0F;
+  for (std::size_t index = 0; index < settings_.kinds.size(); ++index) {
+    const SupplyKind &kind = settings_.kinds[index];
+    const float chance = special_ ? kind.special_chance.value_or(kind.chance) : kind.chance;
+    if (chance > 0.0F && fallback < 0) {
+      fallback = static_cast<int>(index);
+    }
+    total += chance;
+    if (value < total) {
+      return static_cast<int>(index);
     }
   }
+  return std::max(fallback, 0);
 }
 
 void SupplyDrop::tick(const float seconds, const std::function<float(Vec3)> &ground,
@@ -114,6 +133,7 @@ void SupplyDrop::fly(const float ticks) {
         segment_ = 0; // 0x06804b wraps round while it drops
         continue;
       }
+      streak_ = 0; // it flew its route without being brought down
       park();
       return;
     }
@@ -184,6 +204,9 @@ bool SupplyDrop::shoot_carrier() {
   if (!carrier_shootable()) {
     return false;
   }
+  const bool none_dropped = std::ranges::all_of(
+      pickups_, [](const SupplyPickup &pickup) { return pickup.state == SupplyState::carried; });
+  streak_ = none_dropped && !special_ ? streak_ + 1 : 0;
   shootable_ = false;
   carrier_.wrecked = true;
   phase_ = Phase::wreck;
@@ -208,9 +231,8 @@ void SupplyDrop::fall(const float ticks, const std::function<float(Vec3)> &groun
   const Vec3 before = carrier_.position;
   carrier_.position = carrier_.position + velocity_ * ticks;
   wreck_left_ -= ticks;
-  const auto hit =
-      contact ? contact(before, carrier_.position, settings_.carrier_radius) : std::nullopt;
-  if (hit || carrier_.position.y - settings_.carrier_radius <= ground(carrier_.position) ||
+  const auto hit = contact ? contact(before, carrier_.position, carrier_radius()) : std::nullopt;
+  if (hit || carrier_.position.y - carrier_radius() <= ground(carrier_.position) ||
       wreck_left_ < 0.0F) {
     crash_ = hit.value_or(carrier_.position);
     park();
@@ -225,7 +247,9 @@ void SupplyDrop::shoot_pickup(const std::size_t index) {
 }
 
 Mat4 SupplyDrop::carrier_frame() const {
-  return rotation_y(carrier_.heading) * translation(carrier_.position);
+  const float scale = carrier_.scale;
+  return scaling({scale, scale, scale}) * rotation_y(carrier_.heading) *
+         translation(carrier_.position);
 }
 
 // 0x069d52: carried pickups ride in the hold; falling ones drop to rest
@@ -238,6 +262,11 @@ void SupplyDrop::tick_pickups(const float ticks, const std::function<float(Vec3)
       pickup.position = transform_point(settings_.hold, frame);
       break;
     case SupplyState::falling: {
+      if (pickup.target >= 0) {
+        glide_to_target(pickup, ticks, ground);
+      } else if (pickup.spot >= 0) {
+        steer_to_spot(pickup, ticks, ground);
+      }
       pickup.position.y -= settings_.fall_speed * ticks;
       const float rest = ground(pickup.position) + settings_.rest_height;
       if (pickup.position.y < rest) {
@@ -275,6 +304,15 @@ void SupplyDrop::tick_pickups(const float ticks, const std::function<float(Vec3)
       pickup.blink = std::fmod(pickup.blink + settings_.blink_step * rate * ticks, pi);
     }
   }
+}
+
+std::size_t pick_ammo_slot(const std::vector<float> &shares, const bool emptiest,
+                           std::minstd_rand &random) {
+  if (!emptiest) {
+    std::uniform_int_distribution<std::size_t> pick(0, shares.size() - 1);
+    return pick(random);
+  }
+  return static_cast<std::size_t>(std::ranges::min_element(shares) - shares.begin());
 }
 
 float SupplyDrop::blink(const SupplyPickup &pickup) {

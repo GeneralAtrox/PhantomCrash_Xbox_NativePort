@@ -21,6 +21,18 @@ void Battle::tick_supply(const float seconds) {
   if (!supply_ || !supply_->active()) {
     return;
   }
+  // The rescue: players' robots low on armour call for a repair box.
+  const float critical = supply_->settings().rescue.armour_share;
+  std::vector<Vec3> robots;
+  std::vector<int> rescue;
+  robots.reserve(robots_.size());
+  for (const Combatant &robot : robots_) {
+    if (robot.piloted && robot.alive && robot.hp < robot.max_hp * critical) {
+      rescue.push_back(static_cast<int>(robots.size()));
+    }
+    robots.push_back(robot.mover.position());
+  }
+  supply_->watch(std::move(robots), std::move(rescue));
   supply_->tick(
       seconds,
       [this](const Vec3 at) {
@@ -35,6 +47,11 @@ void Battle::tick_supply(const float seconds) {
       });
   if (const auto crash = supply_->take_crash()) {
     supply_explosion(*crash);
+  }
+  if (supply_->take_special_arrival()) {
+    BattleEvent arrival{-1, BattleEventKind::special_carrier};
+    arrival.at = supply_->carrier().position;
+    events_.push_back(arrival);
   }
   for (const Vec3 at : supply_->take_bursts()) {
     BattleEvent burst{-1, BattleEventKind::effect};
@@ -69,7 +86,7 @@ void Battle::add_supply_targets(std::vector<Target> &out) const {
     return;
   }
   const SupplySettings &settings = supply_->settings();
-  out.push_back({supply_->carrier().position, settings.carrier_radius, supply_team,
+  out.push_back({supply_->carrier().position, supply_->carrier_radius(), supply_team,
                  supply_->carrier_shootable()});
   for (const SupplyPickup &pickup : supply_->pickups()) {
     const bool out_now =
@@ -103,7 +120,7 @@ bool Battle::hit_supply(const WeaponHit &hit) {
   supply_explosion(supply_->carrier().position);
   if (hit.attacker >= 0 && hit.attacker < robots) {
     BattleEvent event{hit.attacker, BattleEventKind::carrier_down};
-    event.amount = supply_->settings().shot_bounty;
+    event.amount = supply_->shot_bounty();
     events_.push_back(event);
     chatter(robots_[static_cast<std::size_t>(hit.attacker)], chatter_event::shot_carrier);
   }
@@ -127,20 +144,22 @@ void Battle::take_supply(Combatant &robot, const SupplyTaken &taken) {
                                                                  : chatter_event::repaired_low);
     break;
   case SupplyEffect::ammo: {
-    // 0x06ad29: one weapon picked at random among those short of rounds
-    // gets the share of its magazine, rounded up; the remark goes by the
-    // share before it (robot +0x110).
+    // 0x06ad29: one weapon among those short of rounds (the emptiest, or
+    // as the original one at random) gets the share of its magazine,
+    // rounded up; the remark goes by the share before it (robot +0x110).
     std::vector<std::size_t> short_slots;
+    std::vector<float> shares;
     for (std::size_t slot = 0; slot < weapon_slots; ++slot) {
       const Magazine &magazine = robot.magazines[slot];
       if (robot.weapons[slot] != nullptr && !robot.lost[slot] && magazine.limited() &&
           magazine.ammo < magazine.max) {
         short_slots.push_back(slot);
+        shares.push_back(static_cast<float>(magazine.ammo) / static_cast<float>(magazine.max));
       }
     }
     if (!short_slots.empty()) {
-      std::uniform_int_distribution<std::size_t> pick(0, short_slots.size() - 1);
-      Magazine &magazine = robot.magazines[short_slots[pick(random_)]];
+      const bool emptiest = supply_->settings().ammo_emptiest;
+      Magazine &magazine = robot.magazines[short_slots[pick_ammo_slot(shares, emptiest, random_)]];
       magazine.refill(static_cast<int>(std::ceil(static_cast<float>(magazine.max) * kind.amount)));
     }
     const float share = robot.ammo_share;

@@ -103,13 +103,16 @@ void DesktopSupply::add_carrier(const SupplyCarrier &carrier, std::vector<WorldI
     if (model_ >= 0 && !carrier.parked) {
       WorldItem item;
       item.model = model_;
-      item.world = rotation_y(carrier.heading) * translation(carrier.position);
+      item.world = carrier_frame(carrier);
+      if (carrier.tint) {
+        const auto &tint = *carrier.tint;
+        item.colour = std::array<float, 4>{tint[0], tint[1], tint[2], 1.0F};
+      }
       items.push_back(std::move(item));
       if (carrier_light_model_ >= 0 && !carrier.wrecked) {
         WorldItem light;
         light.model = carrier_light_model_;
-        light.world =
-            rotation_y(-carrier.spin) * rotation_y(carrier.heading) * translation(carrier.position);
+        light.world = rotation_y(-carrier.spin) * carrier_frame(carrier);
         items.push_back(std::move(light));
       }
     }
@@ -118,7 +121,10 @@ void DesktopSupply::add_carrier(const SupplyCarrier &carrier, std::vector<WorldI
   if (!ready()) {
     return;
   }
-  const Mat4 frame = rotation_y(carrier.heading) * translation(carrier.position);
+  const Mat4 frame = carrier_frame(carrier);
+  const std::size_t start = items.size();
+  std::size_t shell_first = start;
+  std::size_t shell_last = start;
   if (carrier.wrecked) {
     add_mesh(parts_.wreck, frame, items); // 0x0699d5 state 4: the wreck alone
   } else if (!carrier.parked) {
@@ -134,16 +140,33 @@ void DesktopSupply::add_carrier(const SupplyCarrier &carrier, std::vector<WorldI
       for (std::size_t index = first; index < items.size(); ++index) {
         items[index].colour = colour;
       }
+      shell_first = first;
+      shell_last = items.size();
     }
     for (const int door : parts_.doors) {
       add_mesh(door, mesh_world(carrier, door), items);
     }
     add_mesh(parts_.spinner, mesh_world(carrier, parts_.spinner), items);
   }
+  // The red carrier: all of it in its tint but the shell's flashing lights.
+  if (carrier.tint) {
+    const auto &tint = *carrier.tint;
+    for (std::size_t index = start; index < items.size(); ++index) {
+      if (index < shell_first || index >= shell_last) {
+        items[index].colour = std::array<float, 4>{tint[0], tint[1], tint[2], 1.0F};
+      }
+    }
+  }
+}
+
+Mat4 DesktopSupply::carrier_frame(const SupplyCarrier &carrier) {
+  const float scale = carrier.scale;
+  return scaling({scale, scale, scale}) * rotation_y(carrier.heading) *
+         translation(carrier.position);
 }
 
 Mat4 DesktopSupply::mesh_world(const SupplyCarrier &carrier, const int mesh) const {
-  const Mat4 frame = rotation_y(carrier.heading) * translation(carrier.position);
+  const Mat4 frame = carrier_frame(carrier);
   if (mesh == parts_.spinner) {
     return rotation_y(carrier.spin) * frame;
   }
@@ -319,6 +342,9 @@ std::unique_ptr<DesktopSupply> load_supply(WorldRenderer *world, const DataRoots
   if (settings.routes.empty()) {
     return nullptr;
   }
+  if (settings.stage_routes) {
+    settings.special.streak = 0; // its spots are the training ground's H
+  }
   SDL_Log("Supply routes: stage=%d routes=%zu imported=%d", tuning.stage, settings.routes.size(),
           settings.stage_routes);
   const SupplyLook look = settings.look;
@@ -340,28 +366,6 @@ std::unique_ptr<DesktopSupply> load_supply(WorldRenderer *world, const DataRoots
   }
   SDL_Log("The supply drop model is missing; convert the robots again");
   return nullptr;
-}
-
-void gather_supply_sounds(const Battle &battle, const SupplyLook &look,
-                          std::vector<WorldSound> &sounds) {
-  const SupplyDrop *drop = battle.supply();
-  for (const BattleEvent &event : battle.events()) {
-    if (event.robot != battle.player_index()) {
-      continue;
-    }
-    if (event.kind == BattleEventKind::supply) {
-      // 0x066e50, for player robots, at the robot; a kind may name its own.
-      const SupplyKindLook *kind =
-          drop != nullptr ? DesktopSupply::kind_look(*drop, event.slot) : nullptr;
-      if (kind == nullptr || kind->take_sounds.empty()) {
-        sounds.push_back({look.take_sound, battle.player().aim_origin(), AudioBus::pickups});
-        continue;
-      }
-      for (const std::string &name : kind->take_sounds) {
-        sounds.push_back({name, battle.player().aim_origin(), AudioBus::pickups});
-      }
-    }
-  }
 }
 
 } // namespace phantomcrash

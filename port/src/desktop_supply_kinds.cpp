@@ -1,6 +1,6 @@
 // The supply kinds' own looks (port addition, docs/SUPPLY_BOXES.md): a
 // kind's picture on an original crate, its body and lettering tints, its
-// sheen and its glow.
+// sheen, its glow and its sounds, and the red carrier's alarm.
 #include "desktop_supply.hpp"
 
 #include <SDL3/SDL.h>
@@ -75,6 +75,35 @@ std::array<float, 3> DesktopSupply::glow_colour(const SupplyDrop &drop, const in
     return *kind->tint;
   }
   return look_.glow_colours[static_cast<std::size_t>(effect_of(drop, type))];
+}
+
+void gather_supply_sounds(const Battle &battle, const SupplyLook &look,
+                          std::vector<WorldSound> &sounds) {
+  const SupplyDrop *drop = battle.supply();
+  for (const BattleEvent &event : battle.events()) {
+    if (event.kind == BattleEventKind::special_carrier && drop != nullptr &&
+        !drop->settings().special.arrive_sound.empty()) {
+      // The red carrier's alarm, heard by the player wherever it is.
+      sounds.push_back(
+          {drop->settings().special.arrive_sound, battle.player().aim_origin(), AudioBus::pickups});
+      continue;
+    }
+    if (event.robot != battle.player_index()) {
+      continue;
+    }
+    if (event.kind == BattleEventKind::supply) {
+      // 0x066e50, for player robots, at the robot; a kind may name its own.
+      const SupplyKindLook *kind =
+          drop != nullptr ? DesktopSupply::kind_look(*drop, event.slot) : nullptr;
+      if (kind == nullptr || kind->take_sounds.empty()) {
+        sounds.push_back({look.take_sound, battle.player().aim_origin(), AudioBus::pickups});
+        continue;
+      }
+      for (const std::string &name : kind->take_sounds) {
+        sounds.push_back({name, battle.player().aim_origin(), AudioBus::pickups});
+      }
+    }
+  }
 }
 
 } // namespace phantomcrash
