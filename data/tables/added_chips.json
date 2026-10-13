@@ -54,7 +54,7 @@
    "breed": "Ragdoll",
    "face": "textures/chips/cat_vii.png",
    "chatter": [0, 1, 2, 3, 4],
-   "traits": "Grey; cuddly and playful when they want to be (Repulsion Shield starts at 0.5% and climbs late to 10.5%, level with Cat V); a princess in demands (price x1.3); lazy (track 1, lock 22 frames); strokes things with the paws (lowest critical); a big cat (heaviest, best knockdown resistance).",
+   "traits": "Grey; cuddly and playful when they want to be (Repulsion Shield starts at 0.5% and climbs late to 10.5%, level with Cat V); a princess in demands (once priced x1.3 of the other cats, now their price: its low critical and slow lock did not earn more); lazy (track 1, lock 22 frames); strokes things with the paws (lowest critical); a big cat (heaviest, best knockdown resistance).",
    "stats": {
     "inner_shape": 0,
     "inner_value": {"base": 200, "mid": 490, "top": 700, "knee": 50, "low_scale": -1},
@@ -66,7 +66,7 @@
     "critical_percent": {"base": 0.5, "mid": 2.1, "top": 3.0, "knee": 50, "low_scale": -1},
     "dodge_percent": {"base": 0.5, "mid": 4.0, "top": 10.0, "knee": 60, "low_scale": -1},
     "knockdown_resistance": {"base": 3.5, "mid": 10.5, "top": 15.0, "knee": 60, "low_scale": -1},
-    "price": {"base": 8450, "mid": 341250, "top": 1007500, "knee": 50, "low_scale": 1}
+    "price": {"base": 6500, "mid": 262500, "top": 775000, "knee": 50, "low_scale": 1}
    }
   },
   {
@@ -174,7 +174,7 @@
    "breed": "Mandrill",
    "face": "textures/chips/mandrill.png",
    "chatter": [0, 1, 2, 3, 4],
-   "traits": "Front-loaded, for players who do not uplift: the best CHIP at level 0 (critical and shield 4%, knockdown 8, large sights, track 3, lock 12 frames), but its stats stop growing by level 15 and later CHIPs overtake it; dear to buy, cheap to uplift. A vertically long aiming sight (700 to 900) and a square lock-on sight (600 to 850).",
+   "traits": "Front-loaded, for players who do not uplift: the best CHIP at level 0 (critical and shield 4%, knockdown 8, large sights, track 3, lock 12 frames), but its stats stop growing by level 15 and later CHIPs overtake it; dear to buy, cheap to uplift. A vertically long aiming sight (700 to 900) and a square lock-on sight (600 to 850). Critical and shield stop at 5% to 5.5% and knockdown at 10 to 11 so the Wolf passes it on critical by level 40 and overall by level 46.",
    "stats": {
     "inner_shape": 2,
     "inner_value": {"base": 700, "mid": 150, "top": 200, "knee": 15, "low_scale": -1},
@@ -183,9 +183,9 @@
     "outer_value": {"base": 600, "mid": 200, "top": 250, "knee": 15, "low_scale": -1},
     "lock_frames": 12,
     "weight": {"base": 22.0, "mid": 0.0, "top": 0.0, "knee": 50, "low_scale": -1},
-    "critical_percent": {"base": 4.0, "mid": 2.0, "top": 2.5, "knee": 15, "low_scale": -1},
-    "dodge_percent": {"base": 4.0, "mid": 2.0, "top": 2.5, "knee": 15, "low_scale": -1},
-    "knockdown_resistance": {"base": 8.0, "mid": 3.0, "top": 4.0, "knee": 15, "low_scale": -1},
+    "critical_percent": {"base": 4.0, "mid": 1.0, "top": 1.5, "knee": 15, "low_scale": -1},
+    "dodge_percent": {"base": 4.0, "mid": 1.0, "top": 1.5, "knee": 15, "low_scale": -1},
+    "knockdown_resistance": {"base": 8.0, "mid": 2.0, "top": 3.0, "knee": 15, "low_scale": -1},
     "price": {"base": 20000, "mid": 30000, "top": 60000, "knee": 15, "low_scale": 1}
    }
   },
@@ -194,19 +194,19 @@
    "breed": "Meerkat",
    "face": "textures/chips/meerkat.png",
    "chatter": [0, 1, 2, 3, 4],
-   "traits": "Anti-air sentinel: a vertically long lock-on sight that reaches full size by level 40 (400 at level 0) and a quick lock (8 frames), so shoulder missiles catch robots jumping or flying overhead, with a solid square aiming sight (300 to 800, track 4) for arm weapons. Small and fragile: shield 1% to 6%, easily loses its weapons (knockdown resistance 1.5 to 7), critical 1% to 6%, light.",
+   "traits": "Anti-air sentinel: a vertically long lock-on sight that reaches full size by level 40 (400 at level 0) and a quick lock (6 frames, second only to the Hawk), so shoulder missiles catch robots jumping or flying overhead, with a solid square aiming sight (300 to 800, track 4) for arm weapons. Small and fragile: shield 1% to 6%, easily loses its weapons (knockdown resistance 1.5 to 7), critical 1% to 6%, light. Priced as the Rabbit, whose shield is twice its own.",
    "stats": {
     "inner_shape": 0,
     "inner_value": {"base": 300, "mid": 350, "top": 500, "knee": 50, "low_scale": -1},
     "track": 4,
     "outer_shape": 2,
     "outer_value": {"base": 400, "mid": 599, "top": 650, "knee": 40, "low_scale": -1},
-    "lock_frames": 8,
+    "lock_frames": 6,
     "weight": {"base": 14.0, "mid": 0.0, "top": 0.0, "knee": 50, "low_scale": -1},
     "critical_percent": {"base": 1.0, "mid": 3.5, "top": 5.0, "knee": 50, "low_scale": -1},
     "dodge_percent": {"base": 1.0, "mid": 3.5, "top": 5.0, "knee": 60, "low_scale": -1},
     "knockdown_resistance": {"base": 1.5, "mid": 3.5, "top": 5.5, "knee": 60, "low_scale": -1},
-    "price": {"base": 6500, "mid": 300000, "top": 820000, "knee": 50, "low_scale": 1}
+    "price": {"base": 4250, "mid": 112500, "top": 530000, "knee": 35, "low_scale": 1}
    }
   }
  ],

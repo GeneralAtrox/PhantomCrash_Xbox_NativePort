@@ -173,11 +173,12 @@ Resulting values (level 0 -> level 99):
 | Cat IV | 2 | 16 | 0.5 -> 6.0 | 0.5 -> 8.5 | 3.0 -> 15.0 | 20.1 | 6500 |
 | Cat V Norwegian Forest Cat | 3 | 8 | 0.5 -> 4.0 | 1.0 -> 10.5 | 2.0 -> 11.0 | 22.0 | 6500 |
 | Cat VI Maine Coon | 3 | 10 | 2.0 -> 8.0 | 1.0 -> 7.0 | 1.5 -> 9.5 | 20.1 | 7475 (x1.15) |
-| Cat VII Ragdoll | 1 | 22 | 0.5 -> 3.5 | 0.5 -> 10.5 (late) | 3.5 -> 18.5 | 24.0 | 8450 (x1.3) |
+| Cat VII Ragdoll | 1 | 22 | 0.5 -> 3.5 | 0.5 -> 10.5 (late) | 3.5 -> 18.5 | 24.0 | 6500 |
 
 Cat VI first had lock 8, Mortal Shot 10% and Repulsion Shield 10%, which
 out-locked Bird II and matched the Wolf's rates; it was toned down to the row
-above.
+above. Cat VII was first priced x1.3 of the other cats (the dearest CHIP at
+level 99) for a low Mortal Shot and a slow lock, and now costs what they do.
 
 Keep knees as the original's (50 for sights, critical and price; 60 for
 shield and knockdown), and scale a price by multiplying all three of `base`,
@@ -193,8 +194,8 @@ thing and pay for it elsewhere. Sights are shape and size, level 0 -> 99:
 | Tortoise I Giant Tortoise | square 150 -> 600 | square 100 -> 500 | 1 | 30 | 0 | **3 -> 20** | 6 -> 22 | 40 | 7000 |
 | Boar I Wild Boar | square 200 -> 600 | wide 70 -> 999 | 2 | 20 | 1 -> 9 | 0 | **5 -> 32** | 30 | 3500 |
 | Hawk I Jackal Buzzard | wide 100 -> 500 | square **500 -> 999** (by 40) | 1 | **4** | 1 -> 6 | 0.5 -> 4 | 2 -> 9 | 12 | 7000 |
-| Monkey I Mandrill | tall 700 -> 900 | square 600 -> 850 | 3 | 12 | 4 -> 6.5 | 4 -> 6.5 | 8 -> 12 | 22 | 20000 |
-| Meerkat I Meerkat | square 300 -> 800 | **tall 400 -> 999** (by 40) | 4 | 8 | 1 -> 6 | 1 -> 6 | 1.5 -> 7 | 14 | 6500 |
+| Monkey I Mandrill | tall 700 -> 900 | square 600 -> 850 | 3 | 12 | 4 -> 5.5 | 4 -> 5.5 | 8 -> 11 | 22 | 20000 |
+| Meerkat I Meerkat | square 300 -> 800 | **tall 400 -> 999** (by 40) | 4 | 6 | 1 -> 6 | 1 -> 6 | 1.5 -> 7 | 14 | 4250 |
 
 - **Fox:** glass cannon, the highest Mortal Shot with no shield.
 - **Bear:** brawler for arm weapons and close range: the fastest aim and the
@@ -209,13 +210,16 @@ thing and pay for it elsewhere. Sights are shape and size, level 0 -> 99:
   weapons; fragile.
 - **Monkey:** front-loaded for players who do not uplift: the best CHIP at
   level 0, but every curve stops at level 15 (knee 15) and later CHIPs pass
-  it; dear to buy (20000), cheap to uplift (80000 at level 99).
+  it; dear to buy (20000), cheap to uplift (80000 at level 99). Its first
+  curves stopped at 6% and knockdown 11, which beat the Wolf until level 52;
+  now the Wolf passes it on Mortal Shot by level 40 and overall by level 46.
 - **Meerkat:** anti-air: the only square aiming sight paired with a tall
-  lock-on sight, which reaches full size by level 40 and locks in 8 frames,
+  lock-on sight, which reaches full size by level 40 and locks in 6 frames,
   so shoulder missiles catch robots jumping or flying overhead while arm
   weapons aim normally. The Rabbit's sights are both tall (a jump fighter);
   the Hawk's lock-on sight is square and faster but its aim is poor. Small
-  and fragile: low shield and Knockdown Resist.
+  and fragile: low shield and Knockdown Resist. It costs what the Rabbit
+  does, whose shield is twice its own.
 
 ## 3. The chatter
 

@@ -94,11 +94,11 @@ TEST_CASE("the added CHIPs follow the original's, one record per personality") {
   CHECK(tables.chip(131)->lock_frames == 4 && tables.chip(131)->inner_shape == 1);
   const ChipRecord &mandrill = *tables.chip(136);
   CHECK(mandrill.inner_shape == 2);
-  CHECK(near(mandrill.critical_percent.value(15), 6.0F));
-  CHECK(near(mandrill.critical_percent.value(part_level_max), 6.5F));
+  CHECK(near(mandrill.critical_percent.value(15), 5.0F));
+  CHECK(near(mandrill.critical_percent.value(part_level_max), 5.5F));
   const ChipRecord &meerkat = *tables.chip(141);
   CHECK(meerkat.face->image == "textures/chips/meerkat.png");
-  CHECK(meerkat.inner_shape == 0 && meerkat.outer_shape == 2 && meerkat.lock_frames == 8);
+  CHECK(meerkat.inner_shape == 0 && meerkat.outer_shape == 2 && meerkat.lock_frames == 6);
   CHECK(near(meerkat.outer_value.value(40), 999.0F));
 }
 
