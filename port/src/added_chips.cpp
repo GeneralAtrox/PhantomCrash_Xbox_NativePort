@@ -3,6 +3,7 @@
 #include "phantomcrash/data_roots.hpp"
 #include "phantomcrash/json_fields.hpp"
 
+#include <algorithm>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -21,6 +22,18 @@ JsonValue &member(JsonValue &object, const char *key) {
     }
   }
   throw std::runtime_error(std::string("missing \"") + key + "\"");
+}
+
+// Sets `key` in `object`, adding it when the object lacks it.
+void set(JsonValue &object, const std::string &key, const JsonValue &value) {
+  auto &members = std::get<JsonValue::Object>(object.value);
+  for (auto &[name, field] : members) {
+    if (name == key) {
+      field = value;
+      return;
+    }
+  }
+  members.emplace_back(key, value);
 }
 
 JsonValue number(const double value) {
@@ -56,6 +69,28 @@ int record_index(const JsonValue &added, const std::string &name, const int chat
   return found;
 }
 
+// The port's retunes of original CHIPs ("retune"): each listed stat of every
+// record whose name is in the entry's "names" takes the entry's value.
+void retune(JsonValue::Array &chips, const JsonValue &added) {
+  const JsonValue *entries = added.find("retune");
+  if (entries == nullptr) {
+    return;
+  }
+  for (const auto &entry : entries->array()) {
+    const auto &names = json::required(entry, "names").array();
+    for (auto &chip : chips) {
+      const std::string &name = json::required(chip, "name").string();
+      if (std::none_of(names.begin(), names.end(),
+                       [&](const JsonValue &listed) { return listed.string() == name; })) {
+        continue;
+      }
+      for (const auto &[key, value] : json::required(entry, "stats").object()) {
+        set(chip, key, value);
+      }
+    }
+  }
+}
+
 } // namespace
 
 bool add_chips(JsonValue &parts, const JsonValue &added) {
@@ -63,6 +98,7 @@ bool add_chips(JsonValue &parts, const JsonValue &added) {
   if (static_cast<double>(chips.size()) != json::required(added, "first_index").number()) {
     return false;
   }
+  retune(chips, added);
   each_record(added, [&](const JsonValue &family, const int chatter, const int index) {
     JsonValue::Object record{{"index", number(index)},
                              {"name", json::required(family, "name")},

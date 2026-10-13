@@ -71,6 +71,23 @@ TEST_CASE("a reticle's size runs over its table with the value") {
   CHECK(close_to(reticle_corner_inset(corner, 2.0F)[1], 7.0F));
 }
 
+TEST_CASE("Aim Speed sets the reticle's speed on the port's 0..10 scale") {
+  BattleHudStyle::Control control = parse_battle_hud_style(shipped("ui/battle_hud.json")).control;
+  control.track_value = 1.0F; // the cats: the original's speed
+  CHECK(close_to(track_speed(control), 0.02F));
+  control.track_value = 3.0F;
+  CHECK(close_to(track_speed(control), 0.036F));
+  control.track_value = 10.0F;
+  CHECK(close_to(track_speed(control), 0.092F));
+  control.track_value = 500.0F; // past the scale's top
+  CHECK(close_to(track_speed(control), 0.092F));
+  // The original's own constants (0x4f6a0): tracks 1-5 barely differ.
+  control.track_base = 0.02F;
+  control.track_full = 999.0F;
+  control.track_value = 5.0F;
+  CHECK(close_to(track_speed(control), 0.0204F));
+}
+
 TEST_CASE("a battle HUD without its sight is refused") {
   bool threw = false;
   try {

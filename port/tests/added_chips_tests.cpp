@@ -18,6 +18,8 @@ using namespace phantomcrash;
 namespace {
 
 constexpr int original_chips = 96;
+constexpr int added_records = 50; // ten families of five personalities
+constexpr int first_specialist = 111;
 constexpr int shop_days = 24;
 
 const char *const original_chip = R"({"index": 0, "name": "Dog I", "inner_shape": 0,
@@ -30,11 +32,16 @@ json::JsonValue added() {
   return DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT).document(added_chips_document);
 }
 
-// A parts table holding `count` chips and no weapons.
+// A parts table holding `count` chips and no weapons; the original's Rabbits
+// (61-70) are named as theirs.
 json::JsonValue parts_with(const int count) {
   std::string text = R"({"chips": [)";
   for (int index = 0; index < count; ++index) {
-    text += (index == 0 ? "" : ",") + std::string(original_chip);
+    std::string chip = original_chip;
+    if (index >= 61 && index < 71) {
+      chip.replace(chip.find("Dog I"), 5, index < 66 ? "Rabbit I" : "Rabbit II");
+    }
+    text += (index == 0 ? "" : ",") + chip;
   }
   return json::parse(text + R"(], "arm_weapons": [], "shoulder_weapons": []})");
 }
@@ -49,9 +56,12 @@ TEST_CASE("the added CHIPs follow the original's, one record per personality") {
   auto parts = parts_with(original_chips);
   CHECK(add_chips(parts, added()));
   const PartTables tables = parse_part_tables(parts);
-  CHECK(tables.chips.size() == 111U);
-  const std::array<const char *, 3> names{"Cat V", "Cat VI", "Cat VII"};
-  for (int index = original_chips; index < 111; ++index) {
+  const int last = original_chips + added_records;
+  CHECK(tables.chips.size() == static_cast<std::size_t>(last));
+  const std::array<const char *, 10> names{"Cat V",    "Cat VI",     "Cat VII", "Fox I",
+                                           "Bear I",   "Tortoise I", "Boar I",  "Hawk I",
+                                           "Monkey I", "Meerkat I"};
+  for (int index = original_chips; index < last; ++index) {
     const ChipRecord *chip = tables.chip(index);
     CHECK(chip != nullptr);
     if (chip == nullptr) {
@@ -67,10 +77,44 @@ TEST_CASE("the added CHIPs follow the original's, one record per personality") {
   CHECK(norwegian.face->image == "textures/chips/cat_v.png");
   CHECK(norwegian.track == 3 && norwegian.lock_frames == 8);
   CHECK(near(norwegian.dodge_percent.value(part_level_max), 10.5F));
+  const ChipRecord &maine_coon = *tables.chip(101);
+  CHECK(maine_coon.lock_frames == 10);
+  CHECK(near(maine_coon.critical_percent.value(part_level_max), 8.0F));
+  CHECK(near(maine_coon.dodge_percent.value(part_level_max), 7.0F));
   const ChipRecord &ragdoll = *tables.chip(106);
   CHECK(ragdoll.track == 1 && ragdoll.lock_frames == 22);
   CHECK(near(ragdoll.knockdown_resistance.value(part_level_max), 18.5F));
-  CHECK(near(tables.chip(101)->critical_percent.value(part_level_max), 10.0F));
+  // The specialists, each best at one thing.
+  CHECK(near(tables.chip(111)->critical_percent.value(part_level_max), 18.0F));
+  CHECK(tables.chip(116)->face->image == "textures/chips/bear.png");
+  CHECK(tables.chip(116)->track == 10);
+  CHECK(near(tables.chip(121)->dodge_percent.value(part_level_max), 20.0F));
+  CHECK(near(tables.chip(126)->knockdown_resistance.value(part_level_max), 32.0F));
+  CHECK(tables.chip(126)->outer_shape == 1);
+  CHECK(tables.chip(131)->lock_frames == 4 && tables.chip(131)->inner_shape == 1);
+  const ChipRecord &mandrill = *tables.chip(136);
+  CHECK(mandrill.inner_shape == 2);
+  CHECK(near(mandrill.critical_percent.value(15), 6.0F));
+  CHECK(near(mandrill.critical_percent.value(part_level_max), 6.5F));
+  const ChipRecord &meerkat = *tables.chip(141);
+  CHECK(meerkat.face->image == "textures/chips/meerkat.png");
+  CHECK(meerkat.inner_shape == 0 && meerkat.outer_shape == 2 && meerkat.lock_frames == 8);
+  CHECK(near(meerkat.outer_value.value(40), 999.0F));
+}
+
+TEST_CASE("the retune gives the original's Rabbits their jump-fighter stats") {
+  auto parts = parts_with(original_chips);
+  CHECK(add_chips(parts, added()));
+  const PartTables tables = parse_part_tables(parts);
+  for (const int index : {61, 70}) {
+    const ChipRecord &rabbit = *tables.chip(index);
+    CHECK(rabbit.lock_frames == 10);
+    CHECK(near(rabbit.inner_value.value(35), 999.0F));
+    CHECK(near(rabbit.outer_value.value(0), 500.0F));
+    CHECK(near(rabbit.dodge_percent.value(part_level_max), 12.0F));
+    CHECK(rabbit.inner_shape == 0); // the fixture's; the retune leaves shapes alone
+  }
+  CHECK(tables.chip(60)->lock_frames == 22); // not a Rabbit
 }
 
 TEST_CASE("the added CHIPs leave a table alone that does not end at the original's last") {
@@ -79,7 +123,7 @@ TEST_CASE("the added CHIPs leave a table alone that does not end at the original
   CHECK(parse_part_tables(parts).chips.size() == 3U);
 }
 
-TEST_CASE("each shop day offers one added cat, the families and personalities in turn") {
+TEST_CASE("each shop day offers one added cat and one specialist, in turn") {
   std::string text = R"({"chip_lineups": [)";
   for (int day = 0; day < shop_days; ++day) {
     text += day == 0 ? "[]" : ",[]";
@@ -89,13 +133,14 @@ TEST_CASE("each shop day offers one added cat, the families and personalities in
   const auto &days = json::required(garage, "chip_lineups").array();
   for (int day = 0; day < shop_days; ++day) {
     const auto &offers = days[static_cast<std::size_t>(day)].array();
-    CHECK(offers.size() == 1U);
-    if (offers.size() != 1U) {
+    CHECK(offers.size() == 2U);
+    if (offers.size() != 2U) {
       return;
     }
-    const int family = day % 3;
-    const int personality = day / 3 % 5;
-    CHECK(json::required(offers[0], "id").number() == original_chips + family * 5 + personality);
-    CHECK(json::required(offers[0], "level").number() == 0.0);
+    const int cat = original_chips + day % 3 * 5 + day / 3 % 5;
+    const int specialist = first_specialist + day % 7 * 5 + day % 5;
+    CHECK(json::required(offers[0], "id").number() == cat);
+    CHECK(json::required(offers[1], "id").number() == specialist);
+    CHECK(json::required(offers[1], "level").number() == 0.0);
   }
 }

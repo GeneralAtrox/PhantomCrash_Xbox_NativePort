@@ -153,10 +153,7 @@ void BattleSights::track(const View &view, const Battle &battle, const CanvasPoi
       break;
     }
   }
-  const auto &control = style_.control;
-  const float speed =
-      control.track_base + control.track_scale * control.track_value / control.value_max;
-  tracker_.update(target, speed, frames,
+  tracker_.update(target, track_speed(style_.control), frames,
                   {half[0] * scale[0] / ndc[0], half[1] * scale[1] / ndc[1]});
   reticle_ = {sight.x + tracker_.offset()[0] * ndc[0], sight.y + tracker_.offset()[1] * ndc[1]};
 }

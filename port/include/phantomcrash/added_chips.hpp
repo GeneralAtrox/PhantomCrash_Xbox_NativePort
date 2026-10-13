@@ -17,9 +17,9 @@ class DataRoots;
 
 inline constexpr const char *added_chips_document = "tables/added_chips.json";
 
-// Appends the added records to parts.json's "chips". Returns false, leaving
-// the table alone, when it does not end where the additions start (another
-// game's table, such as S.L.A.I.'s).
+// Applies the "retune" of original records and appends the added records to
+// parts.json's "chips". Returns false, leaving the table alone, when it does
+// not end where the additions start (another game's table, such as S.L.A.I.'s).
 bool add_chips(json::JsonValue &parts, const json::JsonValue &added);
 
 // Appends the added shop offers to garage.json's "chip_lineups".

@@ -91,6 +91,7 @@ void parse_control(const json::JsonValue &control, BattleHudStyle::Control &out)
   out.value_max = number(control, "value_max", out.value_max);
   out.track_base = number(control, "track_base", out.track_base);
   out.track_scale = number(control, "track_scale", out.track_scale);
+  out.track_full = number(control, "track_full", out.track_full);
   out.track_range = number(control, "track_range", out.track_range);
   out.lock_frames = number(control, "lock_frames", out.lock_frames);
 }
@@ -168,6 +169,13 @@ BattleHudStyle parse_battle_hud_style(const json::JsonValue &document) {
     }
   }
   return style;
+}
+
+float track_speed(const BattleHudStyle::Control &control) {
+  const float share = control.track_full > 0.0F
+                          ? std::clamp(control.track_value / control.track_full, 0.0F, 1.0F)
+                          : 0.0F;
+  return control.track_base + control.track_scale * share;
 }
 
 std::array<float, 2> reticle_half_size(const ReticleSizes &sizes, const float value,
