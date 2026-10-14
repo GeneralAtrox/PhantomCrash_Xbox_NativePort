@@ -91,6 +91,10 @@ public:
   [[nodiscard]] virtual bool uses_music_program() const {
     return false;
   }
+  // Seconds of silence before the program's next song starts.
+  [[nodiscard]] virtual double music_program_gap() const {
+    return 0.0;
+  }
   // The music file playing now, or empty for silence: told as the screen
   // opens and whenever it changes, for the screens that show its credit.
   virtual void set_music(const std::string & /*file*/) {}

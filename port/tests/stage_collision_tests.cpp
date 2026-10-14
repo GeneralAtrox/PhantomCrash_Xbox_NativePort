@@ -75,6 +75,22 @@ TEST_CASE("segments stop at the first wall or floor they cross") {
   CHECK(ground.has_value() && std::fabs(ground->y) < 1e-4F);
 }
 
+TEST_CASE("segments beside a small collision's bounds miss and one ending on its face hits") {
+  // A placed object's one wall: x = 1, y 0..2, z -1..1, in a single grid cell.
+  const StageCollision crate = parse_stage_collision(json::parse(R"({
+    "walls": [
+      {"points": [[1, 0, -1], [1, 0, 1], [1, 2, -1]]},
+      {"points": [[1, 2, -1], [1, 0, 1], [1, 2, 1]]}
+    ],
+    "floor": []
+  })"));
+  CHECK(!crate.segment_hit({-40.0F, 1.0F, 30.0F}, {40.0F, 1.0F, 30.0F}).has_value());
+  CHECK(!crate.segment_hit({0.0F, 5.0F, 0.0F}, {3.0F, 5.0F, 0.0F}).has_value());
+  const auto face = crate.segment_hit({-3.0F, 1.0F, 0.0F}, {1.0F, 1.0F, 0.0F});
+  CHECK(face.has_value() && std::fabs(face->x - 1.0F) < 1e-4F);
+  CHECK(!StageCollision{}.segment_hit({-1.0F, 1.0F, 0.0F}, {3.0F, 1.0F, 0.0F}).has_value());
+}
+
 TEST_CASE("robots walking into a stage wall stop at their radius") {
   Battle battle(parse_battle_settings(json::parse("{}")), EnemyPath{});
   battle.set_stage(sample_stage());

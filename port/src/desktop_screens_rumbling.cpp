@@ -122,6 +122,8 @@ void ScreenRunner::run_rumbling(const double seconds) {
     if (cooperative() && world->lent() >= 0) {
       return; // Co-op's match owner runs it once.
     }
+    const auto &fighting = world->live().fighting_screens;
+    world->set_fighting(!fighting || std::ranges::find(*fighting, name_) != fighting->end());
     world->update(quest_, seconds);
   }
 }

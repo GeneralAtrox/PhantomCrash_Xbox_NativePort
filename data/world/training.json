@@ -95,6 +95,7 @@
    "door_frame": 480,
    "close_frame": 30,
    "play_in_frame": 12,
+   "music_gap_seconds": 3,
    "entry_delay": 120,
    "blend_frames": 20,
    "letterbox_frames": 30,

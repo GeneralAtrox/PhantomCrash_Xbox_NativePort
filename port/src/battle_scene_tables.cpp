@@ -4,6 +4,7 @@
 
 #include "phantomcrash/json_fields.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <stdexcept>
 #include <string>
@@ -97,6 +98,7 @@ SceneTuning parse_scene_tuning(const JsonValue &value) {
   s.door_frame = number(value, "door_frame", s.door_frame);
   s.close_frame = number(value, "close_frame", s.close_frame);
   s.play_in_frame = number(value, "play_in_frame", s.play_in_frame);
+  s.music_gap_seconds = std::max(0.0F, number(value, "music_gap_seconds", s.music_gap_seconds));
   s.entry_delay = number(value, "entry_delay", s.entry_delay);
   s.blend_frames = number(value, "blend_frames", s.blend_frames);
   s.letterbox_frames = number(value, "letterbox_frames", s.letterbox_frames);

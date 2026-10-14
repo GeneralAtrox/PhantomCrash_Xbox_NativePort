@@ -306,8 +306,9 @@ private:
   MusicProgram music_program_;
   std::string program_file_;
   int program_track_{-1};
-  std::string told_music_;                         // the music file the screen was last told of
-  std::vector<int> volume_millibels_;              // tables/music.json
+  double music_silence_{};            // seconds no music has played, for the program's gap
+  std::string told_music_;            // the music file the screen was last told of
+  std::vector<int> volume_millibels_; // tables/music.json
   std::map<std::string, std::string> track_files_; // music name -> file
   GameOptions options_;
   bool skip_conversations_{};

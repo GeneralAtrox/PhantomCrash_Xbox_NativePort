@@ -23,13 +23,53 @@ std::string TrainingScreen::music() const {
   if (battle_music_ended()) {
     return {};
   }
-  return finale_ ? finale_music() : cue_music_.empty() ? script_.music : cue_music_;
+  if (finale_) {
+    return finale_music();
+  }
+  if (!cue_music_.empty()) {
+    return cue_music_;
+  }
+  return music_start_ == MusicStart::open ? script_.music : std::string{};
 }
 
 bool TrainingScreen::uses_music_program() const {
   // Otherwise the runner would start the next playlist track after the exit stops it.
   return free_play_ && script_.music_program && cue_music_.empty() && !finale_ &&
-         !battle_music_ended();
+         music_start_ == MusicStart::open && !battle_music_ended();
+}
+
+void TrainingScreen::tick_music_start(const double seconds) {
+  const auto start_gap = [&] {
+    music_start_ = MusicStart::gap;
+    music_gap_left_ = script_.battle.scenes.music_gap_seconds;
+  };
+  switch (music_start_) {
+  case MusicStart::entrance: {
+    // The entrance cues the jingle as it ends (0x08975e); without one the
+    // gap starts as the entrance does end.
+    const bool entering = scene_ && scene_->scene().state() != scene_state::none;
+    entrance_seen_ = entrance_seen_ || entering;
+    if (!cue_music_.empty()) {
+      music_start_ = MusicStart::play_in;
+    } else if (entrance_seen_ && !entering) {
+      start_gap();
+    }
+    break;
+  }
+  case MusicStart::play_in:
+    if (cue_music_.empty()) {
+      start_gap(); // the jingle is over (or would not play)
+    }
+    break;
+  case MusicStart::gap:
+    music_gap_left_ -= seconds;
+    if (music_gap_left_ <= 1e-9) {
+      music_start_ = MusicStart::open;
+    }
+    break;
+  case MusicStart::open:
+    break;
+  }
 }
 
 void TrainingScreen::queue_dialogue(std::vector<std::string> sounds) {

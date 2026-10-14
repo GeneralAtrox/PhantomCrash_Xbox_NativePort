@@ -348,6 +348,7 @@ void ScreenRunner::tick(const InputFrame &raw_input, const double tick_seconds) 
   for (const DamageRumble &hurt : screen_->take_rumble()) {
     rumble_.start(hurt.port, damage_rumble(rumble_tuning_, hurt.damage));
   }
+  music_silence_ = audio_.playing() ? 0.0 : music_silence_ + tick_seconds;
   play_music();
   if (const auto song = radio_->update(name_, tick_seconds, !audio_.playing())) {
     play_song(*song);

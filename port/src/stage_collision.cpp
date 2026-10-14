@@ -17,6 +17,7 @@ constexpr std::array<unsigned, 11> surface_table{0x1,   0x40,   0x80,   0x100,  
                                                  0x800, 0x1000, 0x2000, 0x4000, 0x8000};
 constexpr int surface_modulus = 1000;
 constexpr float grid_cell = 8.0F;        // port grid, world units
+constexpr float bounds_margin = 0.01F;   // keeps rounding at the bounding box's faces
 constexpr int push_passes = 3;           // corners need a second push
 constexpr int box_wall_surface = 9;      // a plain wall
 constexpr float contact_epsilon = 1e-4F; // retain tangency after floating-point push-out
@@ -115,9 +116,15 @@ void StageCollision::build_grid() {
         z0 = first ? p.z : std::min(z0, p.z);
         x1 = first ? p.x : std::max(x1, p.x);
         z1 = first ? p.z : std::max(z1, p.z);
+        low_.y = first ? p.y : std::min(low_.y, p.y);
+        high_.y = first ? p.y : std::max(high_.y, p.y);
         first = false;
       }
     }
+  }
+  if (!first) {
+    low_ = {x0 - bounds_margin, low_.y - bounds_margin, z0 - bounds_margin};
+    high_ = {x1 + bounds_margin, high_.y + bounds_margin, z1 + bounds_margin};
   }
   origin_x_ = x0;
   origin_z_ = z0;
@@ -285,6 +292,11 @@ std::optional<StageHit> StageCollision::segment_contact(const Vec3 from, const V
   };
   const float x0 = std::min(from.x, to.x), x1 = std::max(from.x, to.x);
   const float z0 = std::min(from.z, to.z), z1 = std::max(from.z, to.z);
+  // Shots test every placed object and wreck: most pass nowhere near it.
+  if (x1 < low_.x || x0 > high_.x || z1 < low_.z || z0 > high_.z ||
+      std::max(from.y, to.y) < low_.y || std::min(from.y, to.y) > high_.y) {
+    return std::nullopt;
+  }
   for (const std::uint32_t index : candidates(x0, z0, x1, z1, false)) {
     test(triangles_walls_[index]);
   }

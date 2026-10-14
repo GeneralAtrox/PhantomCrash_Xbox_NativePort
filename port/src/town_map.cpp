@@ -68,7 +68,7 @@ void TownMap::move_to(const int next, const bool wrapped) {
 
 // A forward step (+1) goes to the next number and a back step to the one
 // before; following the screen, forward takes whichever of the two
-// neighbours stands further left and back the one further right.
+// neighbours stands further right and back the one further left.
 int TownMap::stepped_place(const int step) const {
   const int count = static_cast<int>(script_.places.size());
   const int next = move_cursor(place_, step, true, count);
@@ -78,7 +78,7 @@ int TownMap::stepped_place(const int step) const {
   const int other = move_cursor(place_, -step, true, count);
   const float next_x = script_.places[static_cast<std::size_t>(next)].rider[0];
   const float other_x = script_.places[static_cast<std::size_t>(other)].rider[0];
-  const bool other_is_wanted = step > 0 ? other_x < next_x : other_x > next_x;
+  const bool other_is_wanted = step > 0 ? other_x > next_x : other_x < next_x;
   return other_is_wanted ? other : next;
 }
 

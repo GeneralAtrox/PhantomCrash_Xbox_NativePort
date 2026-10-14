@@ -22,7 +22,7 @@ from .slai.native_cosmetics import register_cosmetics
 from .xdvdfs import XdvdfsImage
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_DISC = REPOSITORY_ROOT.parent / "Games" / "Phantom Crash (Europe).xiso.iso"
+DEFAULT_DISC = REPOSITORY_ROOT / "Phantom Crash (Europe).xiso.iso"
 DEFAULT_OUTPUT = REPOSITORY_ROOT / "artifacts" / "europe"
 DEFAULT_ASSETS = DEFAULT_OUTPUT / "assets"
 DEFAULT_MODS = REPOSITORY_ROOT / "mods"

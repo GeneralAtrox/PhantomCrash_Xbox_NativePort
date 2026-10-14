@@ -856,6 +856,14 @@ robot index % 4 (0x0825df). The lessons start in their own states (0x18,
   (0x082e60). In regular battles (modes 0 and 2) the music cue, track 16
   9PLAYIN, starts 6 battle ticks (12 frames) before the end; the
   tutorial's mode 4 has none.
+- **Battle music** (0x09e24c, ticked by the battle's state task). Once no
+  music plays it waits the tick rate times 3.0 (0x17cce0) and, if still
+  silent, plays the next song of the saved program, or a ranker's theme
+  (0x09e6b1). So a regular battle walks out without music, plays 9PLAYIN,
+  then starts the program 3 s after the jingle ends, and leaves 3 s
+  between the program's songs. The port's `TrainingScreen` holds back the
+  program and the battle's own track until the jingle ends plus
+  `music_gap_seconds`; the runner keeps the same gap between songs.
 - **Computer robots** (state 1: 0x082552, 0x088ffa, 0x08928c, 0x0897a2).
   The original assigns gates by robot index, with a delay of 120
   frames (+0x277c). While the gate's door is busy they wait, until the

@@ -59,26 +59,66 @@ TEST_CASE("the town map starts on the place it was opened from") {
 
 TEST_CASE("the town map's cursor steps round the places and waits for the rider") {
   TownMap map = town("garage");
-  press(map, button::left);
+  press(map, button::right);
   CHECK(map.place() == 0); // still fading in
   run(map, 0.6);
   static_cast<void>(map.take_sounds());
-  press(map, button::left);
+  press(map, button::right);
   CHECK(map.place() == 1);
   CHECK((map.take_sounds() == std::vector<std::string>{"adjust", "town_move"}));
   CHECK(map.moving());
-  press(map, button::left);
+  press(map, button::right);
   CHECK(map.place() == 1); // the rider is still travelling
   run(map, 0.2);
   CHECK(!map.moving());
-  press(map, button::right);
+  press(map, button::left);
   run(map, 0.2);
-  press(map, button::right);
+  press(map, button::left);
   CHECK(map.place() == 7); // round past the start
 }
 
-TEST_CASE("the town map's left and right follow the screen along the bottom") {
-  TownMap map = town("sonic_amp");
+TEST_CASE("the town map turns clockwise on left and anticlockwise on right from every place") {
+  // The places are numbered anticlockwise round the map; leaving SONIC AMP
+  // (on the bottom) must not change which way the buttons turn.
+  for (const char *from : {"garage", "sonic_amp", "plustech", "dealer_kojima"}) {
+    TownMap map = town(from);
+    const int start = map.place();
+    run(map, 0.6);
+    press(map, button::right);
+    CHECK(map.place() == (start + 1) % 8);
+    run(map, 0.2);
+    press(map, button::left);
+    run(map, 0.2);
+    press(map, button::left);
+    CHECK(map.place() == (start + 7) % 8);
+  }
+}
+
+TEST_CASE("the town map's left keeps turning clockwise past Kojima") {
+  TownMap map = town("dealer_kojima");
+  REQUIRE(map.place() == 6);
+  run(map, 0.6);
+  press(map, button::left);
+  CHECK(map.place() == 5); // Ventuno
+  run(map, 0.2);
+  press(map, button::left);
+  CHECK(map.place() == 4); // Sonic Amp, not back to 7
+  run(map, 0.2);
+  press(map, button::right);
+  run(map, 0.2);
+  press(map, button::right);
+  run(map, 0.2);
+  press(map, button::right);
+  CHECK(map.place() == 7);
+  run(map, 0.2);
+  press(map, button::right);
+  CHECK(map.place() == 0); // round past the end
+}
+
+TEST_CASE("the town map's follow_screen option follows the screen along the bottom") {
+  TownMapScript script = shipped();
+  script.follow_screen = true;
+  TownMap map(std::move(script), "sonic_amp", {});
   REQUIRE(map.place() == 4);
   run(map, 0.6);
   press(map, button::left);
@@ -88,18 +128,6 @@ TEST_CASE("the town map's left and right follow the screen along the bottom") {
   run(map, 0.2);
   press(map, button::right);
   CHECK(map.place() == 5); // Ventuno, to the right
-  run(map, 0.2);
-  press(map, button::right);
-  CHECK(map.place() == 6); // up to Kojima, further right
-}
-
-TEST_CASE("the town map keeps the original's number order without follow_screen") {
-  TownMapScript script = shipped();
-  script.follow_screen = false;
-  TownMap map(std::move(script), "sonic_amp", {});
-  run(map, 0.6);
-  press(map, button::left);
-  CHECK(map.place() == 5); // the next number, Ventuno, to the right
 }
 
 TEST_CASE("the town map's sign grows once the map has faded in") {
@@ -129,7 +157,7 @@ TEST_CASE("the town map's rider appears after the fade and faces each place's wa
   }
   CHECK((*rider->size)[0] == 64.0F);
   CHECK(!rider->flip_x);
-  press(map, button::left);
+  press(map, button::right);
   run(map, 0.3);
   const auto at_plustech = map.rider();
   CHECK(map.place() == 3);
@@ -139,12 +167,12 @@ TEST_CASE("the town map's rider appears after the fade and faces each place's wa
 TEST_CASE("confirm on the town map fades out to the chosen place") {
   TownMap map = town("garage");
   run(map, 0.8);
-  press(map, button::left);
+  press(map, button::right);
   run(map, 0.3);
   static_cast<void>(map.take_sounds());
   press(map, button::a);
   CHECK((map.take_sounds() == std::vector<std::string>{"confirm"}));
-  press(map, button::left);
+  press(map, button::right);
   CHECK(map.place() == 1); // no moves while leaving
   run(map, 0.6);
   CHECK(map.done());
@@ -191,7 +219,7 @@ TEST_CASE("the mouse chooses a town map place by its number or name") {
   CHECK(map.place() == 2);
   CHECK((map.take_sounds() == std::vector<std::string>{"adjust", "town_move"}));
   run(map, 0.3);
-  press(map, button::right);
+  press(map, button::left);
   CHECK(map.place() == 1);
   run(map, 0.3);
   CHECK(map.place() == 1);    // the mouse, still, does not take it back

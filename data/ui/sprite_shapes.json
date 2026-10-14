@@ -11,7 +11,8 @@
   "schedule_tex [520,672,640,712] and [640,672,760,712]: the schedule's EXIT plate, also SKIP TO DAY's: a rim round [10,6,110,30], #151515 in white normally, #fcc500 in black lit. Their lettering is in sprite_text.json.",
   "sound_config_tex [640,344,904,360] and [888,0,896,8]: SOUND CONFIG's volume track (a pale rim, dark and blue grooves and a blue body shaded down its height) and the level bar's segment (white to #262526 down its height).",
   "key_config_tex [992,128,1008,144] and [1008,128,1024,144], [1008,280,1024,296] and [1008,296,1024,312]: BUTTON CONFIG's right and left arrows, plain and lit: a black triangle (a white one inside it when lit) over a soft shadow down and right. The button icons and controller markers stay atlas art.",
-  "save_load_tex [640,0,768,152], [896,0,1024,152] and [768,152,896,304]: LOAD/SAVE's folder plates, a path traced from the art's tabbed edge: a cream edge line, a bevel pale to the top left and dark to the bottom right (shade_toward), the body and a soft dark halo. Each bevel step is its own outline on an inner contour of the same path. [768,0,896,152], [640,152,768,304] and [896,152,1024,304]: the chosen plates, a glowing edge, a second glowing ring 9 texels in and the body darkening inward in steps."
+  "save_load_tex [640,0,768,152], [896,0,1024,152] and [768,152,896,304]: LOAD/SAVE's folder plates, a path traced from the art's tabbed edge: a cream edge line, a bevel pale to the top left and dark to the bottom right (shade_toward), the body and a soft dark halo. Each bevel step is its own outline on an inner contour of the same path. [768,0,896,152], [640,152,768,304] and [896,152,1024,304]: the chosen plates, a glowing edge, a second glowing ring 9 texels in and the body darkening inward in steps.",
+  "Leg module tables (customize_tex [1240,480,1448,608], wild_tex/1 [680,480,888,608], stock_module_tex/0 [864,320,1072,448]): the ruled lines, and a port addition: in place of WEIGHT CAPACITY's repeated WEIGHT, a white arrow (a tapered quarter turn in six pieces and its head) bends down from the WEIGHT row to point at CAPACITY (sprite_text.json), with the labels' drop shadow under it, so the values to the right have room."
  ],
  "classes": {
   "menu_bullet_box": {"box": [4, 24, 14, 34], "radius": 0, "stops": [[0, "#ffffff", 1], [0, "#ffffff", 0]]},
@@ -1715,6 +1716,269 @@
     {
      "box": [7, 124, 205, 125],
      "radius": 0,
+     "stops": [[0, "#ffffff", 1], [0, "#ffffff", 0]]
+    },
+    {
+     "path": "M 10.1 44 L 10.5 45.74 L 9.02 46.14 L 8.9 44 Z",
+     "offset": [-1.5, 1.5],
+     "stops": [[0, "#202020", 1], [0, "#202020", 0]]
+    },
+    {
+     "path": "M 10.5 45.74 L 11.31 47.28 L 9.7 48.22 L 9.02 46.14 Z",
+     "offset": [-1.5, 1.5],
+     "stops": [[0, "#202020", 1], [0, "#202020", 0]]
+    },
+    {
+     "path": "M 11.31 47.28 L 12.47 48.53 L 10.92 50.08 L 9.7 48.22 Z",
+     "offset": [-1.5, 1.5],
+     "stops": [[0, "#202020", 1], [0, "#202020", 0]]
+    },
+    {
+     "path": "M 12.47 48.53 L 13.88 49.4 L 12.62 51.59 L 10.92 50.08 Z",
+     "offset": [-1.5, 1.5],
+     "stops": [[0, "#202020", 1], [0, "#202020", 0]]
+    },
+    {
+     "path": "M 13.88 49.4 L 15.43 49.86 L 14.69 52.63 L 12.62 51.59 Z",
+     "offset": [-1.5, 1.5],
+     "stops": [[0, "#202020", 1], [0, "#202020", 0]]
+    },
+    {
+     "path": "M 15.43 49.86 L 17 49.9 L 17 53.1 L 14.69 52.63 Z",
+     "offset": [-1.5, 1.5],
+     "stops": [[0, "#202020", 1], [0, "#202020", 0]]
+    },
+    {
+     "path": "M 16.5 46.5 L 23 51.5 L 16.5 56.5 Z",
+     "offset": [-1.5, 1.5],
+     "stops": [[0, "#202020", 1], [0, "#202020", 0]]
+    },
+    {
+     "path": "M 10.1 44 L 10.5 45.74 L 9.02 46.14 L 8.9 44 Z",
+     "stops": [[0, "#ffffff", 1], [0, "#ffffff", 0]]
+    },
+    {
+     "path": "M 10.5 45.74 L 11.31 47.28 L 9.7 48.22 L 9.02 46.14 Z",
+     "stops": [[0, "#ffffff", 1], [0, "#ffffff", 0]]
+    },
+    {
+     "path": "M 11.31 47.28 L 12.47 48.53 L 10.92 50.08 L 9.7 48.22 Z",
+     "stops": [[0, "#ffffff", 1], [0, "#ffffff", 0]]
+    },
+    {
+     "path": "M 12.47 48.53 L 13.88 49.4 L 12.62 51.59 L 10.92 50.08 Z",
+     "stops": [[0, "#ffffff", 1], [0, "#ffffff", 0]]
+    },
+    {
+     "path": "M 13.88 49.4 L 15.43 49.86 L 14.69 52.63 L 12.62 51.59 Z",
+     "stops": [[0, "#ffffff", 1], [0, "#ffffff", 0]]
+    },
+    {
+     "path": "M 15.43 49.86 L 17 49.9 L 17 53.1 L 14.69 52.63 Z",
+     "stops": [[0, "#ffffff", 1], [0, "#ffffff", 0]]
+    },
+    {
+     "path": "M 16.5 46.5 L 23 51.5 L 16.5 56.5 Z",
+     "stops": [[0, "#ffffff", 1], [0, "#ffffff", 0]]
+    }
+   ]
+  },
+  {
+   "image": "textures/scroll/wild_tex/1.png",
+   "rect": [680, 480, 888, 608],
+   "class": "table_rules",
+   "outlines": [
+    {
+     "box": [7, 19, 205, 20],
+     "radius": 0,
+     "stops": [[0, "#ffffff", 1], [0, "#ffffff", 0]]
+    },
+    {
+     "box": [7, 40, 205, 41],
+     "radius": 0,
+     "stops": [[0, "#ffffff", 1], [0, "#ffffff", 0]]
+    },
+    {
+     "box": [7, 61, 205, 62],
+     "radius": 0,
+     "stops": [[0, "#ffffff", 1], [0, "#ffffff", 0]]
+    },
+    {
+     "box": [7, 82, 205, 83],
+     "radius": 0,
+     "stops": [[0, "#ffffff", 1], [0, "#ffffff", 0]]
+    },
+    {
+     "box": [7, 103, 205, 104],
+     "radius": 0,
+     "stops": [[0, "#ffffff", 1], [0, "#ffffff", 0]]
+    },
+    {
+     "box": [7, 124, 205, 125],
+     "radius": 0,
+     "stops": [[0, "#ffffff", 1], [0, "#ffffff", 0]]
+    },
+    {
+     "path": "M 10.1 44 L 10.5 45.74 L 9.02 46.14 L 8.9 44 Z",
+     "offset": [1, 1],
+     "stops": [[0, "#000000", 0.85], [0, "#000000", 0]]
+    },
+    {
+     "path": "M 10.5 45.74 L 11.31 47.28 L 9.7 48.22 L 9.02 46.14 Z",
+     "offset": [1, 1],
+     "stops": [[0, "#000000", 0.85], [0, "#000000", 0]]
+    },
+    {
+     "path": "M 11.31 47.28 L 12.47 48.53 L 10.92 50.08 L 9.7 48.22 Z",
+     "offset": [1, 1],
+     "stops": [[0, "#000000", 0.85], [0, "#000000", 0]]
+    },
+    {
+     "path": "M 12.47 48.53 L 13.88 49.4 L 12.62 51.59 L 10.92 50.08 Z",
+     "offset": [1, 1],
+     "stops": [[0, "#000000", 0.85], [0, "#000000", 0]]
+    },
+    {
+     "path": "M 13.88 49.4 L 15.43 49.86 L 14.69 52.63 L 12.62 51.59 Z",
+     "offset": [1, 1],
+     "stops": [[0, "#000000", 0.85], [0, "#000000", 0]]
+    },
+    {
+     "path": "M 15.43 49.86 L 17 49.9 L 17 53.1 L 14.69 52.63 Z",
+     "offset": [1, 1],
+     "stops": [[0, "#000000", 0.85], [0, "#000000", 0]]
+    },
+    {
+     "path": "M 16.5 46.5 L 23 51.5 L 16.5 56.5 Z",
+     "offset": [1, 1],
+     "stops": [[0, "#000000", 0.85], [0, "#000000", 0]]
+    },
+    {
+     "path": "M 10.1 44 L 10.5 45.74 L 9.02 46.14 L 8.9 44 Z",
+     "stops": [[0, "#ffffff", 1], [0, "#ffffff", 0]]
+    },
+    {
+     "path": "M 10.5 45.74 L 11.31 47.28 L 9.7 48.22 L 9.02 46.14 Z",
+     "stops": [[0, "#ffffff", 1], [0, "#ffffff", 0]]
+    },
+    {
+     "path": "M 11.31 47.28 L 12.47 48.53 L 10.92 50.08 L 9.7 48.22 Z",
+     "stops": [[0, "#ffffff", 1], [0, "#ffffff", 0]]
+    },
+    {
+     "path": "M 12.47 48.53 L 13.88 49.4 L 12.62 51.59 L 10.92 50.08 Z",
+     "stops": [[0, "#ffffff", 1], [0, "#ffffff", 0]]
+    },
+    {
+     "path": "M 13.88 49.4 L 15.43 49.86 L 14.69 52.63 L 12.62 51.59 Z",
+     "stops": [[0, "#ffffff", 1], [0, "#ffffff", 0]]
+    },
+    {
+     "path": "M 15.43 49.86 L 17 49.9 L 17 53.1 L 14.69 52.63 Z",
+     "stops": [[0, "#ffffff", 1], [0, "#ffffff", 0]]
+    },
+    {
+     "path": "M 16.5 46.5 L 23 51.5 L 16.5 56.5 Z",
+     "stops": [[0, "#ffffff", 1], [0, "#ffffff", 0]]
+    }
+   ]
+  },
+  {
+   "image": "textures/scroll/stock_module_tex/0.png",
+   "rect": [864, 320, 1072, 448],
+   "class": "table_rules",
+   "outlines": [
+    {
+     "box": [7, 19, 205, 20],
+     "radius": 0,
+     "stops": [[0, "#ffffff", 1], [0, "#ffffff", 0]]
+    },
+    {
+     "box": [7, 40, 205, 41],
+     "radius": 0,
+     "stops": [[0, "#ffffff", 1], [0, "#ffffff", 0]]
+    },
+    {
+     "box": [7, 61, 205, 62],
+     "radius": 0,
+     "stops": [[0, "#ffffff", 1], [0, "#ffffff", 0]]
+    },
+    {
+     "box": [7, 82, 205, 83],
+     "radius": 0,
+     "stops": [[0, "#ffffff", 1], [0, "#ffffff", 0]]
+    },
+    {
+     "box": [7, 103, 205, 104],
+     "radius": 0,
+     "stops": [[0, "#ffffff", 1], [0, "#ffffff", 0]]
+    },
+    {
+     "box": [7, 124, 205, 125],
+     "radius": 0,
+     "stops": [[0, "#ffffff", 1], [0, "#ffffff", 0]]
+    },
+    {
+     "path": "M 10.1 44 L 10.5 45.74 L 9.02 46.14 L 8.9 44 Z",
+     "offset": [1, 1],
+     "stops": [[0, "#000000", 0.85], [0, "#000000", 0]]
+    },
+    {
+     "path": "M 10.5 45.74 L 11.31 47.28 L 9.7 48.22 L 9.02 46.14 Z",
+     "offset": [1, 1],
+     "stops": [[0, "#000000", 0.85], [0, "#000000", 0]]
+    },
+    {
+     "path": "M 11.31 47.28 L 12.47 48.53 L 10.92 50.08 L 9.7 48.22 Z",
+     "offset": [1, 1],
+     "stops": [[0, "#000000", 0.85], [0, "#000000", 0]]
+    },
+    {
+     "path": "M 12.47 48.53 L 13.88 49.4 L 12.62 51.59 L 10.92 50.08 Z",
+     "offset": [1, 1],
+     "stops": [[0, "#000000", 0.85], [0, "#000000", 0]]
+    },
+    {
+     "path": "M 13.88 49.4 L 15.43 49.86 L 14.69 52.63 L 12.62 51.59 Z",
+     "offset": [1, 1],
+     "stops": [[0, "#000000", 0.85], [0, "#000000", 0]]
+    },
+    {
+     "path": "M 15.43 49.86 L 17 49.9 L 17 53.1 L 14.69 52.63 Z",
+     "offset": [1, 1],
+     "stops": [[0, "#000000", 0.85], [0, "#000000", 0]]
+    },
+    {
+     "path": "M 16.5 46.5 L 23 51.5 L 16.5 56.5 Z",
+     "offset": [1, 1],
+     "stops": [[0, "#000000", 0.85], [0, "#000000", 0]]
+    },
+    {
+     "path": "M 10.1 44 L 10.5 45.74 L 9.02 46.14 L 8.9 44 Z",
+     "stops": [[0, "#ffffff", 1], [0, "#ffffff", 0]]
+    },
+    {
+     "path": "M 10.5 45.74 L 11.31 47.28 L 9.7 48.22 L 9.02 46.14 Z",
+     "stops": [[0, "#ffffff", 1], [0, "#ffffff", 0]]
+    },
+    {
+     "path": "M 11.31 47.28 L 12.47 48.53 L 10.92 50.08 L 9.7 48.22 Z",
+     "stops": [[0, "#ffffff", 1], [0, "#ffffff", 0]]
+    },
+    {
+     "path": "M 12.47 48.53 L 13.88 49.4 L 12.62 51.59 L 10.92 50.08 Z",
+     "stops": [[0, "#ffffff", 1], [0, "#ffffff", 0]]
+    },
+    {
+     "path": "M 13.88 49.4 L 15.43 49.86 L 14.69 52.63 L 12.62 51.59 Z",
+     "stops": [[0, "#ffffff", 1], [0, "#ffffff", 0]]
+    },
+    {
+     "path": "M 15.43 49.86 L 17 49.9 L 17 53.1 L 14.69 52.63 Z",
+     "stops": [[0, "#ffffff", 1], [0, "#ffffff", 0]]
+    },
+    {
+     "path": "M 16.5 46.5 L 23 51.5 L 16.5 56.5 Z",
      "stops": [[0, "#ffffff", 1], [0, "#ffffff", 0]]
     }
    ]

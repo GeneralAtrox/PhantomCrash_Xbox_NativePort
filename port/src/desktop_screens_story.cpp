@@ -173,6 +173,7 @@ void ScreenRunner::show(const std::string &name, const bool events) {
             coop_location_.c_str(), quest_.day + 1);
   }
   reset_music_program();
+  music_silence_ = 0.0;
   for (const std::string &sound : screen_->sound_preloads()) {
     audio_.preload(sound); // not loaded mid-battle, on its first play
   }

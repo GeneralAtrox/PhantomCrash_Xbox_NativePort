@@ -19,6 +19,7 @@
 #include <array>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <random>
 #include <string>
 #include <vector>
@@ -36,6 +37,9 @@ struct RumblingLive {
   std::array<std::array<std::string, 2>, roster_areas> stages{};
   // Screens the world does not run on: those before a game is under way.
   std::vector<std::string> paused_screens;
+  // Screens on which the areas but the player's fight (the area choice, whose
+  // map shows them); elsewhere they wait. Absent, they fight on every screen.
+  std::optional<std::vector<std::string>> fighting_screens;
   DroneAi ai;
 };
 
@@ -107,6 +111,12 @@ public:
   void set_background(const bool run) noexcept {
     background_ = run;
   }
+  // Whether the areas but the lent one fight at all just now (the screen's
+  // choice, RumblingLive::fighting_screens); while not, downed opponents are
+  // still replaced.
+  void set_fighting(const bool fight) noexcept {
+    fighting_ = fight;
+  }
   // Battle robot `index`'s opponent at `area` (roster place index - 1), or null.
   [[nodiscard]] const RumblingRobot *robot(int area, int index) const;
   // Counts each time one of the area's robots becomes someone else.
@@ -158,6 +168,7 @@ private:
   std::array<Area, roster_areas> areas_{};
   int lent_{-1};
   bool background_{true};
+  bool fighting_{true};
   bool deterministic_{}; // online worlds prepare navigation before any arena starts
   std::vector<RobotParts> lent_looks_;
 };

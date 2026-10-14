@@ -115,6 +115,9 @@ TrainingScreen::TrainingScreen(TextureCache &textures, const GlyphFont &font,
           context.scene_seed.value_or(static_cast<std::uint32_t>(SDL_GetTicks())));
     }
     if (scene_) {
+      if (script_.battle.scenes.regular_battle) {
+        music_start_ = MusicStart::entrance;
+      }
       if (!coop_match_) {
         static_cast<void>(battle_->take_arrivals());
       }
@@ -222,6 +225,7 @@ void TrainingScreen::tick(const InputFrame &incoming, const double tick_seconds)
     tick_finale(tick_seconds);
   }
   tick_battle(input, seconds);
+  tick_music_start(tick_seconds);
   if (vs_) {
     tick_vs(input, tick_seconds);
   }

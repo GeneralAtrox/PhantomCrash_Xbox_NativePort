@@ -70,7 +70,7 @@ and converts only what is missing or out of date (see
 [Windows release setup](docs/WINDOWS_RELEASE.md#updating-to-a-new-version)),
 and the port runs it on startup when the assets need converting again.
 
-The default disc is `..\Games\Phantom Crash (Europe).xiso.iso`; pass `--disc`
+The default disc is `Phantom Crash (Europe).xiso.iso` in the repository root; pass `--disc`
 for another image. Both trimmed `.xiso` images and full Redump-style images are
 supported. Output goes to `artifacts\europe`:
 
@@ -324,8 +324,10 @@ WIRE HEADS DATA steps through them with left and right: pilot and chip
 faces, alias, SV and chip names, team and prize money (the ranker alone in
 a ranker's contest).
 The RUMBLING is live, a port addition (`data\world\rumbling.json` "live"):
-from the first screen of a game (not the intro, title or menus) each area's
+while the RUMBLING area choice is open (`fighting_screens`), each area's
 opponents fight one another on its stage off screen, 30 times a second,
+so its map updates; elsewhere they wait, though the downed are still
+replaced (from the first screen of a game, not the intro, title or menus),
 with the drones' simple AI (face the nearest other robot within range,
 keep a distance, fire what is loaded). One shot down (or out of rounds)
 leaves, and after `arrival_seconds` the next is drawn from those not out.
@@ -349,9 +351,9 @@ with its own EXIT card and a KEEP SV, SV SPEC and CANCEL menu
 and KEEP comes back and saves it, asking before it overwrites one of the
 same name. The kept Scoobees are stored in the settings file as
 `vs_scoobees`, as the original stored them on the memory unit.
-The town map (`data\ui\town_map.json`) links the places: left and right
-step round the garage, Club Wired, Wild Machines, PlusTech, Sonic Amp and
-the three dealers, the chosen place's sign pops up and the rider rides to
+The town map (`data\ui\town_map.json`) links the places: left steps
+clockwise and right anticlockwise round the garage, Club Wired, Wild
+Machines, PlusTech, Sonic Amp and the three dealers, wherever it starts, the chosen place's sign pops up and the rider rides to
 it, and confirm goes there. The map starts on the place it was opened
 from. Sonic Amp (`data\ui\sonic_amp.json`) sells and previews tracks. The
 three SV dealers (`data\ui\dealer.json`; `--start dealer_ventuno`,

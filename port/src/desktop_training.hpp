@@ -122,6 +122,9 @@ public:
   // Battle music ends when entering the exit elevator or leaving the screen.
   [[nodiscard]] std::string music() const override;
   [[nodiscard]] bool uses_music_program() const override;
+  [[nodiscard]] double music_program_gap() const override {
+    return script_.battle.scenes.regular_battle ? script_.battle.scenes.music_gap_seconds : 0.0;
+  }
   void set_music(const std::string &file) override {
     heard_music_ = file;
     if (file.empty() && !finale_) {
@@ -188,6 +191,7 @@ public:
 
 private:
   [[nodiscard]] bool battle_music_ended() const;
+  void tick_music_start(double seconds);
   bool online() const;
   void capture_online(const RobotControl &control, const FireControl &fire);
   bool online_result_ready() const;
@@ -338,6 +342,13 @@ private:
   std::unique_ptr<PointLights> point_lights_; // fires, blasts and shots lighting the stage
   std::string cue_music_;
   std::string heard_music_; // the actual song, including the saved program, for replay
+  // A regular battle's music waits for the entrance: silence while the
+  // robot walks out, the play-in jingle, then music_gap_seconds of silence
+  // before the program or the battle's own track (0x09e24c).
+  enum class MusicStart { entrance, play_in, gap, open };
+  MusicStart music_start_{MusicStart::open};
+  bool entrance_seen_{}; // the player's entrance scene has run
+  double music_gap_left_{};
   // The message playing now, its script kept for the player.
   std::unique_ptr<StoryEvent> message_event_;
   std::unique_ptr<EventPlayer> message_;

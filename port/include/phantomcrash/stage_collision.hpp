@@ -110,6 +110,10 @@ private:
   std::vector<CollisionTriangle> triangles_walls_;
   std::vector<CollisionTriangle> triangles_floor_;
   std::vector<Cell> grid_;
+  // Every triangle lies inside low_..high_; a segment that keeps out of it
+  // meets none of them (an empty collision has high_ below low_).
+  Vec3 low_{0.0F, 0.0F, 0.0F};
+  Vec3 high_{-1.0F, -1.0F, -1.0F};
   float origin_x_{};
   float origin_z_{};
   int columns_{};

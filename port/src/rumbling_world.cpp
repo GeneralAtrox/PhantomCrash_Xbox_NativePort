@@ -45,6 +45,13 @@ RumblingLive parse_rumbling_live(const json::JsonValue &document) {
         live.paused_screens.push_back(name.string());
       }
     }
+    if (const json::JsonValue *fighting = value.find("fighting_screens");
+        fighting && fighting->is_array()) {
+      live.fighting_screens.emplace();
+      for (const json::JsonValue &name : fighting->array()) {
+        live.fighting_screens->push_back(name.string());
+      }
+    }
     if (const json::JsonValue *ai = value.find("ai")) {
       live.ai = parse_drone_ai(*ai);
     }
@@ -86,7 +93,7 @@ void RumblingWorld::update(QuestSave &quest, const double seconds) {
       int steps = 0;
       for (; area.clock >= step_seconds && steps < max_catch_up_steps; ++steps) {
         step(index, quest, static_cast<float>(step_seconds),
-             index != lent_ && (background_ || lent_ < 0));
+             index != lent_ && fighting_ && (background_ || lent_ < 0));
         area.clock -= step_seconds;
       }
       if (steps == max_catch_up_steps) {

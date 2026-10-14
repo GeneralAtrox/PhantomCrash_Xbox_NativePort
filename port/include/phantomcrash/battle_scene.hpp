@@ -94,6 +94,7 @@ struct SceneTuning {
   float door_frame{480.0F};        // the gate's door opens (0x199fe4) ...
   float close_frame{30.0F};        // ... and the exit shuts it behind the robot (0x17ccfc)
   float play_in_frame{12.0F};      // the entrance's music cue: 6 battle ticks (0x19f898)
+  float music_gap_seconds{3.0F};   // silence before the next battle song (0x09e24c)
   float entry_delay{120.0F};       // a computer robot waits this long at most for a busy door
   float blend_frames{20.0F};       // the camera eases into the chase view (0x199f7c)
   float letterbox_frames{30.0F};   // the bars slide over this long (0x049080)

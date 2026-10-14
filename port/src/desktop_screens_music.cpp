@@ -90,6 +90,10 @@ bool ScreenRunner::play_music_program() {
   if (music_program_.empty()) {
     return false;
   }
+  // 0x09e24c starts the next song only after a stretch of silence.
+  if (!audio_.playing() && music_silence_ + 1e-9 < screen_->music_program_gap()) {
+    return true;
+  }
   // A scene cue may interrupt the song. Retain its place in the program;
   // restart that song after the cue, rather than skipping to the next one.
   if (program_file_.empty() || (audio_.music() == program_file_ && !audio_.playing())) {

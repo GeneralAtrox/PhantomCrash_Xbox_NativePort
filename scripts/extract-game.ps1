@@ -7,7 +7,7 @@
 # conversion and -Verify hashes every extracted file against disc.json.
 [CmdletBinding()]
 param(
-    [string]$Disc = (Join-Path $PSScriptRoot '..\..\Games\Phantom Crash (Europe).xiso.iso'),
+    [string]$Disc = (Join-Path $PSScriptRoot '..\Phantom Crash (Europe).xiso.iso'),
     [string]$Root = (Join-Path $PSScriptRoot '..'),
     [string]$Extractor = (Join-Path $PSScriptRoot '..\build\port\port\Release\phantomcrash_extract.exe'),
     [switch]$Convert,

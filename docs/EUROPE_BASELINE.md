@@ -8,7 +8,7 @@ and the first headless Ghidra analysis.
 
 | Field | Value |
 |---|---|
-| File | `C:\Projects\Xemu\Games\Phantom Crash (Europe).xiso.iso` |
+| File | `C:\Projects\Xbox\PhantomCrash\Phantom Crash (Europe).xiso.iso` |
 | Size | 2,724,462,592 bytes |
 | SHA-256 | `85a8fc3bf2cc7dddbe285574b386ba7639dd1a73b4cd0d6cf9abf323f869664f` |
 | Layout | Trimmed xiso; XDVDFS partition at offset 0 |

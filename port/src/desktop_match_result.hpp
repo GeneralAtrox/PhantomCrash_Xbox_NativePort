@@ -47,9 +47,6 @@ public:
   [[nodiscard]] bool day_clicked(const InputFrame &input) const override {
     return !watching_ && frame_.day_clicked(input, quest_);
   }
-  bool save_clicked(const InputFrame &input) override {
-    return !watching_ && frame_.save_clicked(input);
-  }
   void set_music(const std::string &file) override {
     frame_.set_music(file);
   }

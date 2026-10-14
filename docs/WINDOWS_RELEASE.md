@@ -1,6 +1,6 @@
-Version 0.5.11 adds three rare money boxes to the supply drops, up to a
-1,000,000 NY jackpot, with colours set in data, and shows more of each
-part's stats.
+Version 0.5.12 fixes the frame drops in busy RUMBLING battles, adds seven
+specialist CHIPs and the red supply carrier with its rescue box, and lets
+battle music wait for the robot's entrance.
 
 This is a work-in-progress Windows x64 port. The ZIP includes
 `phantomcrash_port.exe`, the game data installer `phantomcrash_extract.exe`,
@@ -54,6 +54,39 @@ opens the Class D rental shortcut (`rumbling_d_night_rental` for the night
 one); it uses and saves the current quest.
 
 ## Included changes
+
+0.5.12 changes:
+
+- RUMBLING battles no longer drop to a few frames a second when many robots
+  fight close together, above all on AQUA LINE: a shot now skips every
+  vehicle, prop and wreck it does not pass near instead of testing their
+  collision shapes.
+- The areas other than the player's fight only while the RUMBLING area
+  choice is open, so its map still updates; elsewhere, the player's battle
+  included, they wait (`fighting_screens` in `data/world/rumbling.json`).
+- Seven specialist CHIP families (Fox I, Bear I, Tortoise I, Boar I,
+  Hawk I, Monkey I, Meerkat I), each best at one thing and weak at another.
+  BUY CHIP sells one added cat and one specialist a day. The Rabbits become
+  jump fighters; Cat VI is toned down; Monkey I, Meerkat I and Cat VII are
+  rebalanced. Aim Speed now sets how fast the reticle follows a target (the
+  original's speed at 1, 4.6 times faster at 10).
+- The red carrier: shoot three supply carriers down before they drop
+  anything and the next comes red, bigger and with the warning alarm,
+  dropping nine boxes onto the helipad's H with better odds.
+- The rescue box: a player's robot below a quarter of its armour when a
+  carrier sets out is brought the 50% repair box first, landing at its
+  feet. Ammo boxes refill the weapon with the least of its magazine left
+  (`"ammo_to": "random"` keeps the original's pick).
+- A regular battle's music waits for the entrance: silence while the robot
+  walks out, the play-in jingle, then 3 s before the program or the
+  battle's own track, with 3 s between the program's songs
+  (`music_gap_seconds` in `data/world/training.json`).
+- The town map turns as the original: left always steps clockwise and
+  right anticlockwise, including after Sonic Amp.
+- RESULT no longer shows the top bar's SAVE button.
+- The leg tables in CUSTOMIZE and the module shops draw a curved arrow
+  from WEIGHT down to CAPACITY in place of a second WEIGHT label, so
+  upgraded values are easy to read.
 
 0.5.11 changes:
 

@@ -6,6 +6,7 @@
 #include "test_support.hpp"
 
 #include "phantomcrash/battle.hpp"
+#include "phantomcrash/data_roots.hpp"
 #include "phantomcrash/rumbling_world.hpp"
 #include "phantomcrash/rumbling_map.hpp"
 #include "phantomcrash/training_battle.hpp"
@@ -208,4 +209,34 @@ TEST_CASE("the map puts a stage point by its area's scale, offset and turn") {
   const auto east = rumbling_map_point(markers, turned, 1.0F, 0.0F);
   CHECK(near(east[0], 244.0F));
   CHECK(near(east[1], 92.0F));
+}
+
+TEST_CASE("the areas wait while the world is told not to fight, and go on after") {
+  Fixture fixture;
+  fixture.rules.roster.live_size = 4;
+  const TestDriveScript drive;
+  const std::map<std::string, WeaponTuning> templates;
+  const RumblingTables tables{fixture.parts, fixture.garage, fixture.tables,
+                              fixture.rules, drive,          templates};
+  std::array<RumblingStage, roster_areas> stages{};
+  stages[0].path = square_path();
+  RumblingWorld world(fixture.check(), tables, fighting_settings(), stages, RumblingLive{}, 7);
+  QuestSave quest;
+  world.update(quest, 0.5);
+  REQUIRE(world.robot(0, 1) != nullptr);
+  const auto position = [&] { return quest.rosters[0].members[0].live.position; };
+  const auto before = position();
+  world.set_fighting(false);
+  world.update(quest, 2.0);
+  CHECK(position() == before);
+  world.set_fighting(true);
+  world.update(quest, 2.0);
+  CHECK(position() != before);
+}
+
+TEST_CASE("the shipped areas fight only on the area choice") {
+  const RumblingLive live = parse_rumbling_live(
+      DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT).document("world/rumbling.json"));
+  REQUIRE(live.fighting_screens.has_value());
+  CHECK((*live.fighting_screens == std::vector<std::string>{"rumbling"}));
 }
