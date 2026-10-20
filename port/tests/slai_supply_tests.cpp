@@ -27,7 +27,8 @@ TEST_CASE("all source arenas expose the crate model and all ten kind-indexed ima
     CHECK(look.carrier_model == "slai/assets/native_world/jet01.gltf");
     CHECK(roots.find_asset(look.carrier_model).has_value());
     REQUIRE(look.pulse.has_value());
-    CHECK(look.pulse->frame_rate == 60);
+    // Stages imported before the flight was recovered keep the 60 Hz pulse.
+    CHECK(look.pulse->frame_rate == (look.flight ? look.flight->update_rate : 60));
     CHECK(look.pulse->colour_steps == 96);
     REQUIRE(stage.supply_routes.has_value());
     CHECK(stage.supply_routes->empty() == (name == "slai_motion"));

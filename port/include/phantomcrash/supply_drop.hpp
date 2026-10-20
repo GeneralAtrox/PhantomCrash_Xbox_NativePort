@@ -2,6 +2,7 @@
 
 #include "phantomcrash/json.hpp"
 #include "phantomcrash/math3d.hpp"
+#include "phantomcrash/supply_source.hpp"
 
 #include <array>
 #include <cstdint>
@@ -76,35 +77,10 @@ struct SupplyRoute {
   int closing{}; // the segment the carrier closes in on (0x067bf6)
   int drop{};    // the segment it opens its hatch on (0x067f04)
   int leave{};   // the segment it turns away on
+  // The S.L.A.I. route's crate floor (header +12, read at 0x525058); none:
+  // the ground under the crate.
+  std::optional<float> floor;
 };
-
-// The original's kinds, each with its own crate in the carrier models;
-// data may append more (SupplySettings::kinds).
-inline constexpr int supply_kind_count = 10;
-
-struct SupplyPickupPulse {
-  float frame_rate{};
-  float step{};
-  float fast_frames{};
-  float fast_rate{};
-  float life_numerator{};
-  float colour_base{};
-  float colour_steps{};
-  float colour_divisor{};
-};
-
-// Optional asset-only pickup presentation. Each kind selects its authored
-// texture, keeping the model's own UVs and samplers.
-struct SupplyPickupLook {
-  std::string model;
-  std::array<std::string, supply_kind_count> images;
-  float scale{2.5F};
-  std::string carrier_model;
-  std::string carrier_light_model;
-  float light_spin_per_second{};
-  std::optional<SupplyPickupPulse> pulse;
-};
-[[nodiscard]] SupplyPickupLook parse_supply_pickup_look(const json::JsonValue &value);
 
 // How the drops are drawn (0x0699d5 the carrier, 0x069d52 the pickups).
 // The carrier and its pickups share a model per stage parity (resources
@@ -269,6 +245,7 @@ struct SupplyPickup {
   float blink{};  // the blink's phase, 0..pi
   int spot{-1};   // the red carrier's: the special spot it falls onto
   int target{-1}; // a rescue box's: the robot it glides toward
+  float hold{-1}; // a burst's ticks still drawn; -1 before its effect
 };
 
 struct SupplyCarrier {
@@ -280,6 +257,8 @@ struct SupplyCarrier {
   bool wrecked{}; // shot down, falling
   float scale{1.0F};
   std::optional<SupplyColour> tint; // the red carrier's
+  SupplyJoints joints{};            // a source carrier's joint angles
+  float shade{1.0F};                // a source wreck's colour
 };
 
 class SupplyDrop final {
@@ -337,6 +316,17 @@ public:
   [[nodiscard]] std::vector<Vec3> take_bursts() noexcept {
     return std::exchange(bursts_, {});
   }
+  // Whether a pickup is drawn: out of the hold, or bursting (0x525288).
+  [[nodiscard]] static bool visible(const SupplyPickup &pickup) noexcept {
+    return pickup.state == SupplyState::falling || pickup.state == SupplyState::landed ||
+           (pickup.state == SupplyState::burst && pickup.hold >= 0.0F);
+  }
+  // The S.L.A.I. carrier's flight, when its stage has one.
+  [[nodiscard]] const SupplySourceFlight *flight() const noexcept {
+    return settings_.look.pickups && settings_.look.pickups->flight
+               ? &*settings_.look.pickups->flight
+               : nullptr;
+  }
   // A pickup's blink, 0..1 (|sin| of its phase).
   [[nodiscard]] static float blink(const SupplyPickup &pickup);
 
@@ -360,6 +350,9 @@ private:
   void work_hatch(float ticks);
   void fall(float ticks, const std::function<float(Vec3)> &ground, const SupplyContact &contact);
   void park();
+  void use_flight();
+  void swing_wings(float ticks);
+  void wreck_pose(float ticks);
   void start_special();
   void steer_to_spot(SupplyPickup &pickup, float ticks, const std::function<float(Vec3)> &ground);
   void load_rescue();
@@ -387,6 +380,9 @@ private:
   bool arrived_{};           // the red carrier set out, not yet reported
   std::vector<Vec3> robots_; // where each robot stands (watch)
   std::vector<int> rescue_;  // the robots calling for a rescue box
+  float wing_count_{};       // 0x5f8c2c: wing updates done this swing
+  float wing_sign_{};        // 0x5f8c30: +1 opening, -1 closing
+  float respawn_left_{-1};   // 0x5f8c1c: updates until the next route
 };
 
 } // namespace phantomcrash

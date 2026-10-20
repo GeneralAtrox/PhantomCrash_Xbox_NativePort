@@ -209,35 +209,6 @@ SupplyLook parse_look(const JsonValue &value) {
 
 } // namespace
 
-SupplyPickupLook parse_supply_pickup_look(const JsonValue &value) {
-  SupplyPickupLook look;
-  look.model = json::required(value, "model").string();
-  look.scale = static_cast<float>(value.number_or("scale", look.scale));
-  look.carrier_model = value.string_or("carrier_model", "");
-  look.carrier_light_model = value.string_or("carrier_light_model", "");
-  look.light_spin_per_second = static_cast<float>(value.number_or("light_spin_per_second", 0));
-  if (const auto *pulse = value.find("pulse")) {
-    const auto number = [&](const char *key) {
-      return static_cast<float>(json::required(*pulse, key).number());
-    };
-    look.pulse =
-        SupplyPickupPulse{number("frame_rate"),   number("step"),           number("fast_frames"),
-                          number("fast_rate"),    number("life_numerator"), number("colour_base"),
-                          number("colour_steps"), number("colour_divisor")};
-    if (look.pulse->frame_rate <= 0 || look.pulse->colour_divisor <= 0) {
-      throw std::runtime_error("Invalid supply pickup pulse");
-    }
-  }
-  const auto &images = json::required(value, "images").array();
-  if (images.size() != look.images.size()) {
-    throw std::runtime_error("Supply pickup images must cover all ten kinds");
-  }
-  for (std::size_t i = 0; i < images.size(); ++i) {
-    look.images[i] = images[i].string();
-  }
-  return look;
-}
-
 SupplySettings parse_supply_settings(const JsonValue &value) {
   SupplySettings s;
   const auto number = [&](const char *key, const float fallback) {
@@ -314,6 +285,9 @@ std::vector<SupplyRoute> parse_supply_route_list(const JsonValue &entry) {
     route.closing = static_cast<int>(value.number_or("closing", 0));
     route.drop = static_cast<int>(value.number_or("drop", 0));
     route.leave = static_cast<int>(value.number_or("leave", 0));
+    if (const JsonValue *floor = value.find("floor")) {
+      route.floor = static_cast<float>(floor->number());
+    }
     if (!route.segments.empty()) {
       routes.push_back(std::move(route));
     }

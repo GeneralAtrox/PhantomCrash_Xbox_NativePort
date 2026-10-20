@@ -30,6 +30,7 @@ DesktopSupply::DesktopSupply(WorldRenderer &world, const SupplyLook &look, const
     return;
   }
   mesh_nodes_ = converter_mesh_nodes(*data);
+  carrier_nodes_.nodes = data->nodes;
   glow_texture_ = world.texture(look_.glow_texture);
   for (std::size_t parity = 0; parity < look_.models.size(); ++parity) {
     const int model = world.model(look_.models[parity].model);
@@ -100,13 +101,20 @@ void DesktopSupply::add_pickup_mesh(const std::size_t parity, const int mesh, co
 // and the spinning part, or the wreck alone (0x0699d5).
 void DesktopSupply::add_carrier(const SupplyCarrier &carrier, std::vector<WorldItem> &items) {
   if (look_.pickups && !look_.pickups->carrier_model.empty()) {
+    // 0x523540 hides the S.L.A.I. carrier only while parked; 0x524f30
+    // draws the wreck, its joints posed and its colour shaded (0x523ac0).
     if (model_ >= 0 && !carrier.parked) {
       WorldItem item;
       item.model = model_;
       item.world = carrier_frame(carrier);
-      if (carrier.tint) {
-        const auto &tint = *carrier.tint;
-        item.colour = std::array<float, 4>{tint[0], tint[1], tint[2], 1.0F};
+      if (look_.pickups->flight) {
+        item.node_worlds = supply_carrier_nodes(carrier_nodes_, *look_.pickups->flight,
+                                                carrier.joints, item.world);
+      }
+      const SupplyColour tint = carrier.tint.value_or(SupplyColour{1.0F, 1.0F, 1.0F});
+      if (carrier.tint || carrier.shade != 1.0F) {
+        const float shade = carrier.shade;
+        item.colour = std::array<float, 4>{tint[0] * shade, tint[1] * shade, tint[2] * shade, 1.0F};
       }
       items.push_back(std::move(item));
       if (carrier_light_model_ >= 0 && !carrier.wrecked) {
@@ -208,7 +216,7 @@ void DesktopSupply::add_items(const SupplyDrop &drop, std::vector<WorldItem> &it
   const float scale = look_.pickup_scale;
   for (const SupplyPickup &pickup : drop.pickups()) {
     // Cargo remains hidden inside the carrier until the hatch releases it.
-    if (pickup.state != SupplyState::falling && pickup.state != SupplyState::landed) {
+    if (!SupplyDrop::visible(pickup)) {
       continue;
     }
     // 0x069d52 takes the crate from the day or the night model at random

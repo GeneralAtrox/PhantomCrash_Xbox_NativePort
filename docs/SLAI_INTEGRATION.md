@@ -1448,6 +1448,96 @@ Sustained weapon sound lifetime (2026-10-06):
   and logs were removed, with absence verified. Standard builds and refreshed
   imported assets remain available.
 
+## Supply carrier states (2026-10-20)
+
+Recovered from the PAL battle overlay `battledvd.bin` (SLES_529.40, loaded at
+0x4d0c00, gp 0x4402f0) and the ELF. Addresses are guarded in
+`supply_assets.py` (`FLIGHT_GUARDS`); every value is read from those words.
+Names below are researcher-assigned.
+
+- Cadence. The S.L.A.I. update `0x523430` runs once per battle update
+  (`0x24bd4c`, `0x24be18`). The libgf frame rate is the field rate over
+  interval 2 (ELF `0x1a86e0..0x1a8788`; both callers, `0x1cbc80` and
+  `0x269490`, pass 2): 30 updates a second in 60 Hz mode and 25 in 50 Hz mode.
+  The import uses 30. The crate pulse's frame rate is now that update rate.
+  The earlier 60 Hz adapter counted lifetimes twice as fast.
+- Speed. The spawn `0x5226c0` picks route `(rand>>1) % count` and passes
+  .015 a segment an update (`0x52274c`). The port had used Phantom Crash's
+  .03, so it flew S.L.A.I. routes twice as fast.
+- Path header. +2/+4/+8 (closing, drop, leave) go to gp-0x4de4/-0x4de0/
+  -0x4dd8. +6 is copied to gp-0x4ddc (`0x5240e0`) and never read again in
+  the overlays or the ELF; it stays exported as `drop_end_source`. The float
+  at +12 is stored at 0x5f8c10 (`0x5240f4`) and read at `0x525058` as the
+  crates' floor. A falling crate moves .5 down an update until it reaches
+  floor − 1 (source y points down). Routes export it as `floor`
+  (−float × scale): Sinjyuku 0, German 7.2/0, New York −1.1/−1.1,
+  London 5/10/25, Hong Kong 0, Egypt 0/−3.7, Las Vegas 0, Practice 0.
+  Crates land there instead of on the collision ground.
+- Banking. No roll producer exists. The frame (`0x524de0`, `0x524f30`) is
+  yaw from the horizontal displacement only. What looks like banking is the
+  articulation of seven joints at 0x5f9290, zeroed at spawn
+  (`0x52416c..0x524240`), on controls 12, 16, 9, 13, 10, 14 and 0. JET01 is
+  a tilt-rotor: controls 12/16 are its nacelles.
+- States (0x5f89bc; handler at 0x5f89c4):
+  - 8: spawned; becomes 1 on the next update.
+  - 1 flight (`0x524300`): adds .03 to the light. At the closing segment it
+    goes to 2 with the swing sign +1. At the path end it parks (6).
+  - 2 swing (`0x524500`): while the counter is below 1/speed (67 updates
+    at .015), each update turns joint 0 by (57, −37, −11)° and joint 1 by
+    (57, 37, 11)° over 1/speed (`0x5246a4..0x524788`). At the drop segment it
+    goes to 3. At or past leave it goes to 1.
+  - 3 cargo (`0x5247a0`): a timer rises .03 an update to π/4, then the
+    release loop runs. Crate 0 goes at once and each later crate waits 100
+    updates. The timer then falls back to 0 and handler `0x524500` returns
+    with sign −1 (the nacelles swing back). The segment wraps past the end.
+    No mesh draws the timer.
+  - Shot (`0x523ac0`): no effect in states 0 or 4. Otherwise effect 0x1a at
+    .3, model colour (.4, .4, .4, 1), speed × .6, .3 down an update, timer 500.
+  - 4 wreck (`0x524ad0`): position += velocity, then velocity × 1.01. Each
+    joint angle eases .01 an update toward the pose table at 0x5b3c20. Swept
+    contact (`0x4d20b0`) or the timer running out explodes it; it then parks.
+  - 6 parked (`0x524d50`). Respawn (`0x5254d0`) starts once every crate is
+    carried or done. It counts down 0x5f8c1c, set at spawn from the libgf
+    rate (`0x523fbc`, 30 updates), then picks a new random route.
+  - 7: paused (`0x5236a0`/`0x523710`).
+- Visibility. The carrier is hidden only in states 6/7 (`0x523540`); the
+  shaded wreck is drawn. The night light shows in states below 4. It turns
+  .03 every update (`0x5235c8`) plus .03 in state 1: 1.8 rad/s in flight,
+  0.9 rad/s otherwise. Crates (reset `0x522d30`: delay 100, first 0, life
+  900, burst hold 15) are drawn in states 1–4. A carried crate sits at the
+  carrier's origin. A burst crate stays drawn for 15 updates after its effect.
+- Native. Stage `supply_pickups.flight` (`supply_source.hpp`) carries these
+  values. `SupplyDrop` (`supply_flight.cpp`) applies them only when present,
+  so Phantom Crash's carrier keeps its own. The renderer poses JET01 through
+  its `source_node_N` controls and shades the wreck. New members are in the
+  online state digest.
+- Not recovered or not implemented:
+  - Engine effect objects `0x525d90`/`0x526030` (controls 5–8).
+  - Navigation-light blink `0x5262b0` (controls 2, 3, 11, 15; toggles every
+    30 updates).
+  - Carrier hit points (model +0x12c from BG object data; the port still
+    brings it down in one shot).
+  - Robot push from the carrier `0x5237a0` (radius 3).
+  - Mode-3 branches (`0x524250..0x5242e4`, `0x525090..0x5250a4`).
+  - The night light's attachment to control 4 (`0x525cd8`, fields written at
+    `0x525d10`); the port draws it at the carrier's origin.
+  - Rewards and collection stay the port's supply data.
+- Checks:
+  - Python: 3 supply-asset tests, including a guard refusal.
+  - Native: 7 new flight tests. phantomcrash_slai_tests passes 160/160
+    against the shared data. phantomcrash_core_tests has 3 failures outside
+    supply code (tutorial courses, post-process).
+  - Live runs (1450–2268 frames) used a scratch copy of the installed
+    stages.json with the new supply output. Practice dropped crates through
+    its roof (route height 130) onto the floor. Las Vegas showed the
+    nacelles level inbound and swung up from the closing segment, and a
+    crate falling under the carrier. For framing, that run's single route
+    was moved toward the robot; this was a review aid only. A scripted
+    shoot-down did not register, so the wreck is checked by tests only.
+- The installed stages need re-registering to carry `flight` and `floor`.
+  From the main checkout, with `PYTHONPATH=src`:
+  `python -c "from pathlib import Path; from phantomcrash_research.slai.native_stages import register_stages; register_stages(Path('C:/Projects/SLAI/SLAI.iso'), Path('data'), Path('artifacts/slai/assets'))"`.
+
 ## Death and weapon-loss particle gates (2026-10-06)
 
 - At `0x50ebe0..50ec90`, the source resolves the first effect descriptor
