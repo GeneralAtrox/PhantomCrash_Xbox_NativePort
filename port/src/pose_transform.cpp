@@ -32,6 +32,22 @@ Quaternion quaternion(const Mat4 &m) {
   }
   return q;
 }
+
+// A body fit (body_fit.hpp) can give pose matrices a uniform scale; the
+// original's own matrices have none, and keep their exact values here.
+float uniform_scale(const Mat4 &m) {
+  const float scale = length(Vec3{m.at(0, 0), m.at(0, 1), m.at(0, 2)});
+  return std::fabs(scale - 1) < 1e-4F || scale < 1e-6F ? 1.0F : scale;
+}
+
+Mat4 rescaled(Mat4 m, const float scale) {
+  for (int r = 0; r < 3; ++r) {
+    for (int c = 0; c < 3; ++c) {
+      m.at(r, c) *= scale;
+    }
+  }
+  return m;
+}
 } // namespace
 
 Mat4 blend_pose_transform(const Mat4 &from, const Mat4 &to, const float weight) {
@@ -41,6 +57,12 @@ Mat4 blend_pose_transform(const Mat4 &from, const Mat4 &to, const float weight) 
   }
   if (t == 1) {
     return to;
+  }
+  const float from_scale = uniform_scale(from), to_scale = uniform_scale(to);
+  if (from_scale != 1 || to_scale != 1) {
+    const Mat4 unscaled =
+        blend_pose_transform(rescaled(from, 1 / from_scale), rescaled(to, 1 / to_scale), t);
+    return rescaled(unscaled, from_scale * (1 - t) + to_scale * t);
   }
   auto a = quaternion(from), b = quaternion(to);
   float cosine = 0;
@@ -84,7 +106,8 @@ Mat4 aim_pose_transform(const Mat4 &pose, const Vec3 target, const Vec3 up) {
   if (length(x) < 1e-5F) {
     x = normalize(cross(Vec3{1, 0, 0}, z));
   }
-  const Vec3 axes[] = {x, cross(z, x), z, origin};
+  const float scale = uniform_scale(pose);
+  const Vec3 axes[] = {x * scale, cross(z, x) * scale, z * scale, origin};
   Mat4 result;
   for (int row = 0; row < 4; ++row) {
     result.at(row, 0) = axes[row].x;

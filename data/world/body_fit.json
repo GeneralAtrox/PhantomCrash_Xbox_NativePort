@@ -1,0 +1,5 @@
+{
+  "notes": "Mixed-part body fit: a port adapter for mods, off by default. The PAL S.L.A.I. executable joins every body to the leg descriptor's first attachment node at unit scale with no offset (assembly 0x2689a0..9d4 through 0x1b3590 and 0x1ca8d0; part creation 0x266694..2667b4; battle construction 0x4dc8d8..950), with no per-pairing table, so the default is that join. To use it, set enabled to true in mods/data/world/body_fit.json and list fits. legs_model and body_model are the model resources of robots/catalogue.json's leg_types and body_types (S.L.A.I. bodies are 10002 + 500 x maker, their legs 10102 + 500 x maker + 2 x (number - 1); maker A is 10); omit one to match any part. scale is uniform about the point where the body meets the legs, and offset moves the body in that mount's space (y raises it). The body's arms and shoulder weapons follow; collision and hit volumes keep the legs' values.",
+  "enabled": false,
+  "fits": []
+}

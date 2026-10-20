@@ -1670,3 +1670,56 @@ Sustained weapon sound lifetime (2026-10-06):
 - No temporary runtime, captures or logs were created. The earlier owned
   body-control, state-effect and death-effect scratch directories were checked
   and remain absent. Standard `build/port` and updated mod data are retained.
+
+## Mixed-part body fit (2026-10-20)
+
+- The original has one join for every body/legs pairing, recorded with
+  guarded instruction words in `slai/body_join.py`. Assembly links the body
+  model (record `+0xf4`) to the legs model (`+0xf8`) at leg descriptor
+  `+0x154` entry 0 (`0x2689a0..9b4`, `jal 0x1b3590`), then sets the body's
+  scale to 1.0 (`0x2689b8..9d4`, `0x1ca8d0` stores model `+0x60..68`).
+  `0x1b3590` stores only the parent model, its node frame
+  (`nodes + index * 0x110`, or zero) and the sibling chain; it applies no
+  offset. Part-model creation gives every part kind scale 1.0 and translation
+  0 (`0x266694..2667b4`, jump table `0x42dd00`). Battle construction repeats
+  the plain node link for the body and arms (`0x4dc8d8..950`). The only
+  part-specific transform is the legs' 0.1 resource-root scale (`0x2526c0..744`).
+- The full-assembly path `0x268810..268ebc` calls the translation setter
+  (`0x1ca900`, model `+0x40`) and rotation setter (`0x1ca8e0`, `+0x50`)
+  nowhere; its six scale calls all load 1.0. Translation and per-part rotation
+  appear only in the single-part preview branch, from the preview table at
+  `0x5b3520` indexed by record `+0xde`. The 372-byte descriptor is fully
+  accounted for (names, 59 action clips, 51 node callbacks, 16 attachment
+  nodes) and has no mount offset. The battle overlay calls none of the setters.
+- The original therefore has no per-pairing mount, scale or offset rule. A
+  small torso on boss legs, such as `S4B01H` on `S8L01H`, is the original
+  join, and the port keeps it by default. Its native join already matched:
+  the body hangs from a zero-offset mount below leg control 1.
+- Opt-in adapter (port addition, not recovered): `data/world/body_fit.json`
+  is disabled and has no entries. A mod enables it in
+  `mods/data/world/body_fit.json` with entries keyed by the leg and body
+  types' model resources (`legs_model`, `body_model`; either may be omitted
+  as a wildcard, with both, then legs, then body as precedence). Each gives a
+  uniform `scale` about the mount and an `offset` in the mount's space (+y
+  raises the body). Assembly places the fit on the skeleton's mount node
+  (`RobotAssembly::fitted`), so imported (rigid) bodies, Phantom Crash
+  (skinned) bodies, both arms, shoulder weapons, sockets and the emblem follow.
+  Pose blending and aiming keep a uniform scale; unscaled matrices take the
+  previous path unchanged. Collision and hit volumes keep the legs' values.
+  For example, `{"enabled": true, "fits": [{"legs_model": 14102,
+  "body_model": 12002, "scale": 1.3}]}` enlarges `S4B01H` on `S8L01H`. This
+  value was chosen for the capture and was not taken from the original.
+- Checks: 5 new native checks (parsing, precedence, disabled table, mount
+  scale/offset with unchanged legs, blend/aim scale, assembly reach) and 3
+  Python checks against the user's disc (contract, changed link/scale,
+  injected placement call). The native core suite passes except three
+  checks that are unrelated (two tutorial courses and a post-process
+  selection). The S.L.A.I. native suite passes 153/153, and Python passes
+  280 checks, with one unrelated missing supply texture reference.
+- Seven bounded Practice captures (`slai_practice`, side orbit camera,
+  gauges moved off screen in a scratch overlay only) cover `S4B01H`/`S8L01H`
+  with the right `S3A07H`, unchanged and at adapter scale 1.3; the matching
+  `S8B01H` on the same legs; a Phantom Crash body on `S8L01H`, unchanged and
+  with a legs-wide 1.3 fit; `S4B01H` on Phantom Crash legs; and `S1B01H` on
+  `S4L01H`. All loaded without errors. The user reviews them visually; they
+  do not cover walking, every pairing or every arena.
