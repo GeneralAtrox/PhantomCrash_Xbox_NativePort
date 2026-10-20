@@ -65,7 +65,8 @@ def rumble_fixture(program):
 def write_fixture(image: Path, output: Path):
     with SlaiDisc(image) as disc:
         fixture = rumble_fixture(ProgramData(disc))
-    output.write_text(json.dumps(fixture, separators=(",", ":")) + "\n", encoding="utf-8")
+    output.write_text(json.dumps(fixture, separators=(",", ":")) + "\n", encoding="utf-8",
+                      newline="\n")
     return fixture
 
 
