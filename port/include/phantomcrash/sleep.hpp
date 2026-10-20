@@ -21,6 +21,8 @@ struct SleepScript {
   std::string exit_to;           // result 0: the garage (scene 13)
   int days_in_cycle{60};         // the calendar day wraps at 60 (0x3c)
   int total_days_max{9999};      // + 0x5ffc stops counting at 0x270f
+  // S.L.A.I. Rumble's rota day wraps here (S.L.A.I. 0x257350, day % 100).
+  int slai_days_in_cycle{100};
 };
 
 // Throws std::runtime_error when a value is missing or wrong.
@@ -28,7 +30,8 @@ struct SleepScript {
 
 // The night passing (0x2e3ad): the calendar day moves on and wraps, a
 // cleared game counts a lap of the calendar as it wraps, the days slept
-// are counted, and the town map's spin payments start again.
+// are counted, and the town map's spin payments start again. S.L.A.I.
+// Rumble's rota day moves on beside it, on its own cycle.
 void sleep_one_night(QuestSave &quest, const SleepScript &script);
 
 class Sleep final {

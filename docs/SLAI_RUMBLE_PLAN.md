@@ -4,8 +4,8 @@ Goal: play S.L.A.I.'s own campaign battles inside the port's Club Wired,
 on S.L.A.I.'s original 100-day calendar, beside Phantom Crash's 60-day one.
 Battles only first; S.L.A.I.'s story stays optional later content.
 
-Sources: `docs/SLAI_CAMPAIGN_RESEARCH.md` and `slai/campaign.py` on branch
-`claude/hungry-cannon-662df3` (not yet merged). Port references:
+Sources: `docs/SLAI_CAMPAIGN_RESEARCH.md`, `docs/SLAI_OPPONENTS_RESEARCH.md`,
+`slai/campaign.py` and `slai/rumble_table.py`. Port references:
 `contests.hpp`, `rumbling_rules.hpp`, `schedule.hpp`, `settings.hpp`
 (`QuestSave`), `data/ui/club_wired.json`, `data/ui/schedule.json`.
 
@@ -126,6 +126,70 @@ schedule that was open.
    - English briefings from the decoded MSG text;
    - the story layer.
 
+## Status
+
+### Phase 2, rules core (done, 2026-10-20)
+
+Native C++ under `port/`, with no UI and no battle launch yet:
+
+- `slai_rumble.hpp`, `slai_rumble_table.cpp` and `slai_rumble_world.cpp`
+  load the data. `load_slai_rumble(roots)` reads `tables/slai_rumble.json`
+  through the asset roots, so `mods/tables/` replaces it. It reads
+  `data/world/slai_rumble.json` through the data roots, so mods overlay it.
+  The world file holds:
+  - city → day/night stage (Las Vegas night is `slai_day_lasvegas` with
+    `night_lighting: lasvegas_night`);
+  - maker names, and leg class → S.L.A.I. leg types;
+  - the special-rule values and the status rule of each regulation;
+  - the ladder ranges and the balance knobs.
+- `slai_rumble_save.hpp/.cpp` hold `QuestSave::slai_rumble`: day, stage,
+  city, finals cleared, and records by id (cleared plus beaten flags 1–14).
+  Older saves load it empty.
+- `slai_rumble_rules.hpp/.cpp` hold the rules:
+  - `slai_scheduled_match` (0x257070, finals as data);
+  - `slai_next_stage` (0x25A4E0, one step a battle);
+  - `slai_entry_check` (0x259A40);
+  - `slai_record_status` / `slai_record_beat` (0x2225A0 / 0x223ED0);
+  - `slai_prize`, `slai_finish_match` (records, finals count, prize into the
+    shared wallet up to `money_limit`, stage);
+  - `advance_slai_rumble_day`, which `sleep_one_night` calls with
+    `slai_days_in_cycle` (100, `data/ui/sleep.json`).
+- Tests:
+  - `slai_rumble_tests.cpp` (core suite): hand-made tables, the world data,
+    the save block and sleep.
+  - `slai_rumble_table_tests.cpp` (S.L.A.I. suite) checks the installed
+    table against `port/tests/slai_rumble_expected.json`. That fixture holds
+    campaign.py's `scheduled_match` for 10 sample days × every city, stage,
+    slot and finals count, plus row spot checks and `next_stage` cases. It
+    is written by `python -m phantomcrash_research.slai.rumble_fixture
+    <iso> <out>`.
+
+Traced while building it (capstone over the PAL executable):
+
+- The ladder counters are 0x257440 (records 0x30–0x67), 0x257490
+  (0x68–0x6E) and 0x2574E0 (0x1A–0x1C). The tutorial-done byte `+0x168` is
+  record 0x18's cleared byte (0x18 × 15).
+- `save+0xA14` is money (**High**): 0x24B470 clamps a battle's loss to it.
+  0x259A40 only compares it with the entry requirement and takes nothing,
+  so `charge_entry` defaults to false.
+- The regulation's `+0x20` is a score target (**Medium**). 0x24B0B0 pays
+  the prize when the player's result score (+0xC) reaches it, and a target
+  read as −1 (0xFFFF) pays nothing. What the score counts is phase 3's
+  question.
+- The player's entry check has no always-eligible makers (only opponents
+  have them, 0x222A60). A rental-only rumble refuses the player's own robot
+  (case 0), so it needs a rental path.
+- 0x223ED0's status table (0x371570) agrees with 0x2225A0's (0x371450) for
+  regulations 0–26:
+  - 5 flags for the tutorial;
+  - 14 flags for the restriction and D–A rumbles;
+  - open for the finals, Master, Free and Regional.
+
+Left for phase 3: a `SlaiRobot` adapter from the ridden port robot. The
+port's S.L.A.I. bodies keep their native type in `class`, not their maker,
+and its parts carry no weapon class or aim kind. Also the score a battle
+reports, and which opponents (record, flag) it beat.
+
 ## Gaps found so far
 
 - **Opponent builds** are undecoded (phase 1b).
@@ -134,8 +198,8 @@ schedule that was open.
   has no `NIGHT_LASVEGAS.BG`, so night Las Vegas is the day scene with night
   MED lighting. The importer reads no MED files at all (see
   SLAI_CAMPAIGN_RESEARCH.md, "Las Vegas night stage").
-- **Unconfirmed meanings:** `save+0xA14` (probably money), the regulation's
-  `+0x20` parameter and the 10 match weights.
+- **Unconfirmed meanings:** the 10 match weights, and what the score
+  compared with the regulation's `+0x20` target counts (see Status).
 - **Economy:** S.L.A.I.'s prizes (2,000–25,000) enter the same wallet as Phantom
   Crash money. The defaults stay the original's; the knobs sit in
   `slai_rumble.json`.

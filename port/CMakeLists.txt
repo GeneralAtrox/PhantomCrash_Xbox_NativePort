@@ -14,6 +14,10 @@ add_library(phantomcrash_core
   src/data_roots.cpp
   src/added_chips.cpp
   src/slai_content.cpp
+  src/slai_rumble_rules.cpp
+  src/slai_rumble_save.cpp
+  src/slai_rumble_table.cpp
+  src/slai_rumble_world.cpp
   src/event_player.cpp
   src/frame_rate.cpp
   src/front_end.cpp
@@ -393,6 +397,7 @@ if(BUILD_TESTING)
     tests/shadow_volume_tests.cpp
     tests/effect_tests.cpp
     tests/effect_cluster_tests.cpp
+    tests/slai_rumble_tests.cpp
   )
   target_link_libraries(phantomcrash_core_tests PRIVATE phantomcrash_core)
   # The shipped data/ documents are part of the source tree and tested too.
@@ -417,6 +422,7 @@ if(BUILD_TESTING)
     tests/slai_supply_tests.cpp
     tests/slai_cheat_tests.cpp
     tests/slai_leg_mount_tests.cpp
+    tests/slai_rumble_table_tests.cpp
     tests/source_suspension_tests.cpp
     tests/source_roll_tests.cpp
     tests/world_sound_tests.cpp tests/battle_sounds_tests.cpp tests/armory_tests.cpp tests/shop_label_tests.cpp)
