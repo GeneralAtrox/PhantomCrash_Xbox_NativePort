@@ -60,6 +60,7 @@ struct BattleEvent {
   int object{-1}; // effect: scenery instance whose destruction changed collision
   int target{-1}; // impact: struck robot; preserved for attached source effects
   Vec3 direction; // fired: barrel direction before a multi-barrel weapon advances
+  int barrel{-1}; // fired: muzzle index the shot leaves from, before it advances
 };
 
 } // namespace phantomcrash
