@@ -445,7 +445,7 @@ its goal, then plays its second message and moves on.
 | 28 | Dash (80) | 0x08bbb7 |
 | 29, 30 | Jump; a high jump (above 8) | 0x08bd7d, 0x08befe |
 | 31 | Dodge both ways (2 each) | 0x08c0c1 |
-| 32, 33 | Twist the upper body past 0.7854 each way, then straighten | 0x08c294, 0x08c43a |
+| 32, 33 | Twist the upper body to 45 degrees each way (0x17d0e0, pi/4, also the twist limit), then straighten | 0x08c294, 0x08c43a |
 | 36-39 | Three kills each with the handgun, drill, missiles, grenades | 0x08c792 |
 | 40 | Ten kills with every weapon | 0x08cdce |
 | 43 | Optic Camouflage on, with a drone placed 30 ahead | 0x08d09e, 0x08d151 |
