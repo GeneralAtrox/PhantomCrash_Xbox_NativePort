@@ -340,9 +340,9 @@ a battle (**Medium**).
 **A. Battles only** (Club Wired rota, no story; recommended first). This is
 mostly data plus one menu.
 
-1. Export the regulations, match templates and rota to TOML with
-   `campaign.py`. The shop lineup ids are mapped to tables but not to item
-   names yet. **Small.**
+1. Export the regulations, match templates and rota with `campaign.py`.
+   **Done:** `tables/slai_rumble.json`, below. The shop lineup ids are
+   mapped to tables but not to item names yet.
 2. Decode the roster table 0x420F40 and the robot or ranker definitions
    behind f_256CC0, so every opponent has a real build. This is the largest
    research gap. It needs the opponent part ids mapped to the imported
@@ -386,6 +386,73 @@ counterpart in Phantom Crash's own UI, and every one of them needs careful
 visual review. Recommendation: build A, and keep B as optional data-driven
 content later. The EVT and MSG decoders here make the scripts readable now,
 for writing English story cards or briefings without the full interpreter.
+
+## Exported table: `tables/slai_rumble.json`
+
+`slai/rumble_table.py` (`register_rumble`) writes the table into the S.L.A.I.
+asset root during registration (the installer and `register-slai-assets`).
+It is built from the disc on each install and is never committed. Every value
+comes from the `campaign.py` decoders, so their guards and checks apply.
+`table_match()` reads a match id from this file. It gives the same result as
+`scheduled_match()` for every day, city, stage, slot and finals count, and the
+tests check this.
+
+- `version`, `schedule_days` (100), `stages` (5).
+- `cities[7]`: `{id, name}` in column order 0 Tokyo, 1 Stuttgart, 2 New
+  York, 3 London, 4 Hong Kong, 5 Cairo, 6 Las Vegas. `display_order` is
+  `[2, 6, 0, 4, 5, 1, 3]` (0x43ACF0).
+- `regulations[32]`: `id`, `name` (UK_RUMBLETYPENAME.MSG), and
+  `entry_requirement`. `maker` is null for any maker, otherwise 0–4, with
+  `maker_name` from Carro, Proton, Hartman, KHT and Zwerg. Also
+  `leg_classes` (names), `special` (null or the rule's name), `param_20`
+  (raw u16; 65535 on the Dummy rows) and `prize`.
+- `matches[157]`: `id`, `regulation`, `night`, `robots_min` and
+  `robots_max` (no row exceeds 6 on the disc), `level`, `save_record` and
+  `save_record_b`. `weights[10]` holds the raw float32 weights, each written
+  as the shortest decimal that reads back to the same float32.
+- `rota.days[100]`: `day`, `shop_lineups[5]` (the +0 header) and
+  `city_days[7]`, one city-day row id per city column (`column*100 + day`
+  on the disc).
+- `rota.city_days[700]`: `id`, `stages[5]` of `[day, night]` match ids (−1
+  is none), and `shop_lineups[10]`, the u16 ids at +0x28..+0x3A in order,
+  with 0xFFFF written as −1. These are +0x28 chips, +0x2A..+0x36 the 7
+  module-shop categories, +0x38 module area and +0x3A the 10-day-cycle
+  index, at the confidence given in the rota section.
+- `finals`: `stage` (3), `fallback[7]` (table 0x334A80, `[day, night]` per
+  city) and `rounds[3]`, indexed by finals cleared:
+  - each round has `name`, `host`, `host_name` and `matches` `[day, night]`
+    (the host's injected ids);
+  - with `host_ignores_rota` false, a host slot changes only when it already
+    holds a match; the final (New York, `[4, -1]`) ignores the rota;
+  - in other cities, a scheduled id in `replace[].from` becomes
+    `replace[].with[slot]`; a null `with` means the city's `fallback` pair.
+  - With 3 cleared, the rota stands as it is.
+- `provenance`: the table addresses, the guarded code words (0x2572C0 and
+  0x257350, as hex words), the checks applied, and the logic addresses the
+  port mirrors (0x257070, 0x25A4E0, 0x259A40, 0x222A60, 0x223ED0).
+
+### Las Vegas night stage
+
+The disc has no `NIGHT_LASVEGAS.BG`. It ships 7 `DAY_*.BG` scenes and only 6
+`NIGHT_*.BG` scenes. battledvd.bin names only `z_zbattle/bg/day_lasvegas`,
+plus the lighting names `lasvegas_day` and `lasvegas_night` (0x59D540).
+The original therefore draws Las Vegas night matches on the day geometry
+with `LASVEGAS_NIGHT.MED` lighting (**Medium**: inferred from the names, not
+yet traced through the stage loader).
+
+The importer does not skip anything. It builds one stage for each `.BG`
+scene and takes its lighting from the scene package's `VLIGHT.DAT`. Its
+`.MED` lookup expects `<CITY>.MED`, but the disc names these files
+`<CITY>_DAY.MED` and `<CITY>_NIGHT.MED`, so no MED lighting is imported for
+any stage.
+
+A `slai_night_lasvegas` stage needs two things:
+
+- the MED lighting format decoded and mapped onto the port's stage lighting;
+- a stage registered from `DAY_LASVEGAS.BG` with that lighting.
+
+This is not a trivial fix, so it is left for the battle phase. Until then,
+a Las Vegas night match can use `slai_day_lasvegas`.
 
 ## Open questions (most need runtime checks in PCSX2)
 

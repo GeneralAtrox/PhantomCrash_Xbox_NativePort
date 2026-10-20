@@ -14,6 +14,7 @@ from .native_stages import register_stages
 from .native_cosmetics import register_cosmetics
 from .native_sound import register_sound
 from .native_particles import register_particles
+from .rumble_table import register_rumble
 
 INSTALL_VERSION = 1
 
@@ -49,16 +50,18 @@ def install(disc: Path, root: Path, converter: Path, report=print) -> None:
         report('Converting models, textures, animation, stages and sound...', flush=True)
         convert_assets(disc, output)
         save(output / 'slai/source_stats.json', extract_stats(disc))
-        report('Registering parts, stages, paints, stickers, audio and effects...', flush=True)
+        report('Registering parts, stages, paints, stickers, audio, effects and rumbles...', flush=True)
         register_parts(disc, assets, data, output)
         register_stages(disc, data, output)
         register_cosmetics(disc, assets, data, output)
         register_sound(disc, data, output)
         register_particles(disc, output)
+        register_rumble(disc, output)
         report('Converting music...', flush=True)
         convert_music(disc, assets, data, output, converter, report=lambda line: report(line, flush=True))
         for relative in ['tables/parts.json', 'tables/garage.json', 'robots/catalogue.json',
-                         'slai/native_parts.json', 'slai/assets/manifest.json']:
+                         'slai/native_parts.json', 'slai/assets/manifest.json',
+                         'tables/slai_rumble.json']:
             if not (output / relative).is_file():
                 raise ValueError('Incomplete S.L.A.I. conversion: ' + relative)
         save(output / 'installed.json', {'version': INSTALL_VERSION, 'disc': 'SLES_529.40'})
