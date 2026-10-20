@@ -16,6 +16,7 @@ Vec3 bezier_point(const std::array<Vec3, 4> &segment, const float along) {
 
 SupplyDrop::SupplyDrop(SupplySettings settings, const std::uint32_t seed)
     : settings_(std::move(settings)), random_(seed) {
+  use_flight();
   if (active()) {
     start_route();
   }
@@ -33,6 +34,12 @@ void SupplyDrop::start_route() {
   carrier_.hatch = 0.0F;
   carrier_.parked = false;
   carrier_.wrecked = false;
+  // 0x52416c..0x524240: the joints at rest, the model's colour back to 1.
+  carrier_.joints = {};
+  carrier_.shade = 1.0F;
+  wing_count_ = 0.0F;
+  wing_sign_ = 0.0F;
+  respawn_left_ = flight() != nullptr ? flight()->respawn : -1.0F;
   shootable_ = true;
   start_special();
   load();
@@ -95,13 +102,21 @@ void SupplyDrop::tick(const float seconds, const std::function<float(Vec3)> &gro
     return;
   }
   const float ticks = seconds * settings_.tick_rate;
-  const float spin = settings_.look.pickups && !settings_.look.pickups->carrier_model.empty()
-                         ? settings_.look.pickups->light_spin_per_second * seconds
-                         : settings_.spin_speed * ticks;
+  float spin = settings_.spin_speed * ticks;
+  if (const SupplySourceFlight *f = flight()) {
+    // 0x5235c8 every update, and 0x5244a4 again in flight (state 1).
+    const bool flying = phase_ == Phase::inbound || phase_ == Phase::outbound;
+    spin = (f->light_step + (flying ? f->flight_light_step : 0.0F)) * ticks;
+  } else if (settings_.look.pickups && !settings_.look.pickups->carrier_model.empty()) {
+    spin = settings_.look.pickups->light_spin_per_second * seconds;
+  }
   carrier_.spin = std::fmod(carrier_.spin + spin, 2.0F * pi);
   if (phase_ == Phase::wreck) {
     fall(ticks, ground, contact);
   } else if (phase_ != Phase::parked) {
+    if (phase_ == Phase::closing) {
+      swing_wings(ticks);
+    }
     fly(ticks);
   }
   if (phase_ == Phase::dropping) {
@@ -110,12 +125,16 @@ void SupplyDrop::tick(const float seconds, const std::function<float(Vec3)> &gro
   tick_pickups(ticks, ground);
   if (phase_ == Phase::parked) {
     // 0x0683b6, 0x06a2f6: once no pickup is out, out again (those still
-    // in a shot-down carrier's hold are lost with it).
+    // in a shot-down carrier's hold are lost with it). The S.L.A.I. carrier
+    // waits out its respawn count first (0x5254d0).
     const bool none_out = std::ranges::all_of(pickups_, [](const SupplyPickup &pickup) {
       return pickup.state == SupplyState::gone || pickup.state == SupplyState::carried;
     });
     if (none_out) {
-      start_route();
+      respawn_left_ -= ticks;
+      if (respawn_left_ < 0.0F) {
+        start_route();
+      }
     }
   }
 }
@@ -139,6 +158,8 @@ void SupplyDrop::fly(const float ticks) {
     }
     if (phase_ == Phase::inbound && segment_ == route_->closing) {
       phase_ = Phase::closing;
+      wing_sign_ = 1.0F; // 0x524300: the wings open
+      wing_count_ = 0.0F;
     } else if (phase_ == Phase::closing && segment_ == route_->drop) {
       phase_ = Phase::dropping;
       hatch_ = Hatch::opening;
@@ -193,6 +214,8 @@ void SupplyDrop::work_hatch(const float ticks) {
       carrier_.hatch = 0.0F;
       hatch_ = Hatch::shut;
       phase_ = Phase::closing; // back to 0x067f04, which turns it away
+      wing_sign_ = -1.0F;      // 0x5247a0 substate 3: the wings close
+      wing_count_ = 0.0F;
     }
     break;
   }
@@ -209,6 +232,7 @@ bool SupplyDrop::shoot_carrier() {
   streak_ = none_dropped && !special_ ? streak_ + 1 : 0;
   shootable_ = false;
   carrier_.wrecked = true;
+  carrier_.shade = flight() != nullptr ? flight()->wreck_shade : 1.0F;
   phase_ = Phase::wreck;
   velocity_ = velocity_ * settings_.wreck_keep;
   velocity_.y = -settings_.wreck_sink;
@@ -230,6 +254,10 @@ void SupplyDrop::fall(const float ticks, const std::function<float(Vec3)> &groun
                       const SupplyContact &contact) {
   const Vec3 before = carrier_.position;
   carrier_.position = carrier_.position + velocity_ * ticks;
+  if (const SupplySourceFlight *f = flight()) {
+    velocity_ = velocity_ * std::pow(f->wreck_accel, ticks);
+    wreck_pose(ticks);
+  }
   wreck_left_ -= ticks;
   const auto hit = contact ? contact(before, carrier_.position, carrier_radius()) : std::nullopt;
   if (hit || carrier_.position.y - carrier_radius() <= ground(carrier_.position) ||
@@ -268,7 +296,8 @@ void SupplyDrop::tick_pickups(const float ticks, const std::function<float(Vec3)
         steer_to_spot(pickup, ticks, ground);
       }
       pickup.position.y -= settings_.fall_speed * ticks;
-      const float rest = ground(pickup.position) + settings_.rest_height;
+      const float floor = route_->floor ? *route_->floor : ground(pickup.position);
+      const float rest = floor + settings_.rest_height;
       if (pickup.position.y < rest) {
         pickup.position.y = rest;
         pickup.state = SupplyState::landed;
@@ -282,8 +311,17 @@ void SupplyDrop::tick_pickups(const float ticks, const std::function<float(Vec3)
       }
       break;
     case SupplyState::burst:
-      bursts_.push_back(pickup.position); // 0x069d52 starts group 0x40 at unit scale
-      pickup.state = SupplyState::gone;
+      // 0x069d52 starts group 0x40 at unit scale; the S.L.A.I. crate stays
+      // drawn for its burst hold (0x524fc0 states 3 and 4).
+      if (pickup.hold < 0.0F) {
+        bursts_.push_back(pickup.position);
+        pickup.hold = flight() != nullptr ? flight()->burst_hold : 0.0F;
+      } else {
+        pickup.hold -= ticks;
+      }
+      if (pickup.hold <= 0.0F) {
+        pickup.state = SupplyState::gone;
+      }
       break;
     case SupplyState::gone:
       break;

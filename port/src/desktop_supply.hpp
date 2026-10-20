@@ -7,6 +7,7 @@
 #include "phantomcrash/battle_scene.hpp"
 #include "phantomcrash/data_roots.hpp"
 #include "phantomcrash/supply_drop.hpp"
+#include "phantomcrash/world_model.hpp"
 
 #include <array>
 #include <cstdint>
@@ -82,6 +83,7 @@ private:
   std::array<std::vector<std::vector<int>>, 2> pickup_nodes_;
   int counter_model_{-1};
   int carrier_light_model_{-1};
+  ModelData carrier_nodes_; // the source carrier's node tree, for its joints
   std::array<int, supply_kind_count> counter_images_{};
   std::vector<int> kind_images_; // by kind, -1 for none
   unsigned counter_seen_{};

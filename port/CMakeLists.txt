@@ -108,6 +108,8 @@ add_library(phantomcrash_core
   src/supply_special.cpp
   src/supply_rescue.cpp
   src/supply_settings.cpp
+  src/supply_source.cpp
+  src/supply_flight.cpp
   src/battle_supply.cpp
   src/battle_watch.cpp
   src/split_screen.cpp
@@ -415,6 +417,7 @@ if(BUILD_TESTING)
     tests/rigid_source_playback_tests.cpp
     tests/source_effect_slots_tests.cpp
     tests/slai_supply_tests.cpp
+    tests/slai_supply_flight_tests.cpp
     tests/slai_cheat_tests.cpp
     tests/slai_leg_mount_tests.cpp
     tests/source_suspension_tests.cpp

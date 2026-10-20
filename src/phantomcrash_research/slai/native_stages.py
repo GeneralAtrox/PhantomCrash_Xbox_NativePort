@@ -112,7 +112,7 @@ def register_stages(image: Path, data: Path, mods: Path) -> dict:
         # 0x523674 replaces light control zero with the rotating world frame.
         light_model["nodes"][0]["matrix"] = np.eye(4).ravel().tolist()
         save(mods / supply_light, light_model)
-        supply_pickups["light_spin_per_second"] = supply["light_spin_per_second"]
+        supply_pickups["flight"] = supply["flight"]
         supply_pickups["pulse"] = supply["pulse"]
         supply_pickups["source_model"] = supply_pickups["model"]
         supply_pickups["model"] = export_world_model(mods, supply_pickups["model"], units)
