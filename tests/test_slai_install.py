@@ -24,14 +24,15 @@ def fake_conversion(tmp_path, monkeypatch, fail=False):
             (output / 'partial').write_text('incomplete')
             raise ValueError('conversion failed')
         for name in ['tables/parts.json', 'tables/garage.json', 'robots/catalogue.json',
-                     'slai/native_parts.json', 'slai/assets/manifest.json']:
+                     'slai/native_parts.json', 'slai/assets/manifest.json',
+                     'tables/slai_rumble.json']:
             file = output / name
             file.parent.mkdir(parents=True, exist_ok=True)
             file.write_text('{}')
     monkeypatch.setattr(installer, 'convert_assets', convert)
     monkeypatch.setattr(installer, 'extract_stats', lambda _: {})
     for name in ['register_parts', 'register_stages', 'register_cosmetics',
-                 'register_sound', 'register_particles', 'convert_music']:
+                 'register_sound', 'register_particles', 'register_rumble', 'convert_music']:
         monkeypatch.setattr(installer, name, lambda *args, **kwargs: {})
     return converter
 

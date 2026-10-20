@@ -155,6 +155,7 @@ def _command_slai_assets(arguments: argparse.Namespace) -> int:
 def _command_register_slai_assets(arguments: argparse.Namespace) -> int:
     from .slai.native_sound import register_sound
     from .slai.native_particles import register_particles
+    from .slai.rumble_table import register_rumble
 
     disc, output = Path(arguments.disc), Path(arguments.output)
     result = register_parts(disc, Path(arguments.assets), Path(arguments.data), output)
@@ -162,6 +163,7 @@ def _command_register_slai_assets(arguments: argparse.Namespace) -> int:
     result.update(register_cosmetics(disc, Path(arguments.assets), Path(arguments.data), output))
     result.update(register_sound(disc, Path(arguments.data), output))
     result.update(register_particles(disc, output))
+    result.update(register_rumble(disc, output))
     print(json.dumps(result))
     return 0
 
