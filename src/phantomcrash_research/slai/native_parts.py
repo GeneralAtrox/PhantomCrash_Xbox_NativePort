@@ -128,6 +128,8 @@ def register_parts(image: Path, assets: Path, data: Path, mods: Path) -> dict:
         suspension = read_suspension(disc)
         from .roll_controls import read_roll_controls, roll_nodes
         roll_controls = read_roll_controls(disc)
+        from .steering_inputs import read_steering_inputs
+        steering_inputs = read_steering_inputs(disc)
         from .body_banks import export_body_banks
         from .motion_resources import read_motion_resources
         export_body_banks(disc, mods / "slai/assets", manifest, {})
@@ -217,7 +219,11 @@ def register_parts(image: Path, assets: Path, data: Path, mods: Path) -> dict:
                     definition["paint_images"] = [colours.get(i+1, default) for i in range(58)]
                     native["movement"] = parts[table][index]["movement"]
                     resource = definition["model"]
-                    wheel["animation"] = "Original hierarchy, PMT clips, coefficients and roll-control groups; native movement inputs"
+                    wheel["animation"] = ("Original hierarchy, PMT clips, coefficients and roll-control groups; "
+                                          "original steering filter, turn speed, turn playback and frame cadence; "
+                                          "native wheel mover (strafe steering, heading rate)")
+                # 0x4dd590: the legs' turn speed takes the graded load factor.
+                native["source_load"] = dict(steering_inputs["source_load"])
                 torso = _torso(base_skeletons["legs"][template_type])
                 from .motion_resources import rolling_nodes
                 rolling = rolling_nodes(profiles[stem])

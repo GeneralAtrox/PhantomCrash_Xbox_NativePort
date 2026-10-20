@@ -1,5 +1,6 @@
 #include "phantomcrash/robot_mover.hpp"
 #include "phantomcrash/robot.hpp"
+#include "phantomcrash/source_steering.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -166,6 +167,9 @@ void RobotMover::turn(const float stick, const float degrees_per_second, const f
 void RobotMover::tick(const RobotControl &input, const float seconds,
                       const RootMotionSource &root) {
   RobotControl control = input;
+  if (tuning_.source_controls) {
+    apply_source_steering(control);
+  }
   if (control.standard) {
     const int flicked = flick(control.strafe, seconds);
     control.dodge = control.dodge != 0 ? control.dodge : flicked;

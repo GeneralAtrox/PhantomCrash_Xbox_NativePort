@@ -23,7 +23,10 @@ def decode_roll_controls(program, units):
     guards.update({0x4e55f0: 0x3463fa35, 0x4e55f4: 0xc662008c,
                    0x4e55fc: 0xc6600e18, 0x4e5614: 0x46010042,
                    0x4e56dc: 0xc6610e18, 0x4e56fc: 0x46000d43,
-                   0x4de7dc: 0xe6200e18})
+                   0x4de7dc: 0xe6200e18,
+                   # One callback a game frame of two vsyncs (steering_inputs.py).
+                   0x1a86ec: 0xac880010, 0x1cbc84: 0x24080002,
+                   0x269494: 0x24080002})
     for address, word in guards.items():
         if program.read(address, 4) != struct.pack('<I', word):
             raise ValueError('Unsupported S.L.A.I. wheel coefficient selector')
@@ -33,13 +36,15 @@ def decode_roll_controls(program, units):
             'max_step': struct.unpack('<f', bytes.fromhex('cabc4a40'))[0],
             'source_units_per_native': 1 / units['world_scale'],
             'steering_radians_per_degree': struct.unpack('<f', struct.pack('<I', 0x3c8efa35))[0],
-            'native_clock_rate': 60,
+            'source_tick_rate': 60,
+            'source_frame_ticks': struct.unpack('<I', program.read(0x1cbc84, 4))[0] & 0xffff,
             'world_units': units,
             'provenance': {'table': '0x59a7f0', 'model_selector': '0x254890',
                            'update': '0x4e54b0', 'axis_normalize': '0x10e8c0',
                            'steering': '0x4e55e0..56fc',
                            'pad_input': '0x4de778..7dc',
-                           'native_clock_rate': 'Native seconds to frame-clock adapter; original cadence unverified'}}
+                           'cadence': '0x1a86e0 interval from 0x1cbc84/0x269494: a game frame of 2 vsyncs; '
+                                      'steering 0x4e5614 times it, spherical 0x4e56fc divides it out'}}
 
 
 def roll_nodes(profile, controls):
@@ -52,7 +57,8 @@ def roll_nodes(profile, controls):
                    'pi': controls['pi'], 'max_step': controls['max_step'],
                    'source_units_per_native': controls['source_units_per_native'],
                    'steering_radians_per_degree': controls['steering_radians_per_degree'],
-                   'native_clock_rate': controls['native_clock_rate'],
+                   'source_tick_rate': controls['source_tick_rate'],
+                   'source_frame_ticks': controls['source_frame_ticks'],
                    'callback': callback}
             for node, callback in enumerate(profile['node_callbacks'])
             if callback and (int(callback, 0) in ROLL_CALLBACKS or int(callback, 0) == SPHERICAL_CALLBACK)}

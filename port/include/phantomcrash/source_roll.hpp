@@ -18,7 +18,11 @@ struct SourceRollControl {
   bool spherical{};
   Vec3 baked_mesh_scale{1, 1, 1};
   float steering_radians_per_degree{0.01745329238474369F}; // source 0x3c8efa35
-  float native_clock_rate{60}; // Native seconds to frame-clock input adapter.
+  // The callbacks run once a game frame of `source_frame_ticks` vsyncs at
+  // `source_tick_rate` (source_steering.hpp); each port call advances the
+  // share of a frame its seconds cover.
+  float source_tick_rate{60};
+  int source_frame_ticks{2};
 };
 
 [[nodiscard]] std::optional<SourceRollControl> parse_source_roll(const json::JsonValue &node);
@@ -28,6 +32,7 @@ void apply_source_spherical_roll(Mat4 &world, const SkeletonNode &node, const Ma
 
 class SourceRollState {
   friend class StateInspector;
+
 public:
   void advance(const SkeletonNode &rig, const std::array<Mat4, 64> &bones,
                const std::array<bool, 64> &set, const RobotMover &mover, float seconds);

@@ -101,7 +101,8 @@ TEST_CASE("source wheel steps clamp wrap and freeze when the actor is destroyed"
   advance(state, leaf, mover);
   mover.set_position({0, 0, -100});
   advance(state, leaf, mover);
-  const float clamped = 2 * source_pi - 3.1677728F;
+  // Half a game frame's step: at most half the frame's 3.1677728.
+  const float clamped = -3.1677728F / 2;
   CHECK(std::abs(state.angles()[1] - clamped) < 1e-6F);
   mover.destroy();
   mover.set_position({0, 0, 100});
@@ -164,7 +165,7 @@ TEST_CASE("source spherical rolling accumulates all axes and replaces the bind b
   const auto without_input = *state.frames()[1];
   CHECK(length(transform_point({0, 1, 0}, without_input) - Vec3{-1, 0, 0}) < 1e-5F);
   auto tuning = mover.tuning();
-  tuning.turn_degrees_per_second = 90 * 60;
+  tuning.source_turn_degrees = 180; // a quarter turn in half a frame
   mover.set_tuning(tuning);
   ScriptedStep still;
   still.heading = source_pi / 2;
@@ -183,7 +184,7 @@ TEST_CASE("source spherical rolling accumulates all axes and replaces the bind b
   CHECK(state.frames()[1]->m == steered.m);
 }
 
-TEST_CASE("spherical steering cancels clock ticks while single-axis steering retains them") {
+TEST_CASE("spherical steering turns once a frame while single-axis steering turns each vsync") {
   auto single = rig().children[1];
   auto sphere = single;
   sphere.source_roll->spherical = true;
@@ -203,15 +204,18 @@ TEST_CASE("spherical steering cancels clock ticks while single-axis steering ret
     CHECK(mover.heading() == 0);
     return state;
   };
+  // 600 degrees a second is the native adapter's 10 a vsync; the steer is 0.5.
   const auto one = run(single, 1.0F / 60);
   const auto two = run(single, 1.0F / 30);
   CHECK(std::abs(two.angles()[1] - 2 * one.angles()[1]) < 1e-6F);
-  CHECK(std::abs(one.angles()[1] - radians(5.0F)) < 1e-6F);
+  CHECK(std::abs(two.angles()[1] - radians(10.0F)) < 1e-6F);
   const auto sphere_one = run(sphere, 1.0F / 60);
   const auto sphere_two = run(sphere, 1.0F / 30);
-  CHECK(sphere_one.frames()[1]->m == sphere_two.frames()[1]->m);
-  const auto rotated = transform_point({1, 0, 0}, *sphere_one.frames()[1]);
+  // A whole frame turns the sphere 5 degrees, half the wheels' 10; half a frame 2.5.
+  const auto rotated = transform_point({1, 0, 0}, *sphere_two.frames()[1]);
   CHECK(length(rotated - Vec3{std::cos(radians(5.0F)), -std::sin(radians(5.0F)), 0}) < 1e-6F);
+  const auto halved = transform_point({1, 0, 0}, *sphere_one.frames()[1]);
+  CHECK(length(halved - Vec3{std::cos(radians(2.5F)), -std::sin(radians(2.5F)), 0}) < 1e-6F);
 }
 
 TEST_CASE("source spherical rolling ignores airborne lateral displacement and resets its matrix") {

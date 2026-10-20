@@ -2,6 +2,7 @@
 
 #include "phantomcrash/json.hpp"
 #include "phantomcrash/movement_tuning.hpp"
+#include "phantomcrash/source_load.hpp"
 #include "phantomcrash/sprite_layer.hpp"
 
 #include <array>
@@ -135,6 +136,7 @@ struct ArmourRecord {
   LevelCurve dodge;        // +0x9c: a dodge's push on the ground ...
   LevelCurve air_dodge;    // +0xac: ... and in the air
   float stop_keep{0.875F}; // legs +0xbc: retained stopping momentum per 30 Hz tick
+  std::optional<SourceLoadRule> source_load; // S.L.A.I. legs (source_load.hpp)
 };
 
 // A pilot (0x1c9920): the tag its robot's marker shows (0x04de50), and

@@ -84,6 +84,7 @@ LoadStats load_stats(const PartTables &tables, const RobotLoadout &loadout) {
   const float frame = weight_of(body, 0) + weight_of(legs, 0);
   const float reference = weight_of(record(tables.bodies, reference_part), 0) +
                           weight_of(record(tables.legs, reference_part), 0);
+  load.frame = frame;
   load.speed_factor = factor(frame, load, loadout.legs_level);
   load.jump_factor = factor(reference, load, loadout.legs_level);
   return load;
@@ -127,6 +128,16 @@ MovementTuning loaded_movement(const PartTables &tables, const RobotLoadout &loa
     base.dash_turn_degrees_per_second = turn;
     base.air_turn_degrees_per_second = turn;
     base.twist_degrees_per_second = turn;
+  }
+  base.source_controls = legs != nullptr && legs->source_load.has_value();
+  base.source_turn_degrees = 0.0F;
+  if (base.source_controls && has_curve(legs->turn)) {
+    // S.L.A.I. 0x4dd590: the legs' turn times their graded load factor
+    // (+0x8c), which the rolling wheels and the turn motion read.
+    const float load_factor = source_load_factor(*legs->source_load, load.frame, load.weight,
+                                                 load.capacity, loadout.legs_level);
+    base.source_turn_degrees = std::clamp(legs->turn.value(loadout.legs_level) * load_factor,
+                                          source_turn_min, source_turn_max);
   }
   if (legs == nullptr) {
     base.jump_height *= std::max(0.0F, load.jump_factor);
