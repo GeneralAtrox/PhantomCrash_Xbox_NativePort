@@ -30,6 +30,10 @@ public:
   }
   [[nodiscard]] std::optional<Mat4> muzzle(std::size_t slot) const;
   void advance_muzzle(std::size_t slot);
+  // The muzzle the next shot leaves from (0x5056e0's barrel +0xb4).
+  [[nodiscard]] int barrel(std::size_t slot) const {
+    return slot < barrel_.size() ? static_cast<int>(barrel_[slot]) : -1;
+  }
   [[nodiscard]] std::optional<MovementPoint> movement_point(std::size_t slot) const;
   [[nodiscard]] const MovementGroups &movement_groups() const {
     return movement_groups_;

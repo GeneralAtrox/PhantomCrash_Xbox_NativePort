@@ -175,6 +175,7 @@ void Battle::fired(const int index, const std::size_t slot, const WeaponTuning &
   event.weapon = &weapon;
   event.at = muzzle(robot, static_cast<WeaponSlot>(slot));
   event.direction = muzzle_direction(robot, static_cast<WeaponSlot>(slot));
+  event.barrel = robot.pose ? robot.pose->barrel(slot) : -1;
   events_.push_back(event);
 }
 

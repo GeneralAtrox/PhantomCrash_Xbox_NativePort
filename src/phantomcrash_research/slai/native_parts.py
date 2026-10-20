@@ -13,7 +13,9 @@ from .assets import save
 from .arm_weapon import _arm_model, _meshes, _muzzles
 from .native_geometry import flat_model, walking_model, motion_bank
 from .native_animation import articulated_model
+from .muzzles import decode_muzzles, flash_entry, muzzle_mount
 from .pod import read_pod
+from .program import ProgramData
 from .progression import write_progression
 from .wheels import _torso, MAKERS
 
@@ -135,6 +137,9 @@ def register_parts(image: Path, assets: Path, data: Path, mods: Path) -> dict:
         body_profiles = {(bank["source"], bank["package_offset"]): bank["motion_profile"]
                          for bank in manifest["body_animation_banks"]}
         motion_resources = read_motion_resources(disc)
+        recovered = decode_muzzles(ProgramData(disc), disc)
+        source_muzzles = {Path(w["source_model"]).stem: w for w in recovered["weapons"]}
+        flashes = []
         profiles = {Path(p["model"]).stem: p for p in motion_resources["tables"]["legs"]}
         from .resources import resource_packages
         records = source_records(stats, manifest["models"], resource_packages(disc), disc)
@@ -188,7 +193,11 @@ def register_parts(image: Path, assets: Path, data: Path, mods: Path) -> dict:
                     save(mods / f"models/binlink/{resource+side}.gltf", model)
                     upsert(skeletons["arms"][side], new_type, copy.deepcopy(base_skeletons["arms"][side][template_type]))
                     template_path = f"models/binlink/{base_catalogue[types][template_type]['models'][side]}.gltf"
-                    mounts["weapons"][f"models/binlink/{resource+side}.gltf"] = copy.deepcopy(mounts["weapons"][template_path])
+                    template_mount = mounts["weapons"][template_path]
+                    mounts["weapons"][f"models/binlink/{resource+side}.gltf"] = muzzle_mount(
+                        model, source_muzzles[stem]["muzzle_nodes"], template_mount, True
+                    ) or copy.deepcopy(template_mount)
+                flashes.append(flash_entry(source_muzzles[stem], category, new_type))
             elif category == "shoulder":
                 native["flight"] = {0: 0, 1: 1, 2: 2, 3: 0}.get(source["flight"], template["flight"])
                 definition["models"] = [resource, resource+1]
@@ -202,10 +211,14 @@ def register_parts(image: Path, assets: Path, data: Path, mods: Path) -> dict:
                 position = np.array(shoulder_origin) - body_origin
                 for side in range(2):
                     at = np.array(position) * [-1 if side == 0 else 1, 1, 1]
-                    save(mods / f"models/binlink/{resource+side}.gltf",
-                         articulated_model(animated, texture, stem, side=side, offset=at))
+                    model = articulated_model(animated, texture, stem, side=side, offset=at)
+                    save(mods / f"models/binlink/{resource+side}.gltf", model)
                     template_path = f"models/binlink/{base_catalogue[types][template_type]['models'][side]}.gltf"
-                    mounts["weapons"][f"models/binlink/{resource+side}.gltf"] = copy.deepcopy(mounts["weapons"][template_path])
+                    template_mount = mounts["weapons"][template_path]
+                    mounts["weapons"][f"models/binlink/{resource+side}.gltf"] = muzzle_mount(
+                        model, source_muzzles[stem]["muzzle_nodes"], template_mount, False
+                    ) or copy.deepcopy(template_mount)
+                flashes.append(flash_entry(source_muzzles[stem], category, new_type))
             elif category == "body":
                 definition.update({"model": resource, "motions": -1})
                 save(mods / f"models/binlink/{resource}.gltf",
@@ -278,6 +291,10 @@ def register_parts(image: Path, assets: Path, data: Path, mods: Path) -> dict:
     result = {"parts": imported, "unresolved": missing, "progression": progression,
               "rig_adapter": "Original part hierarchies and PMT channels; native mixed-part mounts and motion-slot adapter"}
     save(registration, result)
+    save(mods / "slai/muzzle_flashes.json", {**recovered["flash"], "weapons": flashes,
+                                              "hit_effect_scales": recovered["hit_effect_scales"],
+                                              "adapter": recovered["adapter"],
+                                              "provenance": recovered["provenance"]})
     if wheels:
         save(wheel_file, {"parts": list(wheels.values())})
     return {**progression, "registered_parts": len(imported), "unresolved_parts": len(missing),

@@ -4,6 +4,7 @@
 #include "desktop_shot_residue.hpp"
 #include "desktop_mount_effects.hpp"
 #include "desktop_movement_effects.hpp"
+#include "desktop_source_muzzle_flashes.hpp"
 #include "phantomcrash/battle.hpp"
 #include "phantomcrash/data_roots.hpp"
 #include "phantomcrash/effect_system.hpp"
@@ -79,6 +80,7 @@ private:
   std::vector<std::vector<int>> flash_textures_;
   std::minstd_rand random_{0x5eed};
   DesktopSourceParticles *source_particles_{};
+  std::unique_ptr<DesktopSourceMuzzleFlashes> source_flashes_;
 };
 
 } // namespace phantomcrash

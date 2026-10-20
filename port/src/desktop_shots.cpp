@@ -86,7 +86,8 @@ FenceContactLook load_fence_contact(const DataRoots &roots) {
 DesktopShots::DesktopShots(WorldRenderer &world, const EffectBank &bank, const DataRoots &roots,
                            const FenceContactLook contact, DesktopSourceParticles *source_particles)
     : bank_(&bank), residue_(world, bank), fence_(bank.fence, contact),
-      source_particles_(source_particles) {
+      source_particles_(source_particles),
+      source_flashes_(DesktopSourceMuzzleFlashes::load(world, roots)) {
   for (const int mesh : bank.fence.meshes) {
     fence_meshes_.emplace(mesh, load_mesh(world, EffectPicture{bank.fence.model, mesh}));
   }
@@ -154,6 +155,9 @@ void DesktopShots::tick(const Battle &battle, EffectSystem &effects, const float
     flash.remaining -= seconds;
   }
   std::erase_if(muzzle_flashes_, [](const MuzzleFlash &flash) { return flash.remaining <= 0; });
+  if (source_flashes_) {
+    source_flashes_->tick(battle, view, seconds);
+  }
   if (source_particles_) {
     source_particles_->observe(battle, view);
     if (view) {
@@ -167,7 +171,8 @@ void DesktopShots::tick(const Battle &battle, EffectSystem &effects, const float
   const EffectBank &bank = *bank_;
   for (const BattleEvent &event : battle.events()) {
     if (event.kind == BattleEventKind::fired && event.weapon &&
-        !(source_particles_ && source_particles_->has_projectile(*event.weapon))) {
+        !(source_particles_ && source_particles_->has_projectile(*event.weapon)) &&
+        !(source_flashes_ && source_flashes_->handles(*event.weapon))) {
       const auto look = muzzle_looks_.find(event.weapon->fire_sound);
       if (look != muzzle_looks_.end() && look->second.mesh.model >= 0) {
         const float scale = look->second.scale;
@@ -247,6 +252,9 @@ void DesktopShots::add_items(const Battle &battle, const Mat4 &view,
   const Mat4 camera = facing(view);
   std::uniform_real_distribution<float> roll(0.0F, 2.0F * std::numbers::pi_v<float>);
   add_beams(battle, camera, items);
+  if (source_flashes_) {
+    source_flashes_->add_items(items);
+  }
   for (const MuzzleFlash &flash : muzzle_flashes_) {
     const std::size_t first = items.size();
     add_mesh(muzzle_looks_.at(flash.style).mesh, flash.world, items);

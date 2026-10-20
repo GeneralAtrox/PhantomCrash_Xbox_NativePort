@@ -1670,3 +1670,80 @@ Sustained weapon sound lifetime (2026-10-06):
 - No temporary runtime, captures or logs were created. The earlier owned
   body-control, state-effect and death-effect scratch directories were checked
   and remain absent. Standard `build/port` and updated mod data are retained.
+
+## Gameplay muzzles and muzzle flashes (2026-10-20)
+
+Recovered from the PAL battle overlay (`battledvd.bin`, base `0x4d0c00`) with
+the flat-image Ghidra project and checked against the disc data. Exported
+read-only by `src/phantomcrash_research/slai/muzzles.py` with instruction
+guards; registration writes `slai/muzzle_flashes.json` and the weapon
+sockets in `robots/weapon_mounts.json`.
+
+- Gameplay muzzles. The weapon setup `0x504b30` walks the part descriptor's
+  51 node callbacks. A node whose callback is `0x4e6db0` is appended to the
+  muzzle list (`+0x116`, count `+0x114`); `0x4e6da0` nodes go to a second
+  list (`+0x198`/`+0x196`) whose use is still unknown. The muzzle-frame getter `0x5056e0` keeps
+  the barrel in `+0xb4`, advancing it modulo the count before a shot, and
+  launches from that node's normalized world matrix. 90 of the 95 weapons
+  have muzzle nodes (1 to 10). The port's existing per-shot `advance_muzzle`
+  already cycles barrels the same way.
+- Weapon ids. The flash code uses the robot's part ids (`+0xf48` table):
+  the arm descriptor index, or `0x30` plus the shoulder descriptor index
+  (`0x50d850..878`). The listed ids fall on each maker's first weapons,
+  which supports this reading.
+- Flash table. `particle/po2info/muzlle_pos.dat` (loader `0x509f00`) holds 95
+  `[count <= 4][nodes]` entries in descriptor order (47 arms, then 48
+  shoulders), 196 bytes. 77 of 101 listed flash nodes coincide with
+  descriptor muzzle nodes; the rest sit on barrel roots or near the muzzle.
+  Examples: S3A02H, S5A05H, S2A03H and S1A08H are 1.7 to 2.7 units behind it;
+  S1S06H and S2S06H are within 0.2. S3A02H's node 2 is an origin group. Ten
+  weapons list no flash node. These are kept as recovered; please check them
+  visually.
+- Flash builder `0x50d600` (`effobject.cpp`). Each of the four mounts gets
+  two instances of `particle/wepon/model/mazl_01.po2`, with `mflash_02/01`
+  textures, white RGB and alpha 0.4 and 0.8. The second instance sets mesh
+  flag `0x1000`; the first sets model flag 2 and draw hook `0x5bb190`. Both
+  attach to flash node 0. Scale is the mount base from `0x59e740` (0.9 arms,
+  1.1 shoulders), times 1.3 for ids 0, 1, 0x11, 0x2f, 0x30, 0x40, 0x61, or
+  1.7 for ids 9, 0x2b, 0x38, 0x5a, 0x5f. Ids `0x2f` and `0x61` match no
+  descriptor.
+- Fire `0x511630` (from shot callbacks `0x502b10`/`0x503660`, after the
+  muzzle getter). For ids 1, 3, 0xe, 0x11, 0x19 and 0x1d, the flash re-attaches
+  to node `[barrel != 0]`, so table nodes beyond the second are never used.
+  The visible bit is then set, the node matrix is copied, and `+0x88 = 1`.
+  Five of those six weapons have a single muzzle node, so their barrel stays
+  0 and the second flash node is effectively unused.
+- Lifetime `0x511810`. The per-robot effect update (`0x50e500`, once per
+  30 Hz battle update) re-reads the node matrix for visible flashes, counts
+  `+0x88` down, and clears the visible bit at zero. A shot therefore shows
+  the flash for one update; continuous fire keeps it lit. Node callback
+  `0x511780` multiplies a random roll in [-pi, pi] about z into the flash
+  each update.
+- Hit effect scale. `particle/wepon/hiteff_scale.dat` (loader `0x509d80`)
+  holds 11 records `(low, high, low_scale, high_scale)`. `0x50b150` returns
+  `low_scale` below `low`, `high_scale` above `high`, and interpolates
+  linearly between. Record n serves hit type n + 1. The hit spawner `0x50f9f0`
+  (from `0x501c20`) passes the hit type and an integer hit value that is not
+  yet identified. `0x512fe0` passes a value times 1000 with its own record.
+  The values are exported for reference and are not consumed yet.
+- Port. Registration replaces the template-copied sockets of all 180
+  imported weapon models that have muzzle nodes. Each socket is the node's
+  rest position in the drawn model's frame (glTF z mirrored, as the rigid
+  loader does), under native arm bone 0 or the shoulder mount. The 10 models
+  of the five weapons without muzzle nodes keep their template socket. The
+  rest pose under the native mount is a labelled adapter: it ignores
+  animated barrels and source body arm/shoulder mounts.
+- `BattleEvent::barrel` carries the muzzle a shot left from. The new
+  `DesktopSourceMuzzleFlashes` draws `mazl_01` on the animated flash node
+  from `BattleView::source_weapon_frame`, with the recovered node choice,
+  scale and random roll. Both layers are drawn additive and unlit at their
+  alphas for one 30 Hz update. Flagged weapons replace the native flash.
+  Flag `0x1000`, model flag 2 and hook `0x5bb190` are not decoded, so the
+  blend mode is an adapter.
+- Checks: 8 new Python and 3 new native checks pass; all 156 S.L.A.I.
+  native checks and 121 Python S.L.A.I. checks pass. The core suite has the
+  same three course/blur failures as the existing main build. A scratch
+  registration on the shipped data produced 95 flash records and 180
+  recovered mounts, with no non-S.L.A.I. mount changed. Shared extracted data
+  was not regenerated, so the installed game shows the new flashes and
+  sockets only after re-registration. No in-battle capture was made.

@@ -270,6 +270,7 @@ add_library(phantomcrash_core
   src/source_weapon_actions.cpp
   src/source_motion_actions.cpp
   src/source_particle_birth.cpp
+  src/source_muzzle_flash.cpp
 )
 
 # cgltf (header only) reads the converted glTF models.
@@ -408,6 +409,7 @@ if(BUILD_TESTING)
     tests/slai_lighting_tests.cpp tests/slai_body_bank_tests.cpp tests/source_sound_tests.cpp
     tests/source_particle_atlas_tests.cpp tests/source_particle_motion_tests.cpp tests/source_particle_birth_tests.cpp tests/source_particle_parent_tests.cpp tests/source_fire_pair_tests.cpp tests/source_sustained_sound_tests.cpp tests/source_melee_tests.cpp
     tests/source_weapon_actions_tests.cpp
+    tests/source_muzzle_flash_tests.cpp
     tests/source_motion_actions_tests.cpp
     tests/source_rigid_transition_tests.cpp
     tests/source_leg_playback_tests.cpp
@@ -713,6 +715,7 @@ if(PHANTOMCRASH_BUILD_DESKTOP)
     src/desktop_source_projectiles.cpp
     src/desktop_source_weapon_actions.cpp
     src/desktop_source_model_actions.cpp
+    src/desktop_source_muzzle_flashes.cpp
     src/desktop_shots.cpp
     src/desktop_mech_vfx.cpp
     src/mech_vfx_data.cpp
