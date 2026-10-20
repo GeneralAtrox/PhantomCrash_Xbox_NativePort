@@ -521,7 +521,7 @@
     {
      "state": 32,
      "goal": "twist_both",
-     "amount": 0.7854
+     "amount": 0.7853982
     },
     {
      "state": 33,

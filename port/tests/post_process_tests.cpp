@@ -40,7 +40,9 @@ TEST_CASE("blur tint and stage distortion can be enabled independently") {
   ScreenPass stage;
   stage.depth_of_field = stage.distortion = true;
   stage.tint = {0.8F, 0.7F, 0.6F};
-  CHECK(!selected_screen(stage, {}).active());
+  // All three off: PostProcessOptions{} is the original's defaults, all on.
+  CHECK(!selected_screen(stage, {false, false, false}).active());
+  CHECK(selected_screen(stage, {}).active());
   const auto wave = selected_screen(stage, {false, true, false});
   CHECK(wave.distortion && !wave.depth_of_field && wave.tint.x == 1.0F);
   const auto blur = selected_screen(stage, {true, false, false});

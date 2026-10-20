@@ -2,10 +2,20 @@
 
 #include "test_support.hpp"
 
+#include "phantomcrash/added_chips.hpp"
 #include "phantomcrash/data_roots.hpp"
 #include "phantomcrash/json.hpp"
+#include "phantomcrash/robot.hpp"
+#include "phantomcrash/robot_combat.hpp"
+#include "phantomcrash/robot_library.hpp"
+#include "phantomcrash/robot_load.hpp"
+#include "phantomcrash/robot_parts.hpp"
 #include "phantomcrash/training_ground.hpp"
 #include "phantomcrash/tutorial.hpp"
+
+#include <algorithm>
+#include <array>
+#include <memory>
 
 using namespace phantomcrash;
 
@@ -63,6 +73,36 @@ InputFrame practice_input(const LessonStep &step, const int tick, const BattleBu
   return input;
 }
 
+// Gives the battle's player (0) and drone (1) their converted robots, as the
+// training screen does: the radius, stride and load tuning and the animated
+// pose that times a strike and carries its blade. The poses use the
+// returned library; null without the assets.
+std::shared_ptr<RobotLibrary> rig_training_robots(Battle &battle, const DataRoots &roots,
+                                                  const TrainingScript &script) {
+  auto library = std::make_shared<RobotLibrary>(roots);
+  const auto table = read_converted_table(roots, "tables/parts.json");
+  if (!library->available() || !table) {
+    return nullptr;
+  }
+  const TrainingBattle &setup = script.battle;
+  const PartTables parts = parse_part_tables(*table);
+  const std::array<const char *, 2> names{"player", "drone"};
+  for (int index = 0; index < 2; ++index) {
+    RobotAssembly assembly =
+        assemble_robot(library->catalogue(), library->skeletons(), script.robots.at(names[index]));
+    battle.set_radius(index, assembly.radius > 0 ? assembly.radius : setup.settings.robot_radius);
+    MovementTuning movement = setup.stride_speeds
+                                  ? stride_tuning(*library, assembly, setup.settings.movement)
+                                  : setup.settings.movement;
+    const RobotLoadout loadout =
+        training_loadout(script, names[index], index == 0 ? setup.player : setup.drone);
+    battle.set_movement(index,
+                        loaded_movement(parts, loadout, load_stats(parts, loadout), movement));
+    battle.robot(index).pose = std::make_shared<RobotCombat>(*library, std::move(assembly));
+  }
+  return library;
+}
+
 } // namespace
 
 TEST_CASE("the shipped basic and camouflage courses can be finished with their controls") {
@@ -101,11 +141,14 @@ TEST_CASE("the shipped attack course can be finished with each weapon") {
   const auto roots = DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT);
   const TrainingScript script = parse_training(roots.document("world/training.json"));
   const TrainingBattle &setup = script.battle;
-  // Without a path the drone respawns at the middle, straight ahead.
+  // Without a path the drone respawns at the middle.
   Battle battle(setup.settings, EnemyPath{});
   battle.add_robot("player", 0, setup.player_start, setup.player_heading, setup.player.weapons,
                    setup.player.hp);
   battle.add_drone("drone", setup.drone.hp);
+  // The drill's blade is where the left arm's strike motion carries it.
+  const auto library = rig_training_robots(battle, roots, script);
+  REQUIRE(library != nullptr);
   Tutorial tutorial(setup.courses.at(1));
   constexpr float tick = 1.0F / 60.0F;
   for (int frame = 0; frame < 60 * 600 && !tutorial.finished(); ++frame) {
@@ -117,20 +160,28 @@ TEST_CASE("the shipped attack course can be finished with each weapon") {
     battle.set_drones_active(step.drones);
     battle.set_allowed_weapons(step.weapons);
     const Combatant &drone = battle.robots()[1];
-    const float distance = length(drone.mover.position() - battle.player().mover.position());
+    const Vec3 offset = drone.mover.position() - battle.player().mover.position();
+    const float distance = length(offset);
     // Close in for the drill; keep some range for the rest, as missiles
     // need room to turn.
     const bool melee = step.weapons == (1U << static_cast<unsigned>(WeaponSlot::left_arm));
     const float wanted = melee ? 5.0F : 30.0F;
     InputFrame input;
-    if (drone.alive && distance > wanted + 2.0F) {
-      input.left_stick = {0.0F, 0.6F};
-    } else if (drone.alive && distance < wanted - 5.0F) {
-      input.left_stick = {0.0F, -0.6F};
-    }
-    for (std::size_t slot = 0; slot < weapon_slots; ++slot) {
-      if ((step.weapons & (1U << slot)) != 0 && frame % 2 == 0) {
-        input.held |= setup.buttons.fire[slot];
+    if (drone.alive) {
+      // Face the drone wherever it respawns; the right stick turns.
+      const float error = wrap_angle(heading_toward(offset) - battle.player().mover.heading());
+      input.right_stick = {std::clamp(error * 2.0F, -1.0F, 1.0F), 0.0F};
+      if (distance > wanted + 2.0F) {
+        input.left_stick = {0.0F, 0.6F};
+      } else if (distance < wanted - 5.0F) {
+        input.left_stick = {0.0F, -0.6F};
+      }
+      // Hold the triggers on a live drone; the blade only once it is within
+      // reach, as each strike steps the robot forward.
+      for (std::size_t slot = 0; slot < weapon_slots; ++slot) {
+        if ((step.weapons & (1U << slot)) != 0 && (!melee || distance <= wanted + 2.0F)) {
+          input.held |= setup.buttons.fire[slot];
+        }
       }
     }
     const float heading = battle.player().mover.heading();
