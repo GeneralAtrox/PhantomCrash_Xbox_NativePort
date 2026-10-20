@@ -47,6 +47,8 @@ struct SkeletonNode {
   std::optional<SourceRollControl> source_roll;
   std::vector<SkeletonNode> children;
   bool source_model_root{}; // control zero of the imported leg model, including non-drawing nodes
+  // A port adapter placed before the node's own transform (body_fit.hpp).
+  std::optional<Mat4> body_fit;
 };
 
 struct RobotSkeletons {

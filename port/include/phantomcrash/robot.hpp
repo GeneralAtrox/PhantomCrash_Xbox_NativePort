@@ -1,5 +1,6 @@
 #pragma once
 
+#include "phantomcrash/body_fit.hpp"
 #include "phantomcrash/json.hpp"
 #include "phantomcrash/math3d.hpp"
 #include "phantomcrash/skeleton.hpp"
@@ -80,6 +81,8 @@ struct RobotCatalogue {
   std::vector<int> arm_maker_types;
   std::vector<int> shoulder_maker_types;
   std::vector<Vec3> shoulder_mounts;
+  // A port adapter for mods (world/body_fit.json), disabled by default.
+  BodyFitTable body_fits;
 };
 
 [[nodiscard]] RobotCatalogue parse_robot_catalogue(const json::JsonValue &document);
@@ -130,6 +133,9 @@ struct RobotAssembly {
   // this, the legs' skeleton with the body's maker's body section grafted
   // on (graft_body_section).
   std::shared_ptr<const SkeletonNode> grafted;
+  // A port adapter: `skeleton` again, with the catalogue's body fit for
+  // this pairing on its mount (body_fit.hpp).
+  std::shared_ptr<const SkeletonNode> fitted;
   std::array<const SkeletonNode *, 2> arm_skeletons{};
   float forearm_turn{}; // the body type's (RobotCatalogue::BodyType)
   // A port addition: moves another maker's shoulder weapon, in the upper

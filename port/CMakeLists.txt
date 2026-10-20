@@ -218,6 +218,7 @@ add_library(phantomcrash_core
   src/town_map.cpp
   src/town_map_script.cpp
   src/robot.cpp
+  src/body_fit.cpp
   src/robot_skin.cpp
   src/robot_body_models.cpp
   src/robot_library.cpp
@@ -383,6 +384,7 @@ if(BUILD_TESTING)
     tests/system_menu_tests.cpp
     tests/battle_hud_style_tests.cpp
     tests/robot_tests.cpp
+    tests/body_fit_tests.cpp
     tests/robot_combat_tests.cpp
     tests/robot_parts_tests.cpp
     tests/added_chips_tests.cpp

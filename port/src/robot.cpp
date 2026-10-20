@@ -371,6 +371,13 @@ RobotAssembly assemble_robot(const RobotCatalogue &catalogue, const RobotSkeleto
       }
     }
   }
+  const BodyFit *fit = find_body_fit(catalogue.body_fits, legs.model, body.model);
+  if (fit != nullptr && !is_identity_fit(*fit) && robot.skeleton != nullptr) {
+    robot.fitted = fit_body_mount(*robot.skeleton, body_fit_transform(*fit));
+    if (robot.fitted) {
+      robot.skeleton = robot.fitted.get();
+    }
+  }
   return robot;
 }
 

@@ -280,6 +280,9 @@ void visit(const SkeletonNode &node, const Mat4 &parent, Context &context) {
     return;
   }
   Mat4 world = animated_transform(node, context) * parent;
+  if (node.body_fit) {
+    world = *node.body_fit * world;
+  }
   apply_source_spherical_roll(world, node, context.input.root, context.input.source_roll_frames);
   apply_source_suspension(world, node.source_suspension, context.input.procedural_seconds);
   if (context.part > 0 && node.track >= 0) {

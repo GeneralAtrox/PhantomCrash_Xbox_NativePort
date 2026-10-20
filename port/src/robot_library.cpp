@@ -11,6 +11,9 @@ RobotLibrary::RobotLibrary(const DataRoots &roots) : roots_(roots) {
     catalogue_ = parse_robot_catalogue(json::read_file(roots.asset("robots/catalogue.json")));
     skeletons_ = parse_robot_skeletons(json::read_file(roots.asset("robots/skeletons.json")));
     read_maker_tables(roots.document("ui/robot_preview.json"), catalogue_);
+    if (roots.has_document("world/body_fit.json")) {
+      catalogue_.body_fits = parse_body_fits(roots.document("world/body_fit.json"));
+    }
     available_ = true;
   } catch (const std::exception &error) {
     errors_.push_back(std::string("Robots are unavailable: ") + error.what());
