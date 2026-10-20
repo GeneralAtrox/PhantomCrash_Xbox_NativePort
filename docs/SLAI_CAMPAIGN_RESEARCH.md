@@ -75,6 +75,9 @@ and a 5-step stage ladder decides which rumbles the rota may offer. Both are
     place; these use save records 29 and 30. Their meaning is **Low**: they
     may be rematches.
 
+Shop stock also rotates with the rota day (**High** for the reads,
+**Medium** for which shop): see the day table and city-day rows below.
+
 A second gate is the story layer. Town events (below) appear by place, by
 progress counts and by flags. No EVT opcode starts a battle (**Medium**).
 Battles are reached from Club Wired's menu, not from scripts.
@@ -86,8 +89,10 @@ Two tables define the rota (**High**).
 - **Day table** `DAY_TABLE` 0x42D0F0, 100 × 24 bytes. The accessor is
   f_257350 (`day % 100`).
   - +0: five u16 values. Each comes from one block of 8 values (32–39,
-    0–7, 16–23, 8–15, 24–31). Their purpose is unresolved (**Low**: perhaps
-    shop stock or news picks).
+    0–7, 16–23, 8–15, 24–31). They are daily shop lineups: shopimp.cpp
+    (0x54BA40, via 0x547960) picks the value for shop id 0x43AB48 and reads 3
+    items from the lineup table 0x333A10 (6-byte rows; items 0x9C bytes at
+    0x382390).
   - +10: seven u16 pattern ids, one per city column. On the disc every
     pattern id is `column*100 + day`.
 - **City-day table** `CITY_DAY_TABLE` 0x422CE0, 700 × 60 bytes.
@@ -95,8 +100,13 @@ Two tables define the rota (**High**).
     0x422CE0. radare2 independently confirms this.
   - f_2572E0 adds `stage*8 + slot*4`, so each row holds five
     (day, night) s32 match-id pairs. The value −1 means no match.
-  - The 20 bytes after the five pairs are unresolved. They look like packed
-    u16 data.
+  - +0x28..+0x3B are per-city daily shop lineups (u16 lineup ids):
+    +0x28 for chipshop.cpp and chipshop_select.cpp (up to 10 chips, 0x51C2E0);
+    +0x2A.. per category and +0x38 for the module-shop area (0x5372D0,
+    0x537480: 7 categories × 14 items). When flag 0x43B91C is set, that shop
+    instead uses a 10-day cycle per city: `day/10*10 + offset[city] − 1`
+    (offsets 0x43A908 = 7 8 2 6 1 10 4), then +0x3A into 0x333B00 (16-byte
+    rows). What sets that flag is unresolved.
 - **Cities.** City columns follow UK_FIELDINFOMSG order: 0 Tokyo (Shinjuku),
   1 Stuttgart, 2 New York, 3 London, 4 Hong Kong, 5 Cairo, 6 Las Vegas.
   - This order comes from the per-city match blocks. The 7 regional
@@ -186,7 +196,7 @@ ids are **not decoded yet**. They are the main missing piece for opponents.
 | ids 0x30–0x67 | 56 city × class ranker records; ids 0x68–0x6E 7 regional; higher = master | High |
 | `+0xA10` / `+0x41DC` | rota day 0..99 / elapsed days (cap 9999) | High |
 | `+0xA14` | value the entry requirement is compared with (likely money) | Medium |
-| `+0xA20` | byte set by town 0x4EF9C0; story events compare it against 0..8 (9 = any) | Low |
+| `+0xA20` | current city or field (the shops pass it as the rota city column); set by town 0x4EF9C0; story events compare it against 0..8 (9 = any) | Medium |
 | `+0xA21` | stage 0..4 | High |
 | `+0x168` | tutorial-done byte | Medium |
 | `+0x426F` | 256-bit event flag field (test 0x204E50, set 0x204F20, clear 0x204FC0) | High |
@@ -316,23 +326,14 @@ a battle (**Medium**).
 
 ## Guarded addresses
 
-The decoder checks these before trusting the data:
-
-- code words at 0x2572C0 (city-day row geometry);
-- code words at 0x257350 (`% 100`, base 0x42D0F0);
-- code words at 0x26A920 (event bound 0x9A, base 0x335E80);
-- the argc column of the EVT opcode table;
-- regulation ids equal to the row index;
-- every match row having a valid regulation and day/night value.
-
-Other key addresses (unguarded):
-
-- rumble manager in the ELF: 0x222070 constructor, 0x2225A0 opponent list,
-  0x222A60 opponent eligibility, 0x222F70 completion test, 0x223ED0 status,
-  0x2240E0 challenger;
-- player entry check 0x259A40; stage advance 0x25A4E0; rota lookup
-  0x257070;
-- town code: schedule screen 0x57A7E0, next day 0x4E8CF0.
+- **Guarded by the decoder:** the code words at 0x2572C0 (city-day row
+  geometry), 0x257350 (`% 100`, base 0x42D0F0) and 0x26A920 (event bound
+  0x9A); the EVT opcode argc column; regulation ids equal to their row; and
+  a valid regulation and day/night value in every match row.
+- **Unguarded:** the rumble manager (0x222070 constructor, 0x2225A0
+  opponents, 0x222A60 eligibility, 0x222F70 completion, 0x223ED0 status,
+  0x2240E0 challenger); entry check 0x259A40; stage advance 0x25A4E0; rota
+  lookup 0x257070; schedule screen 0x57A7E0; next day 0x4E8CF0.
 
 ## What a native S.L.A.I. Rumble mode needs
 
@@ -340,8 +341,8 @@ Other key addresses (unguarded):
 mostly data plus one menu.
 
 1. Export the regulations, match templates and rota to TOML with
-   `campaign.py`. The data is all decoded except the 5 day-header values
-   and the 20-byte row tail. **Small.**
+   `campaign.py`. The shop lineup ids are mapped to tables but not to item
+   names yet. **Small.**
 2. Decode the roster table 0x420F40 and the robot or ranker definitions
    behind f_256CC0, so every opponent has a real build. This is the largest
    research gap. It needs the opponent part ids mapped to the imported
@@ -388,11 +389,10 @@ for writing English story cards or briefings without the full interpreter.
 
 ## Open questions (most need runtime checks in PCSX2)
 
-- What do the five day-header values at day table +0 and the 20-byte tail of
-  each city-day row mean?
+- Which items do the daily shop lineup ids name, and what sets 0x43B91C?
 - Is `+0xA14` money? What do the regulation's `+0x20` parameter and the 10
   match weights do?
 - What builds sit behind the roster ids (f_256CC0)? This needs ranker and
   robot data decoding.
-- What are the semantics of `save+0xA20`, of f_4EA860, of EVT opcodes 0F,
+- What are the semantics of save+0xA20 values 7 and 8, of f_4EA860, of EVT opcodes 0F,
   13, 1B and 1C, and of story trigger kinds 0–4?
