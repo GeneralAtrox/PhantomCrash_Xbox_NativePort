@@ -19,7 +19,9 @@ class Program:
     words.update({0x4e55f0: 0x3463fa35, 0x4e55f4: 0xc662008c,
                   0x4e55fc: 0xc6600e18, 0x4e5614: 0x46010042,
                   0x4e56dc: 0xc6610e18, 0x4e56fc: 0x46000d43,
-                  0x4de7dc: 0xe6200e18})
+                  0x4de7dc: 0xe6200e18,
+                  0x1a86ec: 0xac880010, 0x1cbc84: 0x24080002,
+                  0x269494: 0x24080002})
 
     def read(self, address, size):
         if address == 0x59a7f0:
@@ -68,8 +70,11 @@ class RollControlsTests(unittest.TestCase):
         nodes = roll_nodes(profile, controls)
         for node in nodes.values():
             self.assertAlmostEqual(node['steering_radians_per_degree'], .01745329238474369)
-            self.assertEqual(node['native_clock_rate'], 60)
-        for address in (0x4e55f4, 0x4e55fc, 0x4e5614, 0x4e56fc, 0x4de7dc):
+            self.assertEqual(node['source_tick_rate'], 60)
+            self.assertEqual(node['source_frame_ticks'], 2)
+            self.assertNotIn('native_clock_rate', node)
+        for address in (0x4e55f4, 0x4e55fc, 0x4e5614, 0x4e56fc, 0x4de7dc,
+                        0x1a86ec, 0x1cbc84, 0x269494):
             program = Program()
             program.words = {**program.words, address: 0}
             with self.assertRaises(ValueError):

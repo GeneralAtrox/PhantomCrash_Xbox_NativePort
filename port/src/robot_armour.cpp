@@ -47,6 +47,7 @@ ArmourRecord parse_armour_record(const json::JsonValue &value) {
   out.air_dodge = curve(value, "air_dodge");
   out.stop_keep = static_cast<float>(value.number_or("stop_keep", out.stop_keep));
   out.wheels = parse_wheeled_tuning(value.find("movement"));
+  out.source_load = parse_source_load(value.find("source_load"));
   return out;
 }
 

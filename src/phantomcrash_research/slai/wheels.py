@@ -78,6 +78,8 @@ def import_wheels(image: Path, assets: Path, data: Path, mods: Path, spec: Path)
         from .motion_resources import read_motion_resources
         profiles = {Path(p["model"]).stem: p for p in read_motion_resources(disc)["tables"]["legs"]}
         stats = read_stats(disc)
+        from .steering_inputs import read_steering_inputs
+        source_load = read_steering_inputs(disc)["source_load"]
         # Match shipped wheel model descriptions to the actual part package,
         # rather than assuming six identically classified legs for each maker.
         start, size = disc.disc_files()["SLES_529.40"]
@@ -144,7 +146,8 @@ def import_wheels(image: Path, assets: Path, data: Path, mods: Path, spec: Path)
                 native[key]["knee"] = round(native[key]["knee"] * 99 / 100)
             tuning.pop("wheel_nodes", None)
             native.update({"index": len(parts["legs"]), "name": f"S.L.A.I. {source['name']}",
-                           "model": new_type, "movement": tuning, "source": source["source"]})
+                           "model": new_type, "movement": tuning, "source": source["source"],
+                           "source_load": dict(source_load)})
             parts["legs"].append(native)
             catalogue["parts"]["legs"].append(new_type)
             # Driving speed comes from records rather than an authored walking stride.
@@ -152,7 +155,8 @@ def import_wheels(image: Path, assets: Path, data: Path, mods: Path, spec: Path)
             deliveries.append({"category": 1, "id": native["index"], "name": native["name"]})
             imported.append({"part": native["index"], "leg_type": new_type, "model": stem,
                              "source_record": source["index"], "wheel_nodes": rolling,
-                             "animation": "Original control hierarchy and PMT clips; native roll and motion-slot adapters",
+                             "animation": "Original control hierarchy and PMT clips; native roll and motion-slot "
+                                          "adapters; original turn-speed load rule",
                              "movement": tuning})
     preview_base = json.loads((data / "ui/robot_preview.json").read_text(encoding="utf-8"))
     preview_path = mods / "data/ui/robot_preview.json"

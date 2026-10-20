@@ -2,6 +2,7 @@
 #include "phantomcrash/json_fields.hpp"
 #include "phantomcrash/robot_mover.hpp"
 #include "phantomcrash/skeleton.hpp"
+#include "phantomcrash/source_steering.hpp"
 #include <algorithm>
 #include <cmath>
 #include <stdexcept>
@@ -46,7 +47,12 @@ std::optional<SourceRollControl> parse_source_roll(const json::JsonValue &node) 
                         read("max_step"), read("source_units_per_native")};
   out.spherical = value->boolean_or("spherical", false);
   out.steering_radians_per_degree = read("steering_radians_per_degree");
-  out.native_clock_rate = read("native_clock_rate");
+  // Older registrations carry the retired "native_clock_rate" adapter; the
+  // recovered cadence replaces it.
+  out.source_tick_rate =
+      static_cast<float>(value->number_or("source_tick_rate", source_vsyncs_per_second));
+  out.source_frame_ticks =
+      static_cast<int>(value->number_or("source_frame_ticks", source_frame_vsyncs));
   if (out.spherical) {
     const auto &scale = json::required(*value, "baked_mesh_scale").array();
     if (scale.size() != 3) {
@@ -69,8 +75,9 @@ std::optional<SourceRollControl> parse_source_roll(const json::JsonValue &node) 
       !std::isfinite(out.pi) || out.pi <= 0 || !std::isfinite(out.max_step) || out.max_step <= 0 ||
       !std::isfinite(out.source_units_per_native) || out.source_units_per_native <= 0 ||
       !std::isfinite(out.steering_radians_per_degree) || out.steering_radians_per_degree <= 0 ||
-      !std::isfinite(out.native_clock_rate) || out.native_clock_rate <= 0 || track < 0 ||
-      track >= 64 || bone < 0 || bone >= 64 || (children && !children->array().empty())) {
+      !std::isfinite(out.source_tick_rate) || out.source_tick_rate <= 0 ||
+      out.source_frame_ticks <= 0 || track < 0 || track >= 64 || bone < 0 || bone >= 64 ||
+      (children && !children->array().empty())) {
     throw std::runtime_error("Invalid source rolling leaf control");
   }
   return out;
@@ -127,41 +134,44 @@ void SourceRollState::advance(const SkeletonNode &rig, const std::array<Mat4, 64
       throw std::runtime_error("Missing source rolling control pose");
     }
     const float denominator = c.coefficient > 0 ? c.pi * c.coefficient : c.pi / 2;
-    const float clock_ticks = seconds * c.native_clock_rate;
-    // 0x4e55fc..5614 uses steering input, turn speed and elapsed clock ticks.
-    // Native controls/load stats supply the actor inputs; yaw displacement
-    // (including teleports, reverse steering and quick turns) is not an input.
-    const float turn_per_clock = -mover.rolling_steer() *
-                                 (mover.tuning().turn_degrees_per_second / c.native_clock_rate) *
-                                 c.steering_radians_per_degree;
+    // The share of a game frame (0x4e54b0 runs once a frame) this call covers.
+    const float frames = seconds * c.source_tick_rate / static_cast<float>(c.source_frame_ticks);
+    const float max_step = c.max_step * frames;
+    // 0x4e55f0..5614: the steer (+0xe18, the filtered control) times the
+    // turn speed (+0x8c) in radians, a vsync. Yaw displacement (teleports,
+    // reverse steering, quick turns) is not an input.
+    const float turn_per_tick = -mover.rolling_steer() * source_turn_degrees(mover.tuning()) *
+                                c.steering_radians_per_degree;
     float step;
     if (mover.grounded()) {
       const Vec3 wheel_position = transform_point({}, bones[bone]);
       const float local_x = transform_point(wheel_position - position, inverse_heading).x;
       step = local_z * c.source_units_per_native / denominator;
       if (!c.spherical) {
-        const float turn = turn_per_clock * clock_ticks;
+        // 0x4e5614: times the frame's vsyncs.
+        const float turn = turn_per_tick * static_cast<float>(c.source_frame_ticks) * frames;
         step += local_x > 0 ? turn : -turn;
       }
     } else {
-      // Actor +0xe10 is the forward control; native tick duration supplies cadence.
-      step = -mover.stick()[1] * seconds * battle_tick_rate / denominator;
+      // Actor +0xe10 is the forward control, a step a frame.
+      step = -mover.stick()[1] * frames / denominator;
     }
-    step = std::clamp(step, -c.max_step, c.max_step);
+    step = std::clamp(step, -max_step, max_step);
     auto &accumulator = accumulators_[static_cast<std::size_t>(c.group)];
     accumulator = wrap(accumulator + step, c.pi);
     angles_[static_cast<std::size_t>(node->track)] = accumulator;
     if (c.spherical) {
-      const float sideways = mover.grounded()
-                                 ? std::clamp(-lateral * c.source_units_per_native / denominator,
-                                              -c.max_step, c.max_step)
-                                 : 0;
+      const float sideways =
+          mover.grounded()
+              ? std::clamp(-lateral * c.source_units_per_native / denominator, -max_step, max_step)
+              : 0;
       accumulators_[1] = wrap(accumulators_[1] - sideways, c.pi);
       // 0x4e5a00..2c updates the persistent actor matrix X, Y, then Z.
-      // 0x4e56f4..56fc divides steering by clock ticks for this axis.
-      // Y/Z signs reflect source axes; elapsed ticks do not scale Z rotation.
+      // 0x4e56f4..56fc divides the frame's vsyncs back out: the sphere turns
+      // the steer a frame, half the single-axis wheels' turn. Y/Z signs
+      // reflect source axes.
       spherical_ =
-          spherical_ * rotation_x(step) * rotation_y(sideways) * rotation_z(turn_per_clock);
+          spherical_ * rotation_x(step) * rotation_y(sideways) * rotation_z(turn_per_tick * frames);
       frames_[static_cast<std::size_t>(node->track)] = spherical_;
     }
   }

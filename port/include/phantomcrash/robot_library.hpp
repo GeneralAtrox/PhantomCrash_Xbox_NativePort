@@ -85,6 +85,10 @@ public:
   }
   // Frames advance `speed` times the motion rate (the walk slows with a
   // half-pressed stick, 0x08e6b6).
+  // Legs imported from S.L.A.I., which play by their own source motions.
+  [[nodiscard]] bool source_legs() const noexcept {
+    return !assembly_.source_transition_frames.empty();
+  }
   void set_speed(float speed) noexcept {
     speed_ = speed;
   }

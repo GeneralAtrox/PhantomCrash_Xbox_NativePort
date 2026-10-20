@@ -48,6 +48,12 @@ struct MovementTuning {
   float turn_degrees_per_second{110.0F};
   float dash_turn_degrees_per_second{70.0F};
   float air_turn_degrees_per_second{55.0F};
+  // S.L.A.I. legs (robot_load sets these from the legs' "source_load"): their
+  // Standard controls take the original stick filter (source_steering.hpp),
+  // and their rolling and turn playback the original turn speed (+0x8c,
+  // 0x4dd8dc), degrees a 60 Hz vsync. Zero without S.L.A.I. legs.
+  bool source_controls{};
+  float source_turn_degrees{};
   float stick_threshold{0.01F};   // 0x199f78: the stick counts as pushed past this
   float dash_stick{0.7F};         // 0x17cd14: holding past this ...
   float dash_hold_seconds{0.5F};  // ... for 30 frames (0x17ccfc) starts a dash

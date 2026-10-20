@@ -1890,3 +1890,75 @@ sockets in `robots/weapon_mounts.json`.
   recovered mounts, with no non-S.L.A.I. mount changed. Shared extracted data
   was not regenerated, so the installed game shows the new flashes and
   sockets only after re-registration. No in-battle capture was made.
+
+Original wheel steering inputs (2026-10-20):
+
+- Recovered from the PAL `SLES_529.40` executable and battle overlay; the
+  guard words live in `slai/steering_inputs.py` (`PAD_GUARDS`, `LOAD_GUARDS`,
+  `PLAYBACK_GUARDS`, `CADENCE_GUARDS`) and all match the user's disc.
+- Steering input (actor `+0xe18`, player pad update `0x4de690..4df13c`): the
+  pad reader `0x221320` returns 0x7f for a digital source (`0x221444`) and
+  `raw - 0x80` outside a 55-of-128 stick dead zone (`0x1b6ea8`, `0x1b7550`);
+  `+0xe18` is the positive plus negative source over 127.0 (`0x4de778..7dc`).
+  Analog layout 3 (`0x2208c8`, the S.L.A.I. default from `0x2205a0`) shares the
+  right stick between the turn (x) and the aim (`+0xe2c`, y). Unless the right
+  stick's x is mapped to `+0xe30` (`0x4de9b8`), `0x4debd8..4dede0` takes the
+  stick's angle from the aim axis (`0x1aa210`): within 30 degrees of it the
+  turn is dropped (`0x4dec3c`), between 70 and 110 degrees the aim is
+  (`0x4dec88`); both axes are then rescaled by minus 55/128 over 73/128.
+  There is no release filtering: unmapped controls clear `+0xe10..e37`
+  (`0x4de760..76c`) and pads recompute them every frame.
+- Turn speed (`+0x8c`, `+0x88`): `0x4dd590` (from `0x4ddd9c`) takes the legs'
+  turn (`+0x38` of the leg record) times the load factor `0x2568d0`, clamped to
+  0.1..90 (`0x256700`, `0x256838..56850`). The factor is the square root of
+  the robot's body and legs at level 0 (`0x256460`) over its weight
+  (`0x254900`), times `1 - level / 99 * 0.1`; overloaded, it is cut by
+  (capacity / weight) to n squared for the n-th 35-weight band over capacity
+  (n = 1..3, `0x256994..2569d8`), and to the 10th from the fourth band on.
+  Phantom Crash always uses the 10th power.
+- Turn playback (`0x4ebc28..4ebcd4`): the turn state's motion rate is
+  `(1 + |e18 * rad(+0x8c) * vsyncs| / (pi / 40)) / 2`, clamped to 0.9..1.1,
+  applied through `0x4e9650`.
+- Cadence: the display object's interval (`+0x10`, `0x1a86e0`) is 2 from
+  both callers (`0x1cbc84`, `0x269494`); its rate is 60 (or 50) over it. The
+  battle callbacks run once a game frame. The single-axis wheel turn term is
+  `e18 * rad(+0x8c) * 2` a frame (`0x4e5614`); the spherical control divides
+  the 2 back out (`0x4e56fc`), so it turns half as far a frame.
+- Native: `source_steering.cpp` applies the stick filter to the Standard
+  controls of robots on S.L.A.I. legs (`MovementTuning::source_controls`),
+  computes the turn playback rate and returns `+0x8c`;
+  `source_load.cpp` implements the graded factor, read from a legs record's
+  new `source_load` (written by `native_parts.py` and `wheels.py`);
+  `robot_load.cpp` sets `source_turn_degrees`. `source_roll.cpp` advances
+  the share of a game frame each call covers (`source_tick_rate`,
+  `source_frame_ticks`, defaulting to 60 and 2, replacing the retired
+  `native_clock_rate` adapter, which older registrations may still carry):
+  the clamp, the airborne step and the spherical Z turn scale by it, which
+  halves the previous spherical steering spin at 60 Hz. `robot_combat.cpp`
+  scales S.L.A.I. legs' turn motion by the playback rate.
+- Adapters that remain, labelled in code: the host dead zone and rescale
+  stand in for the pad's; Clear controls (layout 2) and computer robots pass
+  through, as their `+0xe18` is not filtered; the native wheel mover keeps its
+  strafe steering and heading rate; legs without `source_load` fall back to
+  the native turn rate over 60. The S.L.A.I. heading turns `+0x8c` a frame
+  (`0x4fb900`, `0x4fbc60`; `0x4fba10` cancels the vsyncs), half of the native
+  mover's rate for these legs; this is reported, not changed. The turn
+  state's own direction gate (`+0xe24` within 70..110 degrees, `0x4ebb48..88`)
+  and the graded factor's use for speed, jump and dodge are not adopted.
+- Checks: all 117 S.L.A.I. Python checks pass, including the new
+  `test_slai_steering_inputs.py` and the updated cadence checks; the decoder
+  passes against the user's disc. The release port builds; all 159 native
+  S.L.A.I. checks pass, including `source_steering_tests.cpp` and the updated
+  roll checks. 668 of 671 core checks pass; the 3 failures (shipped tutorial
+  courses, post-process stage distortion) run without S.L.A.I. legs.
+- Practice: four bounded 800- and 850-frame test drives on the Training Ground
+  with Holy `S3B01H`/`S3L06H` and Aeron `S2B01H`/`S2L06H` sets, Clear
+  controls and the front camera, turning in place and turning while driving,
+  used a scratch copy of the S.L.A.I. part table with `source_load` added.
+  All exited cleanly without loading errors and reached turn slot 8.
+  Registrations in the shared `mods/` and `artifacts/` were not regenerated.
+  After merging, reinstall S.L.A.I. from its ISO in Settings (the installer,
+  `slai/install.py`, reruns `register_parts` into `artifacts/slai/assets`) and
+  rerun `register-slai-assets` for `mods/`, so legs records gain
+  `source_load`; until then S.L.A.I. legs keep the native turn adapter and
+  unfiltered controls.

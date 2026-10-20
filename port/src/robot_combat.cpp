@@ -1,5 +1,6 @@
 #include "phantomcrash/robot_combat.hpp"
 #include "phantomcrash/skeleton.hpp"
+#include "phantomcrash/source_steering.hpp"
 #include <algorithm>
 #include <cmath>
 #include <utility>
@@ -86,7 +87,12 @@ void RobotCombat::tick(const RobotMover &mover, const std::array<bool, 4> &firin
   // Set after any change above, so the motion it froze keeps the old value.
   const bool keep_sway = mover.mode() == MoveMode::stand || mover.mode() == MoveMode::walk;
   animator_.set_keep_sway(keep_sway);
-  animator_.set_speed(mover.motion_speed());
+  float speed = mover.motion_speed();
+  if (mover.mode() == MoveMode::turn && animator_.source_legs()) {
+    // 0x4ebc28..cd4: S.L.A.I. legs play their turn faster as they turn faster.
+    speed *= source_turn_playback_rate(mover.rolling_steer(), source_turn_degrees(mover.tuning()));
+  }
+  animator_.set_speed(speed);
   animator_.tick(seconds);
   const bool destroyed = mover.mode() == MoveMode::destroyed;
   if (destroyed) {

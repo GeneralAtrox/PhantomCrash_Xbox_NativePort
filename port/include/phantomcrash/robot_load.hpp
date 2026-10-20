@@ -32,6 +32,7 @@ struct RobotLoadout {
 struct LoadStats {
   float weight{};   // every part's weight at its level (0x075f93)
   float capacity{}; // the legs' capacity at their level
+  float frame{};    // the robot's own body and legs at level 0 (0x256460)
   // The speed (0x07c148) and jump (0x07c1c4) factors: 1 - level / 99 * 0.1
   // for the legs' level, times the square root of a frame weight over the
   // weight, times (capacity / weight)^10 when overloaded. The speed takes
