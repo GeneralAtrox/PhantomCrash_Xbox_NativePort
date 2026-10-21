@@ -66,8 +66,9 @@ TEST_CASE("with S.L.A.I. the town map has fourteen places, the original eight am
                                          "the_mechanist", "plustech", "blood_music", "sonic_amp",
                                          "ma_fabrik", "ventuno", "omsk", "kojima", "american_stars",
                                          "battle_school"}));
-  CHECK(script.places[6].next == "sonic_amp"); // Blood-Music's songs are Sonic Amp's for now
-  CHECK(script.places[2].next.empty());
+  CHECK(script.places[2].next == "difference_eg");
+  CHECK(script.places[6].next == "blood_music");
+  CHECK(script.places[10].next.empty()); // Omsk's dealer is not there yet
   CHECK(!script.places[2].sign);
   TownMapScript none = shipped(true);
   none.places[13].enabled = false;
@@ -77,12 +78,9 @@ TEST_CASE("with S.L.A.I. the town map has fourteen places, the original eight am
 TEST_CASE("confirming a closed town map place stays on the map") {
   TownMap map(shipped(true), "garage", {});
   run(map, 0.8);
-  press(map, button::left);
+  press(map, button::right);
   run(map, 0.3);
-  REQUIRE(map.place() == 1);
-  press(map, button::left);
-  run(map, 0.3);
-  REQUIRE(map.place() == 2); // Difference-EG
+  REQUIRE(map.place() == 13); // Battle-School
   static_cast<void>(map.take_sounds());
   press(map, button::a);
   CHECK((map.take_sounds() == std::vector<std::string>{"warning"}));
