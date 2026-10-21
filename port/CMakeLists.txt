@@ -225,6 +225,7 @@ add_library(phantomcrash_core
   src/load_game.cpp
   src/load_game_script.cpp
   src/town_map.cpp
+  src/town_map_layout.cpp
   src/town_map_script.cpp
   src/robot.cpp
   src/body_fit.cpp
@@ -332,6 +333,7 @@ if(BUILD_TESTING)
     tests/load_game_tests.cpp
     tests/music_spectrum_tests.cpp
     tests/town_map_tests.cpp
+    tests/town_map_layout_tests.cpp
     tests/name_entry_tests.cpp
     tests/option_screen_tests.cpp
     tests/sprite_lines_tests.cpp
@@ -533,6 +535,8 @@ if(PHANTOMCRASH_BUILD_DESKTOP)
     src/extract/stage_convert.cpp
     src/extract/stage_objects.cpp
     src/extract/text.cpp
+    src/extract/town_map_mask.cpp
+    src/extract/town_map_scrub.cpp
     src/extract/town_tables.cpp
     src/extract/xbe.cpp
     src/extract/xbox_texture.cpp
@@ -612,6 +616,7 @@ if(PHANTOMCRASH_BUILD_DESKTOP)
     src/desktop_pepper_guide.cpp
     src/desktop_load_game.cpp
     src/desktop_town_map.cpp
+    src/desktop_town_map_markers.cpp
     src/desktop_options.cpp
     src/desktop_screens.cpp
     src/desktop_screens_dump.cpp
@@ -897,14 +902,14 @@ if(PHANTOMCRASH_BUILD_DESKTOP)
                      --smoke-test 260 --press 60:left --press 80:left --press 100:right
                      --press 120:right --press 140:right --press 160:left --press 190:a
              WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
-    # The town map by mouse: onto Wild Machines' number, a turn round the
+    # The town map by mouse: onto Wild Machines' disc, a turn round the
     # rider, then a click on Sonic Amp's name.
     add_test(NAME phantomcrash_port_town_map_mouse_smoke
              COMMAND phantomcrash_port --start town_map
                      --settings ${CMAKE_CURRENT_SOURCE_DIR}/tests/cleared_save.json
-                     --smoke-test 240 --mouse 60:120,130 --mouse 100:122,137 --mouse 104:142,157
-                     --mouse 108:122,177 --mouse 112:102,157 --mouse 116:122,138
-                     --mouse 180:420,340:click
+                     --smoke-test 240 --mouse 60:51,123 --mouse 100:54,127 --mouse 104:74,146
+                     --mouse 108:54,166 --mouse 112:34,146 --mouse 116:54,127
+                     --mouse 180:247,343:click
              WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
     # The first talk scene on its own, its pages turned by presses.
     add_test(NAME phantomcrash_port_talk_smoke

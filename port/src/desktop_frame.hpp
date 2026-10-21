@@ -56,6 +56,7 @@ private:
   const FrameStyle &style_;
   const std::vector<MusicCredit> &credits_;
   FramePlacement placement_;
+  MeterStyle meter_style_;
   MusicMeter meter_;
   std::vector<float> heard_;
   std::string file_;

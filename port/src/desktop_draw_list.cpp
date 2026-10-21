@@ -73,19 +73,28 @@ void DrawList::label(const int layer, std::string text, const std::string &font,
                      const std::array<float, 4> &box, const std::uint32_t colour,
                      const std::optional<TextShadow> &shadow, const float shadow_blur,
                      const DisplayLayout layout) {
+  label(layer, std::move(text), font, box, colour, LabelEdge{{}, 0.0F, shadow, shadow_blur},
+        layout);
+}
+
+void DrawList::label(const int layer, std::string text, const std::string &font,
+                     const std::array<float, 4> &box, const std::uint32_t colour,
+                     const LabelEdge &edges, const DisplayLayout layout) {
   commands_.push_back(
-      {layer, [this, text = std::move(text), font, box, colour, shadow, shadow_blur, layout] {
+      {layer, [this, text = std::move(text), font, box, colour, edges, layout] {
          const SpriteText *table = textures_.sprite_text();
          const DisplayFont *display = table != nullptr ? table->display_font(font) : nullptr;
          if (display != nullptr && textures_.display_text().available(*display)) {
            const auto pixels =
                viewport_.to_pixels(box[0], box[1], box[2] - box[0], box[3] - box[1]);
            DisplayEdge edge;
-           if (shadow) {
-             edge.shadow = *shadow;
-             edge.shadow->offset = {shadow->offset[0] * viewport_.scale,
-                                    shadow->offset[1] * viewport_.scale};
-             edge.shadow_blur = shadow_blur * viewport_.scale;
+           edge.outline = edges.outline;
+           edge.outline_pixels = edges.outline_width * viewport_.scale;
+           if (edges.shadow) {
+             edge.shadow = *edges.shadow;
+             edge.shadow->offset = {edges.shadow->offset[0] * viewport_.scale,
+                                    edges.shadow->offset[1] * viewport_.scale};
+             edge.shadow_blur = edges.shadow_blur * viewport_.scale;
            }
            if (textures_.display_text().draw(*display, text,
                                              {pixels.x, pixels.y, pixels.width, pixels.height},
@@ -93,6 +102,7 @@ void DrawList::label(const int layer, std::string text, const std::string &font,
              return;
            }
          }
+         const auto &shadow = edges.shadow;
          const float top = (box[1] + box[3] - font_.cell) * 0.5F;
          const std::vector<int> run = glyph_run(font_, text);
          auto glyphs =
@@ -123,17 +133,23 @@ void DrawList::ticker(const TickerStyle &style, const std::vector<int> &run, con
 
 void DrawList::shape(const int layer, std::vector<ShapeOutline> outlines,
                      const std::array<float, 4> &box) {
+  shape(layer, std::move(outlines), box, {box[2] - box[0], box[3] - box[1]});
+}
+
+void DrawList::shape(const int layer, std::vector<ShapeOutline> outlines,
+                     const std::array<float, 4> &box, const std::array<float, 2> &texels,
+                     const float alpha) {
   const float width = box[2] - box[0], height = box[3] - box[1];
-  if (width <= 0 || height <= 0) {
+  if (width <= 0 || height <= 0 || texels[0] <= 0 || texels[1] <= 0 || alpha <= 0.0F) {
     return;
   }
   SpriteShape shape;
-  shape.rect = {0, 0, width, height};
+  shape.rect = {0, 0, texels[0], texels[1]};
   shape.outlines = std::move(outlines);
-  custom(layer, [this, shape = std::move(shape), box, width, height] {
+  custom(layer, [this, shape = std::move(shape), box, width, height, alpha] {
     const auto pixels = viewport_.to_pixels(box[0], box[1], width, height);
     draw_sprite_shape(textures_.renderer(), shape,
-                      {pixels.x, pixels.y, pixels.width, pixels.height}, 0xffffff, 1.0F);
+                      {pixels.x, pixels.y, pixels.width, pixels.height}, 0xffffff, alpha);
   });
 }
 

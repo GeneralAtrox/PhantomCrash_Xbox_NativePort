@@ -3,107 +3,139 @@
   "The town map (original scene 41: create 0x3f329, controls 0x3eff2, draw 0x3edd2 and the rider 0x3eadc). town_map_tex (resource 0x68a) and 4TOWNMAP. The map fades in over 0.5 s; then the credit starts, the chosen place's sign grows and the rider appears at it.",
   "Places and their scenes (0xa235f, 0x3ef9e): the garage 13, Club Wired 8, Wild Machines 15, PlusTech 27, Sonic Amp 20, and the three dealers, which share scene 34 (the dealer set by 0x393de: Ventuno 2, Kojima 1, American Stars 0).",
   "The cursor steps round the places (0x6d1cd on 7 minus the place, flags 0x1f), always wrapping: forward (left) goes to the next number and back (right) to the one before. buttons.orient_to_start (a port option, on) turns that round as the map opens so that left first goes to whichever neighbour stands further left on screen (by its rider spot), and keeps it that way round until the map closes: opened from the garage, left counts up (02, 03, ... 05); opened from PlusTech, Sonic Amp or Ventuno (the bottom row), left counts down (from Sonic Amp, left goes to PlusTech and right to Ventuno). It never changes while the map is open. Either way, sys entries 4 (\"adjust\") and 24 (\"town_move\") together. It waits while the rider travels (8 frames). confirm (0xdf390, entry 5) fades out over 0.5 s to the place's screen. There is no cancel.",
-  "The chosen place's number and the arrows by its name pulse (flags 0x2008, layer 0x101); its sign (layer 0x103) grows over 8 frames, its centre moving from sign_from (from the sign's top-left) to its middle. The records are at 0x1fea38 (number, arrows, sign) and 0x1feb58 (sign_from).",
-  "The rider (sprite 0xa6d, layer 0x102) travels over 8 frames from the old place's spot to the new one's (0x1feb98: x, y, facing), hovers while at rest (whole units, 4 each way, across over 100 frames and up and down over 64), grows out of the chosen number over 8 frames once the map has faded in and shrinks back into it on confirm. He faces the way the place he comes from says, and the other way after a move round past the ends.",
+  "The original's chosen number and the arrows by its name pulse (flags 0x2008, layer 0x101); its sign (layer 0x103) grows over 8 frames, its centre moving from sign_from (from the sign's top-left) to its middle. The records are at 0x1fea38 (number, arrows, sign) and 0x1feb58 (sign_from).",
+  "The rider (sprite 0xa6d, layer 0x102) travels over 8 frames from the old place's spot to the new one's (0x1feb98: x, y, facing), hovers while at rest (whole units, 4 each way, across over 100 frames and up and down over 64), grows out of the chosen disc over 8 frames once the map has faded in and shrinks back into it on confirm. He faces the way the place he comes from says, and the other way after a move round past the ends.",
   "The original also turns the rider with the right thumbstick (0x3eff2), about a point a quarter of his height above his middle: each full turn pays 10 NY while the game has been paid under 100 (the quest's +0x113c8, the port's spin_paid), with battle sound 19 when the money grew (it stops at 99,999,999). The port turns him with the right thumbstick too (he points the way it is pushed, past half way), and with the mouse: while the mouse is in use the rider turns to face it, so circling him with it spins him. He stands straight again when the mouse leaves the window or the cursor keys move.",
-  "The mouse (the port's): moving it over a place's number chooses the place once the rider has arrived; clicking a place's number or name (hit, in canvas units), or the chosen place's sign, goes there. Moving over a name does not choose it, as the riders stand by other places' names and circling one must not move him.",
-  "The help line (0x1fec4c) scrolls from x 280 at y 45 in black, under the top band (layer 20); twenty leading spaces each (the lead) and their trailing spaces (the trail), 9 units a space. The RIDING SV plate comes in at y 85 (0x6dd74)."
+  "The mouse (the port's): moving it over a place's disc chooses the place once the rider has arrived; clicking a place's disc or label (its bar code and name), or the chosen place's sign, goes there. Moving over a label does not choose it, as the riders stand by other places' labels and circling one must not move him.",
+  "The help line (0x1fec4c) scrolls in black from the right of the top band, under it (layer 20); twenty leading spaces each (the lead) and their trailing spaces (the trail), 9 units a space. The original's line starts at x 280, y 45, and the RIDING SV plate comes in at y 85 (0x6dd74); the widescreen band is thinner, so both stand higher here.",
+  "Widescreen (a port addition): the map is drawn across a 16:9 view, view.rect on the canvas (letterboxed in a narrower window: the whole screen, frame and mouse included, is fitted to it). Its geometry is in view units, view.units across: the map's picture at exactly twice its texels, its row 40 at the top. The picture is textures/scroll/town_map_tex/0_scrubbed.png, which the converter makes from the disc's map with the eight painted markers and the TOWN MAP title filled in from the picture round them; the markers, the bands and the title are drawn as vector art over it.",
+  "bands: vector outlines (data/ui/sprite_shapes.json's format) in view units: the music band, the orange under it, the music slot and its vanes (layer 2), and the black top band (layer 264) the help line passes under. Their curves follow the original's slanted band edges; each has a light rim. The meter (frame.meter_bars) lights eight bars over the vanes, the music's bands spread across them.",
+  "lettering: CURRENT MUSIC and the TOWN MAP title, moved into the orange corner, in data/ui/sprite_text.json display fonts; box is the capitals' box in view units, slant leans them (x per y), bold emboldens them (view units) and shadow is soft (offset and blur in view units).",
+  "markers: each place's disc (radii, a black rim, the bevel bevel_inset in and the face face_inset in, its middle face_offset off), with its number in number_font (capitals number_height high, baseline number_baseline below the middle, leaning number_slant, emboldened number_bold), its bar code (bars: bar, space, bar... widths in modules, stretched across the label from bars_top to bars_bottom) and its name in name_font (capitals from name_top, name_height high), all with a soft shadow. The chosen place's bevel and face turn chosen_bevel and chosen_face, pulsing as the original's number did, with arrows either side.",
+  "places: the cursor goes round them in this order, and the numbers count the places shown. Each stands at spot (its disc's middle, view units), its label to side (-1 left, 1 right) and label_width wide (its name's ink); rider and sign_at are the rider's and the sign's top-left from the spot (view units; both keep their pictures' size). The original eight keep the original's order, signs and help lines. S.L.A.I.'s six (slai: true) are shown only with S.L.A.I.'s content on; enabled: false leaves a place out.",
+  "A place with no next is closed: confirming it plays sounds.closed and stays on the map. PLACEHOLDERS: S.L.A.I.'s places have no signs of their own yet, and their help lines are placeholders. Difference-EG, The Mechanist and Blood-Music open S.L.A.I.'s own shops (data/ui/shop_variants.json); Ma.Fabrik and Omsk stay closed until their dealer screens (dealer_ma_fabrik, dealer_omsk) exist, and Battle-School is closed while its role is undecided (enabled: false removes it).",
+  "water: the bay and its pools as polygons in the map picture's texels, under the map layer named by map; the layout check (port/tests/town_map_layout_tests.cpp) keeps every disc and label off it, apart from each other and out of keep_clear (view units: the bands' areas)."
  ],
  "scene": 41,
  "music": "town_map",
  "fade_in": 0.5,
  "fade_out": 0.5,
  "exit_to": "garage",
- "confirm": { "buttons": "confirm" },
- "cursor_repeat": { "delay": 0.4, "interval": 0.15 },
- "buttons": { "back": "right", "forward": "left", "orient_to_start": true },
- "sounds": { "move": "adjust", "place": "town_move", "select": "confirm", "spin": "spin_pay" },
- "spin": { "pay": 10, "limit": 100 },
+ "confirm": {"buttons": "confirm"},
+ "cursor_repeat": {"delay": 0.4, "interval": 0.15},
+ "buttons": {"back": "right", "forward": "left", "orient_to_start": true},
+ "sounds": {"move": "adjust", "place": "town_move", "select": "confirm", "spin": "spin_pay", "closed": "warning"},
+ "spin": {"pay": 10, "limit": 100},
  "pop_seconds": 0.1333,
  "start_places": {
-  "club_wired": "club_wired", "wild_machines": "wild_machines", "plustech": "plustech", "sonic_amp": "sonic_amp",
-  "dealer_ventuno": "ventuno", "dealer_kojima": "kojima", "dealer_american_stars": "american_stars",
-  "event_50": "club_wired", "event_152": "club_wired", "event_140": "wild_machines", "event_143": "plustech",
-  "event_132": "sonic_amp", "event_153": "sonic_amp"
+  "club_wired": "club_wired",
+  "wild_machines": "wild_machines",
+  "plustech": "plustech",
+  "sonic_amp": "sonic_amp",
+  "dealer_ventuno": "ventuno",
+  "dealer_kojima": "kojima",
+  "dealer_american_stars": "american_stars",
+  "event_50": "club_wired",
+  "event_152": "club_wired",
+  "event_140": "wild_machines",
+  "event_143": "plustech",
+  "event_132": "sonic_amp",
+  "event_153": "sonic_amp"
  },
+ "view": {"rect": [-106.667, 0, 746.667, 480], "units": [1280, 720]},
  "layers": [
-  { "id": "map", "image": "textures/scroll/town_map_tex/0.png", "rect": [0, 0, 640, 480], "position": [0, 0], "layer": 1 , "extend_edges": "both", "edge_bands": [[0, 72], [376, 480]],
- "edge_bands_left": [[0, 72], [414, 480]], "edge_bands_right": [[376, 480]]},
-  { "id": "top_band", "image": "textures/scroll/town_map_tex/0.png", "rect": [264, 608, 904, 680], "position": [0, 0], "layer": 264 , "extend_edges": "left"}
+  {"id": "map", "image": "textures/scroll/town_map_tex/0_scrubbed.png", "rect": [0, 40, 640, 400], "position": [-106.667, 0], "size": [853.333, 480], "layer": 1}
  ],
- "help": { "position": [280, 45], "clip": [0, 0, 640, 480], "colour": "#000000", "speed": 60, "lead": 180, "trail": 0, "layer": 20 },
+ "bands": [
+  { "layer": 2, "outlines": [
+    {"path": "M -40 650 L 786 650 C 814 650 816 610 846 610 L 1320 610 L 1320 760 L -40 760 Z", "stops": [[-1, "#292502"], [-1, "#e2dec4"], [1, "#e2dec4"], [1, "#e2dec4", 0]]},
+    {"path": "M 1320 636 L 958 636 C 934 636 936 684 906 684 L -40 684 L -40 760 L 1320 760 Z", "stops": [[-1, "#ec9400"], [-1, "#ba9654"], [1, "#ba9654"], [1, "#ba9654", 0]]},
+    {"path": "M 866 600 C 860 600 858 601 855 606 L 838 642 C 835 649 838 653 846 653 L 930 653 C 936 653 940 649 940 643 L 940 610 C 940 603 936 600 930 600 Z", "stops": [[-1, "#0e0e0c"], [-1, "#e2dec4"], [1, "#e2dec4"], [1, "#e2dec4", 0]]},
+    {"box": [862, 611, 867, 642], "count": [8, 1], "step": [9.4, 0], "stops": [[0, "#60605c"], [0, "#60605c", 0]]}
+  ] },
+  { "layer": 264, "outlines": [
+    {"path": "M -40 -40 L 1320 -40 L 1320 24 L 626 24 C 594 24 592 62 560 62 L -40 62 Z", "stops": [[-1, "#000000"], [-1, "#e2dec4"], [1, "#e2dec4"], [1, "#e2dec4", 0]]}
+  ] }
+ ],
+ "lettering": [
+  {"text": "CURRENT MUSIC", "font": "gothic_bold_italic", "box": [954, 617.25, 1084.25, 630], "colour": "#ffc800"},
+  {"text": "TOWN MAP", "font": "town_title", "box": [900, 656, 1251, 695.5], "right": true, "colour": "#ffffff", "slant": 0.24, "bold": 1.3, "shadow": {"offset": [4, 4], "colour": "#462200", "alpha": 0.75, "blur": 2.6}}
+ ],
+ "markers": {
+  "radii": [27, 21],
+  "bevel_inset": 3.4,
+  "face_inset": 4.6,
+  "face_offset": [-0.8, -0.9],
+  "rim": "#000000",
+  "bevel": "#c4c4be",
+  "face": "#ffffff",
+  "chosen_bevel": "#ceb200",
+  "chosen_face": "#ffee00",
+  "shadow_offset": [3, 4],
+  "shadow_alpha": 0.55,
+  "shadow_blur": 2.2,
+  "bars_shadow_alpha": 0.3,
+  "number_font": "town_number",
+  "number_colour": "#000000",
+  "number_height": 23.75,
+  "number_baseline": 11.5,
+  "number_nudge": 0.5,
+  "number_slant": 0.21,
+  "number_bold": 0.7,
+  "arrow": "#e80000",
+  "arrow_gap": 3,
+  "arrow_reach": 10,
+  "arrow_half": 9,
+  "label_gap": 17,
+  "min_label_width": 64,
+  "bars_top": -16,
+  "bars_bottom": 7,
+  "bar_trim": 0.1,
+  "name_font": "town_label",
+  "name_colour": "#000000",
+  "name_top": 10,
+  "name_height": 8.25,
+  "layer": 257
+ },
+ "help": {"position": [320, 21], "clip": [-106.667, 16, 746.667, 41.333], "colour": "#000000", "speed": 60, "lead": 180, "trail": 0, "layer": 20},
  "frame": {
   "hud": true,
+  "hud_at": {"day": [-77.333, 16], "money": [224.333, 16]},
   "riding_plate": true,
-  "riding_plate_y": 85,
-  "meter": [435, 396],
-  "now_playing": { "format": "《 {title} : {artist} 》", "position": [0, 419], "clip": [0, 419, 396, 437], "colour": "#ffffff", "speed": 60, "trail": 45, "layer": 263 }
+  "riding_plate_y": 44,
+  "riding_plate_x": -106.667,
+  "riding_plate_bounds": [-106.667, 746.667],
+  "meter": [468, 407.333],
+  "meter_bars": {"bars": 8, "step": 6.267, "bar_size": [3.333, 20.667]},
+  "now_playing": {"format": "《 {title} : {artist} 》", "position": [-82.667, 436], "clip": [-106.667, 434.667, 424, 455.333], "colour": "#ffffff", "speed": 60, "trail": 45, "layer": 263}
  },
- "rider": { "id": "rider", "image": "textures/scroll/town_map_tex/0.png", "rect": [912, 192, 976, 240], "layer": 258, "bob": 4, "bob_x_seconds": 1.6667, "bob_y_seconds": 1.0667 },
+ "rider": {"id": "rider", "image": "textures/scroll/town_map_tex/0.png", "rect": [912, 192, 976, 240], "layer": 258, "bob": 4, "bob_x_seconds": 1.6667, "bob_y_seconds": 1.0667},
  "places": [
-  {
-   "id": "garage", "next": "garage",
-   "help": "{xbe:0x19e9e0}", "help_trail": 36,
-   "badge": { "image": "textures/scroll/town_map_tex/0.png", "rect": [976, 192, 1024, 232], "position": [308, 77], "layer": 257, "animation": "pulse" },
-   "arrows": { "image": "textures/scroll/town_map_tex/0.png", "rect": [640, 448, 704, 464], "position": [300, 86], "layer": 257, "animation": "pulse" },
-   "sign": { "image": "textures/scroll/town_map_tex/0.png", "rect": [640, 128, 912, 256], "position": [321, 108], "layer": 259 },
-   "sign_from": [21, 13], "rider": [300, 103], "hit": [300, 72, 412, 118]
-  },
-  {
-   "id": "club_wired", "next": "club_wired",
-   "help": "{xbe:0x19e800}", "help_trail": 36,
-   "badge": { "image": "textures/scroll/town_map_tex/0.png", "rect": [976, 128, 1024, 176], "position": [211, 186], "layer": 257, "animation": "pulse" },
-   "arrows": { "image": "textures/scroll/town_map_tex/0.png", "rect": [704, 448, 776, 464], "position": [202, 200], "layer": 257, "animation": "pulse" },
-   "sign": { "image": "textures/scroll/town_map_tex/0.png", "rect": [256, 480, 464, 584], "position": [249, 122], "layer": 259 },
-   "sign_from": [8, 70], "rider": [204, 146], "hit": [206, 182, 358, 236]
-  },
-  {
-   "id": "wild_machines", "next": "wild_machines",
-   "help": "{xbe:0x19e6b0}", "help_trail": 36,
-   "badge": { "image": "textures/scroll/town_map_tex/0.png", "rect": [696, 256, 744, 296], "position": [95, 114], "layer": 257, "animation": "pulse" },
-   "arrows": { "image": "textures/scroll/town_map_tex/0.png", "rect": [776, 448, 840, 464], "position": [88, 123], "layer": 257, "animation": "pulse" },
-   "sign": { "image": "textures/scroll/town_map_tex/0.png", "rect": [0, 608, 264, 712], "position": [140, 111], "layer": 259 },
-   "sign_from": [19, 27], "rider": [90, 145], "hit": [90, 110, 250, 156]
-  },
-  {
-   "id": "plustech", "next": "plustech",
-   "help": "{xbe:0x19e510}", "help_trail": 0,
-   "badge": { "image": "textures/scroll/town_map_tex/0.png", "rect": [888, 320, 944, 376], "position": [57, 245], "layer": 257, "animation": "pulse" },
-   "arrows": { "image": "textures/scroll/town_map_tex/0.png", "rect": [792, 256, 872, 272], "position": [48, 265], "layer": 257, "animation": "pulse" },
-   "sign": { "image": "textures/scroll/town_map_tex/0.png", "rect": [640, 320, 888, 448], "position": [107, 149], "layer": 259 },
-   "sign_from": [13, 106], "rider": [75, 279], "rider_flipped": true, "hit": [52, 240, 214, 302]
-  },
-  {
-   "id": "sonic_amp", "next": "sonic_amp",
-   "help": "{xbe:0x19e3b0}", "help_trail": 0,
-   "badge": { "image": "textures/scroll/town_map_tex/0.png", "rect": [936, 64, 992, 128], "position": [316, 294], "layer": 257, "animation": "pulse" },
-   "arrows": { "image": "textures/scroll/town_map_tex/0.png", "rect": [872, 448, 952, 464], "position": [308, 316], "layer": 257, "animation": "pulse" },
-   "sign": { "image": "textures/scroll/town_map_tex/0.png", "rect": [0, 480, 256, 608], "position": [90, 187], "layer": 259 },
-   "sign_from": [256, 128], "rider": [315, 251], "rider_flipped": true, "hit": [312, 290, 486, 360]
-  },
-  {
-   "id": "ventuno", "next": "dealer_ventuno",
-   "help": "{xbe:0x19e250}", "help_trail": 0,
-   "badge": { "image": "textures/scroll/town_map_tex/0.png", "rect": [944, 320, 1000, 376], "position": [438, 227], "layer": 257, "animation": "pulse" },
-   "arrows": { "image": "textures/scroll/town_map_tex/0.png", "rect": [952, 448, 1024, 464], "position": [429, 242], "layer": 257, "animation": "pulse" },
-   "sign": { "image": "textures/scroll/town_map_tex/0.png", "rect": [680, 480, 912, 584], "position": [217, 174], "layer": 259 },
-   "sign_from": [232, 104], "rider": [478, 243], "rider_flipped": true, "hit": [434, 222, 582, 284]
-  },
-  {
-   "id": "kojima", "next": "dealer_kojima",
-   "help": "{xbe:0x19e0d8}", "help_trail": 54,
-   "badge": { "image": "textures/scroll/town_map_tex/0.png", "rect": [640, 256, 696, 304], "position": [466, 166], "layer": 257, "animation": "pulse" },
-   "arrows": { "image": "textures/scroll/town_map_tex/0.png", "rect": [912, 240, 984, 256], "position": [459, 181], "layer": 257, "animation": "pulse" },
-   "sign": { "image": "textures/scroll/town_map_tex/0.png", "rect": [464, 480, 680, 584], "position": [251, 160], "layer": 259 },
-   "sign_from": [201, 28], "rider": [503, 135], "hit": [462, 162, 590, 216]
-  },
-  {
-   "id": "american_stars", "next": "dealer_american_stars",
-   "help": "{xbe:0x19df38}", "help_trail": 27,
-   "badge": { "image": "textures/scroll/town_map_tex/0.png", "rect": [744, 256, 792, 296], "position": [420, 107], "layer": 257, "animation": "pulse" },
-   "arrows": { "image": "textures/scroll/town_map_tex/0.png", "rect": [640, 464, 704, 480], "position": [412, 119], "layer": 257, "animation": "pulse" },
-   "sign": { "image": "textures/scroll/town_map_tex/0.png", "rect": [640, 0, 872, 128], "position": [215, 138], "layer": 259 },
-   "sign_from": [211, 12], "rider": [434, 64], "hit": [416, 104, 592, 148]
-  }
- ]
+  {"id": "garage", "next": "garage", "help": "{xbe:0x19e9e0}", "help_trail": 36, "name": "GARAGE", "bars": "1121311211213121112311211321121131", "label_width": 59.25, "spot": [575, 122], "side": -1, "rider": [-46, 6], "sign": {"image": "textures/scroll/town_map_tex/0.png", "rect": [640, 128, 912, 256], "layer": 259}, "sign_at": [-16, 40], "sign_from": [21, 13]},
+  {"id": "club_wired", "next": "club_wired", "help": "{xbe:0x19e800}", "help_trail": 36, "name": "CLUBWIRED", "bars": "21121113121121311211231112112131121121131", "label_width": 88, "spot": [471, 339], "side": 1, "rider": [-46.5, -96], "sign": {"image": "textures/scroll/town_map_tex/0.png", "rect": [256, 480, 464, 584], "layer": 259}, "sign_at": [21, -132], "sign_from": [8, 70]},
+  {"id": "difference_eg", "next": "difference_eg", "help": "【Difference-EG】...", "slai": true, "name": "DIFFERENCE-EG", "bars": "311211213111211231121121113121131121121131", "label_width": 123.75, "spot": [330, 303], "side": -1, "rider": [-48, 9]},
+  {"id": "wild_machines", "next": "wild_machines", "help": "{xbe:0x19e6b0}", "help_trail": 36, "name": "WILDMACHINES", "bars": "1131121121112311213111211231121112131121131121121311", "label_width": 118.5, "spot": [236, 185], "side": -1, "rider": [-43.5, 16.5], "sign": {"image": "textures/scroll/town_map_tex/0.png", "rect": [0, 608, 264, 712], "layer": 259}, "sign_at": [31.5, -34.5], "sign_from": [19, 27]},
+  {"id": "the_mechanist", "next": "the_mechanist", "help": "【The Mechanist】...", "slai": true, "name": "THE MECHANIST", "bars": "121131121121311121131121121113112131121131121", "label_width": 124.5, "spot": [92, 368], "side": 1, "rider": [-48, -78]},
+  {"id": "plustech", "next": "plustech", "help": "{xbe:0x19e510}", "help_trail": 0, "name": "PLUSTECH", "bars": "2111311211231121112131121131121113", "label_width": 76.5, "spot": [167, 467], "side": 1, "rider": [-15, 9], "rider_flipped": true, "sign": {"image": "textures/scroll/town_map_tex/0.png", "rect": [640, 320, 888, 448], "layer": 259}, "sign_at": [33, -186], "sign_from": [13, 106]},
+  {"id": "blood_music", "next": "blood_music", "help": "【Blood-Music】...Songs for the road.", "slai": true, "name": "BLOOD-MUSIC", "bars": "1121113121121131121131112112131121", "label_width": 106.75, "spot": [300, 590], "side": 1, "rider": [-48, -78]},
+  {"id": "sonic_amp", "next": "sonic_amp", "help": "{xbe:0x19e3b0}", "help_trail": 0, "name": "SONICAMP", "bars": "1211311121121311211231111211312112131", "label_width": 78.25, "spot": [610, 500], "side": -1, "rider": [-43.5, -112.5], "rider_flipped": true, "sign": {"image": "textures/scroll/town_map_tex/0.png", "rect": [0, 480, 256, 608], "layer": 259}, "sign_at": [-381, -208.5], "sign_from": [256, 128]},
+  {"id": "ma_fabrik", "next": "", "help": "【Ma.Fabrik】...Not open yet.", "slai": true, "name": "MA.FABRIK", "bars": "11213112111231121131121121311", "label_width": 83.25, "spot": [1130, 528], "side": 1, "rider": [-60, -10]},
+  {"id": "ventuno", "next": "dealer_ventuno", "help": "{xbe:0x19e250}", "help_trail": 0, "name": "VENTUNO", "bars": "3111211231121121131112131121", "label_width": 68.75, "spot": [1120, 430], "side": 1, "rider": [18, -18], "rider_flipped": true, "sign": {"image": "textures/scroll/town_map_tex/0.png", "rect": [680, 480, 912, 584], "layer": 259}, "sign_at": [-373.5, -121.5], "sign_from": [232, 104]},
+  {"id": "omsk", "next": "", "help": "【Omsk】...Not open yet.", "slai": true, "name": "OMSK", "bars": "2111311211213111", "label_width": 40, "spot": [1205, 352], "side": -1, "rider": [-48, -78]},
+  {"id": "kojima", "next": "dealer_kojima", "help": "{xbe:0x19e0d8}", "help_trail": 54, "name": "KOJIMA", "bars": "1121131121112311211321111", "label_width": 55.5, "spot": [1010, 290], "side": 1, "rider": [13.5, -82.5], "sign": {"image": "textures/scroll/town_map_tex/0.png", "rect": [464, 480, 680, 584], "layer": 259}, "sign_at": [-364.5, -45], "sign_from": [201, 28]},
+  {"id": "american_stars", "next": "dealer_american_stars", "help": "{xbe:0x19df38}", "help_trail": 27, "name": "AMERICAN STARS", "bars": "1121311211131121121113211211231121113121121131121121311211", "label_width": 135.5, "spot": [886, 174], "side": 1, "rider": [-48, 16], "sign": {"image": "textures/scroll/town_map_tex/0.png", "rect": [640, 0, 872, 128], "layer": 259}, "sign_at": [-343.5, 16.5], "sign_from": [211, 12]},
+  {"id": "battle_school", "next": "", "help": "【Battle-School】...Not open yet.", "slai": true, "name": "BATTLE-SCHOOL", "bars": "21121131121113121121131121121311211213112", "label_width": 126, "spot": [760, 100], "side": 1, "rider": [-48, 9]}
+ ],
+ "keep_clear": [
+  [-40, -40, 626, 70],
+  [-40, -40, 1320, 32],
+  [-40, 642, 840, 760],
+  [840, 602, 1320, 760]
+ ],
+ "water": { "map": "map", "polygons": [
+   [[472, 174], [481, 174], [483, 176], [479, 181], [480, 194], [473, 199], [473, 204], [464, 212], [455, 210], [448, 215], [447, 222], [439, 233], [441, 247], [445, 251], [452, 250], [456, 254], [467, 256], [471, 259], [472, 280], [479, 286], [489, 286], [496, 281], [493, 259], [482, 251], [485, 246], [501, 255], [510, 254], [523, 267], [532, 298], [536, 303], [548, 334], [556, 344], [567, 351], [563, 358], [559, 358], [556, 361], [556, 369], [553, 372], [431, 372], [418, 383], [409, 397], [313, 397], [312, 393], [308, 390], [309, 375], [306, 372], [300, 372], [297, 375], [297, 384], [291, 393], [288, 391], [289, 382], [280, 370], [282, 368], [291, 370], [295, 366], [297, 352], [286, 342], [286, 334], [280, 330], [273, 335], [272, 341], [267, 346], [269, 358], [264, 364], [260, 385], [258, 386], [261, 394], [258, 396], [254, 391], [257, 386], [254, 384], [254, 375], [248, 359], [265, 346], [264, 340], [259, 335], [248, 336], [241, 328], [242, 320], [252, 313], [256, 316], [265, 316], [274, 310], [291, 308], [294, 316], [293, 331], [295, 339], [298, 342], [304, 343], [321, 337], [323, 339], [323, 352], [328, 357], [335, 359], [358, 359], [362, 351], [360, 337], [365, 334], [370, 336], [372, 345], [377, 351], [386, 343], [395, 341], [398, 338], [398, 331], [395, 328], [377, 327], [374, 329], [372, 321], [367, 316], [361, 313], [352, 314], [349, 302], [346, 299], [339, 299], [333, 292], [335, 289], [342, 290], [345, 287], [345, 282], [337, 271], [341, 263], [341, 255], [347, 253], [355, 244], [363, 244], [368, 238], [375, 235], [396, 241], [411, 250], [415, 246], [415, 236], [410, 228], [420, 218], [417, 201], [431, 196], [438, 198], [464, 196], [470, 191], [470, 176]],
+   [[315, 87], [323, 93], [321, 96], [327, 102], [339, 103], [342, 106], [344, 147], [347, 155], [350, 158], [354, 157], [356, 159], [351, 166], [352, 176], [345, 178], [339, 188], [327, 184], [316, 188], [307, 188], [305, 186], [303, 171], [305, 169], [311, 170], [314, 167], [315, 160], [312, 157], [314, 154], [322, 154], [325, 151], [325, 142], [318, 123], [325, 121], [329, 117], [328, 109], [325, 106], [315, 106], [312, 108], [306, 98], [306, 92]],
+   [[142, 134], [146, 134], [149, 137], [145, 149], [146, 155], [150, 159], [165, 159], [169, 157], [175, 150], [173, 143], [176, 140], [179, 142], [174, 174], [175, 179], [173, 181], [167, 181], [150, 175], [142, 163], [133, 158], [127, 158], [122, 152], [126, 144], [134, 142]],
+   [[194, 245], [197, 247], [204, 262], [194, 269], [193, 277], [188, 281], [191, 287], [178, 297], [167, 286], [171, 279], [171, 272], [168, 269], [164, 269], [162, 264], [184, 257], [187, 254], [187, 249]]
+ ] }
 }

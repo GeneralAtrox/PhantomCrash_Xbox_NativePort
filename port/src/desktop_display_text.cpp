@@ -28,6 +28,9 @@ struct Coverage {
 
 std::string font_key(const DisplayFont &font) {
   std::string key = std::to_string(font.weight) + (font.italic ? "i" : "r");
+  if (font.tracking != 0.0F) {
+    key += "t" + std::to_string(font.tracking);
+  }
   for (const auto &face : font.faces) {
     key += "|" + face;
   }
@@ -93,6 +96,7 @@ struct DisplayText::Impl {
       return out;
     }
     const HGDIOBJ previous_font = SelectObject(dc, font);
+    SetTextCharacterExtra(dc, static_cast<int>(std::lround(style.tracking * em)));
     const std::wstring line = wide(text);
     SIZE extent{};
     GetTextExtentPoint32W(dc, line.c_str(), static_cast<int>(line.size()), &extent);
@@ -122,6 +126,7 @@ struct DisplayText::Impl {
     if (bitmap != nullptr) {
       DeleteObject(bitmap);
     }
+    SetTextCharacterExtra(dc, 0);
     SelectObject(dc, previous_font);
     DeleteObject(font);
     return out;

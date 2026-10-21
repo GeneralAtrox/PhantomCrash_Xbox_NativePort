@@ -7,6 +7,7 @@
 #include "phantomcrash/menu_screen.hpp"
 #include "phantomcrash/settings.hpp"
 #include "phantomcrash/sprite_layer.hpp"
+#include "phantomcrash/town_map_layout.hpp"
 
 #include <array>
 #include <map>
@@ -17,21 +18,30 @@
 
 namespace phantomcrash {
 
-// One place on the town map: its number and the arrows by its name (both
-// pulsing while it is chosen), its sign, which grows out of `sign_from`
-// (from the sign's top-left) when it is chosen, where the rider stands
-// there and which way he faces, its help line and the screen it opens.
+// One place on the town map: its marker (a numbered disc at `spot`, view
+// units, with its bar code and `name` to `side`, -1 left or 1 right, the
+// name `label_width` wide), its sign, which grows out of `sign_from` (from
+// the sign's top-left) when it is chosen, where the rider stands there and
+// which way he faces, its help line and the screen it opens. A place with
+// no `next` is closed: confirming it sounds "closed" and stays on the map.
+// S.L.A.I.'s places (`slai`) are shown only with its content on, and a
+// place can be left out with `enabled`.
 struct TownPlace {
   std::string id;
   std::string next;
   HelpLine help;
-  Sprite badge;
-  Sprite arrows;
-  Sprite sign;
+  std::string name;
+  std::string bars; // bar, space, bar... widths in modules, stretched across the name
+  std::array<float, 2> spot{};
+  int side{1};
+  float label_width{};
+  bool slai{};
+  bool enabled{true};
+  std::optional<Sprite> sign;
   std::array<float, 2> sign_from{};
-  std::array<float, 2> rider{}; // the rider's top-left
+  std::array<float, 2> rider{}; // the rider's top-left (canvas units)
   bool rider_flipped{};
-  std::array<float, 4> hit{}; // clicking here picks the place: its number and name
+  TownMarkerBoxes boxes; // where its marker is drawn and picked
 };
 
 // data/ui/town_map.json (original scene 41).
@@ -45,10 +55,17 @@ struct TownMapScript : MenuBasics {
   double bob_y_seconds{64.0 / 60.0};  // and up and down over this
   double pop_seconds{8.0 / 60.0};     // a sign grows, the rider moves, appears or goes
   std::vector<TownPlace> places;
-  Buttons back_buttons{};    // the cursor steps back (to the lower number)
-  Buttons forward_buttons{}; // and forward,
-  bool orient_to_start{};    // or, set as the map opens, forward first goes left on screen
-  std::string place_sound;   // played with move_sound on a move
+  TownView view;
+  TownMarkerStyle markers;
+  std::vector<TownBand> bands;
+  std::vector<TownLettering> lettering;
+  std::optional<TownWater> water;
+  std::vector<std::array<float, 4>> keep_clear; // view units the markers stay out of
+  Buttons back_buttons{};                       // the cursor steps back (to the lower number)
+  Buttons forward_buttons{};                    // and forward,
+  bool orient_to_start{};   // or, set as the map opens, forward first goes left on screen
+  std::string place_sound;  // played with move_sound on a move
+  std::string closed_sound; // played on confirming a closed place
   std::map<std::string, std::string> start_places; // screen before -> place
   int spin_pay{10};                                // NY for each full turn of the rider,
   int spin_limit{100};                             // until this much has been paid in the game
@@ -57,6 +74,10 @@ struct TownMapScript : MenuBasics {
 
 // Throws std::runtime_error naming the entry at fault.
 [[nodiscard]] TownMapScript parse_town_map(const json::JsonValue &document);
+
+// The map with the places the content shows: S.L.A.I.'s only with `slai`,
+// none that are not enabled.
+[[nodiscard]] TownMapScript for_content(TownMapScript script, bool slai);
 
 // The town map (0x3f329, 0x3eff2, drawn by 0x3edd2 and 0x3eadc). Once the
 // map has faded in, the chosen place's sign grows and the rider appears at
@@ -68,8 +89,8 @@ struct TownMapScript : MenuBasics {
 // The mouse stands in for the original's right thumbstick: while it is in
 // use the rider turns to face it, and each full turn round him pays
 // `spin_pay` NY into the quest, up to `spin_limit` in a game. Moving it
-// over a place's number chooses the place, and clicking a place's number
-// or name (or the chosen place's sign) goes there.
+// over a place's disc chooses the place, and clicking a place's disc or
+// label (or the chosen place's sign) goes there.
 class TownMap final {
 public:
   TownMap(TownMapScript script, const std::string &from, QuestSave quest);

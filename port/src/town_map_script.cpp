@@ -5,6 +5,7 @@
 #include "phantomcrash/json_fields.hpp"
 
 #include <stdexcept>
+#include <vector>
 
 namespace phantomcrash {
 namespace {
@@ -20,18 +21,37 @@ Sprite member_sprite(const json::JsonValue &value, const char *key) {
   }
 }
 
-TownPlace parse_place(const json::JsonValue &value) {
+// The place's sign and rider stand at offsets from its spot (view units);
+// they keep their pictures' size on the canvas.
+TownPlace parse_place(const json::JsonValue &value, const TownView &view,
+                      const TownMarkerStyle &markers) {
   TownPlace place;
   place.id = required(value, "id").string();
-  place.next = required(value, "next").string();
+  place.next = value.string_or("next", "");
   place.help = parse_help(value);
-  place.badge = member_sprite(value, "badge");
-  place.arrows = member_sprite(value, "arrows");
-  place.sign = member_sprite(value, "sign");
-  place.sign_from = numbers<2>(required(value, "sign_from"), "sign_from");
-  place.rider = numbers<2>(required(value, "rider"), "rider");
+  place.name = required(value, "name").string();
+  place.bars = value.string_or("bars", "");
+  if (place.bars.find_first_not_of("123456789") != std::string::npos) {
+    throw std::runtime_error("bars: widths are the digits 1 to 9");
+  }
+  place.spot = numbers<2>(required(value, "spot"), "spot");
+  place.side = value.number_or("side", 1.0) < 0.0 ? -1 : 1;
+  place.label_width = static_cast<float>(required(value, "label_width").number());
+  place.slai = value.boolean_or("slai", false);
+  place.enabled = value.boolean_or("enabled", true);
+  const auto at = [&](const char *key) {
+    const auto offset = numbers<2>(required(value, key), key);
+    return view.point({place.spot[0] + offset[0], place.spot[1] + offset[1]});
+  };
+  if (value.find("sign") != nullptr) {
+    Sprite sign = member_sprite(value, "sign");
+    sign.position = at("sign_at");
+    place.sign = sign;
+    place.sign_from = numbers<2>(required(value, "sign_from"), "sign_from");
+  }
+  place.rider = at("rider");
   place.rider_flipped = value.boolean_or("rider_flipped", false);
-  place.hit = numbers<4>(required(value, "hit"), "hit");
+  place.boxes = town_marker_boxes(view, markers, place.spot, place.side, place.label_width);
   return place;
 }
 
@@ -64,9 +84,26 @@ TownMapScript parse_town_map(const json::JsonValue &document) {
       script.spin_pay = static_cast<int>(spin->number_or("pay", script.spin_pay));
       script.spin_limit = static_cast<int>(spin->number_or("limit", script.spin_limit));
     }
+    script.closed_sound = sounds.string_or("closed", "");
+    script.view = parse_town_view(required(document, "view"));
+    script.markers = parse_town_markers(required(document, "markers"));
+    if (const auto *bands = document.find("bands")) {
+      script.bands = parse_town_bands(*bands);
+    }
+    if (const auto *lettering = document.find("lettering")) {
+      script.lettering = parse_town_lettering(*lettering);
+    }
+    if (const auto *water = document.find("water")) {
+      script.water = parse_town_water(*water);
+    }
+    if (const auto *clear = document.find("keep_clear")) {
+      for (const auto &box : clear->array()) {
+        script.keep_clear.push_back(numbers<4>(box, "keep_clear"));
+      }
+    }
     for (const auto &value : required(document, "places").array()) {
       try {
-        script.places.push_back(parse_place(value));
+        script.places.push_back(parse_place(value, script.view, script.markers));
       } catch (const std::exception &error) {
         throw std::runtime_error("place \"" + value.string_or("id", "?") + "\": " + error.what());
       }
@@ -83,6 +120,15 @@ TownMapScript parse_town_map(const json::JsonValue &document) {
   } catch (const std::exception &error) {
     throw std::runtime_error(std::string("town_map.json: ") + error.what());
   }
+}
+
+TownMapScript for_content(TownMapScript script, const bool slai) {
+  std::erase_if(script.places,
+                [&](const TownPlace &place) { return !place.enabled || (place.slai && !slai); });
+  if (script.places.empty()) {
+    throw std::runtime_error("town_map.json: no place is shown");
+  }
+  return script;
 }
 
 } // namespace phantomcrash

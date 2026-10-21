@@ -53,7 +53,9 @@ void hud_text(DrawList &list, const GlyphFont &font, const std::string &text, fl
 LocationFrame::LocationFrame(const GlyphFont &font, const FrameStyle &style,
                              const std::vector<MusicCredit> &credits, FramePlacement placement)
     : font_(font), style_(style), credits_(credits), placement_(std::move(placement)),
-      meter_(style.meter) {}
+      meter_style_(placement_.meter_bars ? with_bars(style.meter, *placement_.meter_bars)
+                                         : style.meter),
+      meter_(meter_style_) {}
 
 void LocationFrame::set_music(const std::string &file) {
   if (file == file_) {
@@ -152,11 +154,14 @@ void LocationFrame::draw(DrawList &list, const QuestSave &quest) const {
     // The original's picture ends at x 0 and 640, so the sliding plate is
     // cut there rather than showing in the widescreen margin.
     Sprite plate = style.plate;
+    plate.position[0] = placement_.riding_plate_x.value_or(plate.position[0]);
     plate.position[1] = placement_.riding_plate_y.value_or(plate.position[1]);
+    const auto [left, right] =
+        placement_.riding_plate_bounds.value_or(std::array<float, 2>{0.0F, canvas_width});
     const float x = plate.position[0] + riding_plate_offset(style, plate_seconds_);
-    const float cut = std::max(-x, 0.0F);
+    const float cut = std::max(left - x, 0.0F);
     const float full = plate.rect[2] - plate.rect[0];
-    const float width = full - cut - std::max(x + full - canvas_width, 0.0F);
+    const float width = full - cut - std::max(x + full - right, 0.0F);
     if (width > 0.0F) {
       plate.rect[0] += cut;
       plate.rect[2] = plate.rect[0] + width;
@@ -169,10 +174,10 @@ void LocationFrame::draw(DrawList &list, const QuestSave &quest) const {
     list.text(
         style.name_layer,
         layout_run(font_, name, x + style.name_offset[0], plate.position[1] + style.name_offset[1]),
-        style.name_colour, std::array<float, 4>{0.0F, 0.0F, canvas_width, canvas_height});
+        style.name_colour, std::array<float, 4>{left, 0.0F, right, canvas_height});
   }
   if (placement_.meter) {
-    for (const auto &sprite : meter_sprites(style_.meter, *placement_.meter, meter_.levels())) {
+    for (const auto &sprite : meter_sprites(meter_style_, *placement_.meter, meter_.levels())) {
       list.sprite(sprite);
     }
   }
