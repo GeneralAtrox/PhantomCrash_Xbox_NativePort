@@ -10,6 +10,7 @@
 #include "phantomcrash/battle_scene.hpp"
 
 #include <algorithm>
+#include <utility>
 
 namespace phantomcrash {
 
@@ -21,12 +22,18 @@ void BattleScene::start_defeat(const int robot, const float frames, const bool e
   defeat_left_ = frames;
   defeat_ends_ = ends;
   defeat_over_ = false;
+  // A ranker's ends the battle; another boss's gives it back, and meanwhile
+  // the players, their controls taken, are spared as for a boss's entrance.
+  defeat_spares_ = !ends && tuning_.boss_spares_players;
   letterbox_way_ = 1.0F;
 }
 
-void BattleScene::tick_defeat(const float step) {
+void BattleScene::tick_defeat(Battle &battle, const float step) {
   if (defeat_ < 0 || defeat_over_) {
     return;
+  }
+  if (defeat_spares_) {
+    battle.set_players_spared(true);
   }
   defeat_left_ = std::max(defeat_left_ - step, 0.0F);
   if (defeat_left_ > 0.0F || defeat_speaking_) {
@@ -40,6 +47,9 @@ void BattleScene::tick_defeat(const float step) {
   // 0x067350) and the bars slide out (+0xef320 3).
   defeat_ = -1;
   letterbox_way_ = -1.0F;
+  if (std::exchange(defeat_spares_, false) && !cinematic()) {
+    battle.set_players_spared(false); // a boss's entrance keeps its own
+  }
 }
 
 } // namespace phantomcrash

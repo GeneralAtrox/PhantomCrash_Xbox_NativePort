@@ -142,6 +142,14 @@ std::vector<int> replacement_entrants(const RegulationCheck &check, const Contes
   return entrants;
 }
 
+bool RumblingWorld::eliminated(const int area, const int entrant) const {
+  if (area < 0 || area >= roster_areas) {
+    return false;
+  }
+  const AreaRoster &roster = areas_[static_cast<std::size_t>(area)].roster;
+  return std::ranges::find(roster.eliminated, entrant) != roster.eliminated.end();
+}
+
 std::vector<RosterStatus> RumblingWorld::roster_status(const int area) const {
   std::vector<RosterStatus> status;
   if (area < 0 || area >= roster_areas) {

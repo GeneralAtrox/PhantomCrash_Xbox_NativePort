@@ -1,5 +1,6 @@
 // A boss's defeat (robot states 0x13-0x17): the battle waits its frames
-// and its line, then a ranker's ends and another boss's goes on.
+// and its line, then a ranker's ends and another boss's goes on, the
+// players spared meanwhile.
 
 #include "test_support.hpp"
 
@@ -57,4 +58,30 @@ TEST_CASE("another boss's defeat gives the battle back") {
   CHECK(!scene.defeat_over());
   step(scene, test.battle, 16);
   CHECK(scene.letterbox() == 0.0F);
+}
+
+TEST_CASE("the players take no hits while another boss's defeat holds their controls") {
+  TestBattle test;
+  BattleScene scene(BattleSceneTables{}, SceneTuning{});
+  scene.start_defeat(0, 180.0F, false);
+  step(scene, test.battle, 1);
+  CHECK(test.battle.players_spared());
+  step(scene, test.battle, 89);
+  CHECK(scene.defeat_robot() == -1);
+  CHECK(!test.battle.players_spared());
+
+  // A ranker's ends the battle and spares nobody; nor does any with the
+  // sparing off.
+  TestBattle ranker;
+  BattleScene ends(BattleSceneTables{}, SceneTuning{});
+  ends.start_defeat(0, 180.0F, true);
+  step(ends, ranker.battle, 1);
+  CHECK(!ranker.battle.players_spared());
+  SceneTuning off;
+  off.boss_spares_players = false;
+  TestBattle unspared;
+  BattleScene plain(BattleSceneTables{}, off);
+  plain.start_defeat(0, 180.0F, false);
+  step(plain, unspared.battle, 1);
+  CHECK(!unspared.battle.players_spared());
 }

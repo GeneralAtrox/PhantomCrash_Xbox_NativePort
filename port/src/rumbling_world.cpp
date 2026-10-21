@@ -157,9 +157,18 @@ void RumblingWorld::fit(const int index, const std::size_t place, const QuestSav
 RumblingRobot RumblingWorld::seat(Battle &battle, const int index, const std::size_t place,
                                   const QuestSave &quest) {
   const Area &area = areas_[static_cast<std::size_t>(index)];
-  return seat_member(battle, "live" + std::to_string(index) + "_" + std::to_string(place),
-                     area.roster.members[place], static_cast<int>(place) + 1,
-                     area.enemy_level_offset, quest);
+  const RosterMember &member = area.roster.members[place];
+  const int robot_index = static_cast<int>(place) + 1;
+  RumblingRobot robot =
+      seat_member(battle, "live" + std::to_string(index) + "_" + std::to_string(place), member,
+                  robot_index, area.enemy_level_offset, quest);
+  // The live RUMBLING can bring back a champion a player has shot down (a
+  // port addition); the original's comes out once, so the one coming back
+  // makes no boss's entrance and no boss's defeat (0x082cff, 0x07675e).
+  if (member.source == RosterSource::champion && eliminated(index, member.entrant)) {
+    battle.set_boss(robot_index, false);
+  }
+  return robot;
 }
 
 RumblingRobot RumblingWorld::seat_member(Battle &battle, const std::string &name,

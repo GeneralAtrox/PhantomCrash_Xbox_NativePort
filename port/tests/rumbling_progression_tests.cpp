@@ -61,6 +61,26 @@ TEST_CASE("a finite checklist unlocks its boss and keeps skulls across respawns 
     world.update(quest, 1.0 / 30.0);
   }
   CHECK(std::ranges::any_of(battle->robots(), [](const auto &robot) { return robot.alive; }));
+  // The champion comes back once it is down, but not as a boss: no second
+  // entrance or defeat scene.
+  bool champion_back = false;
+  for (int turn = 0; turn < 30 && !champion_back; ++turn) {
+    for (int actor = 1; actor < static_cast<int>(battle->robots().size()); ++actor) {
+      auto &robot = battle->robot(actor);
+      if (!robot.alive) {
+        continue;
+      }
+      if (quest.rosters[0].members[actor - 1].source == RosterSource::champion) {
+        CHECK(!robot.boss);
+        champion_back = true;
+      }
+      robot.alive = false;
+      robot.hp = 0;
+      robot.shot_by = 0;
+    }
+    world.update(quest, 1.0 / 30.0);
+  }
+  CHECK(champion_back);
   RumblingWorld loaded(fixture.check(), tables, {}, {}, live, 11);
   QuestSave restored = saved;
   const auto restored_battle = loaded.lend(0, restored);
