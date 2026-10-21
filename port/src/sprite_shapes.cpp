@@ -1,6 +1,7 @@
 #include "phantomcrash/sprite_shapes.hpp"
 
 #include "phantomcrash/json_classes.hpp"
+#include "phantomcrash/polygon_fill.hpp"
 #include "phantomcrash/sprite_layer.hpp"
 #include "phantomcrash/sprite_lines.hpp"
 
@@ -72,33 +73,54 @@ ShapeGradient parse_gradient(const json::JsonValue &value) {
   return gradient;
 }
 
-// The first closed contour of SVG path data, moved by `offset`, without a
-// repeated closing point, and its bounds.
+// A contour of SVG path data moved by `offset`, without repeated points.
+std::vector<std::array<float, 2>> path_contour(const LinePolyline &polyline,
+                                               const std::array<float, 2> &offset) {
+  std::vector<std::array<float, 2>> contour;
+  for (const auto &[x, y] : polyline.points) {
+    const std::array<float, 2> point{x + offset[0], y + offset[1]};
+    if (!contour.empty() && std::abs(point[0] - contour.back()[0]) < 1e-4F &&
+        std::abs(point[1] - contour.back()[1]) < 1e-4F) {
+      continue;
+    }
+    contour.push_back(point);
+  }
+  if (contour.size() > 1 && std::abs(contour.front()[0] - contour.back()[0]) < 1e-4F &&
+      std::abs(contour.front()[1] - contour.back()[1]) < 1e-4F) {
+    contour.pop_back();
+  }
+  return contour;
+}
+
+// The closed contours of SVG path data, moved by `offset`: the first is the
+// outline, the rest holes in it; and their bounds and fill.
 void parse_path(const json::JsonValue &value, ShapeOutline &outline) {
   std::array<float, 2> offset{};
   if (const auto *by = value.find("offset")) {
     offset = numbers<2>(*by);
   }
   const auto polylines = parse_line_path(value.find("path")->string());
-  if (polylines.empty() || polylines.front().points.size() < 3) {
+  if (polylines.empty()) {
+    throw std::runtime_error("sprite shape path needs a closed contour of 3 points or more");
+  }
+  outline.path = path_contour(polylines.front(), offset);
+  if (outline.path.size() < 3) {
     throw std::runtime_error("sprite shape path needs a closed contour of 3 points or more");
   }
   outline.box = {1e9F, 1e9F, -1e9F, -1e9F};
-  for (const auto &[x, y] : polylines.front().points) {
-    const std::array<float, 2> point{x + offset[0], y + offset[1]};
-    if (!outline.path.empty() && std::abs(point[0] - outline.path.back()[0]) < 1e-4F &&
-        std::abs(point[1] - outline.path.back()[1]) < 1e-4F) {
-      continue;
-    }
-    outline.path.push_back(point);
+  for (const auto &point : outline.path) {
     outline.box = {std::min(outline.box[0], point[0]), std::min(outline.box[1], point[1]),
                    std::max(outline.box[2], point[0]), std::max(outline.box[3], point[1])};
   }
-  const auto &first = outline.path.front();
-  if (std::abs(first[0] - outline.path.back()[0]) < 1e-4F &&
-      std::abs(first[1] - outline.path.back()[1]) < 1e-4F) {
-    outline.path.pop_back();
+  std::vector<PolygonContour> contours{outline.path};
+  for (std::size_t index = 1; index < polylines.size(); ++index) {
+    auto hole = path_contour(polylines[index], offset);
+    if (hole.size() >= 3) {
+      contours.push_back(hole);
+      outline.holes.push_back(std::move(hole));
+    }
   }
+  outline.triangles = triangulate_polygon(contours);
 }
 
 // `path` moved `distance` outward (inward when negative): each point along
@@ -257,6 +279,17 @@ std::vector<std::array<float, 2>> shape_contour(const ShapeOutline &outline,
     }
   }
   return points;
+}
+
+std::vector<std::vector<std::array<float, 2>>>
+shape_holes(const ShapeOutline &outline, const std::array<float, 4> &box, const float distance) {
+  // A hole's outward is the shape's inward.
+  std::vector<std::vector<std::array<float, 2>>> holes;
+  for (const auto &hole : outline.holes) {
+    holes.push_back(
+        offset_path(hole, {box[0] - outline.box[0], box[1] - outline.box[1]}, -distance));
+  }
+  return holes;
 }
 
 } // namespace phantomcrash

@@ -303,3 +303,31 @@ TEST_CASE("a path outline reads its offset contour, shade direction and shaded s
   CHECK(close_to(inner[2][0], 10.0F));
   CHECK(close_to(inner[2][1], 11.0F));
 }
+
+TEST_CASE("a path with a hole fills its ring and not the hole, whatever its shape") {
+  const auto shapes = parse_sprite_shapes(json::parse(R"({"shapes": [{
+    "image": "logo.png", "rect": [0, 0, 32, 32], "outlines": [{
+      "path": "M 0 0 L 12 0 L 12 4 L 4 4 L 4 12 L 0 12 Z M 1 1 L 1 3 L 3 3 L 3 1 Z",
+      "stops": [[0, "#ffffff"]]}]}]})"));
+  const ShapeOutline &outline = shapes.at(0).outlines.at(0);
+  REQUIRE(outline.holes.size() == 1U);
+  REQUIRE(outline.triangles.size() % 3 == 0U);
+  std::vector<std::array<float, 2>> points = outline.path;
+  points.insert(points.end(), outline.holes[0].begin(), outline.holes[0].end());
+  // The L (an area of 80) less the hole (4), with no triangle turned over.
+  float area = 0.0F;
+  for (std::size_t index = 0; index < outline.triangles.size(); index += 3) {
+    const auto &a = points.at(static_cast<std::size_t>(outline.triangles[index]));
+    const auto &b = points.at(static_cast<std::size_t>(outline.triangles[index + 1]));
+    const auto &c = points.at(static_cast<std::size_t>(outline.triangles[index + 2]));
+    const float twice = (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
+    CHECK(twice >= 0.0F);
+    area += twice * 0.5F;
+  }
+  CHECK(close_to(area, 76.0F));
+  // Into the hole is outward from the shape.
+  const auto holes = shape_holes(outline, outline.box, -0.5F);
+  REQUIRE(holes.size() == 1U);
+  CHECK(close_to(holes[0][0][0], 0.5F));
+  CHECK(close_to(holes[0][0][1], 0.5F));
+}

@@ -1234,6 +1234,8 @@
   {"source": {"image": "textures/scroll/game_vs_tex/0.png", "rect": [200, 312, 336, 344]}, "text": "RETRY", "class": "vs_menu_item", "region": [33, 11, 101, 23], "erase_region": [32, 10, 103, 25]},
   {"source": {"image": "textures/scroll/game_vs_tex/0.png", "rect": [336, 312, 472, 344]}, "text": "SELECT AREA", "class": "vs_menu_item", "within": [4, 6, 128, 26], "region": [6, 11, 127, 23], "erase_region": [5, 10, 128, 25]},
   {"source": {"image": "textures/scroll/game_vs_tex/0.png", "rect": [0, 344, 136, 376]}, "text": "SELECT SV", "class": "vs_menu_item", "region": [15, 11, 115, 23], "erase_region": [14, 10, 117, 25]},
-  {"source": {"image": "textures/scroll/game_vs_tex/0.png", "rect": [328, 280, 464, 312]}, "text": "EXIT", "class": "vs_menu_item", "region": [43, 11, 91, 23], "erase_region": [42, 10, 93, 25]}
+  {"source": {"image": "textures/scroll/game_vs_tex/0.png", "rect": [328, 280, 464, 312]}, "text": "EXIT", "class": "vs_menu_item", "region": [43, 11, 91, 23], "erase_region": [42, 10, 93, 25]},
+  {"source": {"image": "textures/slai/shops/mak02_1.png", "rect": [44, 26, 221, 242]}, "text": "OMSK HEAVY-MACHINE DESIGN BURERAU & PLANT", "font": "condensed", "stretch": true, "region": [1, 155, 169, 162], "colour": "#ffffff", "erase": true, "shadow": {"offset": [1.5, 2.5], "colour": "#000000", "alpha": 0.9, "blur": 1.5}},
+  {"source": {"image": "textures/slai/shops/mak04_1.png", "rect": [20, 21, 240, 251]}, "text": "Scheer und Voltz Machinenfabrik AG", "font": "squared_bold", "stretch": true, "region": [10, 206, 202, 214], "colour": "#ffffff", "erase": true, "shadow": {"offset": [1.5, 2.5], "colour": "#000000", "alpha": 0.9, "blur": 1.5}}
  ]
 }

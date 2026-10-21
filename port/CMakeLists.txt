@@ -255,6 +255,7 @@ add_library(phantomcrash_core
   src/motion_source.cpp
   src/sound_config.cpp
   src/sprite_layer.cpp
+  src/polygon_fill.cpp
   src/sprite_lines.cpp
   src/sprite_shapes.cpp
   src/sprite_text.cpp

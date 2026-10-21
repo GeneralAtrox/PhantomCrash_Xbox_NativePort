@@ -174,8 +174,7 @@ void draw_outline(SDL_Renderer *renderer, const ShapeOutline &outline,
       std::clamp(static_cast<int>(std::ceil(widest * texel / pixels_per_segment)), 1, max_segments);
   std::vector<SDL_Vertex> vertices;
   std::vector<int> indices;
-  const auto ring = [&](const ShapeStop &stop) {
-    const auto contour = shape_contour(outline, box, stop.distance, segments);
+  const auto ring = [&](const std::vector<std::array<float, 2>> &contour, const ShapeStop &stop) {
     if (!outline.shade_toward) {
       const SDL_FColor colour = stop_colour(stop, tint, alpha);
       for (const auto &point : contour) {
@@ -189,41 +188,58 @@ void draw_outline(SDL_Renderer *renderer, const ShapeOutline &outline,
           {mapping.to_pixels(contour[index]), stop_colour(stop, tint, alpha, shades[index]), {}});
     }
   };
-  // The first stop's colour fills the inside, as a fan from the centre,
-  // or the fill's gradient does.
-  const auto inside = shape_contour(outline, box, stops.front().distance, segments);
-  const int count = static_cast<int>(inside.size());
+  // Every stop's contours: the outline's, then its holes'.
+  std::vector<std::vector<std::vector<std::array<float, 2>>>> rings;
+  for (const ShapeStop &stop : stops) {
+    rings.push_back({shape_contour(outline, box, stop.distance, segments)});
+    for (auto &hole : shape_holes(outline, box, stop.distance)) {
+      rings.back().push_back(std::move(hole));
+    }
+  }
+  // The first stop's colour fills the inside: a path by its triangles, a box
+  // as a fan from the centre; or the fill's gradient does.
+  const auto &inside = rings.front();
   if (outline.fill) {
-    fill_shaded(inside, *outline.fill, mapping, tint, stops.front().alpha * alpha, vertices,
+    fill_shaded(inside.front(), *outline.fill, mapping, tint, stops.front().alpha * alpha, vertices,
                 indices);
   } else if (stops.front().alpha > 0.0F) {
-    std::array<float, 2> centre{(box[0] + box[2]) * 0.5F, (box[1] + box[3]) * 0.5F};
-    if (!outline.path.empty()) {
-      centre = {0.0F, 0.0F};
-      for (const auto &[x, y] : inside) {
-        centre = {centre[0] + x / static_cast<float>(count),
-                  centre[1] + y / static_cast<float>(count)};
+    const SDL_FColor colour = stop_colour(stops.front(), tint, alpha);
+    if (!outline.triangles.empty()) {
+      for (const auto &contour : inside) {
+        for (const auto &point : contour) {
+          vertices.push_back({mapping.to_pixels(point), colour, {}});
+        }
+      }
+      indices = outline.triangles;
+    } else {
+      const int count = static_cast<int>(inside.front().size());
+      vertices.push_back(
+          {mapping.to_pixels({(box[0] + box[2]) * 0.5F, (box[1] + box[3]) * 0.5F}), colour, {}});
+      for (const auto &point : inside.front()) {
+        vertices.push_back({mapping.to_pixels(point), colour, {}});
+      }
+      for (int point = 0; point < count; ++point) {
+        indices.insert(indices.end(), {0, 1 + point, 1 + (point + 1) % count});
       }
     }
-    vertices.push_back({mapping.to_pixels(centre), stop_colour(stops.front(), tint, alpha), {}});
-    for (int point = 0; point < count; ++point) {
-      indices.insert(indices.end(), {0, 1 + point, 1 + (point + 1) % count});
-    }
   }
-  const int first = static_cast<int>(vertices.size());
-  for (const ShapeStop &stop : stops) {
-    ring(stop);
-  }
-  for (std::size_t band = 0; band + 1 < stops.size(); ++band) {
-    if (stops[band].alpha <= 0.0F && stops[band + 1].alpha <= 0.0F) {
-      continue;
+  for (std::size_t contour = 0; contour < inside.size(); ++contour) {
+    const int first = static_cast<int>(vertices.size());
+    const int count = static_cast<int>(inside[contour].size());
+    for (std::size_t stop = 0; stop < stops.size(); ++stop) {
+      ring(rings[stop][contour], stops[stop]);
     }
-    const int inner = first + static_cast<int>(band) * count;
-    const int outer = inner + count;
-    for (int point = 0; point < count; ++point) {
-      const int next = (point + 1) % count;
-      indices.insert(indices.end(), {inner + point, outer + point, outer + next, inner + point,
-                                     outer + next, inner + next});
+    for (std::size_t band = 0; band + 1 < stops.size(); ++band) {
+      if (stops[band].alpha <= 0.0F && stops[band + 1].alpha <= 0.0F) {
+        continue;
+      }
+      const int inner = first + static_cast<int>(band) * count;
+      const int outer = inner + count;
+      for (int point = 0; point < count; ++point) {
+        const int next = (point + 1) % count;
+        indices.insert(indices.end(), {inner + point, outer + point, outer + next, inner + point,
+                                       outer + next, inner + next});
+      }
     }
   }
   if (!indices.empty()) {

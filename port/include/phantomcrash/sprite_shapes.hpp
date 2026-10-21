@@ -46,14 +46,17 @@ struct ShapeGradient {
 // edges parallel; the art's rings are often rounder inside than outside).
 // A `fill` gradient colours the inside in place of the first stop's colour.
 // With a `path` (a closed contour in the same texels, such as a folder's
-// tabbed edge) the distances run from it instead, each point moved along
-// its corner's bisector; `box` is then its bounds. A path's fill is a fan
-// from its centre, so it must be seen whole from there; a gradient fill
-// needs it convex. Distances deeper than a corner's radius fold there:
-// layer outlines on exact inner contours rather than reach far in.
+// tabbed edge, or a logo's letter) the distances run from it instead, each
+// point moved along its corner's bisector; `box` is then its bounds. Further
+// contours in the path are holes, their distances running into the shape.
+// A path of any shape fills (by `triangles`); a gradient fill needs it
+// convex. Distances deeper than a corner's radius fold there: layer
+// outlines on exact inner contours rather than reach far in.
 struct ShapeOutline {
   std::array<float, 4> box{};
   std::vector<std::array<float, 2>> path;
+  std::vector<std::vector<std::array<float, 2>>> holes;
+  std::vector<int> triangles; // the path and holes' points, in order (polygon_fill.hpp)
   float radius{};
   float radius_growth{1.0F};
   std::vector<ShapeStop> stops;
@@ -83,5 +86,9 @@ struct SpriteShape {
 [[nodiscard]] std::vector<std::array<float, 2>> shape_contour(const ShapeOutline &outline,
                                                               const std::array<float, 4> &box,
                                                               float distance, int segments);
+// The path's holes moved `distance` texels outward from the shape (into
+// each hole when positive).
+[[nodiscard]] std::vector<std::vector<std::array<float, 2>>>
+shape_holes(const ShapeOutline &outline, const std::array<float, 4> &box, float distance);
 
 } // namespace phantomcrash
