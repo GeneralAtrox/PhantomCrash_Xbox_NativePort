@@ -26,7 +26,6 @@ SlaiRumbleSave slai_rumble_from_json(const JsonValue &value) {
   if (!value.is_object()) {
     return save;
   }
-  save.day = count_of(value, "day");
   save.stage = count_of(value, "stage");
   save.city = count_of(value, "city");
   save.finals_cleared = count_of(value, "finals_cleared");
@@ -75,7 +74,6 @@ JsonValue slai_rumble_to_json(const SlaiRumbleSave &save) {
     }});
   }
   return JsonValue{JsonValue::Object{
-      {"day", number(save.day)},
       {"stage", number(save.stage)},
       {"city", number(save.city)},
       {"finals_cleared", number(save.finals_cleared)},

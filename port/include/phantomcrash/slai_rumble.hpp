@@ -7,6 +7,7 @@
 // PAL SLES-52940; names are researcher-assigned.
 
 #include "phantomcrash/json.hpp"
+#include "phantomcrash/slai_rota.hpp"
 
 #include <array>
 #include <cstdint>
@@ -168,11 +169,12 @@ struct SlaiRumbleWorld {
 struct SlaiRumbleData {
   SlaiRumbleTable table;
   SlaiRumbleWorld world;
+  SlaiRota rota; // data/world/slai_rota.json
 };
 
 // The converted table through the asset roots (so mods/tables/ replaces
-// it) and the world document through the data roots. Nothing when the
-// table is not installed.
+// it), and the world and rota documents through the data roots. Nothing
+// when the table is not installed.
 [[nodiscard]] std::optional<SlaiRumbleData> load_slai_rumble(const DataRoots &roots);
 
 [[nodiscard]] const SlaiMatch *slai_match(const SlaiRumbleTable &table, int id);

@@ -5,6 +5,8 @@
 #include "desktop_screen.hpp"
 #include "desktop_textures.hpp"
 #include "phantomcrash/data_roots.hpp"
+#include "phantomcrash/slai_rumble.hpp"
+#include "phantomcrash/slai_rumble_hub.hpp"
 #include "phantomcrash/contests.hpp"
 #include "phantomcrash/glyph_font.hpp"
 #include "phantomcrash/json.hpp"
@@ -79,6 +81,10 @@ public:
   }
   [[nodiscard]] const SleepScript &sleep_script() const noexcept {
     return sleep_;
+  }
+  // S.L.A.I. Rumble's tables, while S.L.A.I. is installed and enabled.
+  [[nodiscard]] const SlaiRumbleData *slai_rumble() const noexcept {
+    return slai_rumble_ ? &*slai_rumble_ : nullptr;
   }
   // Tools > Cheats: RUMBLING lets the player into any contest held.
   void set_open_contests(const bool open) noexcept {
@@ -166,6 +172,8 @@ private:
   const std::vector<MusicCredit> &credits_;
   const std::vector<StoryEvent> &events_;
   ContestTables contests_;
+  std::optional<SlaiRumbleData> slai_rumble_;
+  std::optional<SlaiRumbleHubScript> slai_hub_; // ui/slai_rumble.json, with S.L.A.I.
   SleepScript sleep_;
   bool open_contests_{};
   ScheduleScript schedule_;

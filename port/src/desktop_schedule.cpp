@@ -11,14 +11,6 @@ namespace {
 
 constexpr std::uint32_t lit_colour = 0xffffff;
 
-// Folds a sprite about its centre to `scale_x` of its width.
-void fold(Sprite &sprite, const float scale_x) {
-  const float width = sprite.rect[2] - sprite.rect[0];
-  const float height = sprite.rect[3] - sprite.rect[1];
-  sprite.size = std::array<float, 2>{width * scale_x, height};
-  sprite.position[0] += width * (1.0F - scale_x) * 0.5F;
-}
-
 Sprite placed(Sprite sprite, const float x, const float y) {
   sprite.position = {x, y};
   return sprite;
@@ -26,13 +18,21 @@ Sprite placed(Sprite sprite, const float x, const float y) {
 
 } // namespace
 
+void fold(Sprite &sprite, const float scale_x) {
+  const float width = sprite.size ? (*sprite.size)[0] : sprite.rect[2] - sprite.rect[0];
+  const float height = sprite.size ? (*sprite.size)[1] : sprite.rect[3] - sprite.rect[1];
+  sprite.size = std::array<float, 2>{width * scale_x, height};
+  sprite.position[0] += width * (1.0F - scale_x) * 0.5F;
+}
+
 ScheduleScreen::ScheduleScreen(TextureCache &textures, const GlyphFont &font, ScheduleScript script,
                                const ContestTables &contests, const std::string &from,
                                const std::string &back, const FrameStyle &frame,
                                const std::vector<MusicCredit> &credits, QuestSave quest,
-                               const MessageBoxStyle &box)
+                               const MessageBoxStyle &box, const SlaiRumbleData *slai)
     : TownScreen(textures, font, script, from, frame, credits, quest), contests_(contests),
-      fee_font_(frame.hud.font), schedule_(std::move(script), contests, quest, back, from, box) {
+      fee_font_(frame.hud.font),
+      schedule_(std::move(script), contests, quest, back, from, box, slai) {
   const ScheduleScript &data = schedule_.script();
   static_cast<void>(textures_.get(data.cell_image));
   static_cast<void>(textures_.get(data.day_digits.image));
@@ -124,21 +124,40 @@ void ScheduleScreen::draw_days(DrawList &list) const {
   }
 }
 
+void ScheduleScreen::draw_buttons(DrawList &list) const {
+  const bool on_row = schedule_.row() == schedule_.button_row();
+  for (const int button : {Schedule::exit_button, Schedule::skip_button, Schedule::toggle_button}) {
+    const bool offered = button == Schedule::exit_button ||
+                         (button == Schedule::skip_button && schedule_.skip_offered()) ||
+                         (button == Schedule::toggle_button && schedule_.toggle_offered());
+    if (!offered) {
+      continue;
+    }
+    list.sprite(schedule_.button_sprite(button, false));
+    if (on_row && schedule_.button() == button) {
+      list.sprite(schedule_.button_sprite(button, true));
+    }
+  }
+}
+
 void ScheduleScreen::draw_cursor(DrawList &list) const {
   const ScheduleScript &data = schedule_.script();
-  list.sprite(data.exit);
-  if (schedule_.row() == Schedule::exit_row && schedule_.button() == Schedule::exit_button) {
-    list.sprite(placed(data.exit_selected, data.exit.position[0], data.exit.position[1]));
-  } else if (schedule_.row() == Schedule::exit_row) {
+  draw_buttons(list);
+  if (schedule_.row() == schedule_.button_row() && schedule_.button() == Schedule::skip_button) {
     // SKIP TO DAY keeps the day it wakes on marked.
     const int column = schedule_.column();
     list.sprite(placed(data.cursor_day, cell(column, 0)[0], data.cursor_day_y));
-  } else if (!schedule_.popup().is_open() && !schedule_.scrolling()) {
+  } else if (schedule_.row() != schedule_.button_row() && !schedule_.popup().is_open() &&
+             !schedule_.scrolling()) {
     const auto [x, y] = cell(schedule_.column(), schedule_.row());
     list.sprite(placed(data.cursor_frame, x, y));
     list.sprite(placed(data.cursor_pulse, x, y));
     list.sprite(placed(data.cursor_day, x, data.cursor_day_y));
   }
+}
+
+void ScheduleScreen::draw_scroll_arrow(DrawList &list) const {
+  const ScheduleScript &data = schedule_.script();
   if (schedule_.scrolling()) {
     // The original lights the left arrow; the port lights the side the
     // calendar scrolls towards.
@@ -171,33 +190,42 @@ void ScheduleScreen::draw_skip(DrawList &list) const {
     list.label(tag.layer, enemy_level_text(tag, schedule_.quest().laps), tag.font, tag.box,
                tag.colour, tag.shadow, tag.shadow_blur);
   }
-  if (!schedule_.skip_offered()) {
-    return;
-  }
-  list.sprite(skip.button);
-  if (schedule_.row() == Schedule::exit_row && schedule_.button() == Schedule::skip_button) {
-    list.sprite(placed(skip.button_selected, skip.button.position[0], skip.button.position[1]));
-  }
-  if (schedule_.box().is_open()) {
+  if (schedule_.skip_offered() && schedule_.box().is_open()) {
     list.message_box(schedule_.box());
   }
 }
 
 void ScheduleScreen::draw(const Viewport &viewport) {
-  draw_town(viewport, schedule_.seconds(), schedule_.black_alpha(), [this](DrawList &list) {
-    draw_cells(list);
-    draw_days(list);
-    draw_cursor(list);
+  const auto content = [this](DrawList &list) {
+    if (schedule_.slai_page()) {
+      draw_slai_cells(list);
+      draw_slai_days(list);
+      draw_slai_plates(list);
+      draw_buttons(list);
+      draw_slai_cursor(list);
+    } else {
+      draw_cells(list);
+      draw_days(list);
+      draw_cursor(list);
+    }
+    draw_scroll_arrow(list);
     if (schedule_.popup().is_open()) {
-      draw_popup(list);
+      if (schedule_.slai_page()) {
+        draw_slai_info(list);
+      } else {
+        draw_popup(list);
+      }
     }
     draw_skip(list);
     const Contest *contest = contests_.contest(schedule_.selected_contest());
-    if (contest != nullptr && !schedule_.scrolling()) {
-      list.ticker(schedule_.script().ticker, glyph_run(font_, contest->name),
-                  schedule_.ticker_seconds());
+    const std::string name = contest != nullptr ? contest->name : slai_ticker_text();
+    if (!name.empty() && !schedule_.scrolling()) {
+      list.ticker(schedule_.script().ticker, glyph_run(font_, name), schedule_.ticker_seconds());
     }
-  });
+  };
+  static const std::vector<std::string> shown_all;
+  const auto &hidden = schedule_.slai_page() ? schedule_.script().slai.hidden_layers : shown_all;
+  draw_town(viewport, schedule_.seconds(), schedule_.black_alpha(), content, hidden);
 }
 
 } // namespace phantomcrash

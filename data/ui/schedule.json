@@ -629,5 +629,86 @@
   "nothing": ["Move the cursor to a later day", "to skip to it."],
   "day_words": ["day", "days"],
   "enemy_level": {"text": "ENEMY LV +{level}", "font": "futura_italic", "box": [62, 134, 150, 150], "colour": "#ff7a29", "layer": 260, "shadow": {"offset": [1, 1], "colour": "#000000", "alpha": 0.8, "blur": 0.6}}
+ },
+ "slai": {
+  "notes": [
+   "The port's S.L.A.I. page (not in the original; docs/SLAI_RUMBLE_PLAN.md, Screens), offered when S.L.A.I. is installed and enabled. Remove the entry to remove the toggle.",
+   "toggle: a button between SKIP TO DAY and EXIT on the EXIT pill art, its lettering from sprite_text.json by id: it names S.L.A.I. on the Phantom Crash page (normal, selected) and PHANTOM CRASH on the S.L.A.I. page (back_normal, back_selected). While it is offered the three buttons stand at 'buttons'; left and right move between them in their order on screen. confirm turns the page, the cursor staying on the toggle.",
+   "The page hides the Phantom Crash grid ('hidden_layers') and draws the same days for S.L.A.I.'s seven cities, one 30-texel row each in the table's display order (New York, Las Vegas, Tokyo, Hong Kong, Cairo, Stuttgart, London), from data/world/slai_rota.json: the city's rumble at the player's stage (its day slot's match, else its night slot's) or CLOSED. Scrolling, SKIP TO DAY, the ticker and the popup work as on the Phantom Crash page.",
+   "header: the grid's DAY- strip over the five columns, its digits at day_digits (the first column's; step as the cells). cells: the first venue's tiles cut to their lower 30 texels (DAY or NIGHT, lit in the cursor's column) and CLOSED's middle 30, drawn unscaled at origin + step x (column, row) as the Phantom Crash page draws its 88-wide tiles 83 apart.",
+   "badges: each regulation's Phantom Crash badge (the class badges for CLASS FREE to A, AREA RANKER for REGIONAL MATCH, FIRST RANKER for Master Rank and the 3rd, 2nd and Final matches, Regulation for every other rule), its ink cut tight and fitted to height and width at the cell's left, inset in; dimmed by dim off the cursor's column. 'class' is what the INFORMATION popup shows on its Class line.",
+   "CLEAR (its ink) fits clear_box once the match's own record is cleared. The cursor's frame and pulse are cut into nine with border and stretched over size at the cell + offset.",
+   "grid, plate, corner: sharp vector outlines (sprite_shapes.json's format) in canvas units over box: the grid's white lines as the Phantom Crash grid draws them; each row's city plate (x on the canvas, y from the row's top) after the Phantom Crash venue plates, navy with a grey rim and a tab into the grid; the page's name over them. city and title: display-font lettering fitted to box, relative to the plate's. city_names by the table's city column."
+  ],
+  "toggle": {
+   "normal": {"id": "slai_toggle", "image": "textures/scroll/schedule_tex/0.png", "rect": [520, 672, 640, 712], "position": [200, 349], "layer": 259},
+   "selected": {"id": "slai_toggle_lit", "image": "textures/scroll/schedule_tex/0.png", "rect": [640, 672, 760, 712], "position": [200, 349], "layer": 259},
+   "back_normal": {"id": "slai_back_toggle", "image": "textures/scroll/schedule_tex/0.png", "rect": [520, 672, 640, 712], "position": [200, 349], "layer": 259},
+   "back_selected": {"id": "slai_back_toggle_lit", "image": "textures/scroll/schedule_tex/0.png", "rect": [640, 672, 760, 712], "position": [200, 349], "layer": 259},
+   "buttons": {"skip": [70, 349], "toggle": [200, 349], "exit": [330, 349]}
+  },
+  "hidden_layers": ["grid"],
+  "header": {"id": "slai_header", "image": "textures/scroll/schedule_tex/0.png", "rect": [101, 482, 516, 516], "position": [158, 98], "layer": 262},
+  "day_digits": {"tens": [206, 106], "units": [216, 106]},
+  "cursor_day_y": 98,
+  "cells": {
+   "origin": [158, 132],
+   "step": [83, 30],
+   "day": [696, 641, 784, 671],
+   "day_lit": [784, 641, 872, 671],
+   "night": [872, 641, 960, 671],
+   "night_lit": [640, 745, 728, 775],
+   "closed": [640, 297, 728, 327],
+   "closed_lit": [728, 297, 816, 327],
+   "clear": [817, 285, 899, 343],
+   "clear_box": [0, 1, 83, 29]
+  },
+  "badges": {
+   "height": 22,
+   "width": 46,
+   "inset": 3,
+   "dim": "#808080",
+   "list": [
+    {"regulations": [22], "rect": [627, 499, 676, 522], "class": "CLASS FREE"},
+    {"regulations": [23], "rect": [925, 414, 984, 449], "class": "CLASS D"},
+    {"regulations": [24], "rect": [837, 414, 897, 450], "class": "CLASS C"},
+    {"regulations": [25], "rect": [749, 415, 803, 450], "class": "CLASS B"},
+    {"regulations": [26], "rect": [925, 349, 985, 385], "class": "CLASS A"},
+    {"regulations": [27], "rect": [644, 412, 717, 449], "class": "AREA RANKER"},
+    {"regulations": [2, 3, 4, 5], "rect": [524, 484, 597, 521], "class": "FIRST RANKER"},
+    {"rect": [699, 496, 778, 529], "class": "REGULATION"}
+   ]
+  },
+  "cursor": {"border": 6, "offset": [-2, -2], "size": [88, 34]},
+  "grid": {
+   "box": [157, 97, 575, 344],
+   "layer": 262,
+   "outlines": [
+    {"box": [1, 1, 417, 246], "radius": 4, "stops": [[-2, "#ffffff", 0], [-2, "#ffffff"], [0, "#ffffff"], [0, "#ffffff", 0]]},
+    {"box": [3, 35, 415, 38], "count": [1, 7], "step": [0, 30], "stops": [[0, "#ffffff"], [0, "#ffffff", 0]]},
+    {"box": [3, 38, 415, 40], "count": [1, 7], "step": [0, 30], "stops": [[0, "#000c18", 0.6], [0, "#000c18", 0]]},
+    {"box": [84, 38, 85, 244], "count": [4, 1], "step": [83, 0], "stops": [[0, "#f7fbff"], [0, "#f7fbff", 0]]},
+    {"box": [85, 38, 86, 244], "count": [4, 1], "step": [83, 0], "stops": [[0, "#08386b", 0.4], [0, "#08386b", 0]]}
+   ]
+  },
+  "plate": {
+   "box": [64, 0, 160, 30],
+   "layer": 262,
+   "outlines": [
+    {"box": [78, 9, 95, 21], "stops": [[0, "#6e6e6e"], [0, "#6e6e6e", 0]]},
+    {"box": [4, 2, 79, 28], "radius": 5, "fill": {"axis": "y", "stops": [[5, "#000c18"], [25, "#002040"]]}, "stops": [[-3, "#000c18"], [-3, "#656565"], [0, "#656565"], [0, "#656565", 0]]}
+   ]
+  },
+  "city": {"font": "futura_italic", "box": [10, 9, 73, 21], "colour": "#ffe23c", "layer": 263, "shadow": {"offset": [1, 1], "colour": "#000000", "alpha": 0.9, "blur": 0.6}},
+  "corner": {
+   "box": [64, 98, 160, 132],
+   "layer": 262,
+   "outlines": [
+    {"box": [4, 4, 79, 30], "radius": 5, "fill": {"axis": "y", "stops": [[7, "#000c18"], [27, "#002040"]]}, "stops": [[-2, "#000c18"], [-2, "#78e6ff"], [0, "#78e6ff"], [0, "#78e6ff", 0]]}
+   ]
+  },
+  "title": {"font": "futura_italic", "box": [12, 11, 71, 23], "colour": "#78e6ff", "layer": 263, "shadow": {"offset": [1, 1], "colour": "#000000", "alpha": 0.9, "blur": 0.6}},
+  "title_text": "S.L.A.I.",
+  "city_names": ["TOKYO", "STUTTGART", "NEW YORK", "LONDON", "HONG KONG", "CAIRO", "LAS VEGAS"]
  }
 }

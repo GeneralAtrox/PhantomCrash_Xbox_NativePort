@@ -104,6 +104,9 @@ ScheduleScript parse_schedule(const json::JsonValue &document) {
     if (const auto *skip = document.find("skip")) {
       script.skip = parse_day_skip(*skip);
     }
+    if (const auto *slai = document.find("slai")) {
+      script.slai = parse_slai_schedule(*slai);
+    }
     if (script.columns <= 0 || script.scroll_step_seconds <= 0.0 ||
         script.venues.size() != schedule_venues) {
       throw std::runtime_error("needs columns, a scroll step above 0 and three venues");

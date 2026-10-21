@@ -6,6 +6,7 @@
   "The cursor moves sideways and wraps, with sys entry 23 (\"wheel\"). confirm plays 5, or 26 on Exit, and fades out to the item's screen over 0.5 s. cancel moves the cursor to Exit. Arriving from the town map plays 25.",
   "The cursor starts on the item for the screen the menu opened from (start_items), otherwise on the first.",
   "The help line scrolls through the panel's window (85, 211 to 265, 229), restarting on each move, each string padded by its own trail.",
+  "slai_rumble (a port item, shown only with S.L.A.I. installed: requires): Rumble S.L.A.I. (ui/slai_rumble.json), on RUMBLING's wedge art; its name is drawn over the RUMBLING label (sprite_text.json, id slai_rumble_label).",
   "riding_plate: the RIDING SV plate with the ridden Scoobee's name slides in once the menu has faded in (0x6dd74 from 0x1bec1, see data/ui/frame.json); a new game rides none, so it shows only once a Scoobee is ridden."
  ],
  "scene": 8,
@@ -19,7 +20,7 @@
  "buttons": { "back": "left", "forward": "right" },
  "sounds": { "move": "wheel", "select": "confirm" },
  "cancel_item": "exit",
- "start_items": { "rumbling": "rumbling", "pepper_guide": "training", "records": "record", "schedule": "schedule", "name_entry": "name_entry" },
+ "start_items": { "rumbling": "rumbling", "slai_rumble": "slai_rumble", "pepper_guide": "training", "records": "record", "schedule": "schedule", "name_entry": "name_entry" },
  "arrive_sounds": { "town_map": "club_arrive" },
  "image": "textures/scroll/club_wird_tex/0.png",
  "layers": [
@@ -43,6 +44,13 @@
    "wedge": { "rect": [640, 480, 784, 632], "layer": 3 },
    "highlight": { "rect": [784, 480, 928, 632], "position": [262, 139], "layer": 4 },
    "label": { "rect": [384, 840, 624, 888], "position": [75, 153], "layer": 4 }
+  },
+  {
+   "id": "slai_rumble", "next": "slai_rumble", "requires": "slai",
+   "help": "S.L.A.I.'s rumbles in the cities open today.", "help_trail": 9,
+   "wedge": { "rect": [640, 480, 784, 632], "layer": 3 },
+   "highlight": { "rect": [784, 480, 928, 632], "position": [262, 139], "layer": 4 },
+   "label": { "id": "slai_rumble_label", "rect": [384, 840, 624, 888], "position": [75, 153], "layer": 4 }
   },
   {
    "id": "training", "next": "pepper_guide",

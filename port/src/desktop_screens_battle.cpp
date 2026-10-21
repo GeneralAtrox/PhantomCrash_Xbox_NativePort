@@ -45,6 +45,9 @@ std::unique_ptr<Screen> ScreenRunner::make_battle(const std::string &name) {
           }
         });
   }
+  if (name == "slai_battle") {
+    return make_slai_battle();
+  }
   if (const auto lesson = training_.lessons.find(name); lesson != training_.lessons.end()) {
     return make_training(training_, lesson->second);
   }

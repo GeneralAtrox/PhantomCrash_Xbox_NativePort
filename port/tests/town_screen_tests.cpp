@@ -136,7 +136,7 @@ TEST_CASE("cancel moves to EXIT and confirm there leaves for the place before") 
   Schedule schedule(shipped_schedule(), contests, quest, "club_wired");
   settle(schedule);
   schedule.update(tick, press(button::b));
-  CHECK(schedule.row() == Schedule::exit_row);
+  CHECK(schedule.row() == schedule.button_row());
   schedule.update(tick, InputFrame{});
   schedule.update(tick, press(button::a));
   settle(schedule);

@@ -16,6 +16,9 @@ add_library(phantomcrash_core
   src/shop_variants.cpp
   src/added_chips.cpp
   src/slai_content.cpp
+  src/slai_rota.cpp
+  src/slai_rumble_hub.cpp
+  src/slai_rumble_hub_script.cpp
   src/slai_rumble_rules.cpp
   src/slai_rumble_save.cpp
   src/slai_rumble_table.cpp
@@ -133,8 +136,10 @@ add_library(phantomcrash_core
   src/cheats.cpp
   src/contests.cpp
   src/schedule.cpp
+  src/schedule_page.cpp
   src/schedule_script.cpp
   src/schedule_skip.cpp
+  src/schedule_slai.cpp
   src/day_skip.cpp
   src/contest_info.cpp
   src/rumbling_rules.cpp
@@ -423,6 +428,7 @@ if(BUILD_TESTING)
     tests/effect_cluster_tests.cpp
     tests/slai_rumble_tests.cpp
     tests/shop_variant_tests.cpp
+    tests/slai_screens_tests.cpp
   )
   target_link_libraries(phantomcrash_core_tests PRIVATE phantomcrash_core)
   # The shipped data/ documents are part of the source tree and tested too.
@@ -739,6 +745,9 @@ if(PHANTOMCRASH_BUILD_DESKTOP)
     src/desktop_records_convention.cpp
     src/desktop_records_trophies.cpp
     src/desktop_schedule.cpp
+    src/desktop_schedule_slai.cpp
+    src/desktop_slai_rumble.cpp
+    src/desktop_screens_slai.cpp
     src/desktop_contest_info.cpp
     src/desktop_rumbling.cpp
     src/desktop_rumbling_robots.cpp

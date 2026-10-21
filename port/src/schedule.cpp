@@ -32,7 +32,8 @@ bool contains_place(const std::vector<std::string> &places, const std::string &p
 } // namespace
 
 Schedule::Schedule(ScheduleScript script, const ContestTables &contests, const QuestSave &quest,
-                   std::string back, const std::string &from, MessageBoxStyle box)
+                   std::string back, const std::string &from, MessageBoxStyle box,
+                   const SlaiRumbleData *slai)
     : script_(std::move(script)), contests_(contests), won_(quest.won_contests),
       game_cleared_(quest.cleared), back_(std::move(back)),
       fade_(script_.fade_in, script_.fade_out),
@@ -40,7 +41,7 @@ Schedule::Schedule(ScheduleScript script, const ContestTables &contests, const Q
       rows_repeat_(script_.repeat_delay, script_.repeat_interval), first_day_(wrap_day(quest.day)),
       popup_(script_.info.growth), quest_(quest),
       skip_offered_(script_.skip.enabled && contains_place(script_.skip.from, from)),
-      box_(std::move(box)) {}
+      box_(std::move(box)), slai_(script_.slai.enabled ? slai : nullptr) {}
 
 bool Schedule::won(const int contest) const {
   return contains(won_, contest);
@@ -55,7 +56,7 @@ int Schedule::contest_at(const int day, const int row) const {
 }
 
 int Schedule::selected_contest() const {
-  return row_ < exit_row ? contest_at(first_day_ + column_, row_) : no_contest;
+  return !slai_page_ && row_ < button_row() ? contest_at(first_day_ + column_, row_) : no_contest;
 }
 
 // 0x35a9f: while a day scrolls, the days shown lag the window by the days
@@ -127,27 +128,22 @@ void Schedule::update(const double tick_seconds, const InputFrame &input) {
 
 void Schedule::handle_input(const double tick_seconds, const InputFrame &raw) {
   InputFrame input = raw;
+  const std::vector<int> buttons = bottom_buttons();
+  const auto clicked_button = std::ranges::find_if(
+      buttons, [&](const int button) { return shop_hit(input, button_sprite(button, false)); });
   if (input.clicked && input.pointer) {
     if (popup_.is_open()) {
       if (popup_.grown()) {
         input.pressed |= script_.cancel_buttons;
       }
-    } else if (skip_offered_ && shop_hit(input, script_.skip.button)) {
-      row_ = exit_row;
-      button_ = skip_button;
-      input.pressed |= script_.confirm_buttons;
-    } else if (shop_hit(input, script_.exit)) {
-      row_ = exit_row;
-      button_ = exit_button;
+    } else if (clicked_button != buttons.end()) {
+      row_ = button_row();
+      button_ = *clicked_button;
       input.pressed |= script_.confirm_buttons;
     } else {
       for (int column = 0; column < script_.columns; ++column) {
-        for (int row = 0; row < exit_row; ++row) {
-          Sprite tile;
-          tile.rect = script_.closed;
-          tile.position = {script_.cell_origin[0] + script_.cell_step[0] * column,
-                           script_.cell_origin[1] + script_.cell_step[1] * row};
-          if (shop_hit(input, tile)) {
+        for (int row = 0; row < button_row(); ++row) {
+          if (shop_hit(input, cell_box(column, row))) {
             column_ = column;
             row_ = row;
             ticker_seconds_ = 0.0;
@@ -170,35 +166,32 @@ void Schedule::handle_input(const double tick_seconds, const InputFrame &raw) {
     return;
   }
   if (input.any_pressed(script_.confirm_buttons)) {
-    if (row_ == exit_row) {
+    if (row_ == button_row()) {
       press_button();
-    } else if (selected_contest() != no_contest) {
+    } else if (selected_contest() != no_contest || selected_slai()) {
       sounds_.play(script_.select_sound);
       popup_.open();
     }
     return;
   }
   if (input.any_pressed(script_.cancel_buttons)) {
-    if (row_ != exit_row || button_ != exit_button) {
+    if (row_ != button_row() || button_ != exit_button) {
       sounds_.play(script_.exit_sound);
     }
-    row_ = exit_row;
+    row_ = button_row();
     button_ = exit_button;
     return;
   }
   bool fresh = false;
-  const int rows = exit_row + 1;
-  if (row_ == exit_row && skip_offered_) {
+  const int rows = button_row() + 1;
+  if (row_ == button_row()) {
     // Left and right go towards the button on that side.
     const int step = columns_repeat_.step(tick_seconds, input, script_.left, script_.right, fresh);
-    const bool skip_left = script_.skip.button.position[0] < script_.exit.position[0];
-    const int moved = std::clamp(button_ + (skip_left ? -step : step), exit_button, skip_button);
-    if (moved != button_) {
+    if (move_button(step)) {
       sounds_.play(script_.move_sound);
-      button_ = moved;
       return;
     }
-  } else if (row_ != exit_row) {
+  } else {
     const int step = columns_repeat_.step(tick_seconds, input, script_.left, script_.right, fresh);
     if (step != 0) {
       sounds_.play(script_.move_sound);
@@ -221,7 +214,7 @@ void Schedule::handle_input(const double tick_seconds, const InputFrame &raw) {
     }
     return;
   }
-  if (row_ == exit_row) {
+  if (row_ == button_row()) {
     return;
   }
   if (input.any_pressed(script_.page_forward)) {

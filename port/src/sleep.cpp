@@ -3,7 +3,6 @@
 #include "phantomcrash/sleep.hpp"
 
 #include "phantomcrash/json_fields.hpp"
-#include "phantomcrash/slai_rumble_rules.hpp"
 
 #include <algorithm>
 #include <stdexcept>
@@ -21,12 +20,8 @@ SleepScript parse_sleep_script(const json::JsonValue &document) {
   script.exit_to = required(document, "exit_to").string();
   script.days_in_cycle = static_cast<int>(required(document, "days_in_cycle").number());
   script.total_days_max = static_cast<int>(required(document, "total_days_max").number());
-  script.slai_days_in_cycle =
-      static_cast<int>(document.number_or("slai_days_in_cycle", script.slai_days_in_cycle));
-  if (script.seconds < 0.0 || script.days_in_cycle <= 0 || script.total_days_max <= 0 ||
-      script.slai_days_in_cycle <= 0) {
-    throw std::runtime_error(
-        "seconds, days_in_cycle, slai_days_in_cycle and total_days_max must not be negative");
+  if (script.seconds < 0.0 || script.days_in_cycle <= 0 || script.total_days_max <= 0) {
+    throw std::runtime_error("seconds, days_in_cycle and total_days_max must not be negative");
   }
   return script;
 }
@@ -47,7 +42,6 @@ void sleep_one_night(QuestSave &quest, const SleepScript &script) {
   }
   quest.total_days = std::min(quest.total_days + 1, script.total_days_max);
   quest.spin_paid = 0;
-  advance_slai_rumble_day(quest.slai_rumble, script.slai_days_in_cycle);
   // Sonic Amp's chart changes overnight (0x2e47c); each night draws its own.
   roll_chart(quest.music,
              static_cast<std::uint32_t>(quest.total_days * night_seed_step + quest.laps));

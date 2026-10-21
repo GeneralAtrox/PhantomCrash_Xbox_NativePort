@@ -25,7 +25,8 @@ def fake_conversion(tmp_path, monkeypatch, fail=False):
             raise ValueError('conversion failed')
         for name in ['tables/parts.json', 'tables/garage.json', 'robots/catalogue.json',
                      'slai/native_parts.json', 'slai/assets/manifest.json',
-                     'tables/slai_rumble.json']:
+                     'tables/slai_rumble.json', 'tables/slai_talk.json',
+                     'font/glyphs.json', 'talk/event/uk/main01t.json']:
             file = output / name
             file.parent.mkdir(parents=True, exist_ok=True)
             file.write_text('{}')
@@ -33,6 +34,7 @@ def fake_conversion(tmp_path, monkeypatch, fail=False):
     monkeypatch.setattr(installer, 'extract_stats', lambda _: {})
     for name in ['register_parts', 'register_stages', 'register_cosmetics',
                  'register_sound', 'register_particles', 'register_rumble', 'register_shop_art',
+                 'register_wired_art', 'register_talk',
                  'convert_music']:
         monkeypatch.setattr(installer, name, lambda *args, **kwargs: {})
     return converter

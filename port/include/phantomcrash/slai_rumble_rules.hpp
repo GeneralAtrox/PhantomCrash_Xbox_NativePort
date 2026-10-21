@@ -23,8 +23,23 @@ namespace phantomcrash {
 // the finals stage the finals cleared so far inject the next final.
 [[nodiscard]] int slai_scheduled_match(const SlaiRumbleTable &table, int day, int city, int stage,
                                        bool night, int finals_cleared);
-// Today's (day, night) matches in the save's city.
-[[nodiscard]] std::array<int, 2> slai_todays_matches(const SlaiRumbleTable &table,
+// A city's rumble on a calendar day, at the save's stage: the S.L.A.I.
+// day the rota borrows its line-up from, and the match that day shows
+// (its day slot's, else its night slot's).
+struct SlaiCityMatch {
+  int city{};
+  int slai_day{};
+  int match{slai_no_match};
+  bool night{};
+};
+// The city's rumble on calendar day `day`, or nothing while it is closed.
+[[nodiscard]] std::optional<SlaiCityMatch>
+slai_city_match(const SlaiRumbleData &data, int day, int city, const SlaiRumbleSave &save);
+// The day's open cities' rumbles, in the rota's (display) order.
+[[nodiscard]] std::vector<SlaiCityMatch>
+slai_day_matches(const SlaiRumbleData &data, int day, const SlaiRumbleSave &save);
+// Today's (day, night) matches in the save's city; none while it is closed.
+[[nodiscard]] std::array<int, 2> slai_todays_matches(const SlaiRumbleData &data, int day,
                                                      const SlaiRumbleSave &save);
 
 // The records cleared among save record ids [first, last) (0x257440,
@@ -102,8 +117,5 @@ struct SlaiMatchOutcome {
 // wallet (up to money_limit) and the stage moved on.
 SlaiMatchOutcome slai_finish_match(QuestSave &quest, const SlaiRumbleData &data,
                                    const SlaiMatchResult &result);
-
-// The night passing: the rota day moves on and wraps at days_in_cycle.
-void advance_slai_rumble_day(SlaiRumbleSave &save, int days_in_cycle);
 
 } // namespace phantomcrash

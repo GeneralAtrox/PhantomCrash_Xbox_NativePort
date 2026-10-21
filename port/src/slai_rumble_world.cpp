@@ -135,6 +135,13 @@ std::optional<SlaiRumbleData> load_slai_rumble(const DataRoots &roots) {
   } catch (const std::exception &error) {
     throw std::runtime_error(std::string(slai_rumble_world_file) + ": " + error.what());
   }
+  try {
+    data.rota = parse_slai_rota(roots.document(slai_rota_file),
+                                static_cast<int>(data.table.cities.size()),
+                                data.table.schedule_days);
+  } catch (const std::exception &error) {
+    throw std::runtime_error(std::string(slai_rota_file) + ": " + error.what());
+  }
   if (data.world.cities.size() != data.table.cities.size()) {
     throw std::runtime_error(std::string(slai_rumble_world_file) +
                              ": needs a stage pair for each of the table's cities");

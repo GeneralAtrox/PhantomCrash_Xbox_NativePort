@@ -106,11 +106,16 @@ TEST_CASE("S.L.A.I. Rumble's finals replace the rota's finals-stage matches as 0
   CHECK(slai_scheduled_match(table, 163, 4, 1, false, 2) == 24);
   CHECK(slai_scheduled_match(table, 0, 7, 1, false, 0) == slai_no_match);
   CHECK(slai_scheduled_match(table, -1, 0, 1, false, 0) == slai_no_match);
+  SlaiRumbleData data;
+  data.table = table;
+  data.rota.days = {{{2, 0}, {1, 7}, {3, 0}}, {{6, 5}, {0, 5}, {4, 5}}};
   SlaiRumbleSave save;
   save.city = 1;
   save.stage = 3;
   save.finals_cleared = 2;
-  CHECK((slai_todays_matches(table, save) == std::array<int, 2>{134, 136}));
+  CHECK((slai_todays_matches(data, 0, save) == std::array<int, 2>{134, 136}));
+  CHECK((slai_todays_matches(data, 1, save) == std::array<int, 2>{slai_no_match, slai_no_match}));
+  CHECK((slai_todays_matches(data, 2, save) == std::array<int, 2>{134, 136}));
 }
 
 TEST_CASE("S.L.A.I. Rumble's world data names a stage pair for each city") {
@@ -282,7 +287,6 @@ TEST_CASE("S.L.A.I.'s entry requirement is held, and taken only when charge_entr
 
 TEST_CASE("the S.L.A.I. Rumble save block round-trips, and older saves load it empty") {
   QuestSave quest;
-  quest.slai_rumble.day = 42;
   quest.slai_rumble.stage = 2;
   quest.slai_rumble.city = 6;
   quest.slai_rumble.finals_cleared = 1;
@@ -295,23 +299,50 @@ TEST_CASE("the S.L.A.I. Rumble save block round-trips, and older saves load it e
   CHECK(older.day == 12);
   CHECK(older.slai_rumble == SlaiRumbleSave{});
   const auto odd = slai_rumble_from_json(json::parse(
-      R"({"day":-3,"records":[{"id":5,"beaten":[0,1,15]},{"id":6},{"cleared":true}]})"));
-  CHECK(odd.day == 0);
+      R"({"day":42,"stage":-3,"records":[{"id":5,"beaten":[0,1,15]},{"id":6},{"cleared":true}]})"));
+  CHECK(odd.stage == 0);
   REQUIRE(odd.records.size() == 1);
   CHECK(odd.records.at(5).beaten[0]);
 }
 
-TEST_CASE("sleeping moves S.L.A.I. Rumble's day on its own 100-day cycle") {
-  const auto script =
-      parse_sleep_script(DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT).document("ui/sleep.json"));
-  CHECK(script.slai_days_in_cycle == 100);
-  QuestSave quest;
-  quest.day = 59;
-  quest.slai_rumble.day = 98;
-  sleep_one_night(quest, script);
-  CHECK(quest.day == 0);
-  CHECK(quest.slai_rumble.day == 99);
-  sleep_one_night(quest, script);
-  CHECK(quest.day == 1);
-  CHECK(quest.slai_rumble.day == 0);
+TEST_CASE("S.L.A.I. Rumble's rota follows the calendar's day") {
+  SlaiRumbleData data;
+  data.table = synthetic_table();
+  data.rota.days = {{{2, 0}, {1, 7}, {3, 0}}, {{6, 5}, {0, 5}, {4, 5}}};
+  SlaiRumbleSave save;
+  save.stage = 1;
+  const auto today = slai_day_matches(data, 0, save);
+  REQUIRE(today.size() == 3);
+  CHECK(today[1].city == 1);
+  CHECK(today[1].slai_day == 7);
+  CHECK(today[1].match == 21);
+  CHECK(!today[1].night);
+  // A city with no day match shows its night one; a closed city none.
+  save.stage = 3;
+  save.finals_cleared = 2;
+  const auto tokyo = slai_city_match(data, 1, 0, save);
+  REQUIRE(tokyo);
+  CHECK(tokyo->match == 40);
+  CHECK(tokyo->night);
+  CHECK(!slai_city_match(data, 1, 1, save));
+  CHECK(slai_rota_source(data.rota, 3, 4) == 5);
+  CHECK(slai_rota_day(SlaiRota{}, 4).empty());
+  CHECK_THROWS(parse_slai_rota(json::parse(R"({"days":[[{"city":7,"slai_day":0}]]})"), 7, 100));
+  CHECK_THROWS(parse_slai_rota(json::parse(R"({"days":[[{"city":1,"slai_day":100}]]})"), 7, 100));
+}
+
+TEST_CASE("the committed rota opens three cities a day, none two days running") {
+  const auto roots = DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT);
+  const auto rota = parse_slai_rota(roots.document(slai_rota_file), 7, 100);
+  REQUIRE(rota.days.size() == 60);
+  for (std::size_t day = 0; day < rota.days.size(); ++day) {
+    const auto &today = rota.days[day];
+    const auto &next = rota.days[(day + 1) % rota.days.size()];
+    REQUIRE(today.size() == 3);
+    for (const auto &entry : today) {
+      for (const auto &later : next) {
+        CHECK(entry.city != later.city);
+      }
+    }
+  }
 }

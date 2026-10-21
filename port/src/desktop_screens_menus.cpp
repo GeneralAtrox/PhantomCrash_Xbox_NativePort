@@ -9,6 +9,7 @@
 #include "desktop_option_screens.hpp"
 
 #include "phantomcrash/saved_time.hpp"
+#include "phantomcrash/shop_variants.hpp"
 
 #include <algorithm>
 #include <utility>
@@ -23,6 +24,16 @@ MenuEntry ScreenRunner::entered(const std::string &name, const MenuBasics &basic
     menu_origins_[name] = from;
   }
   return menu_entry(basics, menu_origins_[name]);
+}
+
+void ScreenRunner::load_location_menus(const DataRoots &roots) {
+  for (const auto &[menu, document] : location_menu_documents(roots)) {
+    LocationMenuScript script = parse_location_menu(roots.document(document), document);
+    if (game_->slai_rumble() == nullptr) {
+      drop_items_needing(script, "slai");
+    }
+    location_menus_[menu] = std::move(script);
+  }
 }
 
 std::unique_ptr<Screen> ScreenRunner::make_menu(const std::string &name, const std::string &from) {

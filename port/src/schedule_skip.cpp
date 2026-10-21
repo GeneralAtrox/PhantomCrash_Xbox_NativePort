@@ -1,5 +1,5 @@
-// The schedule's bottom row: EXIT, and the port's SKIP TO DAY beside it
-// with its question (phantomcrash/day_skip.hpp).
+// The schedule's bottom row: EXIT, the port's SKIP TO DAY beside it with
+// its question (phantomcrash/day_skip.hpp), and the S.L.A.I. toggle.
 
 #include "phantomcrash/schedule.hpp"
 #include "phantomcrash/shop_pointer.hpp"
@@ -10,6 +10,12 @@ void Schedule::press_button() {
   sounds_.play(script_.select_sound);
   if (button_ == exit_button) {
     fade_.leave(back_);
+    return;
+  }
+  if (button_ == toggle_button) {
+    slai_page_ = !slai_page_;
+    row_ = button_row();
+    ticker_seconds_ = 0.0;
     return;
   }
   plan_ = plan_day_skip(quest_, skip_day(), script_.skip.sleep.days_in_cycle);

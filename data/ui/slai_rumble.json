@@ -1,0 +1,762 @@
+{
+ "notes": [
+  "Rumble S.L.A.I. (a port screen, not in the original; docs/SLAI_RUMBLE_PLAN.md, Screens): Club Wired's way into S.L.A.I.'s campaign, shown only with S.L.A.I. installed and enabled. It lists the three cities the rota opens today (world/slai_rota.json), each with its rumble at the player's S.L.A.I. stage, on the schedule's art.",
+  "rows: row r's top-left is origin + r x step. Each row: the city's plate (plate.box: x on the canvas, y from the row's top) and name (city, in the plate's box), the venue's whole day or night tile (tile, lit under the cursor) with its regulation's badge (badges: the first listing the regulation, else the one listing none; white under the cursor, badge_dim otherwise) and CLEAR once the match's record is cleared, the regulation's name (rule) and, under it, the money entry needs and the prize at the regulation's target score (amounts, in the HUD's money font).",
+  "city_art: with S.L.A.I.'s Club Wired city sheets installed (UK_WIR_<CITY>01.PIG, converted at registration to textures/slai/wired/), each row shows the city's emblem fitted in emblem_box and its '<CITY> / DAY' or '<CITY> / NIGHT' label above the regulation, in place of the plate and the city's name; without the sheet the plate is drawn. The rectangles are the sheets' (by the table's city column), padded for the glow and shadow.",
+  "Input: up/down move between the rows and EXIT, wrapping; cancel moves to EXIT. confirm on a row opens its INFORMATION (info, the schedule's popup with S.L.A.I.'s rule text), and confirm again enters: with the money entry needs and a ridden robot that is ready, the entry is paid and the screen leaves for the battle; otherwise a notice says why ({entry} is the money needed). confirm on EXIT leaves for exit_to.",
+  "The battle is a stand-in until S.L.A.I.'s opponent rosters are decoded: the ridden robot on the city's imported stage against training drones, one fewer than the match's robots. Its result clears the match's record when the player is standing and shot down as many as there were opponents; the shootdowns are the score its prize is paid on."
+ ],
+ "scene": 32,
+ "music": "keep",
+ "fade_in": 0.5,
+ "fade_out": 0.5,
+ "exit_to": "club_wired",
+ "confirm": {
+  "buttons": "confirm"
+ },
+ "cancel": {
+  "buttons": "cancel"
+ },
+ "cursor_repeat": {
+  "delay": 0.4,
+  "interval": 0.15
+ },
+ "buttons": {
+  "up": "up",
+  "down": "down"
+ },
+ "sounds": {
+  "move": "cursor",
+  "select": "confirm",
+  "close": "cancel",
+  "refuse": "cancel"
+ },
+ "layers": [
+  {
+   "id": "background",
+   "image": "textures/scroll/schedule_tex/0.png",
+   "rect": [
+    0,
+    0,
+    640,
+    480
+   ],
+   "position": [
+    0,
+    0
+   ],
+   "layer": 1,
+   "extend_edges": "both",
+   "edge_bands": [
+    [
+     0,
+     72
+    ],
+    [
+     376,
+     480
+    ]
+   ],
+   "edge_bands_left": [
+    [
+     0,
+     72
+    ],
+    [
+     414,
+     480
+    ]
+   ]
+  },
+  {
+   "id": "slai_rumble_band",
+   "image": "textures/scroll/schedule_tex/0.png",
+   "rect": [
+    0,
+    816,
+    640,
+    912
+   ],
+   "position": [
+    0,
+    0
+   ],
+   "layer": 2,
+   "extend_edges": "both",
+   "edge_inset": [
+    1,
+    1
+   ]
+  },
+  {
+   "id": "music_band",
+   "image": "textures/scroll/schedule_tex/0.png",
+   "rect": [
+    0,
+    712,
+    640,
+    816
+   ],
+   "position": [
+    0,
+    376
+   ],
+   "layer": 2,
+   "extend_edges": "both",
+   "edge_inset": [
+    1,
+    1
+   ]
+  }
+ ],
+ "frame": {
+  "hud": true,
+  "meter": [
+   434,
+   395
+  ],
+  "now_playing": {
+   "format": "《 {title} : {artist} 》",
+   "position": [
+    0,
+    419
+   ],
+   "clip": [
+    0,
+    419,
+    396,
+    437
+   ],
+   "colour": "#ffffff",
+   "speed": 60,
+   "trail": 45,
+   "layer": 263
+  }
+ },
+ "exit": {
+  "normal": {
+   "id": "exit",
+   "image": "textures/scroll/schedule_tex/0.png",
+   "rect": [
+    520,
+    672,
+    640,
+    712
+   ],
+   "position": [
+    261,
+    349
+   ],
+   "layer": 259
+  },
+  "selected": {
+   "id": "exit_lit",
+   "image": "textures/scroll/schedule_tex/0.png",
+   "rect": [
+    640,
+    672,
+    760,
+    712
+   ],
+   "position": [
+    261,
+    349
+   ],
+   "layer": 260,
+   "animation": "pulse"
+  }
+ },
+ "rows": {
+  "image": "textures/scroll/schedule_tex/0.png",
+  "origin": [
+   180,
+   112
+  ],
+  "step": [
+   0,
+   76
+  ],
+  "tile": [
+   0,
+   0
+  ],
+  "tiles": {
+   "day": [
+    696,
+    608,
+    784,
+    672
+   ],
+   "day_lit": [
+    784,
+    608,
+    872,
+    672
+   ],
+   "night": [
+    872,
+    608,
+    960,
+    672
+   ],
+   "night_lit": [
+    640,
+    712,
+    728,
+    776
+   ]
+  },
+  "tile_layer": 8,
+  "badge_layer": 258,
+  "badge_dim": "#404040",
+  "badges": [
+   {
+    "regulations": [
+     22
+    ],
+    "rect": [
+     608,
+     480,
+     696,
+     544
+    ],
+    "class": "CLASS FREE"
+   },
+   {
+    "regulations": [
+     23
+    ],
+    "rect": [
+     904,
+     408,
+     992,
+     472
+    ],
+    "class": "CLASS D"
+   },
+   {
+    "regulations": [
+     24
+    ],
+    "rect": [
+     816,
+     408,
+     904,
+     472
+    ],
+    "class": "CLASS C"
+   },
+   {
+    "regulations": [
+     25
+    ],
+    "rect": [
+     728,
+     408,
+     816,
+     472
+    ],
+    "class": "CLASS B"
+   },
+   {
+    "regulations": [
+     26
+    ],
+    "rect": [
+     904,
+     344,
+     992,
+     408
+    ],
+    "class": "CLASS A"
+   },
+   {
+    "regulations": [
+     27
+    ],
+    "rect": [
+     640,
+     408,
+     728,
+     472
+    ],
+    "class": "AREA RANKER"
+   },
+   {
+    "regulations": [
+     2,
+     3,
+     4,
+     5
+    ],
+    "rect": [
+     520,
+     480,
+     608,
+     544
+    ],
+    "class": "FIRST RANKER"
+   },
+   {
+    "rect": [
+     696,
+     480,
+     784,
+     544
+    ],
+    "class": "REGULATION"
+   }
+  ],
+  "clear": {
+   "id": "clear",
+   "image": "textures/scroll/schedule_tex/0.png",
+   "rect": [
+    816,
+    280,
+    904,
+    344
+   ],
+   "layer": 259
+  },
+  "plate": {
+   "box": [
+    64,
+    17,
+    160,
+    47
+   ],
+   "layer": 262,
+   "outlines": [
+    {
+     "box": [
+      78,
+      9,
+      95,
+      21
+     ],
+     "stops": [
+      [
+       0,
+       "#6e6e6e"
+      ],
+      [
+       0,
+       "#6e6e6e",
+       0
+      ]
+     ]
+    },
+    {
+     "box": [
+      4,
+      2,
+      79,
+      28
+     ],
+     "radius": 5,
+     "fill": {
+      "axis": "y",
+      "stops": [
+       [
+        5,
+        "#000c18"
+       ],
+       [
+        25,
+        "#002040"
+       ]
+      ]
+     },
+     "stops": [
+      [
+       -3,
+       "#000c18"
+      ],
+      [
+       -3,
+       "#656565"
+      ],
+      [
+       0,
+       "#656565"
+      ],
+      [
+       0,
+       "#656565",
+       0
+      ]
+     ]
+    }
+   ]
+  },
+  "city": {
+   "font": "futura_italic",
+   "box": [
+    10,
+    9,
+    73,
+    21
+   ],
+   "colour": "#ffe23c",
+   "layer": 263,
+   "shadow": {
+    "offset": [
+     1,
+     1
+    ],
+    "colour": "#000000",
+    "alpha": 0.9,
+    "blur": 0.6
+   }
+  },
+  "rule": {
+   "font": "futura_italic",
+   "box": [
+    100,
+    17,
+    400,
+    33
+   ],
+   "colour": "#ffffff",
+   "layer": 263,
+   "shadow": {
+    "offset": [
+     1,
+     1
+    ],
+    "colour": "#000000",
+    "alpha": 0.9,
+    "blur": 0.6
+   }
+  }
+ },
+ "amounts": {
+  "entry_label": {
+   "font": "futura",
+   "box": [
+    100,
+    36,
+    170,
+    49
+   ],
+   "colour": "#f7c300",
+   "layer": 263,
+   "shadow": {
+    "offset": [
+     1,
+     1
+    ],
+    "colour": "#000000",
+    "alpha": 0.9,
+    "blur": 0.6
+   }
+  },
+  "prize_label": {
+   "font": "futura",
+   "box": [
+    100,
+    51,
+    170,
+    64
+   ],
+   "colour": "#f7c300",
+   "layer": 263,
+   "shadow": {
+    "offset": [
+     1,
+     1
+    ],
+    "colour": "#000000",
+    "alpha": 0.9,
+    "blur": 0.6
+   }
+  },
+  "entry_text": "ENTRY",
+  "prize_text": "PRIZE",
+  "entry_at": [
+   176,
+   35
+  ],
+  "prize_at": [
+   176,
+   50
+  ],
+  "digits": 7,
+  "colour": "#ffffff",
+  "layer": 260
+ },
+ "city_art": {
+  "emblem_box": [
+   64,
+   0,
+   176,
+   64
+  ],
+  "label_at": [
+   99,
+   0
+  ],
+  "label_scale": 0.7,
+  "layer": 262,
+  "cities": [
+   {
+    "image": "textures/slai/wired/tokyo.png",
+    "emblem": [
+     337,
+     282,
+     471,
+     404
+    ],
+    "day": [
+     278,
+     490,
+     411,
+     512
+    ],
+    "night": [
+     268,
+     465,
+     420,
+     489
+    ]
+   },
+   {
+    "image": "textures/slai/wired/stuttgart.png",
+    "emblem": [
+     340,
+     286,
+     469,
+     401
+    ],
+    "day": [
+     251,
+     490,
+     437,
+     512
+    ],
+    "night": [
+     241,
+     465,
+     446,
+     489
+    ]
+   },
+   {
+    "image": "textures/slai/wired/new_york.png",
+    "emblem": [
+     319,
+     289,
+     488,
+     400
+    ],
+    "day": [
+     256,
+     490,
+     431,
+     512
+    ],
+    "night": [
+     247,
+     465,
+     441,
+     489
+    ]
+   },
+   {
+    "image": "textures/slai/wired/london.png",
+    "emblem": [
+     338,
+     286,
+     469,
+     402
+    ],
+    "day": [
+     268,
+     490,
+     420,
+     512
+    ],
+    "night": [
+     258,
+     465,
+     429,
+     489
+    ]
+   },
+   {
+    "image": "textures/slai/wired/hong_kong.png",
+    "emblem": [
+     329,
+     284,
+     480,
+     402
+    ],
+    "day": [
+     248,
+     490,
+     440,
+     512
+    ],
+    "night": [
+     238,
+     465,
+     449,
+     489
+    ]
+   },
+   {
+    "image": "textures/slai/wired/cairo.png",
+    "emblem": [
+     331,
+     285,
+     476,
+     401
+    ],
+    "day": [
+     280,
+     490,
+     408,
+     512
+    ],
+    "night": [
+     270,
+     465,
+     418,
+     489
+    ]
+   },
+   {
+    "image": "textures/slai/wired/las_vegas.png",
+    "emblem": [
+     346,
+     287,
+     462,
+     401
+    ],
+    "day": [
+     253,
+     490,
+     435,
+     512
+    ],
+    "night": [
+     243,
+     465,
+     444,
+     489
+    ]
+   }
+  ]
+ },
+ "cursor": {
+  "frame": {
+   "id": "cursor",
+   "image": "textures/scroll/schedule_tex/0.png",
+   "rect": [
+    728,
+    344,
+    816,
+    408
+   ],
+   "layer": 257
+  },
+  "pulse": {
+   "id": "cursor_pulse",
+   "image": "textures/scroll/schedule_tex/0.png",
+   "rect": [
+    816,
+    344,
+    904,
+    408
+   ],
+   "layer": 263,
+   "animation": "pulse"
+  },
+  "border": 6,
+  "box": [
+   -6,
+   -4,
+   406,
+   68
+  ]
+ },
+ "info": {
+  "panel": {
+   "id": "information",
+   "image": "textures/scroll/schedule_tex/0.png",
+   "rect": [
+    640,
+    0,
+    944,
+    280
+   ],
+   "position": [
+    170,
+    110
+   ],
+   "layer": 264
+  },
+  "grow_seconds": 0.2,
+  "grow_from_scale": 0.3,
+  "contest": [
+   184,
+   157
+  ],
+  "class": [
+   184,
+   192
+  ],
+  "body": [
+   184,
+   227
+  ],
+  "legs": [
+   184,
+   262
+  ],
+  "other": [
+   184,
+   297
+  ],
+  "fee": [
+   184,
+   334
+  ],
+  "fee_digits": 9,
+  "fee_unit": {
+   "id": "ny",
+   "image": "textures/scroll/common_2d_tex/1.png",
+   "rect": [
+    464,
+    456,
+    496,
+    472
+   ]
+  },
+  "no_limits": "No limits.",
+  "text_colour": "#f0f0f0",
+  "text_layer": 265
+ },
+ "city_names": [
+  "TOKYO",
+  "STUTTGART",
+  "NEW YORK",
+  "LONDON",
+  "HONG KONG",
+  "CAIRO",
+  "LAS VEGAS"
+ ],
+ "closed": [
+  "No S.L.A.I. city holds a rumble today."
+ ],
+ "refusals": {
+  "money": [
+   "Entry needs {entry} NY.",
+   "You do not have enough money."
+  ],
+  "not_ready": [
+   "Your Scoobee is not ready to fight."
+  ]
+ },
+ "battle": "slai_battle"
+}

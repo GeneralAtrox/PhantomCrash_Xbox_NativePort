@@ -26,6 +26,9 @@ struct LocationItem {
   Sprite highlight;
   Sprite label;
   std::string select_sound;
+  // Content the item needs installed ("slai": S.L.A.I.), or none; the host
+  // drops an item whose content is missing.
+  std::string needs;
 };
 
 // The wheel: the wedge of the item at rest sits at `position` (its
@@ -59,6 +62,10 @@ struct LocationMenuScript : MenuBasics {
 // Throws std::runtime_error naming the document (`name`) and entry at fault.
 [[nodiscard]] LocationMenuScript parse_location_menu(const json::JsonValue &document,
                                                      const std::string &name);
+
+// Drops the items that need `content` (LocationItem::needs), for when it is
+// not installed.
+void drop_items_needing(LocationMenuScript &script, const std::string &content);
 
 // A location's menu (Club Wired 0x1ba45, 0x1bec1; the garage 0x1cbd8,
 // 0x1ca21): a wheel of items turned by a horizontal cursor that wraps.
