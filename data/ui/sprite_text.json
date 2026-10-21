@@ -23,6 +23,7 @@
   "squared_bold": {"faces": ["Bahnschrift"], "weight": 700}
  },
  "classes": {
+  "fabrik_wordmark": {"font": "squared_bold", "stretch": true, "slant": 0.21, "erase": true},
   "menu_title": {"font": "futura_medium", "colour": "#ffffff", "outline": "#ffffff", "outline_width": 0.35, "capitals": true, "text_box": [20, 1, 236, 35], "within": [19, 0, 240, 48], "measure": {"tolerance": 90}},
   "menu_title_garage": {"class": "menu_title", "shadow": {"offset": [1.5, 2], "colour": "#327a0a", "alpha": 0.85, "blur": 1.5}},
   "menu_title_club": {"class": "menu_title", "shadow": {"offset": [1.5, 2], "colour": "#0b0fae", "alpha": 0.85, "blur": 1.5}},
@@ -1236,6 +1237,14 @@
   {"source": {"image": "textures/scroll/game_vs_tex/0.png", "rect": [0, 344, 136, 376]}, "text": "SELECT SV", "class": "vs_menu_item", "region": [15, 11, 115, 23], "erase_region": [14, 10, 117, 25]},
   {"source": {"image": "textures/scroll/game_vs_tex/0.png", "rect": [328, 280, 464, 312]}, "text": "EXIT", "class": "vs_menu_item", "region": [43, 11, 91, 23], "erase_region": [42, 10, 93, 25]},
   {"source": {"image": "textures/slai/shops/mak02_1.png", "rect": [44, 26, 221, 242]}, "text": "OMSK HEAVY-MACHINE DESIGN BURERAU & PLANT", "font": "condensed", "stretch": true, "region": [1, 155, 169, 162], "colour": "#ffffff", "erase": true, "shadow": {"offset": [1.5, 2.5], "colour": "#000000", "alpha": 0.9, "blur": 1.5}},
-  {"source": {"image": "textures/slai/shops/mak04_1.png", "rect": [20, 21, 240, 251]}, "text": "Scheer und Voltz Machinenfabrik AG", "font": "squared_bold", "stretch": true, "region": [10, 206, 202, 214], "colour": "#ffffff", "erase": true, "shadow": {"offset": [1.5, 2.5], "colour": "#000000", "alpha": 0.9, "blur": 1.5}}
+  {"source": {"image": "textures/slai/shops/mak04_1.png", "rect": [20, 21, 240, 251]}, "text": "Scheer und Voltz Machinenfabrik AG", "font": "squared_bold", "stretch": true, "region": [10, 206, 202, 214], "colour": "#ffffff", "erase": true, "shadow": {"offset": [1.5, 2.5], "colour": "#000000", "alpha": 0.9, "blur": 1.5}},
+  {"source": {"image": "textures/slai/shops/mak04_1.png", "rect": [20, 21, 240, 251]}, "class": "fabrik_wordmark", "text": "S", "region": [3.05, 172.4, 24.7, 199.7], "colour": "#e08f25", "shadow": {"offset": [2, 3], "colour": "#000000", "alpha": 0.85, "blur": 2}},
+  {"source": {"image": "textures/slai/shops/mak04_1.png", "rect": [20, 21, 240, 251]}, "class": "fabrik_wordmark", "text": "&", "region": [24.78, 184.7, 38.75, 200.0], "colour": "#ffffff", "shadow": {"offset": [2, 3], "colour": "#000000", "alpha": 0.85, "blur": 2}},
+  {"source": {"image": "textures/slai/shops/mak04_1.png", "rect": [20, 21, 240, 251]}, "class": "fabrik_wordmark", "text": "V", "region": [36.31, 177.9, 57.78, 203.0], "colour": "#e08f25", "shadow": {"offset": [2, 3], "colour": "#000000", "alpha": 0.85, "blur": 2}},
+  {"source": {"image": "textures/slai/shops/mak04_1.png", "rect": [20, 21, 240, 251]}, "class": "fabrik_wordmark", "text": "Ma.FABRIK", "region": [58.11, 177.9, 204.89, 200.0], "colour": "#ffffff", "shadow": {"offset": [2, 3], "colour": "#000000", "alpha": 0.85, "blur": 2}},
+  {"source": {"image": "textures/slai/shops/mak04_1.png", "rect": [20, 21, 240, 251]}, "class": "fabrik_wordmark", "text": "S", "region": [44.18, 142.5, 57.29, 159.02], "colour": "#ffffff"},
+  {"source": {"image": "textures/slai/shops/mak04_1.png", "rect": [20, 21, 240, 251]}, "class": "fabrik_wordmark", "text": "&", "region": [57.33, 149.94, 65.79, 159.2], "colour": "#ffffff"},
+  {"source": {"image": "textures/slai/shops/mak04_1.png", "rect": [20, 21, 240, 251]}, "class": "fabrik_wordmark", "text": "V", "region": [64.31, 145.83, 77.3, 161.01], "colour": "#ffffff"},
+  {"source": {"image": "textures/slai/shops/mak04_1.png", "rect": [20, 21, 240, 251]}, "class": "fabrik_wordmark", "text": "Ma.FABRIK", "region": [77.49, 145.83, 166.3, 159.2], "colour": "#ffffff"}
  ]
 }
