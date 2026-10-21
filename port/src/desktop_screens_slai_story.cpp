@@ -1,0 +1,93 @@
+// S.L.A.I.'s story in the screen runner: the talk scene a move between the
+// port's screens plays (docs/SLAI_STORY_PLAN.md), and its screen.
+
+#include "desktop_screens.hpp"
+#include "desktop_slai_talk.hpp"
+
+#include <algorithm>
+
+namespace phantomcrash {
+namespace {
+
+constexpr std::string_view slai_talk_prefix = "slai_talk:";
+// The town map's place, where "town" rows play.
+constexpr std::string_view town_place = "townmap";
+// Where a scene started on its own (--start) leads.
+constexpr std::string_view default_next = "town_map";
+
+// The script's name placeholders take the port's names; braces would read
+// as text tokens.
+std::string placeholder_name(const std::string &name, const std::string &fallback) {
+  std::string out;
+  std::ranges::copy_if(name, std::back_inserter(out), [](char c) { return c != '{' && c != '}'; });
+  return out.empty() ? fallback : out;
+}
+
+} // namespace
+
+std::optional<SlaiStory> ScreenRunner::load_slai_story(const DataRoots &roots) {
+  if (!roots.slai()) {
+    return std::nullopt;
+  }
+  try {
+    auto story = SlaiStory::load(roots);
+    if (!story) {
+      SDL_Log("S.L.A.I. story: no talk data (register-slai-talk)");
+    }
+    return story;
+  } catch (const std::exception &error) {
+    SDL_Log("S.L.A.I. story: talk data unreadable: %s", error.what());
+    return std::nullopt;
+  }
+}
+
+std::string ScreenRunner::slai_story_target(const std::string &source, const std::string &name) {
+  const SlaiStoryContext context{quest_.slai_story, quest_.slai_rumble, quest_.money};
+  const auto to = slai_story_->places_of(name);
+  const SlaiTalkEvent *event = nullptr;
+  if (std::ranges::find(to, town_place) != to.end()) {
+    event = slai_story_->next_event("town", town_place, town_place, context);
+  }
+  for (const auto &from : slai_story_->places_of(source)) {
+    for (const auto &place : to) {
+      if (event == nullptr) {
+        event = slai_story_->next_event("scene_change", from, place, context);
+      }
+    }
+  }
+  if (event == nullptr) {
+    return {};
+  }
+  SlaiStory::complete(*event, quest_.slai_story);
+  SDL_Log("S.L.A.I. story event: %s from=%s to=%s", event->name.c_str(), source.c_str(),
+          name.c_str());
+  return std::string(slai_talk_prefix) + event->name;
+}
+
+std::unique_ptr<Screen> ScreenRunner::make_slai_talk(const std::string &name,
+                                                     const std::string &from) {
+  if (!slai_story_) {
+    return nullptr;
+  }
+  const std::string scene_name = name.substr(slai_talk_prefix.size());
+  SlaiTalkSceneNames names;
+  names.player = placeholder_name(quest_.player_name, names.player);
+  names.day = quest_.day + 1;
+  auto scene = slai_story_->scene(scene_name, names);
+  if (scene == nullptr) {
+    SDL_Log("S.L.A.I. story: no script for %s", scene_name.c_str());
+    return nullptr;
+  }
+  std::string next = slai_next_;
+  if (next.empty()) {
+    next = from.empty() || from.starts_with(slai_talk_prefix) ? std::string(default_next) : from;
+  }
+  std::unique_ptr<Screen> behind;
+  if (slai_story_->mode(scene_name) == SlaiTalkMode::town) {
+    behind = make(next, from);
+  }
+  return std::make_unique<SlaiTalkScreen>(textures_, std::move(scene), std::move(next),
+                                          std::move(behind));
+}
+
+} // namespace phantomcrash

@@ -258,7 +258,7 @@ std::unique_ptr<Screen> ScreenRunner::make(const std::string &name, const std::s
     return std::make_unique<PepperGuideScreen>(textures_, font_, guide_, guide_memory_, from, talk_,
                                                talk_tuning_, frame_, credits_, quest_);
   }
-  if (name.starts_with("event_")) {
+  if (name.starts_with("event_") || name.starts_with("slai_talk:")) {
     return make_event(name, from);
   }
   if (auto battle = make_battle(name)) {

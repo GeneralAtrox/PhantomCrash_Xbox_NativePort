@@ -54,6 +54,9 @@ std::string ScreenRunner::event_destination(const StoryEvent &event,
 }
 
 std::unique_ptr<Screen> ScreenRunner::make_event(const std::string &name, const std::string &from) {
+  if (name.starts_with("slai_talk:")) {
+    return make_slai_talk(name, from);
+  }
   const StoryEvent *event = named_event(name);
   if (event == nullptr) {
     return nullptr;
@@ -110,6 +113,18 @@ void ScreenRunner::show(const std::string &name, const bool events) {
     SDL_Log("Story event skipped: scene=%d from=%s to=%s", event->scene, source.c_str(),
             name.c_str());
     event = story_event(source, name);
+  }
+  if (!event && events && slai_story_) {
+    const bool after_scene = name_.starts_with("slai_talk:");
+    const std::string from = after_scene ? slai_from_ : source;
+    if (std::string scene = slai_story_target(from, name); !scene.empty()) {
+      slai_from_ = from;
+      slai_next_ = name;
+      target = std::move(scene);
+    } else if (after_scene) {
+      slai_from_.clear();
+      slai_next_.clear();
+    }
   }
   if (event && !skip_conversations_) {
     quest_.seen_events.push_back(event->scene);

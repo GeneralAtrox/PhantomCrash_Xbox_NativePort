@@ -15,6 +15,7 @@ from .native_cosmetics import register_cosmetics
 from .native_sound import register_sound
 from .native_particles import register_particles
 from .rumble_table import register_rumble
+from .talk_register import register_talk
 
 INSTALL_VERSION = 1
 
@@ -57,11 +58,14 @@ def install(disc: Path, root: Path, converter: Path, report=print) -> None:
         register_sound(disc, data, output)
         register_particles(disc, output)
         register_rumble(disc, output)
+        report('Converting talk scenes...', flush=True)
+        register_talk(disc, output)
         report('Converting music...', flush=True)
         convert_music(disc, assets, data, output, converter, report=lambda line: report(line, flush=True))
         for relative in ['tables/parts.json', 'tables/garage.json', 'robots/catalogue.json',
                          'slai/native_parts.json', 'slai/assets/manifest.json',
-                         'tables/slai_rumble.json']:
+                         'tables/slai_rumble.json', 'tables/slai_talk.json',
+                         'font/glyphs.json', 'talk/event/uk/main01t.json']:
             if not (output / relative).is_file():
                 raise ValueError('Incomplete S.L.A.I. conversion: ' + relative)
         save(output / 'installed.json', {'version': INSTALL_VERSION, 'disc': 'SLES_529.40'})
