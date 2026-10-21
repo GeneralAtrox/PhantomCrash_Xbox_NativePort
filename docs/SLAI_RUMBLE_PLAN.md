@@ -88,22 +88,48 @@ update the record and pay the prize, then return to the S.L.A.I. Rumble hub.
 
 ### Screens
 
-- **Club Wired:** a new wedge, "S.L.A.I. RUMBLE", shown only with S.L.A.I.
-  content. The wheel is authored for six items modulo six, so it must take the
-  item count from data. The wedge label is sharp text on an existing wedge
+Decided 2026-10-21 from mock-ups; the reference picture is
+`schedule_toggle_slai_cities.png` (one row per city, CLOSED where a city does
+not run that day).
+
+- **Schedule:** the Phantom Crash schedule is unchanged apart from a new
+  button between SKIP TO DAY and EXIT that toggles to the S.L.A.I. page and
+  back (labelled with the other calendar's name). The S.L.A.I. page has one
+  row per city in the original's display order (2 6 0 4 5 1 3), five day
+  columns, and in each cell the regulation for the player's current stage,
+  with DAY or NIGHT; cities not running that day read CLOSED. Cleared marks
+  as on the Phantom Crash page. SKIP TO DAY works from either page.
+- **Club Wired:** a new item, "Rumble S.L.A.I.", shown only with S.L.A.I.
+  content. The wheel is authored for six items modulo six, so it must take
+  the item count from data. The label is sharp text on an existing wedge
   image; the original pictures stay untouched.
-- **S.L.A.I. Rumble hub:** today's day and night rumbles in the current city,
-  a city picker and entry. It reuses the contest-info popup for rules and
-  prize.
-- **S.L.A.I. schedule:** 4 days × 7 cities in the original's display order
-  (2 6 0 4 5 1 3), with cleared marks. It is built from the port's schedule
-  screen with seven rows.
+- **Rumble S.L.A.I.:** today's three cities and their matches; the player
+  picks one. It reuses the contest-info popup for rules and prize.
 
 ### Days
 
-Sleeping advances the Phantom Crash day and the S.L.A.I. day together. The
-two cycles stay independent (60 and 100 days). Skip-to-day applies to the
-schedule that was open.
+Decided 2026-10-21: S.L.A.I. runs on Phantom Crash's 60-day calendar, three
+cities a day. There is no separate S.L.A.I. day counter; phase 2's
+`slai_rumble.day` becomes the Phantom Crash day.
+
+- **Rota rules.** Each day opens three of the seven cities. No city opens on
+  two days in a row, so a day picks three of the four cities closed the day
+  before. Within a day no regulation repeats at any stage (never two CLASS D,
+  never two REGIONAL MATCH), so every day is a mix.
+- **Where matches come from.** A city's match on Phantom Crash day `p` is that
+  city's S.L.A.I. line-up from one S.L.A.I. day near `p*100/60` (within two
+  days of the day range `p` maps to). The borrowing is needed because the
+  original themes most days: on its day 2 every city runs CLASS D.
+- **Coverage.** 180 city-days cannot hold S.L.A.I.'s 700, but almost every
+  distinct match fits: a search found a rota with 99/102 stage-1, 115/116
+  stage-2, 119/120 stage-3 and 132/134 stage-4 matches. Generation should push
+  this towards 100% (a wider window or an optimiser).
+- **Data.** The rota is port-authored data, `data/world/slai_rota.json`: per
+  day, three entries of city and source S.L.A.I. day (no disc content). A
+  research command generates it from the extracted `slai_rumble.json`; tests
+  check the rules and report coverage. Mods can hand-edit or replace it.
+- Finals, the stage ladder and records stay S.L.A.I.'s. Shop lineups (later)
+  follow the source S.L.A.I. day of the first open city.
 
 ## Phases (one session each; files do not overlap within a phase)
 
