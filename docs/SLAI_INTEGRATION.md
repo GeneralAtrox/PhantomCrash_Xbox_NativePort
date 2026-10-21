@@ -1993,3 +1993,68 @@ Original wheel steering inputs (2026-10-20):
   rerun `register-slai-assets` for `mods/`, so legs records gain
   `source_load`; until then S.L.A.I. legs keep the native turn adapter and
   unfiltered controls.
+
+## On-screen part review (2026-10-21)
+
+- Scope: every S.L.A.I. body (16-25), leg set (43-77) and shoulder weapon
+  (69-116), rendered with `--render-robot` from four fixed cameras (front,
+  side, back, three-quarter; distance 15, target height 1.9, the PC Plain
+  Holy at the same camera for size). 239 records were rendered: references,
+  the ten stock robots, each leg set on its matching body and on HLBody,
+  each shoulder in pairs on its matching body and on HLBody/HL2Leg, each
+  body on HL2Leg, PHLeg and AE2Leg plus PC shoulders and arms, and PHBody
+  and AEBody on the first leg of every maker. 36 Test Drive captures (CHOCO
+  day, chase camera) show each leg set walking under its matching body, and
+  four show shoulder fire. A scratch garage table was used; no code or
+  shared data changed. The contact sheets are in
+  `research-output/review-parts/` (`static/`, `test_drive/`, `findings/`).
+- Checked and correct: body facing agrees with leg facing and with the
+  walking direction; body/leg joins are closed for matching and mixed sets;
+  no missing or inside-out faces were seen; every leg set walks with a
+  plausible mid-stride pose.
+- Findings, most severe first:
+  1. Legs 76 `S9L01H` DUSTER-3Wheel and 77 `SAL01H` SWEEPER-3Wheel draw
+     untextured white in every view and in Test Drive (`static/stock_02`,
+     `legs_matching_05`, `legs_pc_body_05`, `test_drive/walk_76`,
+     `walk_77`). Their source glTFs use the body textures `s9b01h01.png` and
+     `sab01h01.png`. `native_parts.py` looks leg paints up by the leg's own
+     stem, so leg types 54/55 get empty `paint_images` and binlinks 14602
+     and 15102 carry no image.
+  2. Source muzzle flash. Firing shoulder M-18 (79) on HARTMAN or Holy draws
+     a robot-sized pinwheel of quads with a block-grid texture
+     (`test_drive/fire_m18_hartman`, `fire_m18_holy`,
+     `findings/flash_zoom`). The PC shoulder control shows a normal flash
+     (`fire_pc2_holy`). `mflash_01/02.png` look like an undecoded PS2
+     swizzle or palette (`findings/mflash01`, `mflash02`); the size and the
+     undecoded flag `0x1000`/hook `0x5bb190` blend also need checking. It
+     affects all 95 weapons with a source flash.
+  3. Phantom Crash bodies and weapons on S.L.A.I. legs take the paint
+     atlas of the template leg the importer copied (PROTON: PHLeg tan;
+     KHT-named S2L: fixed TL4Leg yellow; ZWERG-named S4L: fixed TRHover red;
+     HARTMAN-named S5L: AE2Leg camo; others: HL2Leg white). The paint
+     choice has no effect on the two fixed tables
+     (`static/legs_pc_body_*`, `pc_bodies_slai_legs_*`,
+     `bodies_pc_weapons_*`). This is because `robot.paint` follows
+     `legs.paints`.
+  4. Shoulder-weapon facing needs verifying. M-18 (79) barrels seem to
+     point rearward (+z) in side views, and at the chase camera when it
+     fires. T54 (71), T70 (72), T66 (73) and the T64 laser (74) look the
+     same (`findings/shoulders_side_*`, `shoulders_pc_side_*`). Mounting is
+     consistent between S.L.A.I. and PC bodies (`findings/gren`), so a
+     reversal would be in the weapon model or mount data. It is related to
+     the arm-facing work.
+  5. Uncertain: holding fire for 50 ticks spent one M-18 round per side.
+  6. Leg maker names do not follow the model prefixes: S2L is named KHT,
+     S4L ZWERG and S5L HARTMAN, while the S2B/S4B/S5B bodies are HARTMAN,
+     KHT and ZWERG. Shoulders follow the prefix. Check against the source
+     name table.
+  7. Stand poses to compare with the original: 58 CARRO-4Wheels (front pod
+     raised), 63 ZWERG-2Wheels (pod tilted about 45 degrees) and 69
+     HARTMAN-2Wheels (twisted lower leg).
+- Recorded for other work: S.L.A.I. robots stand about 1.4-1.6 times the
+  Plain Holy's height at the same camera, and ELINT, MOLNIYA and ARDITO
+  about 2 times (stage and robot scale). PROTON stock uses arms 76/77
+  (arm work).
+- Not checked: comparison with the original game, projectile direction,
+  walking seen from the side, and dash, jump, turn and damage poses. Arms
+  were seen only in the stock robots.
