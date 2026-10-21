@@ -112,13 +112,31 @@ TEST_CASE("the elevation is measured in the body's frame, not the world's") {
   CHECK(same(nodes[0].local, rotation_x(pi / 4.0F)));
 }
 
-TEST_CASE("a weapon's aim node turns its -z at the target with its y up") {
+TEST_CASE("the yaw and roll turns follow the z mirror's signs") {
+  // Level with the target, so only the row's own angles turn the arm: the
+  // turn about y is reversed and the one about z kept.
+  SourceArmAim aim = pitch_only(-1.5F, 1.5F);
+  aim.order = {'y'};
+  aim.sides[0].yaw = 0.3F;
+  std::vector<RigidNode> nodes = one_node();
+  aim_source_arm(aim, 0, {1.0F, Vec3{0.0F, 0.0F, -20.0F}, Vec3{}}, Mat4{}, nodes);
+  CHECK(same(nodes[0].local, rotation_y(-0.3F)));
+  aim.order = {'z'};
+  aim.sides[0].roll = 0.3F;
+  nodes = one_node();
+  aim_source_arm(aim, 0, {1.0F, Vec3{0.0F, 0.0F, -20.0F}, Vec3{}}, Mat4{}, nodes);
+  CHECK(same(nodes[0].local, rotation_z(0.3F)));
+}
+
+TEST_CASE("a weapon's aim node turns its barrel (+z in port axes) at the target with its y up") {
+  // The source's -z barrel arrives at the port's +z through the loader's z
+  // mirror: S.L.A.I. muzzles sit at +z of the aim node as the port loads them.
   std::vector<RigidNode> nodes = one_node(rotation_y(1.2F) * rotation_x(0.7F));
   const Vec3 target{10.0F, 0.0F, 0.0F};
   aim_source_weapon(0, 0.0F, {1.0F, target, Vec3{}}, Mat4{}, nodes);
-  CHECK(near(row_of(nodes[0].local, 2), Vec3{-1.0F, 0.0F, 0.0F})); // -z faces the target
+  CHECK(near(row_of(nodes[0].local, 2), Vec3{1.0F, 0.0F, 0.0F})); // +z faces the target
   CHECK(near(row_of(nodes[0].local, 1), Vec3{0.0F, 1.0F, 0.0F}));
-  CHECK(near(row_of(nodes[0].local, 0), Vec3{0.0F, 0.0F, 1.0F}));
+  CHECK(near(row_of(nodes[0].local, 0), Vec3{0.0F, 0.0F, -1.0F}));
 }
 
 TEST_CASE("a mirrored weapon keeps its mirror while it aims") {
@@ -128,7 +146,7 @@ TEST_CASE("a mirrored weapon keeps its mirror while it aims") {
   aim_source_weapon(0, 0.0F, {1.0F, target, Vec3{}}, Mat4{}, nodes);
   const Mat4 &local = nodes[0].local;
   CHECK(dot(row_of(local, 0), cross(row_of(local, 1), row_of(local, 2))) < 0.0F);
-  CHECK(near(row_of(local, 2), Vec3{0.0F, 0.0F, 1.0F}));
+  CHECK(near(row_of(local, 2), Vec3{0.0F, 0.0F, -1.0F}));
 }
 
 TEST_CASE("a weapon below a parent faces the target in world space") {
@@ -141,7 +159,7 @@ TEST_CASE("a weapon below a parent faces the target in world space") {
   aim_source_weapon(1, 0.0F, {1.0F, target, Vec3{}}, Mat4{}, nodes);
   const Mat4 world = nodes[1].local * nodes[0].local;
   const Vec3 position{world.at(3, 0), world.at(3, 1), world.at(3, 2)};
-  CHECK(near(normalize(row_of(world, 2)), normalize(position - target)));
+  CHECK(near(normalize(row_of(world, 2)), normalize(target - position)));
 }
 
 TEST_CASE("arm aim rows parse from the catalogue and reject bad axes") {

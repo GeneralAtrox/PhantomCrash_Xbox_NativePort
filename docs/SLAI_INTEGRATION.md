@@ -1699,6 +1699,17 @@ guns pointing at the ground, and the target's armour never dropped.
   when the arm record's +0x1a is 1, otherwise `+0xcd0`. The up vector is
   (0, 1, 0) in source axes, and the node is rolled by the twist about its
   z axis (`0x1aabe0`).
+- Port axes. The export mirrors y and the port's loader mirrors z, so the
+  source's -z barrel is the loaded node's +z. The port's look-at
+  (`source_arm_aim.cpp`) turns +z at the target, and the arm turns take the
+  z mirror's signs: x and y reversed, z kept.
+  - Checked in a traced Test Drive (S1A01H) by measuring the muzzle nodes'
+    direction from the aim node against the target. With the source's
+    signs the muzzles were 177 degrees off; with the port's they are 3.
+  - With every angle reversed, high-roll rows left the arms 70-90 degrees
+    off the target. With the z-mirror signs they are 10-25 degrees off.
+  - Rows with byte `+0x2b` clear (keep rotation off) still lack the
+    untraced `+0x150` / `+0x15c` turn and stay about 65 degrees off.
 - `0x4dfde8` steps the raise counter `+0xeac + slot * 0xc` by one each tick,
   clamped to the arm record's +0x136 (through `0x24dcf0`).
 - Field labels are researcher-assigned. Instruction guards are in

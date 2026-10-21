@@ -36,8 +36,16 @@ Vec3 source_axes(const Vec3 v) {
   return {v.x, -v.y, v.z};
 }
 
-// A source turn about one axis, conjugated by the export's mirror (which
-// reverses each angle), for the port's row vectors.
+// The model data's axes: the export mirrors y and the port's loader mirrors
+// z (rigid_animation.cpp), a half turn about x. Its own inverse.
+Vec3 model_axes(const Vec3 v) {
+  return {v.x, -v.y, -v.z};
+}
+
+// A source turn about one axis, conjugated by a z mirror for the port's row
+// vectors: it reverses the turns about x and y and keeps the one about z.
+// Measured in game: with every angle reversed, high-roll rows swung the arms
+// 70-90 degrees off the target; this convention keeps them within 10-25.
 Mat4 port_turn(const char axis, const float angle) {
   switch (axis) {
   case 'x':
@@ -45,7 +53,7 @@ Mat4 port_turn(const char axis, const float angle) {
   case 'y':
     return rotation_y(-angle);
   case 'z':
-    return rotation_z(-angle);
+    return rotation_z(angle);
   default:
     throw std::runtime_error("Source arm aim axis must be x, y or z");
   }
@@ -147,8 +155,9 @@ void aim_source_weapon(const int node, const float twist, const ArmAimState &sta
   const Mat4 world =
       aimed.local * (aimed.parent >= 0 ? node_world(nodes, aimed.parent, root) : root);
   const Vec3 position{world.at(3, 0), world.at(3, 1), world.at(3, 2)};
-  // 0x4e7fd0: z away from the target, x = up x z with up (0, 1, 0).
-  const Vec3 z = normalize(source_axes(position - state.target));
+  // 0x4e7fd0: z away from the target, x = up x z with up (0, 1, 0), in the
+  // model data's axes (the loader's z mirror on top of the export's y one).
+  const Vec3 z = normalize(model_axes(position - state.target));
   const Vec3 across = cross({0.0F, 1.0F, 0.0F}, z);
   if (length(across) < 1e-5F) {
     return;
@@ -158,10 +167,11 @@ void aim_source_weapon(const int node, const float twist, const ArmAimState &sta
   // 0x4e80f4 rolls the frame about its z (the barrel) by the row's twist.
   const float c = std::cos(twist);
   const float s = std::sin(twist);
+  // Back in port axes the barrel (the model's +z) faces the target.
   Mat4 desired;
-  set_row(desired, 0, source_axes(x * c + y * s));
-  set_row(desired, 1, source_axes(y * c - x * s) * -1.0F);
-  set_row(desired, 2, source_axes(z));
+  set_row(desired, 0, model_axes(x * c + y * s));
+  set_row(desired, 1, model_axes(y * c - x * s) * -1.0F);
+  set_row(desired, 2, model_axes(z) * -1.0F);
   const Mat4 current = rotation_part(world);
   if (determinant(current) < 0.0F) {
     desired = scaling({-1.0F, 1.0F, 1.0F}) * desired;
