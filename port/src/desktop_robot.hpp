@@ -37,6 +37,11 @@ public:
                                                         int slot, int node) const;
   [[nodiscard]] std::optional<Mat4> source_body_frame(const Pose &pose, const Mat4 &root,
                                                       int node) const;
+  // The arms' raise and aim point this frame (RobotCombat): S.L.A.I. bodies
+  // raise their upper arms and S.L.A.I. weapons turn to it (0x4e7a90, 0x4e7f60).
+  void set_arm_aim(const std::array<ArmAimState, 2> &aim) {
+    arm_aim_ = aim;
+  }
 
 private:
   struct Part {
@@ -75,6 +80,9 @@ private:
   mutable std::optional<std::array<Mat4, 2>> source_shoulder_mounts_;
   std::array<bool, 2> source_arm_mount_valid_{};
   std::array<bool, 2> source_shoulder_mount_valid_{};
+  std::optional<SourceArmAim> source_arm_aim_;
+  std::array<int, 2> source_weapon_aim_nodes_{-1, -1};
+  std::array<ArmAimState, 2> arm_aim_{};
 };
 
 } // namespace phantomcrash

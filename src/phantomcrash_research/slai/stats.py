@@ -76,6 +76,15 @@ def read_stats(disc: SlaiDisc) -> dict:
                 record["weight"] = _curve(elf, at + 8, "f")
                 record["kind"], record["flight"] = elf[at + 0x18:at + 0x1A]
                 record["fire_frames"], record["life_frames"] = struct.unpack_from("<2H", elf, at + 0x20)
+                # 0x24dcf0 copies these into the slot runtime (+0x38/+0x3c/+0x40);
+                # 0x502b10 launches at the first and 0x502a70 accelerates to the second.
+                speeds = struct.unpack_from("<3f", elf, at + 0x24)
+                record["start_speed"], record["top_speed"], record["acceleration"] = (
+                    round(v, 6) for v in speeds)
+                # 0x4e7f60 aims at actor +0xcc0 when this is 1, else at +0xcd0.
+                record["aim_target"] = elf[at + 0x1A]
+                # 0x24dcf0 -> runtime +0xa4; 0x4dfde8 raises the arm over this many ticks.
+                record["raise_frames"] = struct.unpack_from("<h", elf, at + 0x136)[0]
                 for field, off in (("rounds_min", 0x48), ("damage_min", 0x52), ("ammo_min", 0x80)):
                     record[field] = struct.unpack_from("<h", elf, at + off)[0]
                 for field, off in (("rounds", 0x4A), ("damage", 0x54), ("blast_radius", 0x5C),

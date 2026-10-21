@@ -3,10 +3,12 @@
 #include "phantomcrash/json.hpp"
 #include "phantomcrash/math3d.hpp"
 #include "phantomcrash/skeleton.hpp"
+#include "phantomcrash/source_arm_aim.hpp"
 #include "phantomcrash/world_model.hpp"
 
 #include <array>
 #include <memory>
+#include <optional>
 #include <map>
 #include <string>
 #include <vector>
@@ -35,6 +37,9 @@ struct RobotCatalogue {
     float forearm_turn{}; // radians about x on the forearms (0x0aa499)
     std::vector<std::string> paint_images;
     std::map<int, int> models_by_leg_type;
+    // A S.L.A.I. body's arm aim on another maker's legs (an adapter: its
+    // first own legs' row).
+    std::optional<SourceArmAim> source_arm_aim;
   };
   struct LegType {
     int model{-1};
@@ -49,11 +54,14 @@ struct RobotCatalogue {
     float radius{};      // collision radius, 0 if unknown
     int shadow_mesh{-1}; // its flat shadow: a mesh of resource 184 (0x242750), -1 for none
     std::vector<std::string> paint_images;
+    std::optional<SourceArmAim> source_arm_aim; // S.L.A.I. legs: the row 0x4e7a90 reads
   };
   struct ArmType {
     std::array<int, 2> models{-1, -1}; // [side]
     int arm_class{};
     std::vector<std::string> paint_images;
+    int source_aim_node{-1};   // S.L.A.I.: the node 0x4e7f60 turns (callback 0x4e6dc0)
+    int source_raise_frames{}; // S.L.A.I. record +0x136: ticks to raise the arm (0x4dfde8)
   };
   struct ShoulderType {
     std::array<int, 2> models{-1, -1};
@@ -137,6 +145,11 @@ struct RobotAssembly {
   std::array<Vec3, 2> shoulder_shifts{};
   std::string emblem_model;
   std::string emblem_image;
+  // S.L.A.I. arm aim: the legs' row (else the body's), the weapons' aim
+  // nodes, and each arm's raise time (0 keeps CombatAnimation's).
+  std::optional<SourceArmAim> source_arm_aim;
+  std::array<int, 2> source_weapon_aim_nodes{-1, -1};
+  std::array<float, 2> arm_raise_seconds{};
 };
 
 [[nodiscard]] std::string robot_model_path(int resource);

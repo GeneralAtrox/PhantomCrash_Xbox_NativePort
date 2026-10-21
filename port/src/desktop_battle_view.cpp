@@ -204,6 +204,12 @@ void BattleView::tick(Battle &battle, const float seconds) {
     visual.parts->animate(robot.mover.motion(), visual.combat->motion_frame(),
                           robot.mover.motion_loops(), seconds, fired, robot.mover.motion_revision(),
                           robot.mover.motion_speed());
+    std::array<ArmAimState, 2> aim;
+    for (std::size_t side = 0; side < 2; ++side) {
+      aim[side] = {visual.combat->arm_weight(side), visual.combat->arm_target(side),
+                   robot.mover.position()};
+    }
+    visual.parts->set_arm_aim(aim);
   }
 }
 

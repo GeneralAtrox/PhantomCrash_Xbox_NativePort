@@ -1670,3 +1670,91 @@ Sustained weapon sound lifetime (2026-10-06):
 - No temporary runtime, captures or logs were created. The earlier owned
   body-control, state-effect and death-effect scratch directories were checked
   and remain absent. Standard `build/port` and updated mod data are retained.
+
+## Arm aim and gun flight (2026-10-21)
+
+User report: "arms face the wrong way and don't do damage". Reproduced in
+Test Drive with S1A01H on S1B01H/S1L01H: the arms hung at the legs with the
+guns pointing at the ground, and the target's armour never dropped.
+
+- Facing. The original turns two posed nodes every frame, and the port did
+  neither. `0x504b30` binds `0x4e7a90` to body node 4 (weapon slot 0) and
+  node 2 (slot 1); their children 5 and 3 are the hands. It also binds
+  `0x4e7f60` to the weapon node whose descriptor callback is `0x4e6dc0`.
+  Muzzles carry `0x4e6db0`. Port side s is source slot s, matching the
+  existing hand mounts.
+- `0x4e7a90` reads the row of the table at `0x59a910` (stride `0x30`,
+  35 rows) that `0x254890` selects. The selector is the legs record's +6,
+  the legs descriptor row.
+  - Floats `+0x00..+0x10` are slot 1's pitch, yaw, roll and pitch limits;
+    floats `+0x14..+0x24` are slot 0's.
+  - Bytes `+0x28..+0x2a` give the axis order: 1 = x (`0x10ec70`),
+    2 = y (`0x10ed18`), 3 = z (`0x10ebc8`). Byte `+0x2b` keeps the node's own
+    rotation. Float `+0x2c` is the weapon twist, negated for slot 0.
+  - The pitch is the row's base less `atan2(y, z)` of the robot-to-target
+    offset in the robot's frame (`+0x120 - +0xcd0`, through `+0xab0`). It is
+    wrapped and clamped to the limits. The angles are scaled by the raise
+    weight, and the result is slerped again by it (`0x1ab150`).
+- `0x4e7f60` points the weapon node's -z at the target. It uses `+0xcc0`
+  when the arm record's +0x1a is 1, otherwise `+0xcd0`. The up vector is
+  (0, 1, 0) in source axes, and the node is rolled by the twist about its
+  z axis (`0x1aabe0`).
+- `0x4dfde8` steps the raise counter `+0xeac + slot * 0xc` by one each tick,
+  clamped to the arm record's +0x136 (through `0x24dcf0`).
+- Field labels are researcher-assigned. Instruction guards are in
+  `src/phantomcrash_research/slai/arm_aim.py`.
+- Damage. The converter kept the Phantom Crash template's flight (3.8 units
+  a tick) for S.L.A.I. arms, so a life-1 gun reached about 4 units.
+  `0x502b10` launches at `-z * runtime+0x38` through the muzzle, and
+  `0x502d90` moves the shot by velocity × ticks. The source arm records
+  (`0x3cf480`, stride `0x138`) hold the start speed, top speed and
+  acceleration at +0x24/+0x28/+0x2c: about 100 units a tick for the guns.
+  `native_flight` now copies them, except for melee kinds 6 and 7.
+- Port.
+  - Catalogue fields:
+    - Legs and bodies: `source_arm_aim`.
+    - Arms: `source_aim_node`, `source_muzzle_nodes` and
+      `source_raise_frames`.
+  - `port/src/source_arm_aim.cpp` applies both turns to the sampled rigid
+    pose (`RobotVisual::rigid`).
+  - `RobotCombat` raises a S.L.A.I. arm over its record's frames and keeps
+    the arm's aim point.
+- Adapters, labelled in the data and code:
+  - Another maker's legs under a S.L.A.I. body use the body's first own legs
+    row.
+  - The source clock is taken as 60 Hz.
+  - Rows with the cancel flag omit the actor's `+0x150/+0x15c` yaw, which
+    was not traced. The port's body already carries the heading.
+- Verification: native `phantomcrash_slai_tests` 163 tests, 1 failure. The
+  failure is "registered source weapons expose supported fire and loss
+  descriptors on both sides", which the main checkout's build also fails.
+  The 10 new arm-aim tests pass. `phantomcrash_core_tests` 671 tests,
+  3 failures (tutorial courses and post-process blur, outside this change).
+  Python `tests/`: 167 passed, 115 skipped.
+- In game (Test Drive, choco_day), every one of the 47 arms was run on
+  S1B01H/S1L01H, and four were also run on Phantom Crash body 4/legs 11.
+  All 36 guns, launchers and cannons hit, and the target lost armour once
+  its entry shield ended. The contact sheet is in
+  `research-output/review-arms/`.
+- Not yet seen to hit:
+  - The six melee arms: the unsteered target never came within reach.
+  - The five beams: the beam keeps the port's straight aim, and the target
+    stayed 4-5° off its line.
+- Open:
+  - Shoulder records have the same template-speed problem; not changed.
+  - The simulated muzzle still comes from the template sockets, not the
+    S.L.A.I. muzzle nodes.
+  - The port moves a life-1 shot over one 30 Hz tick, about twice the
+    source's one-tick reach.
+  - S.L.A.I. glTF models and stages export through `model.py`
+    `SCALE = 0.1 * (1, -1, 1)`. This is a reflection, and the scale task
+    found the stages mirrored left-right. The rig matrices use
+    `native_geometry.AXES = (1, -1, -1)`, a rotation. The arm aim converts
+    through the same y mirror (`source_axes`, `port_turn`), so a later export
+    change must change those two helpers too. The arm fault reproduced here
+    was the two missing node turns, not this mirror.
+- Shared data must be reinstalled after merging: the installed pack lacks
+  the new fields, and the installer keeps an existing pack. Remove
+  `artifacts/slai/assets`, then install from Settings or run
+  `python -m phantomcrash_research.slai.install --root <repo> --disc <ISO>
+  --converter <audio converter>`.
