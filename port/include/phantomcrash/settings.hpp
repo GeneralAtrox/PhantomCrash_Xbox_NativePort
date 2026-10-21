@@ -10,6 +10,7 @@
 #include "phantomcrash/json.hpp"
 #include "phantomcrash/garage.hpp"
 #include "phantomcrash/music_library.hpp"
+#include "phantomcrash/slai_rumble_save.hpp"
 #include "phantomcrash/vs_scoobee.hpp"
 
 #include <array>
@@ -150,6 +151,9 @@ struct QuestSave {
   // ASSEMBLE's X toggle: hides the equipment the Scoobee cannot fit. Kept
   // with the profile, so a reload comes back the same way.
   bool hide_incompatible{};
+  // S.L.A.I. Rumble's calendar, stage and records (slai_rumble_save.hpp);
+  // used by the S.L.A.I. content profile, which keeps its own saves.
+  SlaiRumbleSave slai_rumble;
 
   bool operator==(const QuestSave &) const = default;
 };

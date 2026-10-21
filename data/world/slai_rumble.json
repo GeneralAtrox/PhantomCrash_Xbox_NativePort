@@ -1,0 +1,58 @@
+{
+ "notes": [
+  "S.L.A.I. Rumble (docs/SLAI_RUMBLE_PLAN.md): S.L.A.I.'s Club Wired campaign as arena battles, beside Phantom Crash's calendar. The rota, regulations and matches come from the user's disc in tables/slai_rumble.json; this file holds the port's choices for them. Defaults reproduce the original (PAL SLES-52940 addresses).",
+  "cities: by the table's city column (0 Tokyo, 1 Stuttgart, 2 New York, 3 London, 4 Hong Kong, 5 Cairo, 6 Las Vegas), the imported stages (world/stages.json) a day or night match is fought on. The disc has no NIGHT_LASVEGAS.BG; the original draws Las Vegas at night on the day scene with LASVEGAS_NIGHT.MED lighting (night_lighting), which the importer does not convert yet. start_city is where a new game stands.",
+  "makers: S.L.A.I.'s maker ids (a regulation's +8 and a body's +2): 0 Carro, 1 Proton, 2 Hartman, 3 KHT, 4 Zwerg. The port's imported S.L.A.I. legs keep these ids as their maker.",
+  "leg_classes: the S.L.A.I. leg types (0x24d7d0, the legs record + 6 through 0x41ea00) each class allows (0x259a40). A class not named here, such as any, allows every leg type.",
+  "special: what the special rules test (0x259a40): close-range and grenade by the weapon class (+0x134), lock-on by the aim kind (+0x18), E-Chip by the CHIP record. Rental-only rumbles refuse the player's own robot.",
+  "status_rules: by regulation, when a record's leader joins (0x2225a0, re-checked after each defeat by 0x223ed0): open from the start, after the first flags members are beaten, or held (regulation 30). A record is cleared once its leader is beaten (record byte 0).",
+  "ladder: the stage (save + 0xa21) moves on one step after a battle (0x25a4e0): 0 to 1 when the tutorial record is cleared (+0x168, 0x257410); 1 to 2 when rankers_needed of the ranker records are (0x257440); 2 to 3 when all regional records are (0x257490); 3 to 4 when all finals records are (0x2574e0). Ranges are save record ids, first and one past the last.",
+  "balance: entry_scale scales a regulation's entry requirement, the money the player must hold (0x259a40 compares save + 0xa14, which 0x24b470 treats as money); charge_entry also takes it (the original does not). prize_scale scales the prize, paid when the player's score reaches the regulation's target (0x24b0b0). robots_max caps a match's robots (0x222070)."
+ ],
+ "cities": [
+  {"name": "Tokyo", "day_stage": "slai_day_tokyo2", "night_stage": "slai_night_tokyo"},
+  {"name": "Stuttgart", "day_stage": "slai_day_german", "night_stage": "slai_night_german"},
+  {"name": "New York", "day_stage": "slai_day_newyork", "night_stage": "slai_night_newyork"},
+  {"name": "London", "day_stage": "slai_day_england", "night_stage": "slai_night_england"},
+  {"name": "Hong Kong", "day_stage": "slai_day_hongkong", "night_stage": "slai_night_hongkong"},
+  {"name": "Cairo", "day_stage": "slai_day_egypt", "night_stage": "slai_night_egypt"},
+  {"name": "Las Vegas", "day_stage": "slai_day_lasvegas", "night_stage": "slai_day_lasvegas",
+   "night_lighting": "lasvegas_night"}
+ ],
+ "start_city": 0,
+ "makers": ["Carro", "Proton", "Hartman", "KHT", "Zwerg"],
+ "leg_classes": {
+  "legged": [0, 1, 2],
+  "wheeled": [3, 4, 5, 6],
+  "caterpillar/hover": [7, 8, 9, 10]
+ },
+ "special": {
+  "close_range_classes": [2],
+  "lock_on_kinds": [1, 9],
+  "grenade_classes": [3, 15],
+  "e_chips": [0, 1]
+ },
+ "status_rules": [
+  {"flags": 5}, "open", "open", "open", "open", "open",
+  {"flags": 14}, {"flags": 14}, {"flags": 14}, {"flags": 14}, {"flags": 14}, {"flags": 14},
+  {"flags": 14}, {"flags": 14}, {"flags": 14}, {"flags": 14}, {"flags": 14}, {"flags": 14},
+  {"flags": 14}, {"flags": 14}, {"flags": 14}, {"flags": 14}, "open",
+  {"flags": 14}, {"flags": 14}, {"flags": 14}, {"flags": 14},
+  "open", "open", "open", "held", "open"
+ ],
+ "ladder": {
+  "tutorial_record": 24,
+  "ranker_records": [48, 104],
+  "rankers_needed": 56,
+  "regional_records": [104, 111],
+  "regionals_needed": 7,
+  "finals_records": [26, 29],
+  "finals_needed": 3
+ },
+ "balance": {
+  "entry_scale": 1.0,
+  "charge_entry": false,
+  "prize_scale": 1.0,
+  "robots_max": 6
+ }
+}
