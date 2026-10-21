@@ -14,6 +14,7 @@ add_library(phantomcrash_core
   src/data_roots.cpp
   src/added_chips.cpp
   src/slai_content.cpp
+  src/slai_rota.cpp
   src/slai_rumble_rules.cpp
   src/slai_rumble_save.cpp
   src/slai_rumble_table.cpp

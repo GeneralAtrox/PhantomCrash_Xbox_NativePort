@@ -122,9 +122,44 @@ int slai_scheduled_match(const SlaiRumbleTable &table, const int day, const int 
   return match;
 }
 
-std::array<int, 2> slai_todays_matches(const SlaiRumbleTable &table, const SlaiRumbleSave &save) {
-  return {slai_scheduled_match(table, save.day, save.city, save.stage, false, save.finals_cleared),
-          slai_scheduled_match(table, save.day, save.city, save.stage, true, save.finals_cleared)};
+std::optional<SlaiCityMatch> slai_city_match(const SlaiRumbleData &data, const int day,
+                                             const int city, const SlaiRumbleSave &save) {
+  const auto source = slai_rota_source(data.rota, day, city);
+  if (!source) {
+    return std::nullopt;
+  }
+  SlaiCityMatch found{city, *source};
+  for (const bool night : {false, true}) {
+    found.match = slai_scheduled_match(data.table, *source, city, save.stage, night,
+                                       save.finals_cleared);
+    found.night = night;
+    if (found.match != slai_no_match) {
+      break;
+    }
+  }
+  return found;
+}
+
+std::vector<SlaiCityMatch> slai_day_matches(const SlaiRumbleData &data, const int day,
+                                            const SlaiRumbleSave &save) {
+  std::vector<SlaiCityMatch> result;
+  for (const SlaiRotaEntry &entry : slai_rota_day(data.rota, day)) {
+    if (const auto found = slai_city_match(data, day, entry.city, save)) {
+      result.push_back(*found);
+    }
+  }
+  return result;
+}
+
+std::array<int, 2> slai_todays_matches(const SlaiRumbleData &data, const int day,
+                                       const SlaiRumbleSave &save) {
+  const auto source = slai_rota_source(data.rota, day, save.city);
+  if (!source) {
+    return {slai_no_match, slai_no_match};
+  }
+  return {
+      slai_scheduled_match(data.table, *source, save.city, save.stage, false, save.finals_cleared),
+      slai_scheduled_match(data.table, *source, save.city, save.stage, true, save.finals_cleared)};
 }
 
 bool slai_record_cleared(const SlaiRumbleSave &save, const int record) {
@@ -265,13 +300,6 @@ SlaiMatchOutcome slai_finish_match(QuestSave &quest, const SlaiRumbleData &data,
   save.stage = slai_next_stage(save, data.world.ladder);
   outcome.stage_after = save.stage;
   return outcome;
-}
-
-void advance_slai_rumble_day(SlaiRumbleSave &save, const int days_in_cycle) {
-  if (days_in_cycle <= 0) {
-    return;
-  }
-  save.day = (std::max(save.day, 0) + 1) % days_in_cycle;
 }
 
 } // namespace phantomcrash

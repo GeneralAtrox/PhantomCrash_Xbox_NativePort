@@ -2,8 +2,9 @@
 
 // S.L.A.I. Rumble's part of a game's save (QuestSave::slai_rumble), as the
 // original keeps it in its save object: see docs/SLAI_CAMPAIGN_RESEARCH.md,
-// "Save layout". A save from before S.L.A.I. Rumble loads it empty: day 0,
-// stage 0, nothing cleared.
+// "Save layout". A save from before S.L.A.I. Rumble loads it empty: stage
+// 0, nothing cleared. S.L.A.I.'s day (+ 0xa10) is not kept: the rota
+// follows the calendar's day (slai_rota.hpp).
 
 #include "phantomcrash/json.hpp"
 
@@ -27,7 +28,6 @@ struct SlaiRumbleRecord {
 };
 
 struct SlaiRumbleSave {
-  int day{};            // + 0xa10: the rota day, 0..99
   int stage{};          // + 0xa21: the stage ladder, 0..4
   int city{};           // + 0x4769: where the player is
   int finals_cleared{}; // 0x2574e0: the finals records cleared, 0..3

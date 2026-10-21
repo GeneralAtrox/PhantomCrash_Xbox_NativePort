@@ -22,7 +22,6 @@ struct SleepScript {
   int days_in_cycle{60};         // the calendar day wraps at 60 (0x3c)
   int total_days_max{9999};      // + 0x5ffc stops counting at 0x270f
   // S.L.A.I. Rumble's rota day wraps here (S.L.A.I. 0x257350, day % 100).
-  int slai_days_in_cycle{100};
 };
 
 // Throws std::runtime_error when a value is missing or wrong.

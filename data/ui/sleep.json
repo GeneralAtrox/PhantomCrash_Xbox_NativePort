@@ -4,7 +4,7 @@
   "It plays sys entry 43 (\"sleep\") and waits the frame rate times four (seconds); A or START (0xdf310, the port's confirm) cuts the wait short. The sound stops as the screen closes.",
   "Then the night passes: the calendar day (the save's + 0x9cc, bits 20-29, the HUD's DAY) moves on and wraps after days_in_cycle; as it wraps, a cleared game counts a lap (+ 0x604c). The days slept (+ 0x5ffc) count up to total_days_max. The town map's spin payments (+ 0x113c8) start again.",
   "The original also redraws the rival teams' contest entries for the new day (0x6cf5a) and picks ten numbers into + 0xc28 (0x2a540); the port has neither table yet.",
-  "S.L.A.I. Rumble's rota day (S.L.A.I.'s save + 0xa10, docs/SLAI_RUMBLE_PLAN.md) moves on the same night and wraps after slai_days_in_cycle (0x257350, day % 100), its own cycle beside the calendar's.",
+  "S.L.A.I. Rumble has no day of its own: its rota (data/world/slai_rota.json, docs/SLAI_RUMBLE_PLAN.md) follows this calendar's day.",
   "Result 0 leads to the garage (scene 13), whose cursor comes back to the hangar."
  ],
  "scene": 24,
@@ -13,6 +13,5 @@
  "sound": "sleep",
  "exit_to": "garage",
  "days_in_cycle": 60,
- "slai_days_in_cycle": 100,
  "total_days_max": 9999
 }
