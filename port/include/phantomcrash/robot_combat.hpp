@@ -45,6 +45,10 @@ public:
   [[nodiscard]] float arm_weight(std::size_t side) const {
     return weights_[side];
   }
+  // Where the arm aimed on the last tick (world space).
+  [[nodiscard]] Vec3 arm_target(std::size_t side) const {
+    return arm_targets_[side];
+  }
   [[nodiscard]] float motion_frame() const {
     return animator_.frame();
   }
@@ -69,6 +73,7 @@ private:
   std::array<std::vector<Mat4>, 4> muzzles_;
   std::array<std::size_t, 4> barrel_{};
   std::array<float, 2> weights_{};
+  std::array<Vec3, 2> arm_targets_{};
   std::array<float, 3> auxiliary_{}; // robot +0x2520, +0x2524, +0x2528
   float wheel_turn_{};               // robot +0x2590, negated (the port's sense)
   std::array<Mat4, 2> shoulders_;

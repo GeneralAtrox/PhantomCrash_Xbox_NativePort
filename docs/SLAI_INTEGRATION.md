@@ -1117,8 +1117,8 @@ Take-off selection and torso attachment investigation (2026-10-06):
   entry rather than assuming node 1. All 35 shipped leg descriptors specify
   node 1, so this confirms the existing join location and does not repair
   the awkward `S4B01H` / `S8L01H` mixed geometry.
-- Callback `0x4e4320` reads actor float `+0x15c`, applies source Z rotation
-  through `0x10ed18`, and restores the control's world position. Its input
+- Callback `0x4e4320` reads actor float `+0x15c`, applies source Y rotation
+  through `0x10ed18` (the y turn of the arm aim's axis order), and restores the control's world position. Its input
   producer remains unresolved; treating it as yaw steering would be wrong.
   Callback `0x4e43a0` generates random positional shake, rather than steering.
 - Wheel callback `0x4e54b0` uses actor `+0xe18`, turn-speed `+0x8c` and
@@ -1993,3 +1993,156 @@ Original wheel steering inputs (2026-10-20):
   rerun `register-slai-assets` for `mods/`, so legs records gain
   `source_load`; until then S.L.A.I. legs keep the native turn adapter and
   unfiltered controls.
+
+## Arm aim and gun flight (2026-10-21)
+
+User report: "arms face the wrong way and don't do damage". Reproduced in
+Test Drive with S1A01H on S1B01H/S1L01H: the arms hung at the legs with the
+guns pointing at the ground, and the target's armour never dropped.
+
+- Facing. The original turns two posed nodes every frame, and the port did
+  neither. `0x504b30` binds `0x4e7a90` to body node 4 (weapon slot 0) and
+  node 2 (slot 1); their children 5 and 3 are the hands. It also binds
+  `0x4e7f60` to the weapon node whose descriptor callback is `0x4e6dc0`.
+  Muzzles carry `0x4e6db0`. Port side s is source slot s, matching the
+  existing hand mounts.
+- `0x4e7a90` reads the row of the table at `0x59a910` (stride `0x30`,
+  35 rows) that `0x254890` selects. The selector is the legs record's +6,
+  the legs descriptor row.
+  - Floats `+0x00..+0x10` are slot 1's pitch, yaw, roll and pitch limits;
+    floats `+0x14..+0x24` are slot 0's.
+  - Bytes `+0x28..+0x2a` give the axis order: 1 = x (`0x10ec70`),
+    2 = y (`0x10ed18`), 3 = z (`0x10ebc8`). Byte `+0x2b` keeps the node's own
+    rotation. Float `+0x2c` is the weapon twist, negated for slot 0.
+  - The pitch is the row's base less `atan2(y, z)` of the robot-to-target
+    offset in the robot's frame (`+0x120 - +0xcd0`, through `+0xab0`). It is
+    wrapped and clamped to the limits. The angles are scaled by the raise
+    weight, and the result is slerped again by it (`0x1ab150`).
+- `0x4e7f60` points the weapon node's -z at the target. It uses `+0xcc0`
+  when the arm record's +0x1a is 1, otherwise `+0xcd0`. The up vector is
+  (0, 1, 0) in source axes, and the node is rolled by the twist about its
+  z axis (`0x1aabe0`).
+- Port axes. The export mirrors y and the port's loader mirrors z, so the
+  source's -z barrel is the loaded node's +z. The port's look-at
+  (`source_arm_aim.cpp`) turns +z at the target, and the arm turns take the
+  z mirror's signs: x and y reversed, z kept.
+  - Checked in a traced Test Drive (S1A01H) by measuring the muzzle nodes'
+    direction from the aim node against the target. With the source's
+    signs the muzzles were 177 degrees off; with the port's they are 3.
+  - With every angle reversed, high-roll rows left the arms 70-90 degrees
+    off the target. With the z-mirror signs they are 10-25 degrees off.
+  - Rows with byte `+0x2b` clear (keep rotation off) set the node's world
+    rotation outright; see "Arm aim rows without keep rotation" below.
+- `0x4dfde8` steps the raise counter `+0xeac + slot * 0xc` by one each tick,
+  clamped to the arm record's +0x136 (through `0x24dcf0`).
+- Field labels are researcher-assigned. Instruction guards are in
+  `src/phantomcrash_research/slai/arm_aim.py`.
+- Damage. The converter kept the Phantom Crash template's flight (3.8 units
+  a tick) for S.L.A.I. arms, so a life-1 gun reached about 4 units.
+  `0x502b10` launches at `-z * runtime+0x38` through the muzzle, and
+  `0x502d90` moves the shot by velocity × ticks. The source arm records
+  (`0x3cf480`, stride `0x138`) hold the start speed, top speed and
+  acceleration at +0x24/+0x28/+0x2c: about 100 units a tick for the guns.
+  `native_flight` now copies them, except for melee kinds 6 and 7.
+- Port.
+  - Catalogue fields:
+    - Legs and bodies: `source_arm_aim`.
+    - Arms: `source_aim_node`, `source_muzzle_nodes` and
+      `source_raise_frames`.
+  - `port/src/source_arm_aim.cpp` applies both turns to the sampled rigid
+    pose (`RobotVisual::rigid`).
+  - `RobotCombat` raises a S.L.A.I. arm over its record's frames and keeps
+    the arm's aim point.
+- Adapters, labelled in the data and code:
+  - Another maker's legs under a S.L.A.I. body use the body's first own legs
+    row.
+  - The source clock is taken as 60 Hz.
+  - Rows with the cancel flag take the body frame's yaw for the actor's
+    `+0x150` heading plus its `+0x15c`.
+- Verification: native `phantomcrash_slai_tests` 163 tests, 1 failure. The
+  failure is "registered source weapons expose supported fire and loss
+  descriptors on both sides", which the main checkout's build also fails.
+  The 10 new arm-aim tests pass. `phantomcrash_core_tests` 671 tests,
+  3 failures (tutorial courses and post-process blur, outside this change).
+  Python `tests/`: 167 passed, 115 skipped.
+- In game (Test Drive, choco_day), every one of the 47 arms was run on
+  S1B01H/S1L01H, and four were also run on Phantom Crash body 4/legs 11.
+  All 36 guns, launchers and cannons hit, and the target lost armour once
+  its entry shield ended. The contact sheet is in
+  `research-output/review-arms/`.
+- Not yet seen to hit:
+  - The six melee arms: the unsteered target never came within reach.
+  - The five beams: the beam keeps the port's straight aim, and the target
+    stayed 4-5° off its line.
+- Open:
+  - Shoulder records have the same template-speed problem; not changed.
+  - The simulated muzzle still comes from the template sockets, not the
+    S.L.A.I. muzzle nodes.
+  - The port moves a life-1 shot over one 30 Hz tick, about twice the
+    source's one-tick reach.
+  - S.L.A.I. glTF models and stages export through `model.py`
+    `SCALE = 0.1 * (1, -1, 1)`. This is a reflection, and the scale task
+    found the stages mirrored left-right. The rig matrices use
+    `native_geometry.AXES = (1, -1, -1)`, a rotation. The arm aim converts
+    through the same y mirror (`source_axes`, `port_turn`), so a later export
+    change must change those two helpers too. The arm fault reproduced here
+    was the two missing node turns, not this mirror.
+- Shared data must be reinstalled after merging: the installed pack lacks
+  the new fields, and the installer keeps an existing pack. Remove
+  `artifacts/slai/assets`, then install from Settings or run
+  `python -m phantomcrash_research.slai.install --root <repo> --disc <ISO>
+  --converter <audio converter>`.
+
+### Arm aim rows without keep rotation (2026-10-21)
+
+- Decode (Ghidra listing of `0x4e7a90`; radare2 agrees on the plain MIPS):
+  - `0x4e7da8` reads the row's `+0x2b`; nonzero jumps to `0x4e7e80`, the
+    keep path, which multiplies the turn onto the node's pose.
+  - Zero: `0x4e7db4`/`0x4e7db8` load the actor's `+0x150` (heading) and
+    `+0x15c`, `0x4e7dbc` adds them, and `0x4e7dc8..4e7e70` wrap the sum
+    into a half turn. `0x4e7e78` calls RotY (`0x10ed18`) with it.
+  - `0x4e7ed8` inverts the node's world matrix (`0x10e948`), and the
+    products at `0x4e7ee8` and `0x4e7f14` (`0x10e830`) cancel the whole
+    world rotation and put the turn, then the heading, in its place.
+    `0x4e7f04` slerps by the raise weight (`0x1ab150`), and the node keeps its
+    translation.
+  - The world rotation becomes the turn followed by the heading. The legs'
+    sway and the body's tilt do not reach the arm. The old port cancelled
+    only the node's local rotation.
+- Port: `aim_source_arm` takes the body frame's yaw (`heading_frame`) for
+  `+0x150` plus `+0x15c`. That is an adapter: the producer of nonzero
+  `+0x15c` values was not found (no direct store at that offset), and the
+  port has no separate upper-body twist. Instruction guards for the path
+  are in `arm_aim.py`.
+- Measured in the traced Test Drive, as the angle between the shoulder-to-hand
+  line and the shoulder-to-target line, side 0 / side 1, with the raise
+  complete:
+  - S1B01H + PROTON-Hover Jet (body 16, legs 48, row 11): 46.3 / 52.7
+    before, 49.7 / 55.9 after, with the arm's y about -0.72. Row 11's base
+    pitch is -0.253 and its limits are [-1.258, 0.227], with roll 0.623, so
+    the faithful pose leaves those arms hanging low and out. The gun look-at
+    (`0x4e7f60`) still points the barrels at the target. The "65 degrees"
+    the handoff recorded was not reproduced at this target distance.
+  - S1B01H + legs 43 (row 6, keep on), regression check: 10.2 / 10.5 both
+    before and after.
+- S5B01H + HARTMAN-2Legs (body 20, legs 67, row 12, keep on): 39.4 / 39.4,
+  with the arm pointing down (y -0.62). This is unchanged and not fixed:
+  - The cause is S5B01H's forearm offset. The hand node is at
+    (0, 6.295, -1.561) in source; the rig export (`native_geometry.AXES`
+    (1, -1, -1)) gives (0, -0.629, +0.156) in port. S1B01H's hand has no z
+    offset.
+  - The fitted `port_turn` signs (x and y reversed, z kept) are the
+    conjugation by a half turn about z. The rig export is the conjugation by
+    a half turn about x. The two differ by a half turn about y.
+  - The fitted signs therefore match the exported geometry only for nodes
+    with no front-back offset. In an offline replay of the dumped matrices,
+    mirroring the forearm's z alone brings 20_67 to 11 degrees and leaves
+    16_43 at 10. Applying the rig export's own conjugation everywhere
+    (x kept, y and z reversed, with the pitch measured on the export's axes)
+    makes every row worse: 16_43 59 degrees, 20_67 102 degrees.
+  - Neither convention is consistent with both the shipped rig and the
+    measured rows, so the fault lies somewhere else in the chain from export
+    to aim. No convention was adopted from the measurements alone.
+  - Closing this needs the original's arm angle for one row with a
+    front-back forearm offset, from a PCSX2 run of S5B01H.
+

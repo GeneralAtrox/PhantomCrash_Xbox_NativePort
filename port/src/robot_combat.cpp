@@ -109,11 +109,15 @@ void RobotCombat::tick(const RobotMover &mover, const std::array<bool, 4> &firin
     // A strike lowers the aim so the arms play their strike motions.
     const bool raised = firing[side] && !lost[side] && mover.mode() != MoveMode::scripted &&
                         mover.mode() != MoveMode::strike;
-    const float change = seconds / tuning_.raise_seconds;
+    // A S.L.A.I. arm raises in its record's ticks (0x4dfde8).
+    const float raise = assembly_.arm_raise_seconds[side] > 0.0F ? assembly_.arm_raise_seconds[side]
+                                                                 : tuning_.raise_seconds;
+    const float change = seconds / raise;
     weights_[side] = lost[side] || destroyed
                          ? 0
                          : std::clamp(weights_[side] + (raised ? change : -change), 0.0F, 1.0F);
     arms[side] = {weights_[side], targets[side], tuning_.joint_pitch_limit};
+    arm_targets_[side] = targets[side];
   }
   const Mat4 root = rotation_y(mover.heading()) * translation(mover.position());
   animator_.pose(root, mover.twist(), mover.pitch(), keep_sway, pose_, arms, tuning_.arm_poses);

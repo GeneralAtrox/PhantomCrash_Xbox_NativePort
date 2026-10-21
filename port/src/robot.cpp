@@ -179,6 +179,7 @@ RobotCatalogue parse_robot_catalogue(const json::JsonValue &document) {
                                     static_cast<float>(value.number_or("forearm_turn", 0.0)),
                                     paint_images(value)});
     read_body_model_variants(value, catalogue.body_types.back());
+    catalogue.body_types.back().source_arm_aim = parse_source_arm_aim(value.find("source_arm_aim"));
   }
   for (const json::JsonValue &value : list(document, "leg_types")) {
     RobotCatalogue::LegType legs;
@@ -207,12 +208,14 @@ RobotCatalogue parse_robot_catalogue(const json::JsonValue &document) {
     }
     legs.radius = static_cast<float>(value.number_or("radius", 0.0));
     legs.shadow_mesh = static_cast<int>(value.number_or("shadow_mesh", -1.0));
+    legs.source_arm_aim = parse_source_arm_aim(value.find("source_arm_aim"));
     catalogue.leg_types.push_back(std::move(legs));
   }
   for (const json::JsonValue &value : list(document, "arm_types")) {
-    catalogue.arm_types.push_back({pair_of(value.find("models")),
-                                   static_cast<int>(value.number_or("class", 0)),
-                                   paint_images(value)});
+    catalogue.arm_types.push_back(
+        {pair_of(value.find("models")), static_cast<int>(value.number_or("class", 0)),
+         paint_images(value), static_cast<int>(value.number_or("source_aim_node", -1)),
+         static_cast<int>(value.number_or("source_raise_frames", 0))});
   }
   for (const json::JsonValue &value : list(document, "shoulder_types")) {
     catalogue.shoulder_types.push_back({pair_of(value.find("models")), paint_images(value)});
@@ -319,6 +322,7 @@ RobotAssembly assemble_robot(const RobotCatalogue &catalogue, const RobotSkeleto
   // 0x080e41 keeps the radius within 0..2.
   robot.radius = std::clamp(legs.radius, 0.0F, max_robot_radius);
   robot.shadow_mesh = legs.shadow_mesh;
+  robot.source_arm_aim = legs.source_arm_aim ? legs.source_arm_aim : body.source_arm_aim;
   if (!legs.paints.empty()) {
     const int colour =
         parts.colour >= 0 && parts.colour < static_cast<int>(legs.paints.size()) ? parts.colour : 0;
@@ -357,6 +361,10 @@ RobotAssembly assemble_robot(const RobotCatalogue &catalogue, const RobotSkeleto
       robot.part_paints[side + 2] = part_paint(arm.paint_images, parts.colour);
       const int bank = arm_legs->arm_motions[side][arm.arm_class == 0 ? 0 : 1];
       robot.arm_motions[side] = motion_bank_path(bank);
+      robot.source_weapon_aim_nodes[side] = arm.source_aim_node;
+      // The source counts its raise in ticks of its 60 Hz clock (an adapter).
+      robot.arm_raise_seconds[side] =
+          static_cast<float>(arm.source_raise_frames) / source_ticks_per_second;
       const int skeleton_type = body_arm_type(catalogue, skeletons, side, arm_type, body_type);
       const auto &arm_skeleton = pick(skeletons.arms[side], skeleton_type, "arm skeleton");
       robot.arm_skeletons[side] = arm_skeleton ? &*arm_skeleton : nullptr;

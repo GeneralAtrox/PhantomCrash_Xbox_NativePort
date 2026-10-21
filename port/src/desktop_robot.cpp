@@ -25,6 +25,8 @@ int load(WorldRenderer &world, const std::string &path) {
 
 RobotVisual::RobotVisual(WorldRenderer &world, const RobotAssembly &assembly) : world_(world) {
   source_turn_frames_ = assembly.source_turn_frames;
+  source_arm_aim_ = assembly.source_arm_aim;
+  source_weapon_aim_nodes_ = assembly.source_weapon_aim_nodes;
   body_ = load(world, assembly.body_model);
   legs_ = load(world, assembly.legs_model);
   paint_ = world.texture(assembly.paint);
@@ -196,13 +198,34 @@ void RobotVisual::rigid(const ModelData &model, const Mat4 &root, const int weap
     source_shoulder_mounts_.emplace();
     shoulders = &*source_shoulder_mounts_;
   }
-  pose_rigid_model(
-      model, clip, seconds, loop, root, nodes, mounts, attachment_node, attachment_frame, shoulders,
+  const std::vector<RigidNode> *evaluated =
       weapon_slot >= 0 && !weapon_playback_[static_cast<std::size_t>(weapon_slot)].nodes.empty()
           ? &weapon_playback_[static_cast<std::size_t>(weapon_slot)].nodes
       : weapon_slot < 0 && rig.preserve_disabled_clips && !body_playback_.nodes.empty()
           ? &body_playback_.nodes
-          : nullptr);
+          : nullptr;
+  // The original turns the posed nodes once a frame; the clips keep theirs.
+  const bool body = weapon_slot < 0 && &model == world_.model_data(body_) && source_arm_aim_ &&
+                    (arm_aim_[0].weight > 0.0F || arm_aim_[1].weight > 0.0F);
+  const bool weapon = weapon_slot >= 0 && weapon_slot < 2 &&
+                      source_weapon_aim_nodes_[static_cast<std::size_t>(weapon_slot)] >= 0 &&
+                      arm_aim_[static_cast<std::size_t>(weapon_slot)].weight > 0.0F;
+  std::vector<RigidNode> aimed;
+  if (body || weapon) {
+    aimed = evaluated ? *evaluated : sample_rigid_pose(rig, clip, seconds, loop);
+    if (body) {
+      for (std::size_t side = 0; side < 2; ++side) {
+        aim_source_arm(*source_arm_aim_, side, arm_aim_[side], root, aimed);
+      }
+    } else {
+      const auto side = static_cast<std::size_t>(weapon_slot);
+      const float twist = source_arm_aim_ ? source_arm_aim_->sides[side].twist : 0.0F;
+      aim_source_weapon(source_weapon_aim_nodes_[side], twist, arm_aim_[side], root, aimed);
+    }
+    evaluated = &aimed;
+  }
+  pose_rigid_model(model, clip, seconds, loop, root, nodes, mounts, attachment_node,
+                   attachment_frame, shoulders, evaluated);
 }
 
 std::optional<Mat4> RobotVisual::source_weapon_frame(const Pose &pose, const Mat4 &root,

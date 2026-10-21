@@ -293,6 +293,7 @@ add_library(phantomcrash_core
   src/source_roll.cpp
   src/source_steering.cpp
   src/source_load.cpp
+  src/source_arm_aim.cpp
   src/source_lighting.cpp
   src/source_particles.cpp
   src/source_impact_attachment.cpp
@@ -462,6 +463,7 @@ if(BUILD_TESTING)
     tests/source_suspension_tests.cpp
     tests/source_roll_tests.cpp
     tests/source_steering_tests.cpp
+    tests/slai_arm_aim_tests.cpp
     tests/world_sound_tests.cpp tests/battle_sounds_tests.cpp tests/armory_tests.cpp tests/shop_label_tests.cpp)
   target_link_libraries(phantomcrash_slai_tests PRIVATE phantomcrash_core)
   target_compile_definitions(phantomcrash_slai_tests

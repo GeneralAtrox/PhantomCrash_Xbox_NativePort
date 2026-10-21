@@ -21,6 +21,7 @@ from .wheels import _torso, MAKERS
 
 SOURCE_MAKERS = {1: 1, 2: 2, 3: 0, 4: 3, 5: 4, 6: 5, 7: 6, 8: 7, 9: 9, 10: 8}
 FOLDERS = {0: "HOLY", 1: "PHOTON", 2: "AERON", 3: "BRINEMAN", 4: "KUBEL"}
+MELEE_KINDS = (6, 7)
 KINDS = {"body": ("bodies", "body_types", "body", 0),
          "leg": ("legs", "leg_types", "legs", 1),
          "arm": ("arm_weapons", "arm_types", "arm", 2),
@@ -96,6 +97,18 @@ def native_curves(target, source):
             target[key] = source[key]
 
 
+def native_flight(target, source):
+    """Launch, top speed and acceleration a tick (0x502b10, 0x502a70).
+
+    The guns fly a single tick at about a hundred units, so the template's
+    speeds left them a few units of reach. The arm actions keep the template's.
+    """
+    if source.get("kind") in MELEE_KINDS or "start_speed" not in source:
+        return
+    for key in ("start_speed", "top_speed", "acceleration"):
+        target[key] = source[key]
+
+
 def register_parts(image: Path, assets: Path, data: Path, mods: Path) -> dict:
     manifest = read(mods / "slai/assets/manifest.json")
     stats = read(mods / "slai/source_stats.json")
@@ -143,6 +156,8 @@ def register_parts(image: Path, assets: Path, data: Path, mods: Path) -> dict:
         source_muzzles = {Path(w["source_model"]).stem: w for w in recovered["weapons"]}
         flashes = []
         profiles = {Path(p["model"]).stem: p for p in motion_resources["tables"]["legs"]}
+        weapon_profiles = {Path(p["model"]).stem: p for p in motion_resources["tables"]["arms"]}
+        from .arm_aim import body_arm_aim, leg_arm_aim, weapon_nodes
         from .resources import resource_packages
         records = source_records(stats, manifest["models"], resource_packages(disc), disc)
         for entry in manifest["models"]:
@@ -189,7 +204,11 @@ def register_parts(image: Path, assets: Path, data: Path, mods: Path) -> dict:
                 native['source_melee_kind'] = source['kind'] if source['kind'] in (6, 7) else -1
                 native["flight"] = {0: 0, 1: 1, 2: 2, 3: 0}.get(source["flight"], template["flight"])
                 native["kind"] = adapted_kind if adapted_kind in (0, 2, 5, 6) else template["kind"]
+                native_flight(native, source)
                 definition["models"] = [resource, resource+1]
+                aim_node, muzzles = weapon_nodes(weapon_profiles[stem])
+                definition.update({"source_aim_node": aim_node, "source_muzzle_nodes": muzzles,
+                                   "source_raise_frames": source.get("raise_frames", 0)})
                 for side in range(2):
                     model = articulated_model(animated, texture, stem, side=side)
                     save(mods / f"models/binlink/{resource+side}.gltf", model)
@@ -223,6 +242,8 @@ def register_parts(image: Path, assets: Path, data: Path, mods: Path) -> dict:
                 flashes.append(flash_entry(source_muzzles[stem], category, new_type))
             elif category == "body":
                 definition.update({"model": resource, "motions": -1})
+                definition["source_arm_aim"] = body_arm_aim(motion_resources["arm_aim"],
+                                                            motion_resources["tables"]["bodies"], stem)
                 save(mods / f"models/binlink/{resource}.gltf",
                      articulated_model(animated, texture, stem,
                                        profile=body_profiles[(entry["source"], entry["package_offset"])]))
@@ -250,6 +271,7 @@ def register_parts(image: Path, assets: Path, data: Path, mods: Path) -> dict:
                 bank, timings = motion_bank(disc, disc.packages()[entry["package_offset"]], nodes, stem, profiles[stem])
                 definition.update({"model": resource, "motions": resource, "timings": timings, "shadow_mesh": -1})
                 definition['source_melee_motions'] = list(range(37, 45))
+                definition["source_arm_aim"] = leg_arm_aim(motion_resources["arm_aim"], source)
                 from .motion_resources import native_motion_actions
                 definition['source_motion_actions'] = native_motion_actions()
                 definition['source_transition_frames'] = motion_resources['transitions']['native_transition_frames']
