@@ -274,3 +274,36 @@ TEST_CASE("base game and S.L.A.I. share one save; old content-mode files are bro
   CHECK(fresh.quest.player_name == "SLAI");
   CHECK(fresh.save_slots[0]->player_name == "Base only");
 }
+
+TEST_CASE("data documents extend others, rewriting strings and selecting items") {
+  TempFolder root;
+  root.write("data/ui/base.json", R"({"image": "a.png", "next": "shop", "keep": 1,
+    "items": [{"id": "x", "image": "a.png"}, {"id": "y"}, {"id": "z"}], "deep": {"one": 1}})");
+  root.write("data/ui/variant.json", R"({"extends": "ui/base.json",
+    "replace_strings": {"a.png": "a.png#blue", "shop": "other_shop"},
+    "select": {"items": ["z", "x"]}, "deep": {"two": 2}})");
+  root.write("mods/data/ui/variant.json", R"({"keep": 3})");
+  const auto document = DataRoots::standard(root.path()).document("ui/variant.json");
+  CHECK(document.find("extends") == nullptr);
+  CHECK(document.find("select") == nullptr);
+  CHECK(document.find("image")->string() == "a.png#blue");
+  CHECK(document.find("next")->string() == "other_shop");
+  CHECK(document.find("keep")->number() == 3.0);
+  const auto &items = document.find("items")->array();
+  REQUIRE(items.size() == 2);
+  CHECK(items[0].string_or("id", "") == "z");
+  CHECK(items[1].string_or("image", "") == "a.png#blue");
+  CHECK(document.find("deep")->number_or("one", 0) == 1.0);
+  CHECK(document.find("deep")->number_or("two", 0) == 2.0);
+}
+
+TEST_CASE("data documents refuse an extends loop and a missing selection") {
+  TempFolder root;
+  root.write("data/ui/a.json", R"({"extends": "ui/b.json"})");
+  root.write("data/ui/b.json", R"({"extends": "ui/a.json"})");
+  root.write("data/ui/c.json", R"({"items": [{"id": "x"}]})");
+  root.write("data/ui/d.json", R"({"extends": "ui/c.json", "select": {"items": ["y"]}})");
+  const auto roots = DataRoots::standard(root.path());
+  CHECK_THROWS(roots.document("ui/a.json"));
+  CHECK_THROWS(roots.document("ui/d.json"));
+}

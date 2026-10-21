@@ -496,6 +496,37 @@ catalogue; they are excluded, and that alone does not identify them as voice.
 Non-ASCII font indices remain in metadata rather than being misread as
 Unicode. Titles/artists display their recovered ASCII portions.
 
+## Shop screens in the shops' own colours (2026-10-21)
+
+S.L.A.I.'s shop art is weaker than Phantom Crash's, so the port reuses
+Phantom Crash's shop screens for S.L.A.I.'s shops, each recoloured and
+carrying its own logo. This is a port addition, all in data:
+
+| Screen | Layout | Theme |
+|---|---|---|
+| `the_mechanist` (+ `_buy_module`, `_sell_module`) | Wild Machines, BUY/SELL MODULE only | blue (hue 212), `MOD_LOGO01` |
+| `difference_eg` (+ `_buy_chip`, `_sell_chip`) | Wild Machines, BUY/SELL CHIP only | green (hue 128), `CHI_LOGO01` |
+| `blood_music` | Sonic Amp, S.L.A.I.'s 90 songs (credits 81-170) | magenta (hue 312), `CDS_LOGO01` |
+
+- `data/ui/shop_variants.json` names each screen, its kind and its
+  document. A document can say `"extends"` (another document, composed with
+  its overlays first), `"replace_strings"` (exact string values, such as
+  an image or a screen name) and `"select"` (keeps the listed `id`s of an
+  array, in order); the rest merges on top (`DataRoots::document`).
+- An image named `"<image>#<theme>"` is drawn through a theme in
+  `data/ui/themes.json`: hue ranges recoloured to the theme's hue, regions
+  erased smoothly from their surroundings, and pictures pasted (the logos).
+  Sprite text, shapes and lines keyed by the plain image still apply; the
+  plate subtitle has themed entries that read the shop's name.
+- The Mechanist's BUY MODULE offers the day's lineup from S.L.A.I.'s
+  records only (`stock_from`: bodies 16, legs 43, arms 76, shoulders 69,
+  paints 57, emblems 206). Wild Machines still sells both games' parts.
+  Difference EG sells the day's Phantom Crash CHIPs until S.L.A.I.'s CHIPs
+  are imported.
+- The installer step `shop_art.py` converts the language-neutral logo
+  sheets to `textures/slai/shops/` (also `MAK02_1` and `MAK04_1` for the
+  OMSK and S&V Ma.FABRIK dealers, which are not wired yet).
+
 ## Original shop calendar
 
 `tables/town.json` contains 60 calendar rows. Each selects seven lineup IDs

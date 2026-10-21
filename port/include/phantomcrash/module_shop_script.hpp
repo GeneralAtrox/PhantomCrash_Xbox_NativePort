@@ -90,6 +90,9 @@ struct ModuleShopScript : TownBasics {
   std::vector<Sprite> emblem_swatches;
   double sell_rate{0.5};
   std::optional<ExtraStatsStyle> extra_stats; // none: no extra lines
+  // BUY offers only the records from these ids on, by kind ("stock_from"; a
+  // port addition: S.L.A.I.'s The Mechanist sells only S.L.A.I.'s parts).
+  std::array<int, goods_kind_count> stock_from{};
 };
 
 // Throws std::runtime_error naming the member at fault.

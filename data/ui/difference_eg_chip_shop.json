@@ -1,0 +1,12 @@
+{
+ "notes": [
+  "Difference EG's BUY and SELL CHIP: Wild Machines' CHIP shop in green, with the day's CHIPs (Phantom Crash's until S.L.A.I.'s CHIPs are imported)."
+ ],
+ "extends": "ui/chip_shop.json",
+ "replace_strings": {
+  "textures/scroll/wild_tex/1.png": "textures/scroll/wild_tex/1.png#difference_eg",
+  "textures/scroll/wild_tex/2.png": "textures/scroll/wild_tex/2.png#difference_eg",
+  "textures/scroll/wild_tex/4.png": "textures/scroll/wild_tex/4.png#difference_eg"
+ },
+ "exit_to": "difference_eg"
+}

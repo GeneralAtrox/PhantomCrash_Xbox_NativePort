@@ -14,6 +14,7 @@
 #include "desktop_world_renderer.hpp"
 #include "phantomcrash/robot_library.hpp"
 #include "phantomcrash/json_fields.hpp"
+#include "phantomcrash/shop_variants.hpp"
 
 #include <algorithm>
 #include <random>
@@ -62,9 +63,8 @@ ScreenRunner::ScreenRunner(SDL_Renderer *renderer, const DataRoots &roots, const
       talk_tuning_(parse_event_tuning(roots.document("story/talk.json"))),
       rumble_tuning_(parse_rumble(roots.document("world/rumble.json"))), options_(options),
       quest_(std::move(quest)) {
-  for (const char *menu : {"club_wired", "garage", "wild_machines", "plustech"}) {
-    const std::string file = std::string(menu) + ".json";
-    location_menus_[menu] = parse_location_menu(roots.document("ui/" + file), file);
+  for (const auto &[menu, document] : location_menu_documents(roots)) {
+    location_menus_[menu] = parse_location_menu(roots.document(document), document);
   }
   if (const auto font = converted_table(roots, "tables/font.json")) {
     font_ = parse_glyph_font(*font);

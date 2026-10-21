@@ -133,6 +133,10 @@ private:
                                                     const QuestSave &quest) const;
   [[nodiscard]] std::unique_ptr<Screen> make_rumbling(const std::string &from,
                                                       const QuestSave &quest) const;
+  // S.L.A.I.'s shops (phantomcrash/shop_variants.hpp; desktop_shop_variants.cpp).
+  void load_shop_variants(const DataRoots &roots, const BattleHudStyle &hud);
+  [[nodiscard]] std::unique_ptr<Screen>
+  make_shop_variant(const std::string &name, const std::string &from, const QuestSave &quest) const;
   [[nodiscard]] std::unique_ptr<Screen> make_keep_sv(const std::string &from,
                                                      const QuestSave &quest) const;
   [[nodiscard]] std::unique_ptr<Screen> make_vs_mode(const std::string &from,
@@ -176,6 +180,10 @@ private:
   ModuleShopScript buy_module_;
   ModuleShopScript sell_module_;
   ModuleShopScript stock_module_; // the garage's MODULES
+  // The shop variants' screens, by screen name.
+  std::map<std::string, ModuleShopScript, std::less<>> module_shops_;
+  std::map<std::string, ChipShopScript, std::less<>> chip_shops_;
+  std::map<std::string, SonicAmpScript, std::less<>> sonic_amps_;
   TuneShopScript customize_;
   HangarMenuScript hangar_;
   AssembleScript assemble_;

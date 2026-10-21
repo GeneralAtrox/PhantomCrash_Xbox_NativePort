@@ -1,4 +1,5 @@
 #include "desktop_sprite_lines.hpp"
+#include "phantomcrash/image_theme.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -166,7 +167,8 @@ SpriteLineSet::SpriteLineSet(std::vector<SpriteLines> lines) {
 }
 
 const SpriteLines *SpriteLineSet::find(const Sprite &sprite) const {
-  const auto found = lines_.find({sprite.image, sprite.rect});
+  const auto found =
+      lines_.find({std::string(split_themed_image(sprite.image).image), sprite.rect});
   return found == lines_.end() ? nullptr : &found->second;
 }
 

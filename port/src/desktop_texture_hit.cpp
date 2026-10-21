@@ -1,6 +1,5 @@
 #include "desktop_textures.hpp"
 #include "phantomcrash/shop_pointer.hpp"
-#include <SDL3_image/SDL_image.h>
 #include <algorithm>
 
 namespace phantomcrash {
@@ -14,10 +13,8 @@ bool TextureCache::hit(const Sprite &sprite, const std::array<float, 2> &point) 
   auto [found, inserted] = hit_masks_.try_emplace(sprite.image);
   auto &mask = found->second;
   if (inserted) {
-    if (const auto path = roots_.find_asset(sprite.image)) {
-      SDL_Surface *loaded = IMG_Load(path->string().c_str());
-      SDL_Surface *rgba = loaded ? SDL_ConvertSurface(loaded, SDL_PIXELFORMAT_RGBA32) : nullptr;
-      SDL_DestroySurface(loaded);
+    {
+      SDL_Surface *rgba = load_rgba(sprite.image);
       if (rgba && SDL_LockSurface(rgba)) {
         mask.width = rgba->w;
         mask.height = rgba->h;

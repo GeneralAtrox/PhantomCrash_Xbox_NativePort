@@ -1,0 +1,36 @@
+{
+ "notes": [
+  "S.L.A.I.'s shops as Phantom Crash's shop screens under their own names (port/include/phantomcrash/shop_variants.hpp; a port addition). Each document extends the original screen's (DataRoots::document): The Mechanist sells parts and Difference EG CHIPs through Wild Machines' screens, Blood Music sells S.L.A.I.'s songs through Sonic Amp's. The town map opens them by these names.",
+  "Kinds: location_menu, buy_module, sell_module, buy_chip, sell_chip, sonic_amp."
+ ],
+ "screens": {
+  "the_mechanist": {
+   "kind": "location_menu",
+   "document": "ui/the_mechanist.json"
+  },
+  "the_mechanist_buy_module": {
+   "kind": "buy_module",
+   "document": "ui/the_mechanist_module_shop.json"
+  },
+  "the_mechanist_sell_module": {
+   "kind": "sell_module",
+   "document": "ui/the_mechanist_module_shop.json"
+  },
+  "difference_eg": {
+   "kind": "location_menu",
+   "document": "ui/difference_eg.json"
+  },
+  "difference_eg_buy_chip": {
+   "kind": "buy_chip",
+   "document": "ui/difference_eg_chip_shop.json"
+  },
+  "difference_eg_sell_chip": {
+   "kind": "sell_chip",
+   "document": "ui/difference_eg_chip_shop.json"
+  },
+  "blood_music": {
+   "kind": "sonic_amp",
+   "document": "ui/blood_music.json"
+  }
+ }
+}

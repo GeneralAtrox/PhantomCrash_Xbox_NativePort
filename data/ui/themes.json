@@ -1,0 +1,150 @@
+{
+ "notes": [
+  "Colour themes for atlas art (port/include/phantomcrash/image_theme.hpp): a screen names an image as \"<image>#<theme>\". S.L.A.I.'s shops reuse Phantom Crash's screens in their own colours (a port addition; data/ui/shop_variants.json).",
+  "Wild Machines' yellow (hues 25-71 degrees, saturation from 0.08) takes the shop's hue; the \"Wild Machines\" lettering on the picture and the music strip is erased, and the shop's logo (installed from the S.L.A.I. disc by shop_art.py) goes on the strip below the ticker, at most twice its size.",
+  "Blood Music recolours only Sonic Amp's green picture (sonic_tex/2, the 640x480 backdrop) and puts its logo where the Sonic Amp script logo was (sonic_tex/0)."
+ ],
+ "themes": {
+  "the_mechanist": {
+   "hues": [
+    [
+     25,
+     71
+    ]
+   ],
+   "min_saturation": 0.08,
+   "hue": 212,
+   "saturation": 0.95,
+   "erase": [
+    {
+     "image": "textures/scroll/wild_tex/0.png",
+     "region": [
+      350,
+      340,
+      610,
+      440
+     ]
+    },
+    {
+     "image": "textures/scroll/wild_tex/0.png",
+     "region": [
+      350,
+      515,
+      610,
+      625
+     ]
+    }
+   ],
+   "paste": [
+    {
+     "image": "textures/scroll/wild_tex/0.png",
+     "picture": "textures/slai/shops/mod_logo01.png",
+     "rect": [
+      10,
+      3,
+      244,
+      125
+     ],
+     "region": [
+      340,
+      546,
+      630,
+      662
+     ],
+     "max_scale": 2
+    }
+   ]
+  },
+  "difference_eg": {
+   "hues": [
+    [
+     25,
+     71
+    ]
+   ],
+   "min_saturation": 0.08,
+   "hue": 128,
+   "saturation": 0.72,
+   "erase": [
+    {
+     "image": "textures/scroll/wild_tex/0.png",
+     "region": [
+      350,
+      340,
+      610,
+      440
+     ]
+    },
+    {
+     "image": "textures/scroll/wild_tex/0.png",
+     "region": [
+      350,
+      515,
+      610,
+      625
+     ]
+    }
+   ],
+   "paste": [
+    {
+     "image": "textures/scroll/wild_tex/0.png",
+     "picture": "textures/slai/shops/chi_logo01.png",
+     "rect": [
+      4,
+      23,
+      254,
+      112
+     ],
+     "region": [
+      340,
+      546,
+      630,
+      662
+     ],
+     "max_scale": 2
+    }
+   ]
+  },
+  "blood_music": {
+   "hues": [
+    [
+     63,
+     120
+    ]
+   ],
+   "min_saturation": 0.12,
+   "hue": 312,
+   "saturation": 0.9,
+   "recolour": [
+    {
+     "image": "textures/scroll/sonic_tex/2.png",
+     "region": [
+      0,
+      0,
+      640,
+      480
+     ]
+    }
+   ],
+   "paste": [
+    {
+     "image": "textures/scroll/sonic_tex/0.png",
+     "picture": "textures/slai/shops/cds_logo01.png",
+     "rect": [
+      35,
+      3,
+      210,
+      126
+     ],
+     "region": [
+      0,
+      0,
+      256,
+      112
+     ],
+     "clear": true
+    }
+   ]
+  }
+ }
+}

@@ -1,4 +1,5 @@
 #include "desktop_sprite_text.hpp"
+#include "phantomcrash/image_theme.hpp"
 #include "desktop_display_text.hpp"
 #include "desktop_sprite_lines.hpp"
 #include "desktop_sprite_shapes.hpp"
@@ -326,8 +327,19 @@ std::span<const SpriteTextStyle> SpriteText::find(const Sprite &sprite) const {
       return named->second;
     }
   }
-  const auto found = replacements_.find({sprite.image, sprite.rect, std::string{}});
-  return found == replacements_.end() ? std::span<const SpriteTextStyle>{} : found->second;
+  if (const auto found = replacements_.find({sprite.image, sprite.rect, std::string{}});
+      found != replacements_.end()) {
+    return found->second;
+  }
+  // A themed copy of an atlas (image_theme.hpp) keeps the plain art's
+  // lettering unless the themed name has its own.
+  const auto plain = split_themed_image(sprite.image);
+  if (plain.theme.empty()) {
+    return {};
+  }
+  Sprite untinted = sprite;
+  untinted.image = std::string(plain.image);
+  return find(untinted);
 }
 
 } // namespace phantomcrash

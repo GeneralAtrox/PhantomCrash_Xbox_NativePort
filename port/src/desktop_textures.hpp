@@ -2,6 +2,7 @@
 
 #include "phantomcrash/canvas.hpp"
 #include "phantomcrash/data_roots.hpp"
+#include "phantomcrash/image_theme.hpp"
 #include "phantomcrash/json.hpp"
 #include "phantomcrash/sprite_layer.hpp"
 #include "desktop_replay_overlay.hpp"
@@ -85,7 +86,15 @@ public:
                                     const std::vector<EraseArea> &areas,
                                     const SpriteLines *lines = nullptr);
 
+  // The image `key` names as RGBA32, its theme applied when the key names
+  // one ("<image>#<theme>", image_theme.hpp); null when the file is missing
+  // (desktop_texture_load.cpp).
+  [[nodiscard]] SDL_Surface *load_rgba(const std::string &key);
+
 private:
+  [[nodiscard]] const ImageThemes &image_themes();
+  void paste_pictures(const ImageTheme &theme, std::string_view image, SDL_Surface *target);
+
   SDL_Renderer *renderer_{};
   ReplayOverlay *recording_{};
   const DataRoots &roots_;
@@ -104,6 +113,7 @@ private:
     std::vector<std::uint8_t> alpha;
   };
   std::map<std::string, HitMask> hit_masks_;
+  std::optional<ImageThemes> image_themes_;
 };
 
 // Draw a constant-U strip, sampling one texel column through the existing GPU pass.

@@ -5,8 +5,6 @@
 #include "desktop_sprite_shapes.hpp"
 #include "desktop_sprite_text.hpp"
 
-#include <SDL3_image/SDL_image.h>
-
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -66,13 +64,7 @@ void bleed_edges(SDL_Surface *surface) {
   SDL_UnlockSurface(surface);
 }
 
-SDL_Texture *load_texture(SDL_Renderer *renderer, const char *path) {
-  SDL_Surface *loaded = IMG_Load(path);
-  if (loaded == nullptr) {
-    return nullptr;
-  }
-  SDL_Surface *rgba = SDL_ConvertSurface(loaded, SDL_PIXELFORMAT_RGBA32);
-  SDL_DestroySurface(loaded);
+SDL_Texture *load_texture(SDL_Renderer *renderer, SDL_Surface *rgba) {
   if (rgba == nullptr) {
     return nullptr;
   }
@@ -147,13 +139,10 @@ SDL_Texture *TextureCache::get(const std::string &file) {
   if (auto found = textures_.find(file); found != textures_.end()) {
     return found->second;
   }
-  SDL_Texture *loaded = nullptr;
-  if (const auto path = roots_.find_asset(file)) {
-    loaded = load_texture(renderer_, path->string().c_str());
-    if (loaded != nullptr) {
-      SDL_SetTextureScaleMode(loaded, SDL_SCALEMODE_LINEAR);
-      SDL_SetTextureBlendMode(loaded, SDL_BLENDMODE_BLEND);
-    }
+  SDL_Texture *loaded = load_texture(renderer_, load_rgba(file));
+  if (loaded != nullptr) {
+    SDL_SetTextureScaleMode(loaded, SDL_SCALEMODE_LINEAR);
+    SDL_SetTextureBlendMode(loaded, SDL_BLENDMODE_BLEND);
   }
   if (loaded == nullptr) {
     SDL_Log("Image %s could not be loaded", file.c_str());
@@ -165,7 +154,7 @@ SDL_Texture *TextureCache::get(const std::string &file) {
 
 void TextureCache::preload(const json::JsonValue &document) {
   if (document.is_string()) {
-    if (document.string().ends_with(".png")) {
+    if (split_themed_image(document.string()).image.ends_with(".png")) {
       static_cast<void>(get(document.string()));
     }
   } else if (document.is_array()) {

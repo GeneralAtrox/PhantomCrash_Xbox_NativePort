@@ -188,7 +188,10 @@ void ModuleShop::load_goods() {
                  true);
   } else {
     const int lineup = cell < lineups_.size() ? lineups_[cell] : -1;
-    list_.assign(goods_for_sale(parts_, garage_, kind, lineup), false);
+    auto goods = goods_for_sale(parts_, garage_, kind, lineup);
+    const int first = script_.stock_from[static_cast<std::size_t>(kind)];
+    std::erase_if(goods, [first](const ShopGoods &line) { return line.goods.id < first; });
+    list_.assign(std::move(goods), false);
   }
 }
 

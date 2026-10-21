@@ -12,6 +12,8 @@ add_library(phantomcrash_core
   src/location_menu.cpp
   src/location_menu_script.cpp
   src/data_roots.cpp
+  src/image_theme.cpp
+  src/shop_variants.cpp
   src/added_chips.cpp
   src/slai_content.cpp
   src/slai_rumble_rules.cpp
@@ -407,6 +409,7 @@ if(BUILD_TESTING)
     tests/effect_tests.cpp
     tests/effect_cluster_tests.cpp
     tests/slai_rumble_tests.cpp
+    tests/shop_variant_tests.cpp
   )
   target_link_libraries(phantomcrash_core_tests PRIVATE phantomcrash_core)
   # The shipped data/ documents are part of the source tree and tested too.
@@ -574,6 +577,8 @@ if(PHANTOMCRASH_BUILD_DESKTOP)
     src/desktop_sprite_text.cpp
     src/desktop_display_text.cpp
     src/desktop_textures_erase.cpp
+    src/desktop_texture_load.cpp
+    src/desktop_shop_variants.cpp
     src/desktop_battle_chatter.cpp
     src/desktop_battle_scene.cpp
     src/desktop_battle_view.cpp

@@ -127,6 +127,15 @@ void parse_help(const json::JsonValue &document, ModuleShopScript &script) {
       script.goods_help[static_cast<std::size_t>(*kind)] = strings(lines);
     }
   }
+  if (const json::JsonValue *from = document.find("stock_from")) {
+    for (const auto &[name, id] : from->object()) {
+      const auto kind = goods_kind_named(name);
+      if (!kind) {
+        throw std::runtime_error("stock_from: no kind " + name);
+      }
+      script.stock_from[static_cast<std::size_t>(*kind)] = static_cast<int>(id.number());
+    }
+  }
   if (const json::JsonValue *swatches = document.find("swatches")) {
     script.paint_swatches = member(*swatches, "paint", parse_sprites);
     script.emblem_swatches = member(*swatches, "emblem", parse_sprites);

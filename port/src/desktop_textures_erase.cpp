@@ -5,8 +5,6 @@
 #include "desktop_textures.hpp"
 #include "phantomcrash/sprite_lines.hpp"
 
-#include <SDL3_image/SDL_image.h>
-
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -181,10 +179,8 @@ SDL_Texture *TextureCache::erased(const std::string &file, const std::array<floa
     return found->second;
   }
   SDL_Texture *texture = nullptr;
-  if (const auto path = roots_.find_asset(file)) {
-    if (SDL_Surface *loaded = IMG_Load(path->string().c_str())) {
-      SDL_Surface *atlas = SDL_ConvertSurface(loaded, SDL_PIXELFORMAT_RGBA32);
-      SDL_DestroySurface(loaded);
+  {
+    if (SDL_Surface *atlas = load_rgba(file)) {
       const auto x = static_cast<int>(rect[0]), y = static_cast<int>(rect[1]);
       const auto w = static_cast<int>(rect[2] - rect[0]), h = static_cast<int>(rect[3] - rect[1]);
       SDL_Surface *piece = atlas != nullptr && w > 0 && h > 0

@@ -1,0 +1,22 @@
+{
+ "notes": [
+  "S.L.A.I.'s The Mechanist, the parts shop: Wild Machines' menu in blue with BUY and SELL MODULE only (data/ui/shop_variants.json)."
+ ],
+ "extends": "ui/wild_machines.json",
+ "replace_strings": {
+  "textures/scroll/wild_tex/0.png": "textures/scroll/wild_tex/0.png#the_mechanist",
+  "wild_machines_buy_module": "the_mechanist_buy_module",
+  "wild_machines_sell_module": "the_mechanist_sell_module"
+ },
+ "select": {
+  "items": [
+   "buy_module",
+   "sell_module",
+   "exit"
+  ]
+ },
+ "start_items": {
+  "the_mechanist_buy_module": "buy_module",
+  "the_mechanist_sell_module": "sell_module"
+ }
+}

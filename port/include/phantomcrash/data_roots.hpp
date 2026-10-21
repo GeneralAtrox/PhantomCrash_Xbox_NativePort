@@ -42,6 +42,11 @@ public:
   // data/<relative> with mods/data/<relative> merged on top (json::merge),
   // unless there is no mods folder. References to the game's text
   // (game_text.hpp) are replaced by the strings in tables/text.json.
+  // A document may build on another (a port addition, for screens that
+  // reuse a layout): "extends" names that document, whose strings
+  // "replace_strings" rewrites (exact values, e.g. an image or a screen
+  // name) and whose arrays "select" narrows to the listed "id"s, in that
+  // order; the rest of the document is merged on top.
   [[nodiscard]] json::JsonValue document(std::string_view relative) const;
   // Whether data/<relative> exists.
   [[nodiscard]] bool has_document(std::string_view relative) const;
@@ -58,6 +63,9 @@ private:
   struct TextCache;
   // tables/text.json, read the first time a document needs it; shared by copies.
   [[nodiscard]] const GameText &game_text() const;
+  // The document's own layers (data, S.L.A.I. content, mods), composed with
+  // the one it extends.
+  [[nodiscard]] json::JsonValue composed(std::string_view relative, int depth) const;
 
   std::filesystem::path data_;
   std::filesystem::path mods_;

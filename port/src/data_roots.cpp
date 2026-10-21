@@ -12,6 +12,53 @@
 namespace phantomcrash {
 namespace {
 
+// Documents extending documents: a deeper chain is a mistake (a loop).
+constexpr int max_extends_depth = 8;
+
+void replace_strings(json::JsonValue &value, const json::JsonValue &replacements) {
+  if (auto *text = std::get_if<std::string>(&value.value)) {
+    if (const auto *replacement = replacements.find(*text)) {
+      *text = replacement->string();
+    }
+  } else if (auto *array = std::get_if<json::JsonValue::Array>(&value.value)) {
+    for (auto &element : *array) {
+      replace_strings(element, replacements);
+    }
+  } else if (auto *object = std::get_if<json::JsonValue::Object>(&value.value)) {
+    for (auto &member : *object) {
+      replace_strings(member.second, replacements);
+    }
+  }
+}
+
+// Keeps the elements of each named array whose "id" is listed, in the listed
+// order.
+void select_ids(json::JsonValue &document, const json::JsonValue &selection) {
+  auto *members = std::get_if<json::JsonValue::Object>(&document.value);
+  if (members == nullptr) {
+    return;
+  }
+  for (const auto &[key, ids] : selection.object()) {
+    for (auto &[name, value] : *members) {
+      auto *array = std::get_if<json::JsonValue::Array>(&value.value);
+      if (name != key || array == nullptr) {
+        continue;
+      }
+      json::JsonValue::Array kept;
+      for (const auto &id : ids.array()) {
+        const auto found = std::ranges::find_if(*array, [&id](const json::JsonValue &element) {
+          return element.string_or("id", "") == id.string();
+        });
+        if (found == array->end()) {
+          throw std::runtime_error("\"select\": no " + key + " element " + id.string());
+        }
+        kept.push_back(*found);
+      }
+      *array = std::move(kept);
+    }
+  }
+}
+
 bool same_name(const std::string &left, const std::string &right) {
   return std::ranges::equal(left, right, [](unsigned char a, unsigned char b) {
     return std::tolower(a) == std::tolower(b);
@@ -144,7 +191,7 @@ bool DataRoots::has_document(std::string_view relative) const {
   return std::filesystem::is_regular_file(data_ / checked_relative(relative), error);
 }
 
-json::JsonValue DataRoots::document(std::string_view relative) const {
+json::JsonValue DataRoots::composed(std::string_view relative, const int depth) const {
   const auto path = checked_relative(relative);
   auto result = json::read_file(data_ / path);
   if (!content_.empty()) {
@@ -157,6 +204,31 @@ json::JsonValue DataRoots::document(std::string_view relative) const {
       json::merge(result, json::read_file(*overlay));
     }
   }
+  const json::JsonValue *base = result.find("extends");
+  if (base == nullptr) {
+    return result;
+  }
+  if (depth >= max_extends_depth) {
+    throw std::runtime_error(std::string(relative) + ": \"extends\" goes too deep (a loop?)");
+  }
+  auto composed_document = composed(base->string(), depth + 1);
+  if (const auto *replace = result.find("replace_strings")) {
+    replace_strings(composed_document, *replace);
+  }
+  if (const auto *select = result.find("select")) {
+    select_ids(composed_document, *select);
+  }
+  auto &own = std::get<json::JsonValue::Object>(result.value);
+  std::erase_if(own, [](const auto &member) {
+    return member.first == "extends" || member.first == "replace_strings" ||
+           member.first == "select";
+  });
+  json::merge(composed_document, result);
+  return composed_document;
+}
+
+json::JsonValue DataRoots::document(std::string_view relative) const {
+  auto result = composed(relative, 0);
   if (has_game_text_references(result)) {
     game_text().resolve(result);
   }

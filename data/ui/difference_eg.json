@@ -1,0 +1,22 @@
+{
+ "notes": [
+  "S.L.A.I.'s Difference EG, the CHIP shop: Wild Machines' menu in green with BUY and SELL CHIP only (data/ui/shop_variants.json)."
+ ],
+ "extends": "ui/wild_machines.json",
+ "replace_strings": {
+  "textures/scroll/wild_tex/0.png": "textures/scroll/wild_tex/0.png#difference_eg",
+  "wild_machines_buy_chip": "difference_eg_buy_chip",
+  "wild_machines_sell_chip": "difference_eg_sell_chip"
+ },
+ "select": {
+  "items": [
+   "buy_chip",
+   "sell_chip",
+   "exit"
+  ]
+ },
+ "start_items": {
+  "difference_eg_buy_chip": "buy_chip",
+  "difference_eg_sell_chip": "sell_chip"
+ }
+}

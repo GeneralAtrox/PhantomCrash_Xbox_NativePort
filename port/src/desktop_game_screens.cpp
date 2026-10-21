@@ -61,6 +61,7 @@ GameScreens::GameScreens(TextureCache &textures, const DataRoots &roots, const G
   use_reticle_sizes(buy_chip_, hud);
   use_reticle_sizes(sell_chip_, hud);
   use_reticle_sizes(uplift_, hud);
+  load_shop_variants(roots, hud);
   assemble_.paint_swatches = buy_module_.paint_swatches;
   assemble_.emblem_swatches = buy_module_.emblem_swatches;
   schedule_.skip.sleep = sleep_;
@@ -348,6 +349,9 @@ std::unique_ptr<Screen> GameScreens::make(const std::string &name, const std::st
     return std::make_unique<TuneShopScreen>(textures_, font_, std::move(logic), message_box_, from,
                                             frame_, credits_, quest, preview_world(),
                                             robot_preview_);
+  }
+  if (auto variant = make_shop_variant(name, from, quest)) {
+    return variant;
   }
   if (const auto look = dealer_.dealers.find(name); look != dealer_.dealers.end()) {
     return make_dealer(name, look->second.index, from, quest);

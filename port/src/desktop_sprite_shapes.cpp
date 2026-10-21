@@ -1,4 +1,5 @@
 #include "desktop_sprite_shapes.hpp"
+#include "phantomcrash/image_theme.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -241,7 +242,8 @@ SpriteShapes::SpriteShapes(std::vector<SpriteShape> shapes) {
 }
 
 const SpriteShape *SpriteShapes::find(const Sprite &sprite) const {
-  const auto found = shapes_.find({sprite.image, sprite.rect});
+  const auto found =
+      shapes_.find({std::string(split_themed_image(sprite.image).image), sprite.rect});
   return found == shapes_.end() ? nullptr : &found->second;
 }
 
