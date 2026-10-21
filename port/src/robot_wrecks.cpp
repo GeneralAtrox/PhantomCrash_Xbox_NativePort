@@ -17,6 +17,24 @@ RobotWreckSettings parse_robot_wreck_settings(const json::JsonValue &value) {
     throw std::runtime_error(
         "robot_wrecks needs nonnegative burn_seconds and reward_ny in multiples of 10 NY");
   }
+  if (const auto *clearing = value.find("ai_clearing")) {
+    WreckClearing &c = out.ai_clearing;
+    c.enabled = clearing->boolean_or("enabled", c.enabled);
+    c.range = static_cast<float>(clearing->number_or("range", c.range));
+    c.stand_off = static_cast<float>(clearing->number_or("stand_off", c.stand_off));
+    c.aim_degrees = static_cast<float>(clearing->number_or("aim_degrees", c.aim_degrees));
+    c.give_up_seconds =
+        static_cast<float>(clearing->number_or("give_up_seconds", c.give_up_seconds));
+    c.ammo_reserve = static_cast<float>(clearing->number_or("ammo_reserve", c.ammo_reserve));
+    const bool valid = std::isfinite(c.range) && std::isfinite(c.stand_off) &&
+                       std::isfinite(c.aim_degrees) && std::isfinite(c.give_up_seconds) &&
+                       c.range > 0 && c.stand_off >= 0 && c.aim_degrees > 0 &&
+                       c.give_up_seconds > 0 && c.ammo_reserve >= 0 && c.ammo_reserve <= 1;
+    if (!valid) {
+      throw std::runtime_error("robot_wrecks.ai_clearing needs positive range, aim_degrees and "
+                               "give_up_seconds, and an ammo_reserve from 0 to 1");
+    }
+  }
   return out;
 }
 

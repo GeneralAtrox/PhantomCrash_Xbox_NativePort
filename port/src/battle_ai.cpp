@@ -269,6 +269,7 @@ RobotControl Battle::ai_control(Combatant &drone, const float seconds) {
     ai_pickup(drone, step);
     ai_reactions(drone, step);
     ai_weapons(drone, step);
+    ai_clear_wreck(drone, step);
     s.diagnostics_left -= step;
     if (settings_.ai.trace && s.diagnostics_left <= 0) {
       s.diagnostics_left = data.value("trace_interval");
@@ -276,7 +277,8 @@ RobotControl Battle::ai_control(Combatant &drone, const float seconds) {
                 << " state=" << static_cast<int>(s.mode) << " target=" << s.target
                 << " visible=" << s.visible << " changes=" << s.transitions << " hp=" << drone.hp
                 << " requests=" << s.shots << " attacks=" << s.attacks << " dodges=" << s.dodges
-                << " pickups=" << s.pickup_selections << " recoveries=" << s.recoveries << '\n';
+                << " pickups=" << s.pickup_selections << " recoveries=" << s.recoveries
+                << " wreck=" << s.wreck << " wrecks_cleared=" << s.wrecks_cleared << '\n';
     }
   }
   return s.control;

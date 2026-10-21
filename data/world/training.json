@@ -282,7 +282,16 @@
    "burn_seconds": 6.45,
    "reward_ny": 10000,
    "break_effect": 15,
-   "break_sound": "sound/sfx/battle/16.wav"
+   "break_sound": "sound/sfx/battle/16.wav",
+   "ai_clearing": {
+    "notes": "Port addition: a computer robot with no enemy held turns to the nearest wreck within range (in sight), walks in to stand_off, and shoots it apart once its aim is within aim_degrees; it gives a wreck up after give_up_seconds. A limited magazine fires only above ammo_reserve of its rounds. Computer robots earn no wreck reward. The original leaves wrecks until shot; enabled false restores that.",
+    "enabled": true,
+    "range": 60,
+    "stand_off": 15,
+    "aim_degrees": 4,
+    "give_up_seconds": 10,
+    "ammo_reserve": 0.5
+   }
   },
   "drone_walk": 0.6,
   "drone_reach": 3,

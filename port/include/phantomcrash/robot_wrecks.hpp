@@ -8,11 +8,24 @@
 
 namespace phantomcrash {
 
+// Port addition: with no enemy held, a computer robot shoots the nearest
+// wreck in reach apart (battle_ai_wrecks.cpp), so the places stay clear
+// without wrecks timing out. Off unless the data enables it.
+struct WreckClearing {
+  bool enabled{};
+  float range{60.0F};           // how far a robot looks for a wreck
+  float stand_off{15.0F};       // it walks in to this distance, then stands
+  float aim_degrees{4.0F};      // it fires once its heading and aim are this close
+  float give_up_seconds{10.0F}; // and leaves a wreck it has not broken by then
+  float ammo_reserve{0.5F};     // a limited magazine keeps this share for robots
+};
+
 struct RobotWreckSettings {
   float burn_seconds{6.45F};
   int reward_ny{10000};
   int break_effect{15};
   std::string break_sound{"sound/sfx/battle/16.wav"};
+  WreckClearing ai_clearing;
 };
 
 [[nodiscard]] RobotWreckSettings parse_robot_wreck_settings(const json::JsonValue &value);

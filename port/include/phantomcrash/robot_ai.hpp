@@ -50,11 +50,15 @@ struct RobotAiState {
   AiMode mode{AiMode::route};
   int pickup{-1};
   float pickup_left{};
+  // Port addition (battle_ai_wrecks.cpp): the wreck being shot apart, the
+  // time left before giving it up, and the last one given up.
+  int wreck{-1}, wreck_skipped{-1};
+  float wreck_left{};
   // 0x059799: 1 jump pressed, 2 in the air, 3 aiming after landing.
   int jump_phase{};
   float jump_aim_left{};
   std::vector<float> damage_seen; // the robot's damage_from at the last AI tick
-  unsigned pickup_selections{};
+  unsigned pickup_selections{}, wrecks_cleared{};
   int target{-1}, submode{}, search{-1}, dodge_side{1};
   float accumulator{}, memory{}, state_left{}, guard{}, action_left{}, previous_hp{};
   float route_stalled{}, blocked{}, camouflage_left{}, camouflage_wait{}, detect_left{};

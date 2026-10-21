@@ -275,6 +275,8 @@ private:
   void ai_move(Combatant &drone, float seconds);
   void ai_route(Combatant &drone, float seconds);
   void ai_pickup(Combatant &drone, float seconds);
+  void ai_clear_wreck(Combatant &drone, float seconds);
+  [[nodiscard]] bool wreck_in_sight(Vec3 from, std::size_t index) const;
   void ai_weapons(Combatant &drone, float seconds);
   // 0x0582b0 / 0x05ed21: the weapon records, beam sustain and forced weapons.
   void ai_setup_weapons(Combatant &drone, bool champion);

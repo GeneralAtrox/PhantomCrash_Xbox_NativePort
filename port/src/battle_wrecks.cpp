@@ -27,7 +27,9 @@ bool Battle::hit_wreck(const WeaponHit &hit) {
     event.slot = settings_.robot_wrecks.break_effect;
     // Event money uses stored units (tens of NY), like supply and match prizes.
     // This bonus never touches kills, BINGO, or the downed robot's damage ledger.
-    if (hit.attacker >= 0 && hit.attacker < static_cast<int>(robots_.size())) {
+    // A computer robot clearing wrecks earns nothing, even with co-op's shared cash.
+    if (hit.attacker >= 0 && hit.attacker < static_cast<int>(robots_.size()) &&
+        !robots_[static_cast<std::size_t>(hit.attacker)].drone) {
       event.amount = static_cast<float>(settings_.robot_wrecks.reward_ny / ny_per_stored_unit);
     }
     events_.push_back(event);

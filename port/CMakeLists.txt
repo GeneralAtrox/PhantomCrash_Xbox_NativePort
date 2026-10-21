@@ -78,6 +78,7 @@ add_library(phantomcrash_core
   src/robot_ai.cpp
   src/robot_ai_data.cpp
   src/battle_ai_pickups.cpp
+  src/battle_ai_wrecks.cpp
   src/battle_ai_navigation.cpp
   src/battle_ai_steering.cpp
   src/battle_ai_vantage.cpp
@@ -359,6 +360,7 @@ if(BUILD_TESTING)
     tests/battle_damage_tests.cpp
     tests/beam_charge_tests.cpp
     tests/battle_wreck_tests.cpp
+    tests/battle_ai_wreck_tests.cpp
     tests/battle_chatter_tests.cpp
     tests/battle_scene_tests.cpp
     tests/battle_scene_defeat_tests.cpp
