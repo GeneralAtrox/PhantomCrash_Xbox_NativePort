@@ -68,6 +68,22 @@ TEST_CASE("the behind view stands over the torso and eases after the robot") {
   CHECK(near(camera.target(), feet + Vec3{0.0F, 2.0F, 0.0F} + forward * 8.0F));
 }
 
+TEST_CASE("an eye height sets the behind view's eye over the feet") {
+  // The S.L.A.I. behind view measured under PCSX2: the eye 5 above and 8.6
+  // behind the feet, the look point 0.5 above and 20 ahead of them.
+  ChaseCameraSettings settings;
+  settings.eye_height = 5.0F;
+  settings.behind = 8.6F;
+  settings.height = 0.5F;
+  settings.look_ahead = 20.0F;
+  ChaseCamera camera(settings);
+  const StageCollision stage;
+  const Vec3 start{-205.9F, 1.25F, 94.5F};
+  camera.tick(standing(start), stage, tick, true);
+  CHECK(near(camera.eye(), start + Vec3{0.0F, 5.0F, 8.6F}));
+  CHECK(near(camera.target(), start + Vec3{0.0F, 0.5F, -20.0F}));
+}
+
 TEST_CASE("the behind view rises in the air and keeps off walls") {
   ChaseCamera camera(ChaseCameraSettings{});
   ArenaBounds bounds;

@@ -148,6 +148,17 @@ std::map<std::string, StageDefinition> parse_stages(const json::JsonValue &docum
           stage.player_spawns.push_back({xyz[0], xyz[1], xyz[2]});
         }
       }
+      if (const auto *camera = value.find("battle_camera")) {
+        if (camera->find("fov_degrees") != nullptr) {
+          stage.camera_fov_degrees = float_or(*camera, "fov_degrees", 0.0F);
+          if (!(*stage.camera_fov_degrees > 0.0F && *stage.camera_fov_degrees < 180.0F)) {
+            throw std::runtime_error("battle_camera fov_degrees is out of range");
+          }
+        }
+        if (const auto *chase = camera->find("chase_camera")) {
+          stage.chase_camera = *chase;
+        }
+      }
       stages.emplace(name, std::move(stage));
     } catch (const std::exception &error) {
       throw std::runtime_error("stages.json, stage " + name + ": " + error.what());
@@ -162,6 +173,16 @@ void apply_stage(SceneTuning &scenes, const StageDefinition &stage) {
   }
   if (!stage.door_model.empty()) {
     scenes.doors.model = stage.door_model;
+  }
+}
+
+void apply_stage_camera(TrainingBattle &battle, const StageDefinition &stage) {
+  if (stage.chase_camera) {
+    battle.camera = parse_chase_camera(*stage.chase_camera, battle.camera);
+  }
+  if (stage.camera_fov_degrees) {
+    battle.camera.fov_degrees = *stage.camera_fov_degrees;
+    battle.views.fov_degrees.fill(*stage.camera_fov_degrees);
   }
 }
 

@@ -20,6 +20,22 @@ constexpr float inside_share = 0.9F;
 // and goes over the first half of a change away (0x04eaa3).
 constexpr float cockpit_share = 0.5F;
 
+// Scale measurement against an original capture: PHANTOMCRASH_CAMERA_POSE
+// "eye x,y,z,target x,y,z,vertical fov degrees" in native units holds the
+// battle camera there (a port debugging aid; unset, nothing changes).
+std::optional<CameraShot> measurement_pose() {
+  static const std::optional<CameraShot> pose = [] {
+    const char *text = SDL_getenv("PHANTOMCRASH_CAMERA_POSE");
+    float v[7]{};
+    if (text == nullptr || SDL_sscanf(text, "%f,%f,%f,%f,%f,%f,%f", &v[0], &v[1], &v[2], &v[3],
+                                      &v[4], &v[5], &v[6]) != 7) {
+      return std::optional<CameraShot>{};
+    }
+    return std::optional<CameraShot>{CameraShot{{v[0], v[1], v[2]}, {v[3], v[4], v[5]}, v[6]}};
+  }();
+  return pose;
+}
+
 } // namespace
 
 TrainingScreen::~TrainingScreen() {
@@ -131,6 +147,9 @@ void TrainingScreen::tick_camera(const InputFrame &input, const float seconds) {
     shot = scene_->scene().shot(camera_.chase());
   }
   camera_.set_shot(shot ? shot : std::optional<CameraShot>(views_.shot()));
+  if (const auto pose = measurement_pose()) {
+    camera_.set_shot(pose);
+  }
   update_target_view();
 }
 

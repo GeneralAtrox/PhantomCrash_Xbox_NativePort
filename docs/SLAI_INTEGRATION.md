@@ -2146,3 +2146,64 @@ guns pointing at the ground, and the target's armour never dropped.
   - Closing this needs the original's arm angle for one row with a
     front-back forearm offset, from a PCSX2 run of S5B01H.
 
+## Stage and robot scale; S.L.A.I. battle camera (2026-10-21)
+
+- Stage scale is the original's. The S.L.A.I. stage loader `0x517e20`
+  draws stage models unscaled; only robot part roots take the 0.1 slot-0
+  scale (`0x2526dc..704`, switch `0x41eca0`). All 15 composed stage glTFs
+  carry the same `canonical_to_world` root scale (10), so their
+  proportions match each other and the original. At the original's camera
+  pose (read from PCSX2 RAM) and field of view, a port frame of New York
+  overlays the PCSX2 frame: pillars, rail, posts and horizon line up.
+  A 35/39/43-degree sweep at that pose matched only at 39 degrees.
+- The mismatch was the camera. S.L.A.I. stages used the Phantom Crash
+  camera (52 degrees at `0x07e10c`; eye 2 over the torso and 6.15 behind,
+  look 2 over and 8 ahead of the feet, `0x2327c4`/`0x2327dc`). The
+  S.L.A.I. view-screen setup `0x1c1410` stores the screen distance from
+  `0x2bb2a0` (549.0) at `+0x1980` and aspect factors from `0x2bb2a4`
+  (1.0) and `0x2bb2a8` (1.16) at `+0x2728`/`+0x272c`; its 512-line mode
+  multiplies the vertical factor by 8/7 (`0x1c149c..b8`). PCSX2 showed the
+  view-screen matrix x 549.0, y 727.817. Vertical field of view:
+  2 atan(224 / (549 * 1.16)) = 38.757 degrees.
+- Behind view, measured at rest in a New York Quick Battle (camera
+  structure `0x4b2f00 + robot * 0x100`: view matrix `+0x60`, eye `+0xa0`,
+  eye offset `+0xb0`, look offset `+0xc0`): eye 5.0 above and 8.6 behind
+  the feet, look point 0.5 above and 20 ahead. No literal 8.6 constant was
+  found; `0x25d940` and `0x25ee90`/`0x25f170` set special and fixed
+  cameras, not the follow camera. These four values are runtime
+  measurements (adapters), not recovered constants.
+- `slai/battle_camera.py` reads the three floats behind instruction guards
+  and `register_stages` writes a `battle_camera` block into every S.L.A.I.
+  stage of `stages.json` (`fov_degrees`, `chase_camera` with
+  `eye_height`, `behind`, `height`, `look_ahead`, plus `source` and
+  `notes`). The port applies it over `training.json`'s camera for that
+  stage (`apply_stage_camera`); the field of view covers every battle view.
+  `ChaseCameraSettings::eye_height`, when set, places the eye above the
+  feet instead of above the torso. Phantom Crash stages carry no block and
+  keep the recovered Phantom Crash camera. `PHANTOMCRASH_CAMERA_POSE`
+  ("eye x,y,z,target x,y,z,vertical fov") holds the battle camera at a
+  pose for measurement against an original capture (a port debugging aid).
+- Robot sizes differ between the two games by design: the New York
+  container is 5 x 5 x 5 collision units; the port's Test Drive robot
+  stands about 3.1 units at the camera, the original Quick Battle robot
+  about 4.2 (a different robot, estimated), and Phantom Crash robots about
+  4.4-5. The parts review found S.L.A.I. robots 1.4-1.6 times the Plain
+  Holy's height at the same camera (ELINT, MOLNIYA, ARDITO about 2 times).
+  No robot or stage scale was changed.
+- Open: the port draws S.L.A.I. content mirrored left-right compared with
+  PCSX2 (container "DELTA" text reads mirrored; layouts match once the
+  port frame is flipped). PS2 screen right is +column 0 of the view
+  matrix (checked by turning right); native = (x, -y, -z) is a proper
+  rotation shown in the port's left-handed view. A fix crosses models,
+  collision, spawns, effects and robots and is not part of this change.
+  Stage spawns still use the Phantom Crash camera offsets in
+  `ground_spawns`. Original captures exist for New York only; the
+  Phantom Crash side relies on recovered XBE constants, not an xemu run.
+- The main checkout's installed artifacts lack the robot clock field
+  `native_clock_rate`, so robots do not load until the pack is
+  regenerated. Re-run the S.L.A.I. install (or `register-slai-assets`)
+  to write the new `battle_camera` blocks into the installed stages.json.
+- Checks: 673 native core checks, 670 pass; the 3 failures (two shipped
+  tutorial courses, blur tint/stage distortion) fail identically on the
+  parent commit. 110 S.L.A.I. Python checks pass, 7 skipped. Review
+  captures are in `research-output/review-scale/`.

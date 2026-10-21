@@ -102,6 +102,8 @@ def register_stages(image: Path, data: Path, mods: Path) -> dict:
         program = ProgramData(disc)
         from .world_units import world_units, restore_world_units, export_world_model
         units = world_units(program)
+        from .battle_camera import battle_camera
+        camera_view = battle_camera(program)
         prop_resources = program.prop_resources()
         supply_pickups = program.supply_pickup_visuals()
         from .supply_assets import supply_assets, stage_supply_routes
@@ -203,7 +205,8 @@ def register_stages(image: Path, data: Path, mods: Path) -> dict:
                     "start": float(fog[1])*units["world_scale"], "end": float(fog[2])*units["world_scale"]},
             "source": stage["source"], "unresolved_materials": unresolved,
             "supply_pickups": pickup_look,
-            "supply_routes": copy.deepcopy(stage_supply_routes(supply, stage["source"]))}
+            "supply_routes": copy.deepcopy(stage_supply_routes(supply, stage["source"])),
+            "battle_camera": copy.deepcopy(camera_view)}
         stage_id = len(vs["battle"]["stages"])
         vs["battle"]["stages"].append(name)
         item = copy.deepcopy(menu["area_select"]["items"][0])
