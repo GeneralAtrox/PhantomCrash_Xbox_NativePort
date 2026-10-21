@@ -6,16 +6,18 @@
 #include "phantomcrash/glyph_font.hpp"
 #include "phantomcrash/town_map.hpp"
 
+#include <optional>
 #include <string>
 #include <vector>
 
 namespace phantomcrash {
 
-// The town map (TownMap): the map, the chosen place's number, arrows and
-// sign, the rider, the scrolling help line and the town frame (day, money,
-// RIDING SV plate, music meter and credit). The mouse chooses and opens
-// places and spins the rider. The frame style and credits outlive the
-// screen.
+// The town map (TownMap): the map, its bands and the places' markers, the
+// chosen place's sign, the rider, the scrolling help line and the town
+// frame (day, money, RIDING SV plate, music meter and credit), all fitted
+// to the map's own view (16:9, letterboxed in a narrower window). The
+// mouse chooses and opens places and spins the rider. The frame style and
+// credits outlive the screen.
 class TownMapScreen final : public Screen {
 public:
   [[nodiscard]] std::optional<MenuPresence> menu_presence() const override;
@@ -29,10 +31,10 @@ public:
     return map_.script().music;
   }
   [[nodiscard]] bool day_clicked(const InputFrame &input) const override {
-    return frame_.day_clicked(input, map_.quest());
+    return frame_.day_clicked(in_view(input), map_.quest());
   }
   bool save_clicked(const InputFrame &input) override {
-    return frame_.save_clicked(input);
+    return frame_.save_clicked(in_view(input));
   }
   void set_music(const std::string &file) override {
     frame_.set_music(file);
@@ -54,11 +56,16 @@ public:
   }
 
 private:
+  // The input with its pointer moved from the window's canvas to the view's.
+  [[nodiscard]] InputFrame in_view(InputFrame input) const;
+
   TextureCache &textures_;
   const GlyphFont &font_;
   TownMap map_;
   LocationFrame frame_;
   std::vector<std::vector<int>> help_runs_;
+  std::optional<Viewport> window_; // the last frame's window and view
+  std::optional<Viewport> view_;
 };
 
 } // namespace phantomcrash

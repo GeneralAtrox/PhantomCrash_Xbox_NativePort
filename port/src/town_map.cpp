@@ -22,6 +22,12 @@ bool inside(const std::array<float, 4> &box, const std::array<float, 2> point) {
   return point[0] >= box[0] && point[0] < box[2] && point[1] >= box[1] && point[1] < box[3];
 }
 
+bool on_disc(const TownMarkerBoxes &boxes, const std::array<float, 2> point) {
+  const float x = (point[0] - boxes.centre[0]) / boxes.radii[0];
+  const float y = (point[1] - boxes.centre[1]) / boxes.radii[1];
+  return x * x + y * y <= 1.0F;
+}
+
 } // namespace
 
 TownMap::TownMap(TownMapScript script, const std::string &from, QuestSave quest)
@@ -125,9 +131,14 @@ void TownMap::update(const double tick_seconds, const InputFrame &input) {
     }
   }
   if (go) {
+    const std::string &next = script_.places[static_cast<std::size_t>(place_)].next;
+    if (next.empty()) {
+      sound(script_.closed_sound);
+      return;
+    }
     sound(script_.select_sound);
     leaving_ = seconds_;
-    fade_.leave(script_.places[static_cast<std::size_t>(place_)].next);
+    fade_.leave(next);
   }
 }
 
@@ -200,9 +211,9 @@ void TownMap::turn_to(const double angle) {
 }
 
 // The place under the mouse: the chosen place on its sign, which is drawn
-// over the map, or the place whose number (or, with `names`, name) it is
-// on. Moving the mouse picks by number alone: the riders stand clear of the
-// other numbers but by other names, and circling him must not move him.
+// over the map, or the place whose disc (or, with `names`, its label) it is
+// on. Moving the mouse picks by disc alone: the riders stand by other
+// places' labels, and circling him must not move him.
 std::optional<int> TownMap::place_at(const std::array<float, 2> point, const bool names) const {
   if (const auto shown = sign(); shown && shown->size) {
     const auto [width, height] = *shown->size;
@@ -214,12 +225,8 @@ std::optional<int> TownMap::place_at(const std::array<float, 2> point, const boo
     }
   }
   for (std::size_t index = 0; index < script_.places.size(); ++index) {
-    const TownPlace &place = script_.places[index];
-    const auto [width, height] = size_of(place.badge);
-    const std::array<float, 4> badge{place.badge.position[0], place.badge.position[1],
-                                     place.badge.position[0] + width,
-                                     place.badge.position[1] + height};
-    if (inside(names ? place.hit : badge, point)) {
+    const TownMarkerBoxes &boxes = script_.places[index].boxes;
+    if (on_disc(boxes, point) || (names && inside(boxes.label, point))) {
       return static_cast<int>(index);
     }
   }
@@ -234,7 +241,10 @@ std::optional<Sprite> TownMap::sign() const {
     return std::nullopt;
   }
   const TownPlace &place = script_.places[static_cast<std::size_t>(place_)];
-  Sprite sign = place.sign;
+  if (!place.sign) {
+    return std::nullopt;
+  }
+  Sprite sign = *place.sign;
   const auto [width, height] = size_of(sign);
   sign.centered = true;
   sign.size = std::array<float, 2>{width * grown, height * grown};
@@ -245,7 +255,7 @@ std::optional<Sprite> TownMap::sign() const {
 
 // 0x3eadc: the rider travels between the places' spots, hovers (whole units,
 // as the original truncates) while at rest, and grows out of and back into
-// the chosen place's number as he appears and goes. He faces the way the
+// the chosen place's disc as he appears and goes. He faces the way the
 // place he comes from says, the other way after a move round past the ends.
 std::optional<Sprite> TownMap::unturned_rider() const {
   float scale = progress(shown_);
@@ -267,11 +277,9 @@ std::optional<Sprite> TownMap::unturned_rider() const {
     x += std::trunc(static_cast<float>(std::sin(phase / script_.bob_x_seconds)) * script_.bob);
     y += std::trunc(static_cast<float>(std::sin(phase / script_.bob_y_seconds)) * script_.bob);
   }
-  const auto [badge_width, badge_height] = size_of(to.badge);
-  const float badge_x = to.badge.position[0] + std::trunc(badge_width * 0.5F);
-  const float badge_y = to.badge.position[1] + std::trunc(badge_height * 0.5F);
+  const auto [disc_x, disc_y] = to.boxes.centre;
   rider.centered = true;
-  rider.position = {lerp(badge_x, x, scale), lerp(badge_y, y, scale)};
+  rider.position = {lerp(disc_x, x, scale), lerp(disc_y, y, scale)};
   rider.size = std::array<float, 2>{width * scale, height * scale};
   rider.flip_x = (moving() ? from.rider_flipped : to.rider_flipped) != wrapped_;
   return rider;

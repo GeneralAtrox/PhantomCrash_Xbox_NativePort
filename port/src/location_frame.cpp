@@ -208,12 +208,40 @@ HudStyle placed_hud(HudStyle style, const HudPlacement &placement) {
 MusicMeter::MusicMeter(MeterStyle style)
     : style_(std::move(style)), levels_(static_cast<std::size_t>(style_.bars), 0.0F) {}
 
+namespace {
+
+// The level `heard` gives bar `index` of `bars`: its own band's, or with
+// another count of bands, the bands spread evenly over the bars.
+float heard_level(const std::vector<float> &heard, const std::size_t index,
+                  const std::size_t bars) {
+  if (heard.empty()) {
+    return 0.0F;
+  }
+  if (heard.size() == bars || bars < 2) {
+    return index < heard.size() ? std::clamp(heard[index], 0.0F, 1.0F) : 0.0F;
+  }
+  const float at = static_cast<float>(index) * static_cast<float>(heard.size() - 1) /
+                   static_cast<float>(bars - 1);
+  const auto low = static_cast<std::size_t>(at);
+  const std::size_t high = std::min(low + 1, heard.size() - 1);
+  const float share = at - static_cast<float>(low);
+  return std::clamp(heard[low] * (1.0F - share) + heard[high] * share, 0.0F, 1.0F);
+}
+
+} // namespace
+
 void MusicMeter::update(const double tick_seconds, const std::vector<float> &heard) {
   const auto fall = static_cast<float>(style_.fall_per_second * tick_seconds);
   for (std::size_t index = 0; index < levels_.size(); ++index) {
-    const float now = index < heard.size() ? std::clamp(heard[index], 0.0F, 1.0F) : 0.0F;
-    levels_[index] = std::max(levels_[index] - fall, now);
+    levels_[index] = std::max(levels_[index] - fall, heard_level(heard, index, levels_.size()));
   }
+}
+
+MeterStyle with_bars(MeterStyle style, const MeterBars &bars) {
+  style.bars = bars.bars;
+  style.step = bars.step;
+  style.bar_size = bars.bar_size;
+  return style;
 }
 
 std::vector<Sprite> meter_sprites(const MeterStyle &style, const std::array<float, 2> origin,
@@ -298,6 +326,19 @@ FramePlacement parse_frame_placement(const json::JsonValue &value) {
   }
   if (const auto *meter = value.find("meter")) {
     placement.meter = numbers<2>(*meter, "meter");
+  }
+  if (const auto *x = value.find("riding_plate_x")) {
+    placement.riding_plate_x = static_cast<float>(x->number());
+  }
+  if (const auto *bounds = value.find("riding_plate_bounds")) {
+    placement.riding_plate_bounds = numbers<2>(*bounds, "riding_plate_bounds");
+  }
+  if (const auto *bars = value.find("meter_bars")) {
+    MeterBars row;
+    row.bars = std::max(1, static_cast<int>(required(*bars, "bars").number()));
+    row.step = static_cast<float>(required(*bars, "step").number());
+    row.bar_size = numbers<2>(required(*bars, "bar_size"), "bar_size");
+    placement.meter_bars = row;
   }
   const auto &now_playing = required(value, "now_playing");
   try {

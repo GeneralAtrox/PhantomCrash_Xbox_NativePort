@@ -197,7 +197,10 @@ void draw_outline(SDL_Renderer *renderer, const ShapeOutline &outline,
                 indices);
   } else if (stops.front().alpha > 0.0F) {
     std::array<float, 2> centre{(box[0] + box[2]) * 0.5F, (box[1] + box[3]) * 0.5F};
-    if (!outline.path.empty()) {
+    if (outline.fan) {
+      centre = {(*outline.fan)[0] + box[0] - outline.box[0],
+                (*outline.fan)[1] + box[1] - outline.box[1]};
+    } else if (!outline.path.empty()) {
       centre = {0.0F, 0.0F};
       for (const auto &[x, y] : inside) {
         centre = {centre[0] + x / static_cast<float>(count),

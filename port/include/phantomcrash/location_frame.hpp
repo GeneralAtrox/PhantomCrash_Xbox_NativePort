@@ -99,7 +99,9 @@ struct HudPlacement {
 
 // The CURRENT MUSIC meter: a row of bars beside the credit that light from
 // the bottom with the music heard (MusicSpectrum, the port's own). Each bar
-// rises at once to its band's level and falls back at fall_per_second.
+// rises at once to its band's level and falls back at fall_per_second. A
+// meter with more or fewer bars than bands heard spreads the bands over its
+// bars.
 struct MeterStyle {
   Sprite unlit; // a swatch stretched over each bar's dark part
   Sprite lit;   // and over its lit part
@@ -125,6 +127,15 @@ private:
   MeterStyle style_;
   std::vector<float> levels_;
 };
+
+// A screen's own row of bars in place of the style's (its own slot).
+struct MeterBars {
+  int bars{7};
+  float step{7.0F};
+  std::array<float, 2> bar_size{4.0F, 24.0F};
+};
+
+[[nodiscard]] MeterStyle with_bars(MeterStyle style, const MeterBars &bars);
 
 // The meter's bars from `origin`, the first bar's top-left.
 [[nodiscard]] std::vector<Sprite> meter_sprites(const MeterStyle &style,
@@ -170,9 +181,14 @@ struct FramePlacement {
   std::optional<std::array<float, 2>> save_offset;
   bool riding_plate{};
   std::optional<float> riding_plate_y; // the plate's height when not the style's (0x6dd74's y)
+  std::optional<float> riding_plate_x; // and its left edge
+  // "riding_plate_bounds": [left, right]: where the sliding plate is cut;
+  // the 4:3 picture's edges unless given.
+  std::optional<std::array<float, 2>> riding_plate_bounds;
   // A plate of the screen's own in place of the style's (RUMBLING's, 0x6db03's last argument 1).
   std::optional<RidingPlateStyle> riding_plate_style;
   std::optional<std::array<float, 2>> meter;
+  std::optional<MeterBars> meter_bars; // "meter_bars": {"bars", "step", "bar_size"}
   TickerStyle now_playing;
   std::string now_playing_format; // "{title}" and "{artist}" are replaced
 };

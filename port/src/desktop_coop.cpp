@@ -13,8 +13,9 @@ CoopScreen::CoopScreen(SDL_Renderer *renderer, const DataRoots &roots, const Gam
                        ScreenRunner::SaveSlots imports, QuestSave current,
                        std::shared_ptr<CoopState> state, const GlyphFont &font)
     : renderer_(renderer), textures_(renderer, roots), font_(font),
-      map_(parse_town_map(roots.document("ui/town_map.json"))), roots_(roots), options_(options),
-      imports_(std::move(imports)), current_(std::move(current)), state_(std::move(state)) {
+      map_(for_content(parse_town_map(roots.document("ui/town_map.json")), roots.slai())),
+      roots_(roots), options_(options), imports_(std::move(imports)), current_(std::move(current)),
+      state_(std::move(state)) {
   state_->matches = std::make_shared<CoopMatches>();
   art_ = load_coop_art(roots_);
   buttons_ = std::make_unique<MenuButtons>(renderer_, roots_.document("ui/main_menu_buttons.json"));

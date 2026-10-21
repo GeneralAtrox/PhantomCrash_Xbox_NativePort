@@ -51,7 +51,7 @@ ScreenRunner::ScreenRunner(SDL_Renderer *renderer, const DataRoots &roots, const
       button_config_(parse_button_config(roots.document("ui/button_config.json"))),
       screen_adjust_(parse_screen_adjust(roots.document("ui/screen_adjust.json"))),
       name_entry_(parse_name_entry(roots.document("ui/name_entry.json"))),
-      town_map_(parse_town_map(roots.document("ui/town_map.json"))),
+      town_map_(for_content(parse_town_map(roots.document("ui/town_map.json")), roots.slai())),
       guide_(parse_pepper_guide(roots.document("ui/pepper_guide.json"))),
       load_game_(parse_load_game(roots.document("ui/load_game.json"))),
       save_game_(parse_load_game(roots.document("ui/save_game.json"))),

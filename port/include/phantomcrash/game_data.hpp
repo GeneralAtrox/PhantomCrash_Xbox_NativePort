@@ -17,7 +17,8 @@ namespace phantomcrash {
 // 3: legs records carry stop_keep (0.5.7).
 // 4: chatter.json carries the Area Rankers' defeat lines.
 // 5: tables/text.json carries the game text the data files reference.
-inline constexpr int converted_assets_version = 5;
+// 6: the town map's picture without its painted markers (0_scrubbed.png).
+inline constexpr int converted_assets_version = 6;
 
 struct GameDataPaths {
   std::filesystem::path europe;   // artifacts/europe

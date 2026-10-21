@@ -18,8 +18,10 @@ namespace {
 
 constexpr double tick = 1.0 / 60.0;
 
-TownMapScript shipped() {
-  return parse_town_map(DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT).document("ui/town_map.json"));
+TownMapScript shipped(const bool slai = false) {
+  return for_content(
+      parse_town_map(DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT).document("ui/town_map.json")),
+      slai);
 }
 
 TownMap town(const std::string &from, QuestSave quest = {}) {
@@ -47,6 +49,46 @@ TEST_CASE("the town map has its eight places") {
   CHECK(script.places[5].next == "dealer_ventuno");
   CHECK(script.places[3].rider_flipped);
   CHECK(!script.places[0].rider_flipped);
+  for (const TownPlace &place : script.places) {
+    CHECK(!place.slai);
+    CHECK(place.sign.has_value());
+  }
+}
+
+TEST_CASE("with S.L.A.I. the town map has fourteen places, the original eight among them") {
+  const TownMapScript script = shipped(true);
+  REQUIRE(script.places.size() == 14U);
+  std::vector<std::string> ids;
+  for (const TownPlace &place : script.places) {
+    ids.push_back(place.id);
+  }
+  CHECK((ids == std::vector<std::string>{"garage", "club_wired", "difference_eg", "wild_machines",
+                                         "the_mechanist", "plustech", "blood_music", "sonic_amp",
+                                         "ma_fabrik", "ventuno", "omsk", "kojima", "american_stars",
+                                         "battle_school"}));
+  CHECK(script.places[6].next == "sonic_amp"); // Blood-Music's songs are Sonic Amp's for now
+  CHECK(script.places[2].next.empty());
+  CHECK(!script.places[2].sign);
+  TownMapScript none = shipped(true);
+  none.places[13].enabled = false;
+  CHECK(for_content(none, true).places.size() == 13U);
+}
+
+TEST_CASE("confirming a closed town map place stays on the map") {
+  TownMap map(shipped(true), "garage", {});
+  run(map, 0.8);
+  press(map, button::left);
+  run(map, 0.3);
+  REQUIRE(map.place() == 1);
+  press(map, button::left);
+  run(map, 0.3);
+  REQUIRE(map.place() == 2); // Difference-EG
+  static_cast<void>(map.take_sounds());
+  press(map, button::a);
+  CHECK((map.take_sounds() == std::vector<std::string>{"warning"}));
+  run(map, 0.6);
+  CHECK(!map.done());
+  CHECK(!map.sign()); // it has no sign of its own
 }
 
 TEST_CASE("the town map starts on the place it was opened from") {
@@ -243,19 +285,27 @@ void circle(TownMap &map, const double turns) {
 
 } // namespace
 
-TEST_CASE("the mouse chooses a town map place by its number or name") {
+// Canvas units of a point in the town map's view units.
+std::array<float, 2> at(const float x, const float y) {
+  return shipped().view.point({x, y});
+}
+
+TEST_CASE("the mouse chooses a town map place by its disc") {
   TownMap map = town("garage");
   run(map, 0.8);
   static_cast<void>(map.take_sounds());
-  point(map, 120.0F, 130.0F); // Wild Machines' number
+  const auto disc = at(250.0F, 190.0F); // Wild Machines' disc, off its middle
+  point(map, disc[0], disc[1]);
   CHECK(map.place() == 2);
   CHECK((map.take_sounds() == std::vector<std::string>{"adjust", "town_move"}));
   run(map, 0.3);
   press(map, button::right);
   CHECK(map.place() == 1);
   run(map, 0.3);
-  CHECK(map.place() == 1);    // the mouse, still, does not take it back
-  point(map, 200.0F, 140.0F); // Wild Machines' name: moving over it does not choose it
+  CHECK(map.place() == 1); // the mouse, still, does not take it back
+  const auto label =
+      at(130.0F, 190.0F); // Wild Machines' bar code: moving over it does not choose it
+  point(map, label[0], label[1]);
   run(map, 0.3);
   CHECK(map.place() == 1);
   point(map, 20.0F, 400.0F); // nowhere
@@ -266,7 +316,8 @@ TEST_CASE("the mouse chooses a town map place by its number or name") {
 TEST_CASE("clicking the chosen town map place's sign goes there") {
   TownMap map = town("garage");
   run(map, 0.8);
-  point(map, 480.0F, 190.0F, true); // the garage's sign, over Kojima's number
+  const auto sign = at(886.0F, 174.0F); // the garage's sign, over American Stars' disc
+  point(map, sign[0], sign[1], true);
   CHECK(map.place() == 0);
   run(map, 0.6);
   CHECK(map.next() == "garage");
@@ -275,7 +326,8 @@ TEST_CASE("clicking the chosen town map place's sign goes there") {
 TEST_CASE("clicking a town map place goes there") {
   TownMap map = town("garage");
   run(map, 0.8);
-  point(map, 420.0F, 340.0F, true); // Sonic Amp's name
+  const auto name = at(530.0F, 514.0F); // Sonic Amp's name
+  point(map, name[0], name[1], true);
   CHECK(map.place() == 4);
   run(map, 0.6);
   CHECK(map.done());

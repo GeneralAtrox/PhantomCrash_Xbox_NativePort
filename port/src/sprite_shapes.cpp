@@ -165,6 +165,9 @@ ShapeOutline parse_outline(const json::JsonValue &value) {
   if (const auto *fill = value.find("fill")) {
     outline.fill = parse_gradient(*fill);
   }
+  if (const auto *fan = value.find("fan")) {
+    outline.fan = numbers<2>(*fan);
+  }
   if (const auto *toward = value.find("shade_toward")) {
     const auto direction = numbers<2>(*toward);
     const float length = std::hypot(direction[0], direction[1]);

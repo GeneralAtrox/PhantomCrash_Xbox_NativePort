@@ -18,6 +18,15 @@
 
 namespace phantomcrash {
 
+// The edges of display lettering, in canvas units: an outline (in the ink's
+// own colour it emboldens the letters) and a soft shadow.
+struct LabelEdge {
+  std::optional<std::uint32_t> outline;
+  float outline_width{};
+  std::optional<TextShadow> shadow;
+  float shadow_blur{};
+};
+
 // Sprites and text collected for one frame and drawn lowest layer first, in
 // the order added within a layer, as the original's layered 2D lists draw.
 class DrawList final {
@@ -41,6 +50,8 @@ public:
   void label(int layer, std::string text, const std::string &font, const std::array<float, 4> &box,
              std::uint32_t colour, const std::optional<TextShadow> &shadow, float shadow_blur,
              DisplayLayout layout = {});
+  void label(int layer, std::string text, const std::string &font, const std::array<float, 4> &box,
+             std::uint32_t colour, const LabelEdge &edge, DisplayLayout layout = {});
   // A ticker `seconds` after its text was set.
   void ticker(const TickerStyle &style, const std::vector<int> &run, double seconds);
   // A message box as it is now: the growing window, then its lines and choices.
@@ -48,6 +59,9 @@ public:
   // Vector outlines (data/ui/sprite_shapes.json's format) over `box`
   // (canvas left, top, right, bottom), their texels stretched onto it.
   void shape(int layer, std::vector<ShapeOutline> outlines, const std::array<float, 4> &box);
+  // As shape, with `texels` across and down the box, at `alpha`.
+  void shape(int layer, std::vector<ShapeOutline> outlines, const std::array<float, 4> &box,
+             const std::array<float, 2> &texels, float alpha = 1.0F);
   // `draw` run in its turn on `layer` (a menu's 3D robot, between the
   // backdrop and the window over it).
   void custom(int layer, std::function<void()> draw) {

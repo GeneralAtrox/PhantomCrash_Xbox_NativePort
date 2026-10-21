@@ -48,12 +48,13 @@ struct ShapeGradient {
 // With a `path` (a closed contour in the same texels, such as a folder's
 // tabbed edge) the distances run from it instead, each point moved along
 // its corner's bisector; `box` is then its bounds. A path's fill is a fan
-// from its centre, so it must be seen whole from there; a gradient fill
-// needs it convex. Distances deeper than a corner's radius fold there:
-// layer outlines on exact inner contours rather than reach far in.
+// from its centre (or from `fan`, a point it can be seen whole from), so it
+// must be seen whole from there; a gradient fill needs it convex. Distances deeper than a corner's
+// radius fold there: layer outlines on exact inner contours rather than reach far in.
 struct ShapeOutline {
   std::array<float, 4> box{};
   std::vector<std::array<float, 2>> path;
+  std::optional<std::array<float, 2>> fan;
   float radius{};
   float radius_growth{1.0F};
   std::vector<ShapeStop> stops;

@@ -62,12 +62,15 @@ struct SpriteTextStyle {
 };
 
 // An installed outline font for display lettering: the first face found is
-// used, after loading `files` (data-root relative) privately.
+// used, after loading `files` (data-root relative) privately. `tracking`
+// spaces the letters by that share of the font's size (negative closes
+// them up).
 struct DisplayFont {
   std::vector<std::string> faces;
   std::vector<std::string> files;
   int weight{700};
   bool italic{};
+  float tracking{};
 };
 
 // data/ui/sprite_text.json: the plain bitmap digits and labels the menus

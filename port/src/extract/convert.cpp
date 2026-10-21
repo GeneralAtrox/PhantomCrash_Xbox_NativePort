@@ -6,6 +6,7 @@
 #include "gltf.hpp"
 #include "parallel.hpp"
 #include "png_write.hpp"
+#include "town_map_scrub.hpp"
 #include "xbox_texture.hpp"
 #include "phantomcrash/game_data.hpp"
 
@@ -250,6 +251,8 @@ Json convert_assets(const fs::path &files, const fs::path &output, const bool re
   put(manifest, "tables", write_tables(image, tables, output));
   put(member(manifest, "tables"), "text", write_game_text(image, text_sources, output));
   put(manifest, "texture_packs", convert_textures(media, output, report));
+  write_scrubbed_town_map(media, output);
+  report(std::string("  1 picture   ") + scrubbed_town_map);
   put(manifest, "models", convert_models(media, output, tables, report));
   put(manifest, "robots", convert_robots(media, executable, tables, output, report));
   put(manifest, "sound_banks", convert_sound_banks(media, output, report));

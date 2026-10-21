@@ -106,6 +106,7 @@ SpriteTextTable parse_sprite_text_table(const json::JsonValue &document) {
       }
       font.weight = static_cast<int>(value.number_or("weight", font.weight));
       font.italic = value.boolean_or("italic", false);
+      font.tracking = static_cast<float>(value.number_or("tracking", 0.0));
       table.fonts[name] = std::move(font);
     }
   }
