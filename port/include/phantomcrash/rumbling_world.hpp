@@ -97,6 +97,9 @@ public:
   stand_up_contest(int area, int contest, const QuestSave &quest, std::vector<RobotParts> &looks);
   [[nodiscard]] bool player_won() const;
   [[nodiscard]] std::vector<RosterStatus> roster_status(int area) const;
+  // Whether a player's robot has shot `entrant` down at `area` today already
+  // (AreaRoster::eliminated, marked once its robot is out).
+  [[nodiscard]] bool eliminated(int area, int entrant) const;
   // The bounties of the opponents the player has shot down in the lent area
   // so far, for the HUD; give_back pays them.
   [[nodiscard]] std::int64_t bounty_won() const;

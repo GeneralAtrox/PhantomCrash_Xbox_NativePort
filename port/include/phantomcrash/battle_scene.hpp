@@ -118,7 +118,8 @@ struct SceneTuning {
   std::string play_in_music{"battle_play_in"}; // track 16, 9PLAYIN
   std::string boss_music{"boss_start"};        // track 6, 13BossStart
   // The piloted robots take no hits while a boss's entrance holds the
-  // camera (port: their controls wait while the others fight on).
+  // camera, nor while another boss's defeat does (port: their controls
+  // wait while the others fight on).
   bool boss_spares_players{true};
   DoorTuning doors;
 };
@@ -278,7 +279,7 @@ private:
   void walk_robot_exit(Battle &battle, RobotEntrance &entry, float seconds, float step);
   void hold_still(Battle &battle, int index) const;
   // battle_scene_defeat.cpp
-  void tick_defeat(float step);
+  void tick_defeat(Battle &battle, float step);
 
   // Fixed once loaded: copies and rollback checkpoints share them.
   std::shared_ptr<const BattleSceneTables> tables_;
@@ -304,6 +305,7 @@ private:
   bool defeat_ends_{};  // a ranker's: the battle ends with it
   bool defeat_over_{};  // ... and it has
   bool defeat_speaking_{};
+  bool defeat_spares_{}; // the players take no hits while it holds (port)
   std::vector<std::string> sounds_;
   std::optional<std::string> music_;
 };
