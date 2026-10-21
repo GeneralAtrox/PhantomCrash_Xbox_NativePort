@@ -247,6 +247,56 @@ The condition functions sit at 0x26A990–0x26AF40. They test:
 Setting flags 0x16, 0x23, 0x28, 0x46, 0x4E or 0x61 calls f_256E70, which
 unlocks content (**Medium**).
 
+**Selection as the port reads it** (`slai_story.cpp`). A row plays when its
+kind and places match, its city (0..8) equals `save+0xA20` or it names none,
+its required flag is set (or -1), and its blocking and completion flags are
+clear. The threshold compares one progress count: won ranker records
+(0x30..0x67), plus regional (0x68..0x6E) from 0x39, plus finals from 0x40
+(**Medium**: the ranges are static; treating them as one running count is
+an assumption that holds when records are won in ladder order). The
+tutorial conditions read record 0x18's cleared byte (0x257410) and
+`save+0x4448`; the money conditions the shared NY. The sponsor, completion
+score and unnamed `fn_*` conditions return false until the port has their
+state. Places are S.L.A.I.'s names, mapped to port screens in
+`data/story/slai_talk.json` (docs/SLAI_STORY_PLAN.md).
+
+## Talk scene assets
+
+`register-slai-talk` (`slai/talk_register.py`, also run by the S.L.A.I.
+install) converts the talk scenes into the S.L.A.I. asset root
+(`artifacts/slai/assets`):
+
+- **Pictures.** The talk archives' PIG pictures as PNG under
+  `talk/<folder>/` (portraits and expressions, `talk/common` window art
+  TAL01–04, `talk/de000` the Knocker, `talk/news/<n>` news and event
+  pictures) and `2d/s_chara`, `2d/s_chip` icons. Folder and file names are
+  the disc's own (shipped names); the PNGs are the original pictures,
+  unchanged.
+- **Animations.** Each ANB bank as JSON beside its picture (`slai/anb.py`
+  reads and writes the format; layout in its docstring, **High**,
+  round-trip tested): cells with UVs, pivots, two scale/rotation stages,
+  blend and RGBA; frames as cell lists; anims as {frame, tween, loop, jump,
+  end} commands.
+- **Font.** FONT01..05 as `font/font01..05.png` and `font/glyphs.json`
+  (`slai/talk_font.py`): 896 glyphs a page in 32×28 cells of 16×18, with
+  the {left, width} metrics from 0x36E2E0 and the four fixed ranges
+  (0x206B20). FONT_A01/02 (debug) are pictures only.
+- **Scripts.** Every EVT script per language as
+  `talk/event/<uk|us|de|fr>/<name>.json`: `{"code": [[op name, args...]],
+  "strings": [...]}` with text in readable tokens (`{player}`,
+  `{style:n}`...`{/style}`, `{hhhh}` for glyphs without a character;
+  `glyph_text` / `talk_glyphs` invert each other). The Japanese package is
+  not exported.
+- **Table.** `tables/slai_talk.json` (`slai/talk_tables.py`): the opcode
+  table (name, argc, polls, `waits_for`), characters (folder, icon, name,
+  chip icon, expressions), the story event rows, news pictures, the window,
+  prompt and style colours (0x337660, 0x337670), panel sprite places
+  (0x337C20), the login curve (0x3376A0) and text, the Knocker texture mask
+  (0x1807FF), the voice meter sets (0x5977D0) and the sound cues.
+- **Sounds.** The talk cues as `slai/assets/sound/cue_NNN.wav`
+  (deterministic extractor names); BGM streams are the S.L.A.I. music
+  conversion's `sound/slai/bgm_NN.ogg`.
+
 ## MSG text format (**High**, round-trip tested)
 
 - **Layout.** `u32 count`, `u32 offsets[count]` (file offsets), then u16
@@ -295,30 +345,98 @@ table):
   `{exec fn, poll fn, u32 argc, pad, u64 blocking mask}`.
   `evt_opcode_argc` checks the decoder's embedded argc list against this
   table.
-- **Branching.** When VM[0x1DD] ≥ 0 and differs from VM[0x1DC], every
-  opcode except 0x35 (case) and 0x3D (end case) is skipped. VM[0x1DC] comes
-  from f_4EA860, which is not decoded (**Medium**).
+- **Branching** (**High**, static). `case` (0x35) sets VM[0x1DD] to its
+  first argument and `end_case` (0x3D) resets it to -1 (**Medium**: the
+  reset is read from the exec function, not seen at runtime). While
+  VM[0x1DD] ≥ 0 and differs from VM[0x1DC], every opcode except 0x35 and
+  0x3D is skipped. A `case` that matches also restyles the window (style 2
+  for selector 0, else 3).
+- **Case selector f_4EA860** (**High**, static). VM[0x1DC] is the partner
+  chip's type: `save+0x9FC` (current hangar, s16) < 0 gives 0; otherwise the
+  hangar's robot record (0x25A870, stride 0x68) names a part in 0x25A850
+  (stride 8, +4 item id), whose item record (0x24D440: 0x3DF340 + id × 0x22C,
+  id clamped 0..0x1C3) holds a u16 chip type at +6. Types 2..9 give
+  selectors 1..8; anything else 0. The port has no S.L.A.I. partner chips
+  yet, so its selector is 0.
 
-Coarse opcode groups (all researcher labels, **Medium** unless noted):
+Opcode names are researcher labels (`EVT_OPCODE_NAMES` in
+`slai/campaign.py`); the wait masks come from the opcode table. **High**
+where the exec and poll functions were read, **Medium** for meanings drawn
+from them:
 
-| opcodes | group |
-|---|---|
-| 01–08 | scene/frame open animations |
-| 09/0A, 0D/0E, 12, 1D | UI panel show/hide |
-| 0B (4) / 0C / 31 | open talk window, close window, select active window |
-| 21 / 36 | show dialogue string / secondary string (**High**) |
-| 20, 2E/2F/30, 1F | wait for button, sync, wait N frames |
-| 34, 37/38, 39, 3A/3B, 3C | window style, text position, text parameter, margins, clear |
-| 35 (2) / 3D | case / end case for choice branches |
-| 23/24/25/27/28/29 | choice and menu prompts (f_4EA6C0) |
-| 2D | day/week display |
-| 16/1A, 17 (3), 18/19, 1B/1C | portrait loading, portrait with expression, slot operations |
-| 10 / 11 / 0F (4) | background image / event image / unresolved |
-| 14 / 15 | fade in / out (duration × 2) |
-| 42 (2) / 43, 44 / 45, 2A | BGM, sound effect play/stop, ambient loop |
-| 2B | tutorial setup (MAIN01T/03T only) |
-| 3E/3F/40, 41, 47/48, 49, 46 | VM flag bits and state writes; 46 is a no-op |
-| 13 | unresolved (f_4E3B00) |
+| opcodes | names | what they do |
+|---|---|---|
+| 01–07 | backdrop_in, haven_open(_2/_3), haven_close, rings_out(_2) | H.A.V.E.N. backdrop, its opening objects, petal and ring sprites and their fades (see below) |
+| 08 | login_screen | FREEZE.PIG reboot screen; percentage follows the (frame, value) curve at 0x3376A0 |
+| 09/0A, 0D/0E | panel_open/close, news_open/close | portrait panel and HPC news frame objects |
+| 0B/0C/31 | open_window, close_window, select_window | talk windows 0..3 |
+| 0F, 16, 1A, 22, 26, 30 | loads and their waits | instant in the port |
+| 10 | background | 0 none, 1 news frame, n>1 news picture n (256×256 at 256,169); alpha ±0x20 a frame, SE 0x2C |
+| 11/12, 1B–1D, 18/19/1E | event portraits, event images, badges | not used by the opening; not ported yet |
+| 13 | town_hud | the town HUD's state (0x26FFF0: state 1 keeps town text at y 409, otherwise 379) |
+| 14/15 | fade_in/out | from/to black over 2n frames |
+| 17 | portrait | character, expression, chip icon (-1: the character's own) |
+| 1F/20/21/2E/2F | wait_frames, wait_button, say, sync, sync_portrait | waits are the table's blocking masks |
+| 23/24/25/29 | knocker_in/out/pose, knocker_only_pose | the Knocker (see below) |
+| 27/28/2D/49 | partner_in/out, partner_path(_stop) | the partner robot; not ported yet |
+| 2A | ambient_loop | not ported yet |
+| 2B | glitch | the town break-up and text rate (see below) |
+| 2C | panel_sprites | the panel's seven icons at 0x337C20, alpha ±0x20 over 4 frames |
+| 34/37/38/39/3A/3B/3C | window_style, glyph_size, ruby_size, text_speed, text_cursor, text_offset, clear_text | text layout |
+| 35/3D | case, end_case | branches (above) |
+| 3E | text_flag_1 (0x270B70) | arg 0 sets VM[6] bit 1: no blinking |
+| 3F | line_feed (0x270C10) | arg 0 sets bit 4: the next say continues the line |
+| 40 | allow_skip (0x270BC0) | arg 0 sets bit 2: typing cannot be skipped |
+| 41 | talk_sounds | VM[0x1AD]: the talk animation and voice meter set |
+| 42/43, 44/45 | bgm, bgm_stop, se, se_stop | 0x203470(id, 0, 0x76) clamps: the bgm id is the stream index (`sound/slai/bgm_NN.ogg`) |
+| 32, 33, 36, 46, 47, 48 | unload_character, op_33, ruby, nop, op_47, op_48 | not used by the opening |
+
+**Talk scene player details** (**High** unless noted; all static, from the
+exec/poll functions named):
+
+- **Text rate.** 0x20A920 sets the rate; the step interval is 60/rate.
+  Typing advances speed/interval glyphs a frame, and a window's default speed
+  is the interval. The game loop is not slowed. `glitch` (0x271300/0x271550):
+  arg 0 hides the town's 25×20 cells from the counter's old to new value
+  (+25 every 16 frames below 100, every 8 below 200, then +15/+20/+25 a
+  frame; rate 3 once past 100; done at 500); 0xD/0xC/0xB/0xA show cells
+  0–124/125–249/250–374/375–499 (rate 2/2/3/unchanged); 4 shows all (rate
+  2); 3 normal rate; 2 rate 20; 1 rate 10. MAIN01T ends at rate 2, so every
+  later scene types at rate 2 (**Medium**: inferred from MAIN01T's last
+  glitch op; nothing resets it).
+- **H.A.V.E.N.** haven_open (0x26B170) plays objects +0x64 anim 6, +0x74 anim
+  8 and +0x6C anim 0x20 at (256,258), scale (0.88,1); when +0x64 ends, +0x68
+  anim 0x13 and +0x70 anim 0x14. haven_open_2: twelve petals at angle
+  i·30+7°, radius 169, alpha clamp((c−i)·32). haven_open_3: rings of 6/8/6
+  sprites (24–29, 30–37, 38–43) at i·60+15°/i·45+50°/i·60+30°, radii
+  245/256/259. Sprites sit at x = 256 + 0.88·r·sin a, y = 258 − r·cos a,
+  rotated by a. rings_out/rings_out_2 fade them out (ring 3, then 1 at −5,
+  then 2 at −10).
+- **Voice meter** (0x4ECBF0). Seven TAL01 bars (320,9,8,46); the sets at
+  0x5977D0 are {f32 low, high, phase (rad), i32 period}. Set 0 idles; set
+  VM[0x1AD] runs while a say is pending in window 0 with style 0. Target =
+  low + (high−low)·(0.5+0.5·sin(phase + (frame % period)·360/period°)); the
+  level moves 0.1 a frame toward it. Bars at x = 26+8i, y = 56+46·(0.5−0.5·level)
+  (**Low**: 0x4DE990 may place them relative to the panel).
+- **Knocker** (0x2701A0..0x2706F0, 0x4EA6C0). A new object at (x+256, 224−y)
+  per file `de%04x`, texture DE0000 or DE0001 by bit f of 0x1807FF.
+  knocker_in 0: file 0x13 at (0xA4,−45) in talk scenes, (0xA1,−108) in town
+  (−68 when the HUD is in state 2); 1: file 0xF; 2: file 8 runs in from
+  x −300 by 40 a frame, hopping over the last 208 px, then anims 1 and 0.
+  knocker_out 1 plays file 0xF anim 3, 0 file 0x14. The talk animation
+  (0x4ED590) plays file 5/0xF/6 by state while a say types in style 2.
+- **Portraits** (0x26F510, 0x4EF1C0, 0x26F600). `talk/<folder>/<folder><hex
+  expr>.json`, picture `<folder><hex(expr/5)>` (character 0x1F: expr>>2), at
+  (125,189). The same character cross-fades by 8 a frame; another fades out
+  over 8 frames, shows its chip icon (TAL01 anim 0x24) and fades in to frame
+  21. Mouths (characters 1..0x1C) play anim 1 while talking; eyes
+  (1..0x17) blink every 4–6 s (0x4ED6F0). Character 0 removes the portrait
+  (**Medium**).
+- **Windows and text.** Window and prompt colours at 0x337660/0x337670,
+  style text colours per style. A glyph advances
+  (((w·256+9)/18·width) >> 4, +8 & ~0xF)/16 and is drawn at x − left·w/18
+  in a 16×18 cell scaled by w/18, h/18. A press skips typing (unless
+  allow_skip 0); the blip SE 0x0A sounds every 3 frames.
 
 Scripts present dialogue only. Story progress comes from the event table's
 completion flags and from town code; no opcode sets a story flag or starts
@@ -371,8 +489,8 @@ match weights, need runtime checks in PCSX2.
 
 - **Script renderer.** A talk-scene renderer for the 74 opcodes: windows,
   portraits with expressions, backgrounds, choices, fades and BGM. About
-  20 opcodes are still coarse or unknown, and f_4EA860 (the case selector)
-  is undecoded.
+  The opening's opcodes and f_4EA860 are decoded; the partner robot,
+  badges, event images and ambient loops remain (see the opcode table).
 - **Trigger system.** The 154-row trigger system with its ~30 hand-written
   condition functions, the place/sub-place town navigation, and the
   256-bit flag set.
@@ -461,5 +579,6 @@ a Las Vegas night match can use `slai_day_lasvegas`.
   match weights do?
 - What builds sit behind the roster ids (f_256CC0)? This needs ranker and
   robot data decoding.
-- What are the semantics of save+0xA20 values 7 and 8, of f_4EA860, of EVT opcodes 0F,
-  13, 1B and 1C, and of story trigger kinds 0–4?
+- What are the semantics of save+0xA20 values 7 and 8, of EVT opcodes 33,
+  47 and 48, of story trigger kinds 2–4, and of save+0x4448 (the
+  tutorial's second ending)?

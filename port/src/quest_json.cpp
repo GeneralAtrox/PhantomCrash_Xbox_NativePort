@@ -180,6 +180,9 @@ QuestSave quest_from_json(const json::JsonValue &value) {
   if (const auto *slai = value.find("slai_rumble")) {
     quest.slai_rumble = slai_rumble_from_json(*slai);
   }
+  if (const auto *story = value.find("slai_story")) {
+    quest.slai_story = slai_story_from_json(*story);
+  }
   return quest;
 }
 
@@ -224,6 +227,7 @@ json::JsonValue quest_to_json(const QuestSave &quest) {
       {"music", music_to_json(quest.music)},
       {"garage", garage_to_json(quest.garage)},
       {"slai_rumble", slai_rumble_to_json(quest.slai_rumble)},
+      {"slai_story", slai_story_to_json(quest.slai_story)},
   }};
 }
 

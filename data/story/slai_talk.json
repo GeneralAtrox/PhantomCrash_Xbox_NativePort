@@ -1,0 +1,24 @@
+{
+ "notes": [
+  "S.L.A.I.'s talk scenes in the port (docs/SLAI_STORY_PLAN.md). The scripts, event table, pictures and font come from the S.L.A.I. registration (artifacts/slai/assets: talk/, font/, tables/slai_talk.json); this file holds the port's choices.",
+  "language: the script folder under talk/event/ (uk, us, de or fr); a scene missing there falls back through uk, us, de, fr.",
+  "text_rate: the game's text rate (0x20A920), which paces typing: speed / (60 / rate) glyphs a frame. MAIN01T's glitch leaves it at 2 for the rest of the game, so scenes start at 2; MAIN01T itself starts at the normal 60.",
+  "glitched: the town's 500 cells start hidden; MAIN03T opens by restoring what MAIN01T broke.",
+  "places: S.L.A.I.'s place names (the event table's place and sub-place) for the port's screens. A story event plays on a move between screens whose places match its row. Battle School (tutorial) and battle_return have no port screen until Rumble S.L.A.I. runs S.L.A.I. matches (docs/SLAI_RUMBLE_PLAN.md)."
+ ],
+ "language": "uk",
+ "text_rate": 2,
+ "scenes": {
+  "main01t": {"text_rate": 60},
+  "main03t": {"glitched": true}
+ },
+ "places": {
+  "townmap": ["town_map"],
+  "wired": ["club_wired"],
+  "garage": ["garage"],
+  "moduleshop": ["wild_machines", "plustech", "sonic_amp"],
+  "ending": ["ending"],
+  "tutorial": [],
+  "battle_return": []
+ }
+}

@@ -107,23 +107,26 @@ EVT_OPCODE_ARGC = (
     1, 1, 1, 0, 0, 1, 1, 0, 1, 0, 1, 1, 2, 0, 1, 1, 2, 1, 1, 1, 2, 0, 0, 0, 1,
     1, 0, 2, 2, 1, 2, 2, 1, 2, 2, 1, 0, 1, 1, 1, 1, 2, 1, 2, 1, 1, 0, 0, 0,
 )
-# Coarse researcher labels from the town-overlay exec routines.
-EVT_OPCODE_NAMES = {
-    0x00: "end", 0x0B: "open_window", 0x0C: "close_window",
-    0x10: "background", 0x11: "event_image", 0x14: "fade_in", 0x15: "fade_out",
-    0x16: "load_portraits", 0x17: "portrait", 0x1A: "load_portraits_b",
-    0x1F: "wait_frames", 0x20: "wait_button", 0x21: "say", 0x23: "choice",
-    0x24: "choice", 0x25: "choice", 0x27: "choice", 0x28: "choice",
-    0x29: "choice", 0x2A: "ambient_loop", 0x2B: "tutorial_setup",
-    0x2D: "day_display", 0x2E: "sync", 0x2F: "sync", 0x30: "sync",
-    0x31: "select_window", 0x34: "window_style", 0x35: "case",
-    0x36: "say_secondary", 0x37: "text_position", 0x38: "text_position",
-    0x39: "text_param", 0x3A: "text_margin", 0x3B: "text_margin",
-    0x3C: "clear_text", 0x3D: "end_case", 0x3E: "vm_flag", 0x3F: "vm_flag",
-    0x40: "vm_flag", 0x42: "bgm", 0x43: "bgm", 0x44: "se_play",
-    0x45: "se_stop", 0x46: "nop",
-}
-EVT_STRING_OPS = {0x21, 0x36}  # first argument is a string index
+# Researcher labels from the exec routines (0x26AFB0..0x271B90); see
+# docs/SLAI_CAMPAIGN_RESEARCH.md, "EVT opcodes".
+EVT_OPCODE_NAMES = dict(enumerate((
+    "end", "backdrop_in", "haven_open", "haven_open_2", "haven_open_3", "haven_close",
+    "rings_out", "rings_out_2", "login_screen", "panel_open", "panel_close",
+    "open_window", "close_window", "news_open", "news_close", "preload_backgrounds",
+    "background", "event_portrait", "event_portrait_close", "town_hud", "fade_in",
+    "fade_out", "load_portrait", "portrait", "badge", "badge_remove", "load_icon",
+    "event_image", "event_image_open", "event_image_close", "badge_focus",
+    "wait_frames", "wait_button", "say", "load_wait", "knocker_in", "knocker_out",
+    "knocker_pose", "load_wait_2", "partner_in", "partner_out", "knocker_only_pose",
+    "ambient_loop", "glitch", "panel_sprites", "partner_path", "sync", "sync_portrait",
+    "sync_loads", "select_window", "unload_character", "op_33", "window_style", "case",
+    "ruby", "glyph_size", "ruby_size", "text_speed", "text_cursor", "text_offset",
+    "clear_text", "end_case", "text_flag_1", "line_feed", "allow_skip", "talk_sounds",
+    "bgm", "bgm_stop", "se", "se_stop", "nop", "op_47", "op_48", "partner_path_stop",
+)))
+# Which argument is a string index (the say text, ruby text, nameplates).
+EVT_STRING_ARGS = {0x21: 0, 0x36: 0, 0x34: 1, 0x35: 1}
+EVT_STRING_OPS = set(EVT_STRING_ARGS)
 
 
 def evt_opcode_argc(program):
@@ -163,8 +166,9 @@ def disassemble_evt(script):
     for at, op, args in script["code"]:
         name = EVT_OPCODE_NAMES.get(op, "op_%02x" % op)
         text = " ".join(str(a) for a in args)
-        if op in EVT_STRING_OPS and args and args[0] < len(script["strings"]):
-            text += "  ; " + script["strings"][args[0]].replace("\n", "\\n")
+        index = args[EVT_STRING_ARGS[op]] if op in EVT_STRING_ARGS else -1
+        if 0 <= index < len(script["strings"]):
+            text += "  ; " + script["strings"][index].replace("\n", "\\n")
         lines.append("%04x  %02x %-15s %s" % (at, op, name, text))
     return lines
 

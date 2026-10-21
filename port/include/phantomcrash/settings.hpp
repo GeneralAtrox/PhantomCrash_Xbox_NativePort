@@ -11,6 +11,7 @@
 #include "phantomcrash/garage.hpp"
 #include "phantomcrash/music_library.hpp"
 #include "phantomcrash/slai_rumble_save.hpp"
+#include "phantomcrash/slai_story_save.hpp"
 #include "phantomcrash/vs_scoobee.hpp"
 
 #include <array>
@@ -154,6 +155,8 @@ struct QuestSave {
   // S.L.A.I. Rumble's calendar, stage and records (slai_rumble_save.hpp);
   // used by the S.L.A.I. content profile, which keeps its own saves.
   SlaiRumbleSave slai_rumble;
+  // S.L.A.I.'s story flags (slai_story_save.hpp).
+  SlaiStorySave slai_story;
 
   bool operator==(const QuestSave &) const = default;
 };

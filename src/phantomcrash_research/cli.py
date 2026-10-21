@@ -156,6 +156,7 @@ def _command_register_slai_assets(arguments: argparse.Namespace) -> int:
     from .slai.native_sound import register_sound
     from .slai.native_particles import register_particles
     from .slai.rumble_table import register_rumble
+    from .slai.talk_register import register_talk
 
     disc, output = Path(arguments.disc), Path(arguments.output)
     result = register_parts(disc, Path(arguments.assets), Path(arguments.data), output)
@@ -164,7 +165,15 @@ def _command_register_slai_assets(arguments: argparse.Namespace) -> int:
     result.update(register_sound(disc, Path(arguments.data), output))
     result.update(register_particles(disc, output))
     result.update(register_rumble(disc, output))
+    result.update(register_talk(disc, output))
     print(json.dumps(result))
+    return 0
+
+
+def _command_register_slai_talk(arguments: argparse.Namespace) -> int:
+    from .slai.talk_register import register_talk
+
+    print(json.dumps(register_talk(Path(arguments.disc), Path(arguments.output))))
     return 0
 
 
@@ -281,6 +290,11 @@ def build_parser() -> argparse.ArgumentParser:
     native.add_argument("--data", default=str(REPOSITORY_ROOT / "data"))
     native.add_argument("--output", default=str(DEFAULT_MODS))
     native.set_defaults(handler=_command_register_slai_assets)
+    talk = commands.add_parser("register-slai-talk",
+                               help="Convert S.L.A.I.'s talk scenes into an installed asset root")
+    talk.add_argument("disc")
+    talk.add_argument("--output", default=str(DEFAULT_MODS))
+    talk.set_defaults(handler=_command_register_slai_talk)
 
     stats_export = commands.add_parser(
         "export-stats", help="Write every part, item and opponent's stats as CSV files"

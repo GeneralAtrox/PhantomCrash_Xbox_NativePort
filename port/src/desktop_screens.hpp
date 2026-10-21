@@ -24,6 +24,7 @@
 #include "phantomcrash/pepper_guide.hpp"
 #include "phantomcrash/screen_adjust.hpp"
 #include "phantomcrash/settings.hpp"
+#include "phantomcrash/slai_story.hpp"
 #include "phantomcrash/story_progression.hpp"
 #include "phantomcrash/sound_config.hpp"
 #include "phantomcrash/rumbling_battle.hpp"
@@ -215,6 +216,13 @@ private:
                                               const std::string &from) const;
   [[nodiscard]] std::unique_ptr<Screen> make_event(const std::string &name,
                                                    const std::string &from);
+  // S.L.A.I.'s story (desktop_screens_slai_story.cpp): the "slai_talk:<scene>"
+  // that plays on the move from `source` to `name` (empty for none), and
+  // that screen.
+  [[nodiscard]] static std::optional<SlaiStory> load_slai_story(const DataRoots &roots);
+  [[nodiscard]] std::string slai_story_target(const std::string &source, const std::string &name);
+  [[nodiscard]] std::unique_ptr<Screen> make_slai_talk(const std::string &name,
+                                                       const std::string &from);
   // The file of a music track ("keep": the one playing), or empty.
   [[nodiscard]] std::string music_file(const std::string &track) const;
   void apply_volumes();
@@ -304,6 +312,9 @@ private:
   StoryMatchState story_match_;
   std::string event_from_;
   std::string event_next_; // where the playing event leads
+  // With S.L.A.I. content and its talk data (desktop_screens_slai_story.cpp).
+  std::optional<SlaiStory> slai_story_{load_slai_story(roots_)};
+  std::string slai_from_, slai_next_; // the move a S.L.A.I. scene interrupted
   std::vector<MusicCredit> credits_;
   std::optional<Jukebox> radio_;
   MusicProgram music_program_;

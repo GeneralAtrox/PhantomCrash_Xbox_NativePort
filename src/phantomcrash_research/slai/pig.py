@@ -2,7 +2,8 @@
 
 Layout, found by inspection (names are researcher-assigned):
 
-- ``P2IG``, u32 0x61, u32, u16 0x0e, u16 1, an 8-byte name (``S3A02H01``),
+- ``P2IG``, u32 0x61, u32, u16 flags (0x0e; bit 8 clear in 707 images,
+  whose pixels are stored linearly), u16 1, an 8-byte name (``S3A02H01``),
   8 bytes; at +0x20 u16 log2 width, u16 log2 height, u16 GS pixel format
   (0x13 PSMT8, 0x14 PSMT4); at +0x40 u32 palette offset, palette size,
   pixel offset, pixel size.
@@ -11,7 +12,8 @@ Layout, found by inspection (names are researcher-assigned):
   the GS's swizzled order (uploaded as 32-bit words).
 - PSMT4 pixels are a PSMCT32 upload of (height / 2) x (width / 4) words that
   the GS then reads as PSMT4; this held for every 4-bit size on the disc
-  from one 32x16 PSMT4 block up. Smaller ones are stored linearly.
+  from one 32x16 PSMT4 block up. Smaller ones, and those with flag bit 8
+  clear (SMOKE_03, TUBU_01), are stored linearly.
   Decoding replays that through the GS page, block and column tables.
 """
 
@@ -24,6 +26,7 @@ from PIL import Image
 MAGIC = b"P2IG"
 PSMT8 = 0x13
 PSMT4 = 0x14
+SWIZZLED = 0x8
 
 
 # GS local-memory layout tables (PSMCT32 and PSMT4 page arrangements).
@@ -144,6 +147,7 @@ def _unswizzle4(data: bytes, width: int, height: int) -> bytes:
 def read_pig(data: bytes) -> Image.Image:
     if data[:4] != MAGIC:
         raise ValueError("Not a P2IG image")
+    swizzled = struct.unpack_from("<H", data, 0xC)[0] & SWIZZLED
     width_log, height_log, pixel_format = struct.unpack_from("<3H", data, 0x20)
     width, height = 1 << width_log, 1 << height_log
     at_palette, palette_size, at_pixels, _ = struct.unpack_from("<4I", data, 0x40)
@@ -154,9 +158,15 @@ def read_pig(data: bytes) -> Image.Image:
         r, g, b, a = entry
         rgba.append((r, g, b, min(255, a * 2)))
     if pixel_format == PSMT8:
-        indices = _unswizzle8(data[at_pixels : at_pixels + width * height], width, height)
+        indices = data[at_pixels : at_pixels + width * height]
+        if swizzled:
+            indices = _unswizzle8(indices, width, height)
     elif pixel_format == PSMT4:
-        indices = _unswizzle4(data[at_pixels : at_pixels + width * height // 2], width, height)
+        packed = data[at_pixels : at_pixels + width * height // 2]
+        if swizzled:
+            indices = _unswizzle4(packed, width, height)
+        else:
+            indices = bytes(b >> shift & 0xF for b in packed for shift in (0, 4))
     else:
         raise ValueError(f"Unsupported P2IG pixel format {pixel_format:#x}")
     image = Image.new("RGBA", (width, height))

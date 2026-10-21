@@ -11,6 +11,8 @@ from phantomcrash_research.slai.pig import (
     read_pig,
 )
 
+FLAGS_SWIZZLED = 0xE  # the disc's usual flags: 0x8 set, stored through the GS layout
+
 
 def swizzle4(indices: list[int], width: int, height: int) -> bytes:
     """Lay linear 4-bit indices out as the game's PSMCT32 upload."""
@@ -34,6 +36,8 @@ def pig4(width: int, height: int, indices: list[int]) -> bytes:
     header = bytearray(0x50)
     header[:4] = b"P2IG"
     struct.pack_into("<3H", header, 0x20, width.bit_length() - 1, height.bit_length() - 1, PSMT4)
+    if width >= 32 and height >= 16:
+        struct.pack_into("<H", header, 0xC, FLAGS_SWIZZLED)
     palette = b"".join(bytes((i * 16, 255 - i * 16, i, 0x80)) for i in range(16))
     pixels = swizzle4(indices, width, height) if width >= 32 and height >= 16 else bytes(width * height // 2)
     struct.pack_into("<4I", header, 0x40, 0x50, len(palette), 0x50 + len(palette), len(pixels))
