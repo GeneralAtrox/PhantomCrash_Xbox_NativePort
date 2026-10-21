@@ -24,6 +24,7 @@
 #include "phantomcrash/pepper_guide.hpp"
 #include "phantomcrash/screen_adjust.hpp"
 #include "phantomcrash/settings.hpp"
+#include "phantomcrash/slai_rumble_rules.hpp"
 #include "phantomcrash/story_progression.hpp"
 #include "phantomcrash/sound_config.hpp"
 #include "phantomcrash/rumbling_battle.hpp"
@@ -224,6 +225,11 @@ private:
   [[nodiscard]] std::unique_ptr<Screen> make_battle(const std::string &name);
   // RESULT, or null on the first clear, which goes to clear_route_ instead.
   [[nodiscard]] std::unique_ptr<Screen> make_match_result();
+  // A rumble entered on Rumble S.L.A.I., and its result as its battle ends
+  // (desktop_screens_slai.cpp).
+  [[nodiscard]] std::unique_ptr<Screen> make_slai_battle();
+  void finish_slai_match();
+  static constexpr const char *slai_result_route = "slai_result";
   // Hands the battle screen being left to `receipt` (a MatchResultScreen),
   // to run the contest's robots behind it.
   void adopt_backdrop(Screen *receipt);
@@ -251,6 +257,9 @@ private:
   // The OPTION screens, LOAD GAME and the garage's system menu
   // (desktop_screens_menus.cpp), or null for another screen.
   [[nodiscard]] std::unique_ptr<Screen> make_menu(const std::string &name, const std::string &from);
+  // Club Wired, the garage, Wild Machines and Plustech, without the items
+  // whose content is not installed.
+  void load_location_menus(const DataRoots &roots);
   // A menu's exit and hud as entered from `from`. The screen it was entered
   // from is kept while its own sub-screens come and go.
   [[nodiscard]] std::unique_ptr<Screen> make_coop_save_load(LoadGameScript script,
@@ -322,6 +331,7 @@ private:
   RumblingBattle rumbling_battle_;
   std::optional<RumblingEntry> active_match_;
   std::optional<RumblingEntry> pending_entry_;
+  std::optional<SlaiCityMatch> slai_match_; // the S.L.A.I. rumble being fought
   std::unique_ptr<Screen> pending_result_;
   std::string clear_route_; // a first clear's screen, in place of RESULT
   // The finale (story/finale.json, tables/finale.json), read as it opens,

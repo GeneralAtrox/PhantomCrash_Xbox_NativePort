@@ -3,6 +3,7 @@
 #include "desktop_draw_list.hpp"
 #include "phantomcrash/shop_pointer.hpp"
 
+#include <algorithm>
 #include <utility>
 
 namespace phantomcrash {
@@ -50,11 +51,14 @@ void TownScreen::tick_frame(const double tick_seconds, const bool faded_in) {
 }
 
 void TownScreen::draw_town(const Viewport &viewport, const double seconds, const float black_alpha,
-                           const std::function<void(DrawList &)> &content) {
+                           const std::function<void(DrawList &)> &content,
+                           const std::vector<std::string> &hidden) {
   clear_black(textures_);
   DrawList list(textures_, font_, viewport, seconds);
   for (const auto &layer : layers_) {
-    list.sprite(layer);
+    if (std::ranges::find(hidden, layer.id) == hidden.end()) {
+      list.sprite(layer);
+    }
   }
   content(list);
   frame_.draw(list, quest_);

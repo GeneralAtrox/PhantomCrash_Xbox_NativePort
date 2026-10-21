@@ -54,9 +54,11 @@ protected:
   // Advances the frame; the RIDING SV plate slides in once faded in.
   void tick_frame(double tick_seconds, bool faded_in);
   // Draws the frame: `content` goes between the fixed layers and the town
-  // frame, all in one layered list, and the fade covers the lot.
+  // frame, all in one layered list, and the fade covers the lot. The fixed
+  // layers whose ids are in `hidden` are left out.
   void draw_town(const Viewport &viewport, double seconds, float black_alpha,
-                 const std::function<void(DrawList &)> &content);
+                 const std::function<void(DrawList &)> &content,
+                 const std::vector<std::string> &hidden = {});
 
   [[nodiscard]] const QuestSave &quest() const noexcept {
     return quest_;

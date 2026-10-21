@@ -81,6 +81,10 @@ void ScreenRunner::show(const std::string &name, const bool events) {
       story_match_ = {entry->area, entry->contest};
     }
   }
+  if (target == slai_result_route) {
+    finish_slai_match();
+    target = "slai_rumble";
+  }
   if (target == "match_result" && !pending_result_) {
     pending_result_ = make_match_result();
     if (!pending_result_ && !clear_route_.empty()) {

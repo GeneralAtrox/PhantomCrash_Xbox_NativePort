@@ -2,8 +2,9 @@
 
 // The contest schedule (the original's scene 32): five days of the contest
 // calendar in three venue rows, a cursor over them and EXIT, a scroll a day
-// or a page at a time, and a popup with a contest's details. See
-// data/ui/schedule.json.
+// or a page at a time, and a popup with a contest's details. With S.L.A.I.
+// installed and enabled, a toggle turns to S.L.A.I.'s page of the same days
+// (schedule_slai.hpp). See data/ui/schedule.json.
 
 #include "phantomcrash/contest_info.hpp"
 #include "phantomcrash/contests.hpp"
@@ -13,12 +14,15 @@
 #include "phantomcrash/menu_cursor.hpp"
 #include "phantomcrash/menu_screen.hpp"
 #include "phantomcrash/message_box.hpp"
+#include "phantomcrash/schedule_slai.hpp"
 #include "phantomcrash/settings.hpp"
+#include "phantomcrash/slai_rumble_rules.hpp"
 #include "phantomcrash/sprite_layer.hpp"
 #include "phantomcrash/town_screen.hpp"
 
 #include <array>
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -66,6 +70,7 @@ struct ScheduleScript : TownBasics {
   ContestInfoStyle info;
   TickerStyle ticker;
   DaySkipScript skip;
+  SlaiScheduleScript slai;
 };
 
 // Throws std::runtime_error naming the member at fault.
@@ -81,14 +86,16 @@ struct ScheduleColumn {
 
 class Schedule final {
 public:
-  static constexpr int exit_row = schedule_venues;
   static constexpr int exit_button = 0;
-  static constexpr int skip_button = 1; // beside EXIT, when offered
+  static constexpr int skip_button = 1;   // beside EXIT, when offered
+  static constexpr int toggle_button = 2; // between them, with S.L.A.I.
 
   // `back` is where EXIT returns to: the place it was opened from. SKIP TO
-  // DAY is offered when `from` is one of the skip's places.
+  // DAY is offered when `from` is one of the skip's places; the S.L.A.I.
+  // toggle with `slai` (installed and enabled) and the script's page.
   Schedule(ScheduleScript script, const ContestTables &contests, const QuestSave &quest,
-           std::string back, const std::string &from = {}, MessageBoxStyle box = {});
+           std::string back, const std::string &from = {}, MessageBoxStyle box = {},
+           const SlaiRumbleData *slai = nullptr);
 
   void update(double tick_seconds, const InputFrame &input);
 
@@ -119,10 +126,35 @@ public:
   [[nodiscard]] bool won(int contest) const;
   // The contest under the cursor, or no_contest.
   [[nodiscard]] int selected_contest() const;
-  // EXIT or SKIP TO DAY on the bottom row.
+  // The calendar's rows on the page shown: the venues, or S.L.A.I.'s cities.
+  [[nodiscard]] int rows() const;
+  // The bottom row, below the calendar's.
+  [[nodiscard]] int button_row() const {
+    return rows();
+  }
+  // EXIT, SKIP TO DAY or the toggle on the bottom row.
   [[nodiscard]] int button() const noexcept {
     return button_;
   }
+  // A bottom-row button as drawn, lit or not, where it stands.
+  [[nodiscard]] Sprite button_sprite(int button, bool lit) const;
+  // A cell's box (its sprite's position and size) on the page shown.
+  [[nodiscard]] Sprite cell_box(int column, int row) const;
+  [[nodiscard]] bool toggle_offered() const noexcept {
+    return slai_ != nullptr;
+  }
+  [[nodiscard]] bool slai_page() const noexcept {
+    return slai_page_;
+  }
+  [[nodiscard]] const SlaiRumbleData *slai() const noexcept {
+    return slai_;
+  }
+  // The S.L.A.I. city on a row, in the table's display order.
+  [[nodiscard]] int slai_city(int row) const;
+  // A city's rumble shown in a cell, or nothing while it is closed.
+  [[nodiscard]] std::optional<SlaiCityMatch> slai_match_at(int day, int row) const;
+  // The rumble under the cursor on the S.L.A.I. page.
+  [[nodiscard]] std::optional<SlaiCityMatch> selected_slai() const;
   [[nodiscard]] bool skip_offered() const noexcept {
     return skip_offered_;
   }
@@ -169,8 +201,13 @@ public:
 
 private:
   void handle_input(double tick_seconds, const InputFrame &input);
-  // The bottom row: EXIT, or SKIP TO DAY's question.
+  // The bottom row: EXIT, the toggle, or SKIP TO DAY's question.
   void press_button();
+  // Left and right along the bottom row, in the buttons' order on screen;
+  // true when the cursor moved.
+  bool move_button(int step);
+  // The buttons offered, left to right.
+  [[nodiscard]] std::vector<int> bottom_buttons() const;
   void update_box(double tick_seconds, const InputFrame &input);
   void scroll(int days);
   void step_scroll(double tick_seconds);
@@ -199,6 +236,8 @@ private:
   MessageBox box_;
   DaySkipPlan plan_;
   bool skipped_{};
+  const SlaiRumbleData *slai_{};
+  bool slai_page_{};
 };
 
 } // namespace phantomcrash

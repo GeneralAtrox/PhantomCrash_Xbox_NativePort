@@ -12,6 +12,7 @@
 #include "desktop_records.hpp"
 #include "desktop_rumbling.hpp"
 #include "desktop_schedule.hpp"
+#include "desktop_slai_rumble.hpp"
 #include "desktop_sleep.hpp"
 #include "desktop_sonic_amp.hpp"
 #include "desktop_sv_spec.hpp"
@@ -72,6 +73,10 @@ GameScreens::GameScreens(TextureCache &textures, const DataRoots &roots, const G
   }
   if (const auto garage = converted_table(roots, "tables/garage.json")) {
     garage_ = parse_garage_tables(*garage);
+  }
+  slai_rumble_ = load_slai_rumble(roots);
+  if (slai_rumble_) {
+    slai_hub_ = parse_slai_rumble_hub(roots.document("ui/slai_rumble.json"));
   }
   const auto placeholders = roots.document("ui/placeholders.json");
   if (const auto *buttons = placeholders.find("buttons")) {
@@ -288,7 +293,12 @@ std::unique_ptr<Screen> GameScreens::make(const std::string &name, const std::st
   if (name == "schedule") {
     return std::make_unique<ScheduleScreen>(textures_, font_, schedule_, contests_, from,
                                             resolve(schedule_.exit_to, place_before), frame_,
-                                            credits_, quest, message_box_);
+                                            credits_, quest, message_box_, slai_rumble());
+  }
+  if (name == "slai_rumble" && slai_rumble_ && slai_hub_) {
+    return std::make_unique<SlaiRumbleScreen>(textures_, font_, *slai_hub_, *slai_rumble_, from,
+                                              resolve(slai_hub_->exit_to, place_before), frame_,
+                                              credits_, quest, message_box_);
   }
   if (name == "records") {
     return std::make_unique<RecordsScreen>(textures_, font_, records_, contests_,

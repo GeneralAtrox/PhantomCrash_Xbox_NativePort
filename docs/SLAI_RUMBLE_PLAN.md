@@ -217,6 +217,33 @@ port's S.L.A.I. bodies keep their native type in `class`, not their maker,
 and its parts carry no weapon class or aim kind. Also the score a battle
 reports, and which opponents (record, flag) it beat.
 
+### Rota, schedule page and Rumble S.L.A.I. (done, 2026-10-21)
+
+- `data/world/slai_rota.json`:
+  - three cities a day for 60 days, none two days running;
+  - matches borrowed from within two S.L.A.I. days;
+  - covers all 472 day and night matches.
+- The schedule's S.L.A.I. page sits behind a toggle between SKIP TO DAY and
+  EXIT (`data/ui/schedule.json` "slai"). Removing the entry removes the
+  toggle.
+- Rumble S.L.A.I. (`data/ui/slai_rumble.json`, `slai_rumble_hub.hpp`):
+  - Club Wired's item `requires` S.L.A.I.; without S.L.A.I. the host drops
+    it.
+  - The screen lists today's cities; entry checks money and a ready ridden
+    robot only.
+- The battle is a stand-in (`desktop_screens_slai.cpp`):
+  - the ridden robot, fitted as for TEST DRIVE, fights on the city's
+    imported stage;
+  - the opponents are training drones, one fewer than the match's most
+    robots;
+  - the score is the shootdowns. The match's leader is beaten when the
+    player is standing with at least that many shootdowns.
+- Still to do:
+  - opponent rosters (phase 1b);
+  - the `SlaiRobot` adapter (maker, legs, special rules);
+  - Las Vegas night lighting;
+  - the RUMBLING lettering on the wedge art the Club Wired item reuses.
+
 ## Gaps found so far
 
 - **Opponent builds** are undecoded (phase 1b).

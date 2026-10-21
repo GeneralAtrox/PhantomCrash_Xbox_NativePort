@@ -100,7 +100,7 @@ TEST_CASE("SKIP TO DAY sleeps to the night before the cursor's day and leaves to
   }
   CHECK(schedule.skip_day() == 4);
   tap(schedule, button::b);
-  CHECK(schedule.row() == Schedule::exit_row);
+  CHECK(schedule.row() == schedule.button_row());
   CHECK(schedule.button() == Schedule::exit_button);
   tap(schedule, button::left); // the shipped SKIP TO DAY sits left of EXIT
   CHECK(schedule.button() == Schedule::skip_button);

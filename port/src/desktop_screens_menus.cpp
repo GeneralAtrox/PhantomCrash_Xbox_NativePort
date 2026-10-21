@@ -25,6 +25,17 @@ MenuEntry ScreenRunner::entered(const std::string &name, const MenuBasics &basic
   return menu_entry(basics, menu_origins_[name]);
 }
 
+void ScreenRunner::load_location_menus(const DataRoots &roots) {
+  for (const char *menu : {"club_wired", "garage", "wild_machines", "plustech"}) {
+    const std::string file = std::string(menu) + ".json";
+    LocationMenuScript script = parse_location_menu(roots.document("ui/" + file), file);
+    if (game_->slai_rumble() == nullptr) {
+      drop_items_needing(script, "slai");
+    }
+    location_menus_[menu] = std::move(script);
+  }
+}
+
 std::unique_ptr<Screen> ScreenRunner::make_menu(const std::string &name, const std::string &from) {
   if (name == "option" || name == "system") {
     const OptionScript &base = name == "option" ? option_ : system_;

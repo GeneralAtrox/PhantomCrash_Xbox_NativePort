@@ -13,12 +13,13 @@ namespace {
 using json::numbers;
 using json::required;
 
-// A sprite member that takes the image from `image` when it has none.
+// A sprite member that takes the image from `image` when it has none, and
+// its id from the member's name when it names none.
 Sprite item_sprite(const json::JsonValue &item, const char *key, const std::string &image) {
   try {
     const auto &value = required(item, key);
     Sprite sprite;
-    sprite.id = std::string(key);
+    sprite.id = value.string_or("id", key);
     sprite.image = value.string_or("image", image);
     sprite.rect = numbers<4>(required(value, "rect"), "rect");
     if (const auto *position = value.find("position")) {
@@ -40,6 +41,7 @@ LocationItem parse_item(const json::JsonValue &value, const std::string &image) 
   item.highlight = item_sprite(value, "highlight", image);
   item.label = item_sprite(value, "label", image);
   item.select_sound = value.string_or("select_sound", "");
+  item.needs = value.string_or("requires", "");
   return item;
 }
 
@@ -109,6 +111,10 @@ LocationMenuScript parse_location_menu(const json::JsonValue &document, const st
   } catch (const std::exception &error) {
     throw std::runtime_error(name + ": " + error.what());
   }
+}
+
+void drop_items_needing(LocationMenuScript &script, const std::string &content) {
+  std::erase_if(script.items, [&](const LocationItem &item) { return item.needs == content; });
 }
 
 } // namespace phantomcrash

@@ -62,10 +62,6 @@ ScreenRunner::ScreenRunner(SDL_Renderer *renderer, const DataRoots &roots, const
       talk_tuning_(parse_event_tuning(roots.document("story/talk.json"))),
       rumble_tuning_(parse_rumble(roots.document("world/rumble.json"))), options_(options),
       quest_(std::move(quest)) {
-  for (const char *menu : {"club_wired", "garage", "wild_machines", "plustech"}) {
-    const std::string file = std::string(menu) + ".json";
-    location_menus_[menu] = parse_location_menu(roots.document("ui/" + file), file);
-  }
   if (const auto font = converted_table(roots, "tables/font.json")) {
     font_ = parse_glyph_font(*font);
     load_sprite_text(textures_, roots, font_);
@@ -140,6 +136,7 @@ ScreenRunner::ScreenRunner(SDL_Renderer *renderer, const DataRoots &roots, const
   game_ = std::make_unique<GameScreens>(textures_, roots, font_, frame_, credits_, events_);
   game_->set_preview_world([this] { return world(); });
   game_->set_vs_scoobees(std::move(vs_scoobees));
+  load_location_menus(roots);
   training_ = parse_training(roots.document("world/training.json"));
   test_drive_ = parse_test_drive(roots.document("world/test_drive.json"));
   rumbling_battle_ = parse_rumbling_battle(roots.document("world/rumbling.json"));

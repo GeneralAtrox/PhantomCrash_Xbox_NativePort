@@ -40,9 +40,11 @@ int digit_of(const NumberFont &font, const Sprite &sprite) {
   return -1;
 }
 
+// The original's wheel: without S.L.A.I. installed.
 LocationMenu make_menu(const std::string &from = "") {
-  return LocationMenu(
-      parse_location_menu(shipped_document("ui/club_wired.json"), "club_wired.json"), from);
+  auto script = parse_location_menu(shipped_document("ui/club_wired.json"), "club_wired.json");
+  drop_items_needing(script, "slai");
+  return LocationMenu(std::move(script), from);
 }
 
 LocationMenu make_garage(const std::string &from = "") {
@@ -179,6 +181,17 @@ TEST_CASE("the Club Wired cursor starts on the item for the screen before") {
   CHECK(make_menu("name_entry").cursor() == 4);
   auto from_map = make_menu("town_map");
   CHECK((from_map.take_sounds() == std::vector<std::string>{"club_arrive"}));
+}
+
+TEST_CASE("Club Wired offers Rumble S.L.A.I. beside RUMBLING when S.L.A.I. is installed") {
+  const auto script =
+      parse_location_menu(shipped_document("ui/club_wired.json"), "club_wired.json");
+  REQUIRE(script.items.size() == 7U);
+  CHECK(script.items[1].id == "slai_rumble");
+  CHECK(script.items[1].next == "slai_rumble");
+  CHECK(script.items[1].label.id == "slai_rumble_label");
+  CHECK(script.items[0].label.id == "label");
+  CHECK(LocationMenu(script, "slai_rumble").cursor() == 1);
 }
 
 TEST_CASE("the Club Wired wheel turns to the cursor over eight frames, the short way round") {
