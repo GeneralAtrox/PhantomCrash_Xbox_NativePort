@@ -26,6 +26,7 @@ void join_online_battle(CoopMatch &match, const int slot, const online::BattlePl
   tuning.ranker_gate = player.entry.ranker_gate;
   tuning.gate = player.entry.gate + slot;
   apply_stage(tuning, stage);
+  apply_stage_camera(script.battle, stage);
   if (stage.spawn) {
     script.battle.player_start = *stage.spawn;
   }

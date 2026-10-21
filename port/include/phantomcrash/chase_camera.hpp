@@ -31,9 +31,14 @@ struct ChaseCameraSettings {
   // Robot +0x3240, the sight line's start above the feet and the eye's
   // lift in the air. Its source is not recovered: battle robot_height.
   float robot_top{4.4F};
+  // Set, the eye stands this far above the feet rather than `height` above
+  // the torso (the S.L.A.I. behind view; unset for Phantom Crash).
+  std::optional<float> eye_height;
 };
 
-[[nodiscard]] ChaseCameraSettings parse_chase_camera(const json::JsonValue &value);
+// The fields `value` gives replace those of `base`.
+[[nodiscard]] ChaseCameraSettings parse_chase_camera(const json::JsonValue &value,
+                                                     ChaseCameraSettings base = {});
 
 // Where a camera stands and looks, its vertical field of view and its roll
 // (radians about the line of sight).

@@ -108,6 +108,29 @@ TEST_CASE("a stage gives the battle's scenes its own gates and door model") {
   CHECK(scenes.doors.model == "night_doors.gltf");
 }
 
+TEST_CASE("an imported stage's battle camera replaces the Phantom Crash camera") {
+  const auto stages = parse_stages(json::parse(R"({"stages": {
+    "slai_day_newyork": {"battle_camera": {"fov_degrees": 38.757,
+      "chase_camera": {"eye_height": 5.0, "behind": 8.6, "height": 0.5, "look_ahead": 20.0}}},
+    "arena": {}}})"));
+  TrainingBattle battle;
+  battle.camera.wall_margin = 3.0F;
+  apply_stage_camera(battle, stages.at("arena"));
+  CHECK(near(battle.camera.fov_degrees, 52.0F));
+  CHECK(!battle.camera.eye_height);
+  apply_stage_camera(battle, stages.at("slai_day_newyork"));
+  CHECK(near(battle.camera.fov_degrees, 38.757F));
+  CHECK(near(battle.views.fov_degrees[0], 38.757F));
+  CHECK(near(battle.views.fov_degrees.back(), 38.757F));
+  CHECK(near(*battle.camera.eye_height, 5.0F));
+  CHECK(near(battle.camera.behind, 8.6F));
+  CHECK(near(battle.camera.look_ahead, 20.0F));
+  // Fields the stage leaves out keep training.json's.
+  CHECK(near(battle.camera.wall_margin, 3.0F));
+  CHECK_THROWS(parse_stages(json::parse(R"({"stages": {
+    "bad": {"battle_camera": {"fov_degrees": 0}}}})")));
+}
+
 TEST_CASE("the training script names its lessons and battle") {
   const auto script = parse_training(json::parse(R"({"stage": "choco_day",
     "music": "tutorial_battle",

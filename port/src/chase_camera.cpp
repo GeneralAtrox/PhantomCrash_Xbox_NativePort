@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <utility>
 
 namespace phantomcrash {
 namespace {
@@ -15,8 +16,8 @@ float number(const json::JsonValue &value, const char *key, const float fallback
 
 } // namespace
 
-ChaseCameraSettings parse_chase_camera(const json::JsonValue &value) {
-  ChaseCameraSettings s;
+ChaseCameraSettings parse_chase_camera(const json::JsonValue &value, ChaseCameraSettings base) {
+  ChaseCameraSettings s = std::move(base);
   s.fov_degrees = number(value, "fov_degrees", s.fov_degrees);
   s.near_plane = number(value, "near_plane", s.near_plane);
   s.far_plane = number(value, "far_plane", s.far_plane);
@@ -27,6 +28,9 @@ ChaseCameraSettings parse_chase_camera(const json::JsonValue &value) {
   s.look_ahead = number(value, "look_ahead", s.look_ahead);
   s.height = number(value, "height", s.height);
   s.pitch_lift = number(value, "pitch_lift", s.pitch_lift);
+  if (value.find("eye_height") != nullptr) {
+    s.eye_height = number(value, "eye_height", 0.0F);
+  }
   s.eye_follow_ticks = number(value, "eye_follow_ticks", s.eye_follow_ticks);
   s.wall_margin = number(value, "wall_margin", s.wall_margin);
   s.robot_clearance = number(value, "robot_clearance", s.robot_clearance);
@@ -54,7 +58,12 @@ void ChaseCamera::tick(const CameraSubject &subject, const StageCollision &stage
   const Mat4 aim = rotation_x(pitch_) * rotation_y(yaw_);
   const float lift = settings_.height + settings_.pitch_lift * std::fabs(pitch_);
   target_ = subject.position + transform_point({0.0F, lift, -settings_.look_ahead}, aim);
-  Vec3 wanted = subject.torso + transform_point({0.0F, lift, settings_.behind}, aim);
+  const float pitch_rise = settings_.pitch_lift * std::fabs(pitch_);
+  Vec3 wanted =
+      settings_.eye_height
+          ? subject.position +
+                transform_point({0.0F, *settings_.eye_height + pitch_rise, settings_.behind}, aim)
+          : subject.torso + transform_point({0.0F, lift, settings_.behind}, aim);
   const float r = subject.height;
   const float top = settings_.robot_top;
   // In the air the eye rises to look down on the robot, and the sight

@@ -64,12 +64,20 @@ struct StageDefinition {
   std::vector<Vec3> player_spawns;
   std::optional<SupplyPickupLook> supply_pickups;
   std::optional<std::vector<SupplyRoute>> supply_routes;
+  // An imported game's own battle camera ("battle_camera"): a field of view
+  // for every view and chase_camera fields over training.json's. Unset, the
+  // stage keeps the Phantom Crash camera.
+  std::optional<float> camera_fov_degrees;
+  std::optional<json::JsonValue> chase_camera;
 };
 
 [[nodiscard]] std::map<std::string, StageDefinition> parse_stages(const json::JsonValue &document);
 
 // The scenes' gates, doors and cameras for the stage the battle is on.
 void apply_stage(SceneTuning &scenes, const StageDefinition &stage);
+
+// The stage's own battle camera, if it has one, over the script's.
+void apply_stage_camera(TrainingBattle &battle, const StageDefinition &stage);
 
 // The tutorial battle (scene 42), opened by one of Pepper's lessons. The
 // guide's lesson (0x2928c) picks the save's mode at +0x10f10: FreePlay 3,

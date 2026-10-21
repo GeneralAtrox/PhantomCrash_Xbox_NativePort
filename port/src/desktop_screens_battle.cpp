@@ -157,6 +157,7 @@ std::unique_ptr<Screen> ScreenRunner::make_training(const TrainingScript &script
   staged_training_ = script;
   if (stage != stages_.end()) {
     apply_stage(staged_training_.battle.scenes, stage->second);
+    apply_stage_camera(staged_training_.battle, stage->second);
     if (stage->second.spawn) {
       staged_training_.battle.player_start = *stage->second.spawn;
     }
