@@ -40,6 +40,9 @@ public:
 
 private:
   void draw_row(DrawList &list, int row) const;
+  // The city's emblem and DAY or NIGHT label, or its plate and name when
+  // its sheet is not installed.
+  void draw_city(DrawList &list, const SlaiCityMatch &shown, float x, float y) const;
   void draw_cursor(DrawList &list) const;
   void draw_popup(DrawList &list) const;
 

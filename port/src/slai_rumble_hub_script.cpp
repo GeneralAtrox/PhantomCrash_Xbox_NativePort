@@ -58,6 +58,17 @@ void parse_rows(const json::JsonValue &value, SlaiRumbleHubScript &script) {
   script.rule = member(value, "rule", parse_slai_label);
 }
 
+void parse_city_art(const json::JsonValue &value, SlaiRumbleHubScript &script) {
+  script.emblem_box = member(value, "emblem_box", rect4);
+  script.art_label_at = member(value, "label_at", point2);
+  script.art_label_scale = static_cast<float>(value.number_or("label_scale", 1.0));
+  script.art_layer = static_cast<int>(value.number_or("layer", script.art_layer));
+  for (const auto &city : required(value, "cities").array()) {
+    script.city_art.push_back({required(city, "image").string(), member(city, "emblem", rect4),
+                               member(city, "day", rect4), member(city, "night", rect4)});
+  }
+}
+
 void parse_amounts(const json::JsonValue &value, SlaiRumbleHubScript &script) {
   script.entry_label = member(value, "entry_label", parse_slai_label);
   script.prize_label = member(value, "prize_label", parse_slai_label);
@@ -87,6 +98,9 @@ SlaiRumbleHubScript parse_slai_rumble_hub(const json::JsonValue &document) {
     script.exit_selected = member(exit, "selected", parse_sprite);
     parse_rows(required(document, "rows"), script);
     parse_amounts(required(document, "amounts"), script);
+    if (const auto *art = document.find("city_art")) {
+      parse_city_art(*art, script);
+    }
     const auto &cursor = required(document, "cursor");
     script.cursor_frame = member(cursor, "frame", parse_sprite);
     script.cursor_pulse = member(cursor, "pulse", parse_sprite);

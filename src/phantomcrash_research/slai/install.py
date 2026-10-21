@@ -15,6 +15,7 @@ from .native_cosmetics import register_cosmetics
 from .native_sound import register_sound
 from .native_particles import register_particles
 from .rumble_table import register_rumble
+from .wired_art import register_wired_art
 
 INSTALL_VERSION = 1
 
@@ -57,6 +58,7 @@ def install(disc: Path, root: Path, converter: Path, report=print) -> None:
         register_sound(disc, data, output)
         register_particles(disc, output)
         register_rumble(disc, output)
+        register_wired_art(disc, output)
         report('Converting music...', flush=True)
         convert_music(disc, assets, data, output, converter, report=lambda line: report(line, flush=True))
         for relative in ['tables/parts.json', 'tables/garage.json', 'robots/catalogue.json',

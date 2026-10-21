@@ -4,6 +4,7 @@
 #include "desktop_draw_list.hpp"
 #include "desktop_schedule.hpp"
 
+#include <algorithm>
 #include <utility>
 
 namespace phantomcrash {
@@ -53,12 +54,7 @@ void SlaiRumbleScreen::draw_row(DrawList &list, const int row) const {
   const float y = script.row_origin[1] + script.row_step[1] * static_cast<float>(row);
   const bool lit = row == hub_.row();
 
-  const std::array<float, 4> plate = offset_box(script.plate.box, 0.0F, y);
-  list.shape(script.plate.layer, script.plate.outlines, plate);
-  const auto city = static_cast<std::size_t>(shown.city);
-  draw_label(list, script.city,
-             city < script.city_names.size() ? script.city_names[city] : data.table.cities[city],
-             offset_box(script.city.box, plate[0], plate[1]), true);
+  draw_city(list, shown, x, y);
 
   Sprite tile;
   tile.image = script.cell_image;
@@ -93,6 +89,40 @@ void SlaiRumbleScreen::draw_row(DrawList &list, const int row) const {
     draw_amount(list, money_font_, {x + at[0], y + at[1]}, script.amount_digits, amount,
                 script.info.fee_unit, script.amount_colour, script.amount_layer);
   }
+}
+
+void SlaiRumbleScreen::draw_city(DrawList &list, const SlaiCityMatch &shown, const float x,
+                                 const float y) const {
+  const SlaiRumbleHubScript &script = hub_.script();
+  const auto city = static_cast<std::size_t>(shown.city);
+  if (city < script.city_art.size() && textures_.get(script.city_art[city].image) != nullptr) {
+    const SlaiCityArt &art = script.city_art[city];
+    Sprite emblem;
+    emblem.image = art.image;
+    emblem.rect = art.emblem;
+    emblem.layer = script.art_layer;
+    const std::array<float, 4> &box = script.emblem_box;
+    const float width = art.emblem[2] - art.emblem[0];
+    const float height = art.emblem[3] - art.emblem[1];
+    const float scale = std::min((box[2] - box[0]) / width, (box[3] - box[1]) / height);
+    emblem.size = std::array<float, 2>{width * scale, height * scale};
+    emblem.position = {(box[0] + box[2] - width * scale) * 0.5F,
+                       y + (box[1] + box[3] - height * scale) * 0.5F};
+    list.sprite(emblem);
+    Sprite label = emblem;
+    label.rect = shown.night ? art.night : art.day;
+    label.size = std::array<float, 2>{(label.rect[2] - label.rect[0]) * script.art_label_scale,
+                                      (label.rect[3] - label.rect[1]) * script.art_label_scale};
+    label.position = {x + script.art_label_at[0], y + script.art_label_at[1]};
+    list.sprite(label);
+    return;
+  }
+  const std::array<float, 4> plate = offset_box(script.plate.box, 0.0F, y);
+  list.shape(script.plate.layer, script.plate.outlines, plate);
+  const SlaiRumbleData &data = hub_.data();
+  draw_label(list, script.city,
+             city < script.city_names.size() ? script.city_names[city] : data.table.cities[city],
+             offset_box(script.city.box, plate[0], plate[1]), true);
 }
 
 void SlaiRumbleScreen::draw_cursor(DrawList &list) const {

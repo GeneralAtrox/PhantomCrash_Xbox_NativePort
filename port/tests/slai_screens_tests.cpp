@@ -149,6 +149,10 @@ TEST_CASE("Rumble S.L.A.I. lists today's cities and leaves by EXIT") {
   CHECK(hub.matches()[0].city == 2);
   CHECK(hub.matches()[2].city == 0);
   CHECK(hub.exit_row() == 3);
+  // Each city has its Wired sheet's emblem and DAY and NIGHT labels.
+  REQUIRE(hub.script().city_art.size() == 7U);
+  CHECK(hub.script().city_art[2].image == "textures/slai/wired/new_york.png");
+  CHECK(hub.script().city_art[2].night[3] <= hub.script().city_art[2].day[1]);
   settle(hub);
   tap(hub, hub.script().down);
   CHECK(hub.row() == 1);

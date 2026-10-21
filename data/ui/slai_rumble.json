@@ -2,6 +2,7 @@
  "notes": [
   "Rumble S.L.A.I. (a port screen, not in the original; docs/SLAI_RUMBLE_PLAN.md, Screens): Club Wired's way into S.L.A.I.'s campaign, shown only with S.L.A.I. installed and enabled. It lists the three cities the rota opens today (world/slai_rota.json), each with its rumble at the player's S.L.A.I. stage, on the schedule's art.",
   "rows: row r's top-left is origin + r x step. Each row: the city's plate (plate.box: x on the canvas, y from the row's top) and name (city, in the plate's box), the venue's whole day or night tile (tile, lit under the cursor) with its regulation's badge (badges: the first listing the regulation, else the one listing none; white under the cursor, badge_dim otherwise) and CLEAR once the match's record is cleared, the regulation's name (rule) and, under it, the money entry needs and the prize at the regulation's target score (amounts, in the HUD's money font).",
+  "city_art: with S.L.A.I.'s Club Wired city sheets installed (UK_WIR_<CITY>01.PIG, converted at registration to textures/slai/wired/), each row shows the city's emblem fitted in emblem_box and its '<CITY> / DAY' or '<CITY> / NIGHT' label above the regulation, in place of the plate and the city's name; without the sheet the plate is drawn. The rectangles are the sheets' (by the table's city column), padded for the glow and shadow.",
   "Input: up/down move between the rows and EXIT, wrapping; cancel moves to EXIT. confirm on a row opens its INFORMATION (info, the schedule's popup with S.L.A.I.'s rule text), and confirm again enters: with the money entry needs and a ridden robot that is ready, the entry is paid and the screen leaves for the battle; otherwise a notice says why ({entry} is the money needed). confirm on EXIT leaves for exit_to.",
   "The battle is a stand-in until S.L.A.I.'s opponent rosters are decoded: the ridden robot on the city's imported stage against training drones, one fewer than the match's robots. Its result clears the match's record when the player is standing and shot down as many as there were opponents; the shootdowns are the score its prize is paid on."
  ],
@@ -412,9 +413,9 @@
    "font": "futura_italic",
    "box": [
     100,
-    8,
+    17,
     400,
-    26
+    33
    ],
    "colour": "#ffffff",
    "layer": 263,
@@ -434,9 +435,9 @@
    "font": "futura",
    "box": [
     100,
-    33,
+    36,
     170,
-    46
+    49
    ],
    "colour": "#f7c300",
    "layer": 263,
@@ -454,9 +455,9 @@
    "font": "futura",
    "box": [
     100,
-    49,
+    51,
     170,
-    62
+    64
    ],
    "colour": "#f7c300",
    "layer": 263,
@@ -474,15 +475,178 @@
   "prize_text": "PRIZE",
   "entry_at": [
    176,
-   31
+   35
   ],
   "prize_at": [
    176,
-   47
+   50
   ],
   "digits": 7,
   "colour": "#ffffff",
   "layer": 260
+ },
+ "city_art": {
+  "emblem_box": [
+   64,
+   0,
+   176,
+   64
+  ],
+  "label_at": [
+   99,
+   0
+  ],
+  "label_scale": 0.7,
+  "layer": 262,
+  "cities": [
+   {
+    "image": "textures/slai/wired/tokyo.png",
+    "emblem": [
+     337,
+     282,
+     471,
+     404
+    ],
+    "day": [
+     278,
+     490,
+     411,
+     512
+    ],
+    "night": [
+     268,
+     465,
+     420,
+     489
+    ]
+   },
+   {
+    "image": "textures/slai/wired/stuttgart.png",
+    "emblem": [
+     340,
+     286,
+     469,
+     401
+    ],
+    "day": [
+     251,
+     490,
+     437,
+     512
+    ],
+    "night": [
+     241,
+     465,
+     446,
+     489
+    ]
+   },
+   {
+    "image": "textures/slai/wired/new_york.png",
+    "emblem": [
+     319,
+     289,
+     488,
+     400
+    ],
+    "day": [
+     256,
+     490,
+     431,
+     512
+    ],
+    "night": [
+     247,
+     465,
+     441,
+     489
+    ]
+   },
+   {
+    "image": "textures/slai/wired/london.png",
+    "emblem": [
+     338,
+     286,
+     469,
+     402
+    ],
+    "day": [
+     268,
+     490,
+     420,
+     512
+    ],
+    "night": [
+     258,
+     465,
+     429,
+     489
+    ]
+   },
+   {
+    "image": "textures/slai/wired/hong_kong.png",
+    "emblem": [
+     329,
+     284,
+     480,
+     402
+    ],
+    "day": [
+     248,
+     490,
+     440,
+     512
+    ],
+    "night": [
+     238,
+     465,
+     449,
+     489
+    ]
+   },
+   {
+    "image": "textures/slai/wired/cairo.png",
+    "emblem": [
+     331,
+     285,
+     476,
+     401
+    ],
+    "day": [
+     280,
+     490,
+     408,
+     512
+    ],
+    "night": [
+     270,
+     465,
+     418,
+     489
+    ]
+   },
+   {
+    "image": "textures/slai/wired/las_vegas.png",
+    "emblem": [
+     346,
+     287,
+     462,
+     401
+    ],
+    "day": [
+     253,
+     490,
+     435,
+     512
+    ],
+    "night": [
+     243,
+     465,
+     444,
+     489
+    ]
+   }
+  ]
  },
  "cursor": {
   "frame": {

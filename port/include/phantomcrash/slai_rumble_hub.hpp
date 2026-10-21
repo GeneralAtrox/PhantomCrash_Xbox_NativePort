@@ -31,6 +31,13 @@ struct SlaiHubBadge {
   std::string class_text;
 };
 
+// A city's art on its S.L.A.I. Wired sheet: the emblem and the
+// "<CITY> / DAY" and "<CITY> / NIGHT" labels.
+struct SlaiCityArt {
+  std::string image;
+  TexelRect emblem{}, day{}, night{};
+};
+
 struct SlaiRumbleHubScript : TownBasics {
   Buttons up{}, down{};
   std::string close_sound, refuse_sound;
@@ -48,6 +55,15 @@ struct SlaiRumbleHubScript : TownBasics {
   SlaiSchedulePlate plate; // y from the row's top
   SlaiScheduleLabel city;  // in the plate's box
   SlaiScheduleLabel rule;  // the regulation's name, from the row's top-left
+  // With the city's sheet installed, its emblem fitted in emblem_box (x on
+  // the canvas, y from the row's top) and its DAY or NIGHT label at
+  // art_label_at (from the row's top-left) scaled by art_label_scale, in
+  // place of the plate and the city's name.
+  std::vector<SlaiCityArt> city_art; // by the table's city column
+  std::array<float, 4> emblem_box{};
+  std::array<float, 2> art_label_at{};
+  float art_label_scale{1.0F};
+  int art_layer{0x106};
   // ENTRY and PRIZE: the word, then the amount in the HUD's money font.
   SlaiScheduleLabel entry_label, prize_label;
   std::string entry_text, prize_text;
