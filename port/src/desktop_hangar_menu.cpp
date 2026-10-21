@@ -105,6 +105,17 @@ void HangarMenuScreen::draw_hangar(DrawList &list, const int hangar, const float
   const HangarStatus &bay = logic_.status(hangar);
   const float y = cards.y;
   const std::uint32_t colour = bay.riding ? cards.riding_colour : cards.colour;
+  if (bay.locked) {
+    // A set-aside robot: its name and the mark that keeps it from battle.
+    const Hangar &robot = logic_.quest().garage.set_aside.hangars.at(hangar);
+    std::vector<int> name = glyph_run(font_, robot.name);
+    name.resize(std::min(name.size(), static_cast<std::size_t>(cards.name_glyphs)));
+    list.text(cards.name_layer, layout_run(font_, name, x + cards.name_at[0], y + cards.name_at[1]),
+              colour, canvas_clip);
+    list.sprite(on_card(cards.name_line, x, y), canvas_clip);
+    list.sprite(on_card(cards.incomplete, x, y), canvas_clip);
+    return;
+  }
   if (!bay.owned) {
     list.sprite(on_card(cards.for_sale, x, y), canvas_clip);
     NumberStyle price = cards.price;

@@ -57,8 +57,9 @@ Hand-written port data:
 
 ### Save
 
-A new `slai_rumble` block in `QuestSave` (and `quest_json.cpp`), present only
-in the S.L.A.I. content profile, which already keeps its own saves:
+A new `slai_rumble` block in `QuestSave` (and `quest_json.cpp`). Base game and
+S.L.A.I. share one save, so the block is always read and written, and stays
+untouched while S.L.A.I. is off:
 
 - `day` (0..99), `stage` (0..4), `city`, `finals_cleared`;
 - `records`: record id → cleared + 14 beaten flags (the original's 15 bytes);

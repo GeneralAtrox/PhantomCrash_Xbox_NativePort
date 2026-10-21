@@ -1,5 +1,8 @@
 #include "desktop_slai.hpp"
 #include "desktop_settings_menu.hpp"
+#include "phantomcrash/added_chips.hpp"
+#include "phantomcrash/content_fit.hpp"
+#include "phantomcrash/data_roots.hpp"
 #include "phantomcrash/slai_content.hpp"
 #include <SDL3/SDL.h>
 #include <atomic>
@@ -127,6 +130,41 @@ bool prepare_slai_data(const std::filesystem::path &root, bool interactive) {
   }
 }
 
+Settings load_shared_settings(const DataRoots &roots, const std::filesystem::path &configuration,
+                              const bool slai, const bool smoke) {
+  Settings settings = load_settings(configuration);
+  settings.slai_enabled = slai;
+  if (!smoke && !settings.save_slots_unreadable && !settings.content_profiles_merged) {
+    const ProfileMerge merge = merge_content_profiles(settings, configuration);
+    for (const std::string &line : merge.moved) {
+      SDL_Log("Shared save: brought in %s", line.c_str());
+    }
+    if (!save_settings(configuration, settings)) {
+      throw std::runtime_error("Cannot write the shared settings and saves");
+    }
+    if (!merge.left.empty()) {
+      std::string files;
+      for (const auto &file : merge.left) {
+        SDL_Log("Shared save: games left in %s", file.string().c_str());
+        files += "\n" + file.string();
+      }
+      SDL_ShowSimpleMessageBox(
+          SDL_MESSAGEBOX_WARNING, "Shared save",
+          ("Base game and S.L.A.I. now share one save. Some older games found no free "
+           "save slot and stay in:" +
+           files + "\nFree a slot and copy them over to keep playing them.")
+              .c_str(),
+          nullptr);
+    }
+  }
+  const auto parts = read_converted_table(roots, "tables/parts.json");
+  const auto garage = read_converted_table(roots, "tables/garage.json");
+  if (parts && garage) {
+    fit_settings(settings, content_limits(*parts, *garage));
+  }
+  return settings;
+}
+
 void update_slai_menu(SettingsMenu &menu, const std::filesystem::path &root,
                       const std::filesystem::path &configuration) {
   if (!menu.take_slai_toggle()) {
@@ -153,7 +191,8 @@ void update_slai_menu(SettingsMenu &menu, const std::filesystem::path &root,
   SDL_ShowSimpleMessageBox(
       SDL_MESSAGEBOX_INFORMATION, "S.L.A.I.",
       "Restart the game to apply this setting.\n"
-      "Base-game and S.L.A.I. campaigns use separate saves. Existing saves are kept.",
+      "Base game and S.L.A.I. share the same campaign and saves. While S.L.A.I. is off, "
+      "Scoobees built from S.L.A.I. parts wait in their hangars, locked.",
       nullptr);
 }
 } // namespace phantomcrash

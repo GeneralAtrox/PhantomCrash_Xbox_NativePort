@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
+#include <iterator>
 #include <string>
 #include <vector>
 
@@ -214,23 +215,62 @@ TEST_CASE("SLAI content is opt-in and legacy overlays cannot bypass its toggle")
         root.path() / "artifacts/europe/assets/model.txt");
 }
 
-TEST_CASE("content modes retain original saves and use independent campaign files") {
+TEST_CASE("base game and S.L.A.I. share one save; old content-mode files are brought in once") {
   TempFolder root;
   const auto base = root.path() / "settings.json";
-  phantomcrash::Settings original;
-  original.quest.player_name = "Original";
-  original.online_profile = original.quest;
-  CHECK(phantomcrash::save_settings(base, original));
-  CHECK(!phantomcrash::load_settings(base).slai_enabled);
-  const auto modded = phantomcrash::content_profile_path(base, true, false);
-  const auto clean = phantomcrash::content_profile_path(base, false, true);
-  CHECK(modded != base && clean != base && modded != clean);
-  auto fresh = phantomcrash::load_content_settings(base, modded, true);
-  CHECK(fresh.quest.player_name.empty() && !fresh.online_profile);
-  fresh.quest.player_name = "SLAI";
-  CHECK(phantomcrash::save_settings(modded, fresh));
-  CHECK(phantomcrash::load_content_settings(base, modded, true).quest.player_name == "SLAI");
-  CHECK(phantomcrash::load_settings(base).quest.player_name == "Original");
-  CHECK(phantomcrash::content_profile_path(base, false, false) == base);
-  CHECK(phantomcrash::load_content_settings(base, clean, false).quest.player_name.empty());
+  const auto files = phantomcrash::legacy_content_profiles(base);
+  REQUIRE(files.size() == 2);
+  CHECK(files[0] == root.path() / "settings.base.json");
+  CHECK(files[1] == root.path() / "settings.slai.json");
+  const auto game = [](const char *name) {
+    phantomcrash::QuestSave quest;
+    quest.player_name = name;
+    return quest;
+  };
+  phantomcrash::Settings shared;
+  shared.quest = game("Original");
+  shared.save_slots[0] = game("Original");
+  phantomcrash::Settings slai;
+  slai.quest = game("SLAI");
+  slai.save_slots[1] = game("SLAI slot");
+  slai.save_slots[2] = game("Original"); // already in the shared save
+  slai.coop_profiles[0] = game("SLAI co-op");
+  CHECK(phantomcrash::save_settings(files[1], slai));
+  const std::string before = [&] {
+    std::ifstream in(files[1], std::ios::binary);
+    return std::string(std::istreambuf_iterator<char>(in), {});
+  }();
+
+  const auto merge = phantomcrash::merge_content_profiles(shared, base);
+  CHECK(merge.left.empty());
+  CHECK(merge.moved.size() == 4);
+  CHECK(shared.content_profiles_merged);
+  CHECK(shared.quest.player_name == "Original");
+  CHECK(shared.save_slots[0]->player_name == "Original");
+  CHECK(shared.save_slots[1]->player_name == "SLAI"); // the S.L.A.I. current game
+  CHECK(shared.save_slots[2]->player_name == "SLAI slot");
+  CHECK(shared.coop_profiles[0]->player_name == "SLAI co-op");
+  CHECK(fs::exists(files[1]));
+  std::ifstream after(files[1], std::ios::binary);
+  CHECK(std::string(std::istreambuf_iterator<char>(after), {}) == before);
+  // Once merged, never again.
+  CHECK(phantomcrash::merge_content_profiles(shared, base).moved.empty());
+
+  // A game with no free slot keeps its file and is reported.
+  phantomcrash::Settings full;
+  full.save_slots.fill(game("Full"));
+  full.save_slots[0] = game("Other");
+  phantomcrash::Settings base_mode;
+  base_mode.save_slots[0] = game("Base only");
+  CHECK(phantomcrash::save_settings(files[0], base_mode));
+  const auto crowded = phantomcrash::merge_content_profiles(full, base);
+  CHECK(crowded.left.size() == 2);
+  CHECK(crowded.left[0] == files[0]);
+  CHECK(fs::exists(files[0]));
+
+  // An empty shared game takes the old file's current game.
+  phantomcrash::Settings fresh;
+  CHECK(phantomcrash::merge_content_profiles(fresh, base).left.empty());
+  CHECK(fresh.quest.player_name == "SLAI");
+  CHECK(fresh.save_slots[0]->player_name == "Base only");
 }

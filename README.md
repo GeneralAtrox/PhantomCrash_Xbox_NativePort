@@ -47,8 +47,9 @@ setup in the Windows release instructions.
 **Settings > S.L.A.I. content** enables the optional content pack. It is off by
 default and requires your European S.L.A.I. PS2 ISO (SLES-52940) for installation
 only. The release includes a standalone converter; no Python installation is
-needed. Restart after changing the toggle. Base-game and S.L.A.I. campaigns use
-separate save files; legacy manually imported content and saves are retained.
+needed. Restart after changing the toggle. Base game and S.L.A.I. share one
+campaign and one save; while S.L.A.I. is off, robots built from S.L.A.I. parts
+stay locked in their hangars and nothing is removed from the save.
 
 - Python 3.11+ (no third-party runtime dependencies; `pytest` for tests)
 - PowerShell 7.4+

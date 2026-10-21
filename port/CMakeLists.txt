@@ -159,6 +159,7 @@ add_library(phantomcrash_core
   src/sonic_amp_pointer.cpp
   src/sonic_amp_script.cpp
   src/garage.cpp
+  src/content_fit.cpp
   src/garage_tables.cpp
   src/dealer_script.cpp
   src/dealer.cpp
@@ -311,6 +312,7 @@ if(BUILD_TESTING)
     tests/club_tests.cpp
     tests/core_tests.cpp
     tests/data_tests.cpp
+    tests/content_fit_tests.cpp
     tests/event_player_tests.cpp
     tests/guide_tests.cpp
     tests/front_end_tests.cpp

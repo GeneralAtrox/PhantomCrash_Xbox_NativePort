@@ -188,6 +188,9 @@ struct Settings {
   bool skip_conversations{}; // story conversations never play (their scenes still count as seen)
   bool experimental_coop{true};
   bool slai_enabled{};
+  // The separate files older builds kept for each content mode
+  // (settings.base.json, settings.slai.json) have been brought in.
+  bool content_profiles_merged{};
   CoopOptions coop;
   // Independent experimental campaigns; importing a solo slot never overwrites it.
   std::array<std::optional<QuestSave>, 4> coop_profiles{};

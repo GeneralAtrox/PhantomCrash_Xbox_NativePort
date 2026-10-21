@@ -389,12 +389,20 @@ the HM10 barrel fix.
 - **Garage and shop updates.** Twelve hangar slots, S.L.A.I. starter robots in
   the Fill Hangars cheat when enabled, and label/layout fixes.
 
-S.L.A.I. and the base game have separate campaign/profile files. A new S.L.A.I.
-campaign starts fresh; switching off returns to the base-game campaign. Original
-settings and saves are retained. If an older, manually assembled S.L.A.I. mod is
-found in `mods`, that legacy overlay is retained on disk but no longer loaded
-automatically; new base and S.L.A.I. profiles are kept separately from its saves.
-Both peers must enable the same content when playing online.
+S.L.A.I. and the base game share one campaign and one save (`settings.json`).
+While S.L.A.I. is off, S.L.A.I. parts, the Scoobees built from them and S.L.A.I.
+paints and emblems are set aside: the save keeps them, their hangars show as
+locked, and they return when S.L.A.I. is switched on again. Kept VS Scoobees
+with S.L.A.I. parts read as damaged while it is off; do not delete them.
+
+Builds before this one kept separate `settings.base.json` and
+`settings.slai.json` files. On first start, their current games, save slots,
+co-op profiles and kept VS Scoobees are copied into free slots of the shared
+save, and `phantomcrash.log` lists what moved. The old files are never changed
+or deleted; if a game finds no free slot, a message names the file that still
+holds it. If an older, manually assembled S.L.A.I. mod is found in `mods`, that
+legacy overlay is retained on disk but no longer loaded automatically. Both
+peers must enable the same content when playing online.
 
 0.5.1 fixes:
 

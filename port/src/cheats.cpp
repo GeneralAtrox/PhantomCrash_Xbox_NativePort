@@ -117,7 +117,9 @@ int fill_hangars(QuestSave &quest, const CheatTables &cheats, const PartTables &
     const bool held = std::ranges::any_of(owned.hangars, [&](const Hangar &hangar) {
       return fitted_body_model(owned, parts, hangar) == model;
     });
-    const auto empty = std::ranges::find_if(owned.hangars, &Hangar::empty);
+    const auto empty = std::ranges::find_if(owned.hangars, [&owned](const Hangar &bay) {
+      return bay.empty() && !owned.locked(static_cast<int>(&bay - owned.hangars.data()));
+    });
     if (held || empty == owned.hangars.end()) {
       continue;
     }
