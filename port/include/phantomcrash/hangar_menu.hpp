@@ -16,6 +16,7 @@ namespace phantomcrash {
 
 // What a hangar's card says about it (0x01cd33).
 struct HangarStatus {
+  bool locked{}; // holds a robot set aside (S.L.A.I. parts while S.L.A.I. is off)
   bool owned{};
   bool riding{};
   bool empty{};      // nothing fitted

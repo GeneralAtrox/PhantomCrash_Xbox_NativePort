@@ -97,9 +97,8 @@ void apply_fullscreen(DesktopHost &host, SettingsMenu &menu) {
 
 int run(const Options &options) {
   const auto root = find_root(options);
-  const bool smoke =
-      options.smoke_frames > 0 || options.robot_shot || options.online_resource_check ||
-      options.online_stress_seconds > 0.0;
+  const bool smoke = options.smoke_frames > 0 || options.robot_shot ||
+                     options.online_resource_check || options.online_stress_seconds > 0.0;
   const bool benchmark = options.benchmark_seconds > 0.0;
   if (!prepare_game_data(root, !smoke && !benchmark)) {
     return 0;
@@ -117,11 +116,8 @@ int run(const Options &options) {
   for (const char *document : documents) {
     static_cast<void>(roots.document(document));
   }
-  const auto preferences = content_profile_path(configuration, slai, legacy_slai(root));
-  const Settings saved = load_content_settings(configuration, preferences, slai);
-  if (!smoke && !std::filesystem::exists(preferences) && !save_settings(preferences, saved)) {
-    throw std::runtime_error("Cannot create the selected content mode's settings and saves");
-  }
+  const auto &preferences = configuration;
+  const Settings saved = load_shared_settings(roots, configuration, slai, smoke);
   Settings initial = saved;
   if (options.fullscreen) {
     initial.fullscreen = *options.fullscreen;

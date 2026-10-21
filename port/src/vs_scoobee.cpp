@@ -83,6 +83,21 @@ VsScoobee vs_scoobee_from_hangar(const Garage &garage, const int hangar, const s
 }
 
 bool vs_scoobee_damaged(const VsScoobee &scoobee, const PartTables &parts) {
+  // A part past the tables (S.L.A.I.'s, with S.L.A.I. off) cannot be read
+  // back either; the entry stays in the list for when the content returns.
+  const std::array<std::size_t, robot_part_slots> counts{parts.bodies.size(),
+                                                         parts.legs.size(),
+                                                         parts.arm_weapons.size(),
+                                                         parts.arm_weapons.size(),
+                                                         parts.shoulder_weapons.size(),
+                                                         parts.shoulder_weapons.size(),
+                                                         parts.chips.size()};
+  for (std::size_t slot = 0; slot < counts.size(); ++slot) {
+    const auto &part = scoobee.robot.parts[slot];
+    if (part && (part->id < 0 || static_cast<std::size_t>(part->id) >= counts[slot])) {
+      return true;
+    }
+  }
   return vs_scoobee_maker(scoobee, parts) < 0;
 }
 

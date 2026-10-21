@@ -80,6 +80,22 @@ struct Hangar {
   bool operator==(const Hangar &) const = default;
 };
 
+// What the loaded content cannot show (a port addition): S.L.A.I. parts,
+// the hangars built from them and S.L.A.I. paints and emblems while S.L.A.I.
+// is off. The save keeps them and they come back once the content does; the
+// stock indices stay reserved and the hangars locked meanwhile.
+struct SetAside {
+  std::map<int, StockItem> stock; // by stock index
+  std::map<int, Hangar> hangars;  // by hangar index
+  int riding{-1};                 // the hangar ridden when it was set aside
+  std::vector<int> paints;
+  std::vector<int> emblems;
+
+  [[nodiscard]] bool empty() const;
+
+  bool operator==(const SetAside &) const = default;
+};
+
 struct Garage {
   // By stock index; an index stays the same while the entry is kept.
   std::map<int, StockItem> stock;
@@ -91,11 +107,16 @@ struct Garage {
   // The entries the stock holds: the original's 255 unless Tools > Cheats
   // raised it to hold every part (a port addition, cheats.hpp).
   int stock_size{garage_stock_size};
+  SetAside set_aside;
 
-  // The stock entries not in use (0x0baaab).
+  // The stock entries not in use (0x0baaab); set-aside entries stay in use.
   [[nodiscard]] int free_stock() const;
   // Adds an entry at the lowest free index; -1 when the stock is full.
   int add_stock(StockItem item);
+  // The hangar holds a robot set aside: it cannot be bought, fitted or ridden.
+  [[nodiscard]] bool locked(const int hangar) const {
+    return set_aside.hangars.contains(hangar);
+  }
 
   bool operator==(const Garage &) const = default;
 };

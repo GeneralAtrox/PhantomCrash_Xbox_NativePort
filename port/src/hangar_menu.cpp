@@ -46,6 +46,7 @@ HangarStatus hangar_status(const PartTables &parts, const Garage &garage, const 
     return status;
   }
   const Hangar &bay = garage.hangars[static_cast<std::size_t>(hangar)];
+  status.locked = garage.locked(hangar);
   status.owned = bay.owned;
   if (!status.owned) {
     return status;
@@ -228,6 +229,8 @@ void HangarMenu::wheel_input(const double tick_seconds, const InputFrame &input)
     sound(script_.select_sound);
     if (card_ == exit_card) {
       leave(script_.exit_to);
+    } else if (status(card_).locked) {
+      say("set_aside", false);
     } else if (script_.refuse && !(status(card_).owned && status(card_).complete)) {
       say(script_.refuse->incomplete, false);
     } else if (script_.refuse && status(card_).unarmed) {

@@ -174,6 +174,7 @@ Settings settings_from_json(const json::JsonValue &value) {
   settings.skip_conversations = value.boolean_or("skip_conversations", settings.skip_conversations);
   settings.experimental_coop = value.boolean_or("experimental_coop", settings.experimental_coop);
   settings.slai_enabled = value.boolean_or("slai_enabled", false);
+  settings.content_profiles_merged = value.boolean_or("content_profiles_merged", false);
   if (const auto *coop = value.find("coop")) {
     settings.coop.enemy_level_offset = clamped(*coop, "enemy_level_offset", 0, -99, 99);
     settings.coop.kill_ny_percent = clamped(*coop, "kill_ny_percent", 100, 0, 1000);
@@ -274,6 +275,7 @@ json::JsonValue settings_to_json(const Settings &settings) {
       {"skip_conversations", JsonValue{settings.skip_conversations}},
       {"experimental_coop", JsonValue{settings.experimental_coop}},
       {"slai_enabled", JsonValue{settings.slai_enabled}},
+      {"content_profiles_merged", JsonValue{settings.content_profiles_merged}},
       {"coop",
        JsonValue{JsonValue::Object{
            {"enemy_level_offset",
