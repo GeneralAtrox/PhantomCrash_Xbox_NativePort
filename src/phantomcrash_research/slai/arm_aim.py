@@ -25,7 +25,10 @@ MUZZLE_CALLBACK = 0x4E6DB0
 AXES = {1: "x", 2: "y", 3: "z"}
 GUARDS = {0x4E7AF0: 0x8E440F48, 0x4E7B00: 0x2484A910, 0x4E7B3C: 0x26450120,
           0x4E7B44: 0x26460CD0, 0x4E80E4: 0xC66C002C, 0x4DFDE8: 0x8E040EAC,
-          0x4DFDEC: 0x844300A4}
+          0x4DFDEC: 0x844300A4,
+          # The cleared flag's path: +0x150, +0x15c, RotY, inverse, product.
+          0x4E7DA8: 0x9222002B, 0x4E7DB4: 0xC6410150, 0x4E7DB8: 0xC640015C,
+          0x4E7E78: 0x0C043B46, 0x4E7ED8: 0x0C043A52, 0x4E7EE8: 0x0C043A0C}
 PROVENANCE = {"table": "0x59a910", "row_select": "0x4e7aec (0x254890: legs record +6)",
               "arm_aim": "0x4e7a90", "weapon_aim": "0x4e7f60", "raise_counter": "0x4dfde8",
               "binding": "0x504b30", "fields": "researcher assigned"}
@@ -48,8 +51,9 @@ def arm_aim_rows(program):
             sides.append({"node": ARM_AIM_NODES[slot], "pitch": pitch, "yaw": yaw, "roll": roll,
                           "pitch_limits": [low, high],
                           "twist": round(twist if slot == 1 else -twist, 6)})
-        # A zero flag cancels the node's rotation and turns by the actor's
-        # +0x150 + +0x15c, which are not traced; the port's body already turns.
+        # A zero flag (0x4e7da8) sets the node's world rotation outright: the
+        # turn, then RotY of the actor's +0x150 heading plus its +0x15c
+        # (0x4e7db4..4e7f14). The port takes the body frame's yaw for both.
         rows.append({"row": index, "sides": sides, "order": order,
                      "keep_rotation": row[0x2B] != 0})
     return rows

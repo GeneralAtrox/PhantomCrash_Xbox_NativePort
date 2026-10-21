@@ -128,6 +128,37 @@ TEST_CASE("the yaw and roll turns follow the z mirror's signs") {
   CHECK(same(nodes[0].local, rotation_z(0.3F)));
 }
 
+TEST_CASE("a row without keep_rotation sets the arm's world turn to the aim then the heading") {
+  // 0x4e7db4..4e7f14: the node's whole world rotation is cancelled, so a
+  // tilted parent and the node's own turn leave no trace; only the row's turn
+  // and the body's yaw remain. The node keeps its offset from the parent.
+  SourceArmAim aim = pitch_only(-1.5F, 1.5F);
+  aim.keep_rotation = false;
+  aim.sides[0].node = 1;
+  aim.sides[0].pitch = 0.2F;
+  RigidNode parent;
+  parent.local = rotation_x(0.4F) * rotation_z(-0.6F);
+  RigidNode arm;
+  arm.parent = 0;
+  arm.local = rotation_z(0.3F) * translation({1.0F, 2.0F, 0.5F});
+  const Mat4 body = rotation_y(0.5F) * translation({4.0F, 0.0F, -2.0F});
+  const Vec3 position = transform_point(Vec3{}, body);
+  const Vec3 ahead = transform_point(Vec3{0.0F, 0.0F, -20.0F}, body);
+  std::vector<RigidNode> nodes{parent, arm};
+  aim_source_arm(aim, 0, {1.0F, ahead, position}, body, nodes);
+  const Mat4 world = nodes[1].local * nodes[0].local * body;
+  CHECK(same(world, rotation_x(-0.2F) * rotation_y(0.5F)));
+  CHECK(near(row_of(nodes[1].local, 3), Vec3{1.0F, 2.0F, 0.5F}));
+
+  // Half raised: the angles are halved, then the world turn goes half way.
+  nodes = {parent, arm};
+  aim_source_arm(aim, 0, {0.5F, ahead, position}, body, nodes);
+  const Mat4 start = rotation_z(0.3F) * nodes[0].local * body;
+  const Mat4 goal = rotation_x(-0.1F) * rotation_y(0.5F);
+  const Mat4 half = partial_rotation(goal * transposed(start), 0.5F) * start;
+  CHECK(same(nodes[1].local * nodes[0].local * body, half));
+}
+
 TEST_CASE("a weapon's aim node turns its barrel (+z in port axes) at the target with its y up") {
   // The source's -z barrel arrives at the port's +z through the loader's z
   // mirror: S.L.A.I. muzzles sit at +z of the aim node as the port loads them.

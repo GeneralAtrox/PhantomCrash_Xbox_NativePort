@@ -64,6 +64,21 @@ Mat4 node_world(const std::vector<RigidNode> &nodes, const int index, const Mat4
   return node.local * (node.parent >= 0 ? node_world(nodes, node.parent, root) : root);
 }
 
+// The yaw of `frame` alone: its forward (z) row laid flat, with y up.
+Mat4 heading_frame(const Mat4 &frame) {
+  Vec3 forward = row_of(frame, 2);
+  forward.y = 0.0F;
+  if (length(forward) < 1e-5F) {
+    const Vec3 across = row_of(frame, 0);
+    forward = {-across.z, 0.0F, across.x};
+  }
+  forward = normalize(forward);
+  Mat4 out;
+  set_row(out, 0, cross({0.0F, 1.0F, 0.0F}, forward));
+  set_row(out, 2, forward);
+  return out;
+}
+
 float number(const json::JsonValue &value, const char *key) {
   const json::JsonValue *found = value.find(key);
   if (found == nullptr || !found->is_number()) {
@@ -139,9 +154,15 @@ void aim_source_arm(const SourceArmAim &aim, const std::size_t side, const ArmAi
   }
   RigidNode &node = nodes[static_cast<std::size_t>(row.node)];
   if (!aim.keep_rotation) {
-    // The actor's +0x150 + +0x15c turn that follows is not traced; the
-    // body this node hangs from already carries the port's heading.
-    turn = turn * transposed(rotation_part(node.local));
+    // 0x4e7db4..4e7f14: a zero +0x2b flag sets the node's world rotation
+    // outright to the turn followed by RotY (0x4e7e78) of the actor's +0x150
+    // heading plus its +0x15c, wrapped to a half turn. It cancels the
+    // node's whole world rotation (the inverse at 0x4e7ed8 and the products
+    // at 0x4e7ee8/0x4e7f14), not just its own, so the legs' sway and the
+    // body's tilt do not reach the arm. The body frame's yaw stands in for
+    // the heading and the sum; the slerp at 0x4e7f04 weights the change.
+    const Mat4 world = rotation_part(node_world(nodes, row.node, body));
+    turn = turn * heading_frame(body) * transposed(world);
   }
   node.local = partial_rotation(turn, weight) * node.local;
 }

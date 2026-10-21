@@ -28,7 +28,8 @@ struct SourceArmAimSide {
 struct SourceArmAim {
   std::array<SourceArmAimSide, 2> sides;
   std::vector<char> order; // 'x', 'y', 'z': the turns, first applied first
-  // False cancels the node's own rotation first (the row's +0x2b flag).
+  // False sets the node's world rotation to the turn, then the body's yaw
+  // (the row's +0x2b flag; 0x4e7db4..4e7f14).
   bool keep_rotation{true};
 };
 
