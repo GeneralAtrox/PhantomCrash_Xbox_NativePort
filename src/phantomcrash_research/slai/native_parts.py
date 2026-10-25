@@ -109,6 +109,16 @@ def native_flight(target, source):
         target[key] = source[key]
 
 
+def part_paints(paints, stem, model):
+    """The part's paint sheets. A part with none of its own wears the set its
+    model's texture belongs to: S9L01H and SAL01H use their bodies' sheets."""
+    if paints.get(stem):
+        return paints[stem]
+    images = {Path(image.get("uri", "")).name for image in model.get("images", [])}
+    return next((colours for colours in paints.values()
+                 if any(Path(colour["file"]).name in images for colour in colours)), [])
+
+
 def register_parts(image: Path, assets: Path, data: Path, mods: Path) -> dict:
     manifest = read(mods / "slai/assets/manifest.json")
     stats = read(mods / "slai/source_stats.json")
@@ -193,13 +203,14 @@ def register_parts(image: Path, assets: Path, data: Path, mods: Path) -> dict:
                            "source": source["source"], "slai_model": stem})
             native["model" if category != "body" else "class"] = new_type
             definition = copy.deepcopy(base_catalogue[types][template_type])
-            colours = {c["source_colour"]: "slai/assets/" + c["file"] for c in paints[stem]}
-            default = colours.get(1, next(iter(colours.values()), ""))
-            definition["paint_images"] = [colours.get(i+1, default) for i in range(58)]
-            texture = "../../" + default if default else ""
             file = next(f for f in disc.packages()[entry["package_offset"]] if f.name == entry["source"])
             nodes = read_pod(disc.read(file))
             animated = read(mods / "slai/assets" / entry["file"])
+            colours = {c["source_colour"]: "slai/assets/" + c["file"]
+                       for c in part_paints(paints, stem, animated)}
+            default = colours.get(1, next(iter(colours.values()), ""))
+            definition["paint_images"] = [colours.get(i+1, default) for i in range(58)]
+            texture = "../../" + default if default else ""
             if category == "arm":
                 native['source_melee_kind'] = source['kind'] if source['kind'] in (6, 7) else -1
                 native["flight"] = {0: 0, 1: 1, 2: 2, 3: 0}.get(source["flight"], template["flight"])
