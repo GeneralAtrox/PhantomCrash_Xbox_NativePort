@@ -174,6 +174,14 @@ void read_maker_tables(const json::JsonValue &document, RobotCatalogue &catalogu
 [[nodiscard]] std::shared_ptr<const SkeletonNode> graft_body_section(const SkeletonNode &legs,
                                                                      const SkeletonNode &body);
 
+// The paint table (texture resources by colour) the Phantom Crash parts wear:
+// the legs'. S.L.A.I. legs (a port addition, marked by their own paint
+// images) carry the table of the leg their import copied, which may be a
+// fixed colour, so on them those parts take the table of their body's own
+// maker's legs, or of the first legs under a S.L.A.I. body.
+[[nodiscard]] const std::vector<int> &native_paints(const RobotCatalogue &catalogue, int body_type,
+                                                    int leg_type);
+
 // Throws std::runtime_error when a part id or type is out of range.
 [[nodiscard]] RobotAssembly assemble_robot(const RobotCatalogue &catalogue,
                                            const RobotSkeletons &skeletons,

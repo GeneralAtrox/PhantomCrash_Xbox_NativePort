@@ -244,6 +244,7 @@ add_library(phantomcrash_core
   src/town_map_layout.cpp
   src/town_map_script.cpp
   src/robot.cpp
+  src/robot_paints.cpp
   src/body_fit.cpp
   src/robot_skin.cpp
   src/robot_body_models.cpp

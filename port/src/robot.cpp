@@ -323,10 +323,10 @@ RobotAssembly assemble_robot(const RobotCatalogue &catalogue, const RobotSkeleto
   robot.radius = std::clamp(legs.radius, 0.0F, max_robot_radius);
   robot.shadow_mesh = legs.shadow_mesh;
   robot.source_arm_aim = legs.source_arm_aim ? legs.source_arm_aim : body.source_arm_aim;
-  if (!legs.paints.empty()) {
+  if (const auto &paints = native_paints(catalogue, body_type, robot.leg_type); !paints.empty()) {
     const int colour =
-        parts.colour >= 0 && parts.colour < static_cast<int>(legs.paints.size()) ? parts.colour : 0;
-    robot.paint = robot_texture_path(legs.paints[static_cast<std::size_t>(colour)]);
+        parts.colour >= 0 && parts.colour < static_cast<int>(paints.size()) ? parts.colour : 0;
+    robot.paint = robot_texture_path(paints[static_cast<std::size_t>(colour)]);
   }
   const auto &skeleton = pick(skeletons.legs, robot.leg_type, "leg skeleton");
   robot.skeleton = skeleton ? &*skeleton : nullptr;

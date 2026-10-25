@@ -115,6 +115,21 @@ TEST_CASE("native S.L.A.I. parts assemble with both games and load all paints an
   }
 }
 
+TEST_CASE("Phantom Crash parts on S.L.A.I. legs wear their own maker's paint table") {
+  RobotCatalogue catalogue;
+  catalogue.leg_types.resize(4);
+  catalogue.leg_types[0].paints = {10, 11}; // the first legs
+  catalogue.leg_types[1].paints = {20, 20}; // a fixed colour
+  catalogue.leg_types[2].paints = {20, 20}; // S.L.A.I., copied from 1
+  catalogue.leg_types[2].paint_images = {"textures/a.png"};
+  catalogue.leg_types[3].paints = {30, 31};
+  catalogue.leg_types[3].paint_images = {"textures/b.png"}; // a S.L.A.I. body's own legs
+  catalogue.body_leg_types = {0, 1, 3};
+  CHECK((native_paints(catalogue, 1, 1) == std::vector<int>{20, 20})); // native legs keep theirs
+  CHECK((native_paints(catalogue, 0, 2) == std::vector<int>{10, 11})); // the body's own maker's
+  CHECK((native_paints(catalogue, 2, 2) == std::vector<int>{10, 11})); // the first legs'
+}
+
 TEST_CASE("S.L.A.I. weapon fire rules select the recovered cues for both mounts") {
   const auto roots = DataRoots::standard(PHANTOMCRASH_SOURCE_ROOT);
   const auto file = roots.find_asset("slai/sound_cues.json");

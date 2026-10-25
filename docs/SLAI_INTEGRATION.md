@@ -2276,6 +2276,10 @@ guns pointing at the ground, and the target's armour never dropped.
     weapons faced backwards (4). The size (mount base times the id factor)
     stays as recovered. Flag `0x1000` and hook `0x5bb190` are still
     undecoded; the port draws both layers additively.
+  - 3 is fixed. Phantom Crash parts on S.L.A.I. legs wear the paint table
+    of their body's own maker's legs, or the first legs' under a S.L.A.I.
+    body (`native_paints`), so the paint choice applies on every leg set.
+    A Phantom Crash body that is fixed-colour in the original stays fixed.
   - 4 is fixed as an adapter. A source weapon's barrel lies along the
     model's +z (source -z, as in `0x4e7fd0`), but both the source body's
     shoulder control and the native shoulder mount face -z. Shoulder
