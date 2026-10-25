@@ -63,6 +63,18 @@ TEST_CASE("a partial rotation turns the given share of the way along the shortes
   CHECK(same(partial_rotation(rotation_z(2.0F), 0.0F), Mat4{}));
 }
 
+TEST_CASE("a S.L.A.I. shoulder weapon's barrel faces the native shoulder aim") {
+  // The native frame yawed 0.4 and placed; its -z is where it aims.
+  const Mat4 native = rotation_y(0.4F) * translation({2.0F, 3.0F, 4.0F});
+  const Vec3 offset{0.95F, 0.6F, -0.925F};
+  const Mat4 frame = source_shoulder_frame(native, {1.0F, 2.0F, 3.0F}, offset);
+  // The weapon root (at the offset in model space) lands on the position.
+  CHECK(near(transform_point(offset, frame), Vec3{1.0F, 2.0F, 3.0F}));
+  // The barrel, the model's +z, runs along the native frame's -z.
+  CHECK(near(row_of(frame, 2), row_of(native, 2) * -1.0F));
+  CHECK(near(row_of(frame, 1), row_of(native, 1)));
+}
+
 TEST_CASE("the upper arm pitches by the row's base less the target's elevation") {
   // A target 45 degrees above the robot's forward line: 0x4e7c0c's pitch is
   // base - atan2(y, z) of the offset, turned about source x, which the

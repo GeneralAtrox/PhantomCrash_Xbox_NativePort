@@ -200,6 +200,12 @@ void aim_source_weapon(const int node, const float twist, const ArmAimState &sta
   aimed.local = partial_rotation(desired * transposed(current), state.weight) * aimed.local;
 }
 
+Mat4 source_shoulder_frame(const Mat4 &native, const Vec3 position, const Vec3 root_offset) {
+  Mat4 frame = rotation_y(pi) * rotation_part(native);
+  set_row(frame, 3, position);
+  return translation(root_offset * -1.0F) * frame;
+}
+
 Mat4 partial_rotation(const Mat4 &rotation_matrix, const float weight) {
   if (weight >= 1.0F) {
     Mat4 out = rotation_part(rotation_matrix);

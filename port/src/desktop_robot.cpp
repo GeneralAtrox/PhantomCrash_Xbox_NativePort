@@ -128,11 +128,8 @@ void RobotVisual::add_items(const Pose &pose, const Mat4 &root, std::vector<Worl
     item.model = part.model;
     // A battle's mounts already carry the shift (RobotCombat).
     item.world = shoulder_mounts ? (*shoulder_mounts)[side] : shoulder_shifts_[side] * mount;
-    if (model->rig && source_shoulder_mounts_ && source_shoulder_mount_valid_[side]) {
-      item.world =
-          translation(model->rig->body_mount_offset * -1.0F) * (*source_shoulder_mounts_)[side];
-    }
     if (model->rig) {
+      item.world = source_shoulder_world(*model, side, item.world);
       rigid(*model, item.world, static_cast<int>(side) + 2, item.node_worlds);
     }
     item.paint = paint_;
@@ -251,16 +248,26 @@ std::optional<Mat4> RobotVisual::source_weapon_frame(const Pose &pose, const Mat
     mount = (*source_arm_mounts_)[static_cast<std::size_t>(slot)];
   } else if (slot >= 2) {
     const auto side = static_cast<std::size_t>(slot) - 2;
-    mount =
-        source_shoulder_mounts_ && source_shoulder_mount_valid_[side]
-            ? translation(model->rig->body_mount_offset * -1.0F) * (*source_shoulder_mounts_)[side]
-            : shoulder_mounts[side];
+    mount = source_shoulder_world(*model, side, shoulder_mounts[side]);
   } else if (pose[static_cast<std::size_t>(slot) + 1].set[0]) {
     mount = pose[static_cast<std::size_t>(slot) + 1].bones[0];
   }
   Mat4 frame;
   rigid(*model, mount, slot, unused, node, &frame);
   return frame;
+}
+
+Mat4 RobotVisual::source_shoulder_world(const ModelData &model, const std::size_t side,
+                                        const Mat4 &native) const {
+  // The source body's shoulder control places the weapon; on a Phantom Crash
+  // body the weapon's own root offset from the native mount does. Either way
+  // it faces the native shoulder aim.
+  const Vec3 offset = model.rig->body_mount_offset;
+  const bool source = source_shoulder_mounts_ && source_shoulder_mount_valid_[side];
+  const Mat4 &at = source ? (*source_shoulder_mounts_)[side] : native;
+  const Vec3 position =
+      source ? Vec3{at.at(3, 0), at.at(3, 1), at.at(3, 2)} : transform_point(offset, native);
+  return source_shoulder_frame(native, position, offset);
 }
 
 std::optional<Mat4> RobotVisual::source_body_frame(const Pose &pose, const Mat4 &root,

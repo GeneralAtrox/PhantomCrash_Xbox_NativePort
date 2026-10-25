@@ -2265,6 +2265,25 @@ guns pointing at the ground, and the target's armour never dropped.
   7. Stand poses to compare with the original: 58 CARRO-4Wheels (front pod
      raised), 63 ZWERG-2Wheels (pod tilted about 45 degrees) and 69
      HARTMAN-2Wheels (twisted lower leg).
+- Follow-up (2026-10-25):
+  - 1 is fixed. A part without paint sheets of its own wears the set its
+    model's texture belongs to (`part_paints` in `native_parts.py`), so
+    S9L01H and SAL01H take their bodies' sheets.
+  - 2: the block grid came from the old pack. After the reconvert and
+    reinstall, `mflash_01/02.png` decode as a starburst and a flame. The
+    "pinwheel" is `mazl_01` itself: a cone along the model's -z (the
+    barrel) and three blades around it. It looked wrong because the shoulder
+    weapons faced backwards (4). The size (mount base times the id factor)
+    stays as recovered. Flag `0x1000` and hook `0x5bb190` are still
+    undecoded; the port draws both layers additively.
+  - 4 is fixed as an adapter. A source weapon's barrel lies along the
+    model's +z (source -z, as in `0x4e7fd0`), but both the source body's
+    shoulder control and the native shoulder mount face -z. Shoulder
+    weapons now take the native shoulder frame, which follows the aim, turned
+    half round about y (`source_shoulder_frame`). They keep the source
+    control's position on a S.L.A.I. body and the root offset on a Phantom
+    Crash body. Whether the original also aims shoulder weapons is not
+    decoded; at rest its shoulder controls point them sideways or back.
 - Recorded for other work: S.L.A.I. robots stand about 1.4-1.6 times the
   Plain Holy's height at the same camera, and ELINT, MOLNIYA and ARDITO
   about 2 times (stage and robot scale). PROTON stock uses arms 76/77

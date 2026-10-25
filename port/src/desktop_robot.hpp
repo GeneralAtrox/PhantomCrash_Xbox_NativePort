@@ -56,6 +56,9 @@ private:
            int weapon_slot = -1);
   void rigid(const ModelData &model, const Mat4 &root, int weapon_slot, std::vector<Mat4> &nodes,
              int attachment_node = -1, Mat4 *attachment_frame = nullptr) const;
+  // A S.L.A.I. shoulder weapon's root frame from the native shoulder mount.
+  [[nodiscard]] Mat4 source_shoulder_world(const ModelData &model, std::size_t side,
+                                           const Mat4 &native) const;
 
   WorldRenderer &world_;
   int body_{-1};
