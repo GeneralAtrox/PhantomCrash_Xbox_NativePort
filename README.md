@@ -479,7 +479,11 @@ Controls: keyboard Enter = START, Z/Space = A, X/Backspace = B, Esc = BACK,
 arrows or WASD = D-pad; gamepads map by position (south = A). F11, Alt+Enter, or Alt+Numpad Enter toggles
 fullscreen. Settings > Visuals contains VSync, a frame-rate cap from 30 to
 144 FPS (VSync off with no cap is unlimited), and a frame counter. Pause When
-Unfocused remains in Settings; choices are saved in `%APPDATA%\PhantomCrash\PhantomCrash Port`.
+Unfocused remains in Settings. Choices, the game in progress and the save
+slots are saved in `Saves\` beside the game data (the folder holding `data\`);
+Settings > Save Data Location shows and opens it. The first run copies the
+older `%APPDATA%\PhantomCrash\PhantomCrash Port` saves there and leaves the
+originals in place.
 
 vcpkg is checked out under `.tools\vcpkg` at the same baseline as Lodoss, so
 packages already built for Lodoss are restored from the local binary cache.

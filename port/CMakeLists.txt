@@ -618,6 +618,8 @@ if(PHANTOMCRASH_BUILD_DESKTOP)
     src/desktop_frame.cpp
     src/desktop_frame_counter.cpp
     src/desktop_frame_rate_dialog.cpp
+    src/desktop_save_location_dialog.cpp
+    src/desktop_save_folder.cpp
     src/desktop_front_end.cpp
     src/desktop_game_data.cpp
     src/desktop_slai.cpp

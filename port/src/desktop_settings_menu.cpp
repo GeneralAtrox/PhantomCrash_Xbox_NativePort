@@ -7,6 +7,7 @@
 #include "desktop_frame_rate_dialog.hpp"
 #include "desktop_controls_dialog.hpp"
 #include "desktop_copy_button.hpp"
+#include "desktop_save_location_dialog.hpp"
 
 #include <algorithm>
 #include <stdexcept>
@@ -28,6 +29,7 @@ struct SettingsMenu::Impl {
   static constexpr UINT coop_command = 0x7206;
   static constexpr UINT slai_command = 0x7209;
   static constexpr UINT skip_conversations_command = 0x7208;
+  static constexpr UINT save_location_command = 0x720a;
   static constexpr UINT first_level_command = 0x7300;
   static constexpr UINT last_level_command = 0x73ff;
 
@@ -40,6 +42,7 @@ struct SettingsMenu::Impl {
   std::optional<CheatRequest> cheat;
   bool copy_requested{};
   bool slai_toggle{};
+  std::filesystem::path save_folder;
   HWND window{};
   HMENU bar{}, menu{}, levels{}, audio{}, cheats{};
   std::unique_ptr<VisualsDialog> visuals;
@@ -104,6 +107,9 @@ struct SettingsMenu::Impl {
       break;
     case controls_command:
       edit_host_controls(window, settings.host_controls);
+      break;
+    case save_location_command:
+      show_save_location(window, save_folder);
       break;
     default:
       return false;
@@ -229,7 +235,8 @@ SettingsMenu::SettingsMenu(void *native_window, const Settings &initial)
       !AppendMenuW(state.menu, MF_STRING, Impl::pause_unfocused_command,
                    L"&Pause When Unfocused") ||
       !AppendMenuW(state.menu, MF_STRING, Impl::skip_conversations_command,
-                   L"&Skip Story Conversations")) {
+                   L"&Skip Story Conversations") ||
+      !AppendMenuW(state.menu, MF_STRING, Impl::save_location_command, L"Save &Data Location...")) {
     throw std::runtime_error("Unable to fill the Settings menu");
   }
   state.audio = static_cast<HMENU>(create_audio_menu(state.menu, state.settings.audio));
@@ -257,6 +264,9 @@ bool SettingsMenu::take_slai_toggle() {
 void SettingsMenu::set_slai_enabled(bool enabled) {
   impl_->settings.slai_enabled = enabled;
   impl_->refresh();
+}
+void SettingsMenu::set_save_folder(const std::filesystem::path &folder) {
+  impl_->save_folder = folder;
 }
 
 const Settings &SettingsMenu::settings() const {
@@ -357,6 +367,7 @@ bool SettingsMenu::take_slai_toggle() {
 void SettingsMenu::set_slai_enabled(bool enabled) {
   impl_->settings.slai_enabled = enabled;
 }
+void SettingsMenu::set_save_folder(const std::filesystem::path &) {}
 bool SettingsMenu::visuals_open() const {
   return false;
 }

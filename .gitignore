@@ -12,6 +12,9 @@
 # Local mods, built from the user's own discs (S.L.A.I., MechAssault).
 /mods/
 
+# The player's settings and save files (desktop_save_folder.hpp).
+/Saves/
+
 # Pinned external reverse-engineering checkouts and Ghidra project databases.
 /.tools/
 *.gpr

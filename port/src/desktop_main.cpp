@@ -21,6 +21,7 @@
 #include "desktop_input.hpp"
 #include "desktop_debug_log.hpp"
 #include "desktop_live_resize.hpp"
+#include "desktop_save_folder.hpp"
 #include "desktop_online_diagnostics.hpp"
 #include "desktop_options.hpp"
 #include "desktop_tools.hpp"
@@ -71,16 +72,6 @@ std::filesystem::path find_root(const Options &options) {
                            "Run from the checkout or pass --root.");
 }
 
-std::filesystem::path settings_path() {
-  char *folder = SDL_GetPrefPath("PhantomCrash", "PhantomCrash Port");
-  if (folder == nullptr) {
-    return "settings.json";
-  }
-  std::filesystem::path path = std::filesystem::path(reinterpret_cast<const char8_t *>(folder));
-  SDL_free(folder);
-  return path / "settings.json";
-}
-
 void apply_fullscreen(DesktopHost &host, SettingsMenu &menu) {
   const bool wanted = menu.settings().fullscreen;
   if (wanted == host.fullscreen()) {
@@ -103,7 +94,7 @@ int run(const Options &options) {
   if (!prepare_game_data(root, !smoke && !benchmark)) {
     return 0;
   }
-  const auto configuration = options.settings.value_or(settings_path());
+  const auto configuration = options.settings ? *options.settings : default_settings_path(root);
   start_debug_log(configuration.parent_path() / "phantomcrash.log");
   const bool slai = load_settings(configuration).slai_enabled;
   if (slai && !prepare_slai_data(root, !smoke && !benchmark)) {
@@ -126,6 +117,8 @@ int run(const Options &options) {
   DesktopHost host(phangrade::initial_fullscreen(initial.fullscreen), smoke, options.size);
   SettingsMenu menu(smoke ? nullptr : host.native_window(), initial);
   menu.set_visible(!initial.fullscreen);
+  menu.set_save_folder(configuration.has_parent_path() ? configuration.parent_path()
+                                                       : std::filesystem::current_path());
   phangrade::DesktopSession session(host, menu, smoke);
   DesktopInput input;
   FixedStep step(logic_tick_seconds);

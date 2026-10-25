@@ -3,6 +3,7 @@
 #include "phantomcrash/cheats.hpp"
 #include "phantomcrash/settings.hpp"
 
+#include <filesystem>
 #include <memory>
 #include <optional>
 #include <string>
@@ -11,7 +12,8 @@
 namespace phantomcrash {
 
 // The window menu: Settings > Visuals opens live display/render controls;
-// audio, input controls and Pause When Unfocused remain in Settings.
+// audio, input controls and Pause When Unfocused remain in Settings, and Save
+// Data Location shows and opens the save folder.
 // Beside Settings, a copy icon copies the game context (desktop_scene_dump.hpp).
 // Tools: Level Select, which jumps straight to a screen for testing, and
 // Cheats (desktop_cheats_menu.hpp).
@@ -30,6 +32,8 @@ public:
   void set_fullscreen(bool enabled);
   bool take_slai_toggle();
   void set_slai_enabled(bool enabled);
+  // The folder Settings > Save Data Location shows and opens.
+  void set_save_folder(const std::filesystem::path &folder);
   // The menu bar is hidden in fullscreen.
   void set_visible(bool visible);
   // True once after the user interacts with the menu, so the loop can drop

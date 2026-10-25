@@ -4,7 +4,7 @@ Click the **copy icon** on the menu bar, next to Settings (tooltip "Copy game
 context"), to describe what is on screen for an agent. In fullscreen, where
 the menu bar is hidden, **F9** does the same. Nothing is shown when it copies.
 The dump is written to `scene_dumps/` next to the settings file
-(`%APPDATA%/PhantomCrash/PhantomCrash Port/scene_dumps/`), and the JSON is also
+(`Saves/scene_dumps/` beside the game data), and the JSON is also
 copied to the clipboard so it can be pasted straight into a chat. When Phangrade
 started the game, the clipboard copy (not the file) ends with Phangrade's context
 for this run: where its full logs, crash dumps and co-op partners' logs are.
