@@ -15,6 +15,10 @@ from .motion_resources import native_clip_names, NATIVE_ACTIONS, ACTION_PROVENAN
 
 AXES = np.array([1., -1., -1.])
 GLTF = np.array([.1, -.1, .1])
+# A S.L.A.I. robot faces its native -z, which AXES puts at the port's +z; a
+# port robot faces its -z. A half turn about y faces S.L.A.I. legs forward
+# (PCSX2: a battle robot's body maps native +z to the actor's back).
+SOURCE_FACING = [0., math.pi, 0.]
 
 
 def euler(matrix):
@@ -130,7 +134,9 @@ def walking_model(nodes, texture, torso, wheel_nodes=(), suspension=None, rolls=
             body_slots(child)
     body_slots(mount, True)
     mount["translation"] = [0, 0, 0]
-    mount["rotation"] = [0, 0, 0]
+    # The mount turns back, so a body on it keeps the native torso's facing;
+    # the port turns a S.L.A.I. body itself (desktop_robot.cpp).
+    mount["rotation"] = list(SOURCE_FACING)
     if not 0 <= body_node < len(nodes):
         raise ValueError("S.L.A.I. leg body attachment is outside its hierarchy")
 
@@ -167,7 +173,7 @@ def walking_model(nodes, texture, torso, wheel_nodes=(), suspension=None, rolls=
 
     roots = [tree(i) for i, n in enumerate(nodes) if n.parent < 0]
     skeleton = {"type": 0, "flags": 1, "track": -1, "bone": -1,
-                "translation": [0, 0, 0], "rotation": [0, 0, 0], "children": roots}
+                "translation": [0, 0, 0], "rotation": list(SOURCE_FACING), "children": roots}
     return document(builder, draw_nodes, meshes, texture), skeleton
 
 

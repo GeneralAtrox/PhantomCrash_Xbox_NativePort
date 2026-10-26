@@ -2426,9 +2426,50 @@ guns pointing at the ground, and the target's armour never dropped.
   rounded nose toward the camera and the long end on the guns' side; the
   original matrix turned half round about y fits the port frame. The
   likely cause is the port loader's z flip, which guns and shoulder
-  weapons were already turned for but bodies were not. The other nine
-  S.L.A.I. bodies were not compared.
+  weapons were already turned for but bodies were not. Fixed; see
+  "S.L.A.I. robots face forward" below.
 - PT-1 sets optical camouflage to AUTOMATIC and is invisible at rest until
   its O.C. power runs out (about 09:44 on the timer); captures before
   then show no body.
 - Nothing was changed by this check.
+
+## S.L.A.I. robots face forward (2026-10-26)
+
+- Every S.L.A.I. body and leg set was drawn facing backwards. All ten
+  Quick Battle READY-MADE SVs were compared from behind in PCSX2 and the
+  port: PROTON, KHT, HARTMAN, ZWERG and CARRO bodies on 2Legs, crawler and
+  wheeled legs.
+  - From behind, the original shows each body's back: KHT tail lights,
+    the HARTMAN roll bar, the boxy ZWERG and yellow-striped CARRO backs,
+    and PROTON's long end trailing. The port showed grilles, eyes and jaws.
+  - Cause: a S.L.A.I. robot faces its native -z. The rig export
+    (`native_geometry.AXES`, x kept, y and z reversed) puts that at the
+    port's +z, while port robots face -z. Bodies and legs share the same
+    conversion, so both were reversed. A half turn about y corrects it;
+    no mirror is needed.
+- The fix:
+  - `native_geometry.SOURCE_FACING` turns the leg skeleton's wrapper half
+    round.
+  - The leg skeleton's body mount (a copy of the Phantom Crash torso)
+    turns back by the same amount, so a Phantom Crash body on S.L.A.I.
+    legs keeps its facing.
+  - `RobotVisual::source_body_root` turns a S.L.A.I. body half round on
+    whatever mount it rides (S.L.A.I. or Phantom Crash legs). Drawing, arm
+    and shoulder mounts, and muzzle frames all go through it.
+- Checked after the fix:
+  - All ten SVs show their backs to the chase camera.
+  - A side view of PT-1 running shows its legs striding toward the
+    direction of travel, with the long body end trailing.
+  - HT-2 (crawler) leads with its guns.
+  - AEBody on 2Legs 43 shows the same back as on AE2Leg, and PROTON on
+    AE2Leg shows its tail lights.
+- Arm aim: the half turn about y is the difference between the fitted
+  `port_turn` signs and the rig export recorded under "Arm aim and gun
+  flight". The turn changes only the x component of the arm's local target
+  offset, so the measured pitch rows are unchanged; the S5B01H residual
+  (20_67) was not re-measured.
+- Wheels and crawler tracks spin from travel along the heading frame, as
+  in the original; with the legs turned they should now roll forward.
+  Not checked frame by frame.
+- Installed packs must be re-registered (`register-slai-assets`) to pick
+  up the turned leg skeletons in `robots/skeletons.json`.

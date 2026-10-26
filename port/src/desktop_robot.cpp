@@ -81,8 +81,9 @@ void RobotVisual::add(Part &part, const Pose &pose, const Mat4 &root, std::vecto
     const Mat4 mount = weapon_slot >= 0 && weapon_slot < 2 && source_arm_mounts_ &&
                                source_arm_mount_valid_[static_cast<std::size_t>(weapon_slot)]
                            ? (*source_arm_mounts_)[static_cast<std::size_t>(weapon_slot)]
-                       : p.set[0] ? p.bones[0]
-                                  : root;
+                       : part.model == body_ ? source_body_root(pose, root)
+                       : p.set[0]            ? p.bones[0]
+                                             : root;
     rigid(*model, mount, weapon_slot, part.node_worlds);
   } else {
     skin_nodes(*model, p, part.first_slot, root, part.node_worlds);
@@ -241,8 +242,7 @@ std::optional<Mat4> RobotVisual::source_weapon_frame(const Pose &pose, const Mat
   std::vector<Mat4> unused;
   const auto *body = world_.model_data(body_);
   if (body && body->rig) {
-    const Mat4 body_root = pose[0].set[0] ? pose[0].bones[0] : root;
-    rigid(*body, body_root, -1, unused);
+    rigid(*body, source_body_root(pose, root), -1, unused);
   }
   if (slot < 2 && source_arm_mounts_ && source_arm_mount_valid_[static_cast<std::size_t>(slot)]) {
     mount = (*source_arm_mounts_)[static_cast<std::size_t>(slot)];
@@ -276,11 +276,18 @@ std::optional<Mat4> RobotVisual::source_body_frame(const Pose &pose, const Mat4 
   if (!body || !body->rig || node < 0 || node >= static_cast<int>(body->rig->nodes.size())) {
     return std::nullopt;
   }
-  const Mat4 mount = pose[0].set[0] ? pose[0].bones[0] : root;
   std::vector<Mat4> unused;
   Mat4 frame;
-  rigid(*body, mount, -1, unused, node, &frame);
+  rigid(*body, source_body_root(pose, root), -1, unused, node, &frame);
   return frame;
+}
+
+Mat4 RobotVisual::source_body_root(const Pose &pose, const Mat4 &root) const {
+  // The model export leaves a S.L.A.I. body facing the port's +z (its native
+  // -z, the front); port robots face -z. Measured against PCSX2: every Quick
+  // Battle robot shows its back to the chase camera.
+  const Mat4 mount = pose[0].set[0] ? pose[0].bones[0] : root;
+  return rotation_y(pi) * mount;
 }
 
 std::optional<Vec3> RobotVisual::torso(const Pose &pose) const {

@@ -33,6 +33,10 @@ class NativeAdapterTests(unittest.TestCase):
         root = rig["children"][0]
         self.assertEqual(root["children"][0]["children"], [])
         self.assertEqual(root["children"][1]["children"][0]["bone"], 0)
+        # The legs turn half round to face the port's forward; the body
+        # mount turns back.
+        self.assertEqual(rig["rotation"], [0, np.pi, 0])
+        self.assertEqual(root["children"][1]["children"][0]["rotation"], [0, np.pi, 0])
         for invalid in (-1, 3):
             with self.assertRaises(ValueError):
                 walking_model(nodes, "paint.png", torso, body_node=invalid)
