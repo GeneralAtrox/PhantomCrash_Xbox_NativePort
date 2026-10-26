@@ -57,9 +57,9 @@ Implemented in the native port:
   former separate rest-pose mount could leave the body behind during leg
   animation. Mixed-part mounting, gameplay muzzle
   sockets and aiming still use Phantom Crash adapters.
-  Native body/weapon and arena adapters reverse the canonical export's triangle winding
+  Native body/weapon adapters reverse the canonical export's triangle winding
   for the port's front-face convention, accounting for the reflected right
-  mount. Original normals and animation keys are unchanged. Both sides are
+  mount. Arenas keep it (see "Stages no longer mirrored"). Original normals and animation keys are unchanged. Both sides are
   checked against their normals through the native model loader; two-sided
   materials alone do not establish correct exterior lighting.
 - 15 selectable arenas in Test Drive and VS: seven day cities, six night
@@ -2522,3 +2522,35 @@ guns pointing at the ground, and the target's armour never dropped.
     keep their own camera.
   - Rows range from 7.0 to 10.1 behind and 3.8 to 5.8 above.
 - Installed packs must be re-registered to get the rows.
+
+## Stages no longer mirrored (2026-10-26)
+
+- S.L.A.I.'s world is right-handed: x right, y down, z ahead. The port's
+  world is left-handed: x right, y up, z ahead. The stages were brought
+  across as (x, -y, -z). That is a rotation, so every stage was drawn
+  mirrored left-right: lettering read backwards and layouts were flipped
+  against PCSX2.
+- A stage now maps to `world_units.STAGE_AXES` = (x, -y, z), which is a
+  reflection. All the stage's world data shares it:
+  - Model: `restore_world_units(..., stage=True)` reverses z on the
+    stage root. The canonical export already reverses y, and the port's
+    loader reverses z. Props sit under the same root.
+  - Winding: the root's reflection reverses the winding again, so
+    `merge_model` keeps the canonical fronts (`port_winding(..., True)`).
+    The shader's back-face normal flip then sees the right side.
+  - Collision: kept in canonical axes and scaled. The old z flip is gone,
+    and `coordinate_conversion` reads (ws, -ws, ws).
+  - Lights (`native_lighting`), enemy routes (`stage_routes`) and supply
+    paths (`read_supply_path`) use `STAGE_AXES`.
+  - Spawns follow, since they come from the route and the collision.
+  - The carrier's heading comes from its movement, so it follows the path.
+- Checked in New York Quick Battle: the hangar's "CAUTION: TOO EXCITING
+  TO STOP." reads correctly, and the lighting is unchanged.
+- Not fixed yet: robots and other local models (weapons, projectiles, the
+  carrier, pickups) still use (x, -y, -z) plus a half turn, so they are
+  mirrored on their own. A robot's "ZERO-ONE" sticker reads backwards.
+  This supersedes the "Open: the port draws S.L.A.I. content mirrored"
+  item under "Stage and robot scale" for stages only.
+- Installed packs must be re-registered. The repository's old `mods/` pack
+  fails `test_registered_stages_collision_fog_and_models_use_the_same_world_units`
+  until it is reinstalled.

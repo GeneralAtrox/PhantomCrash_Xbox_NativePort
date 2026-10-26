@@ -16,7 +16,7 @@ class SupplyAssetTests(unittest.TestCase):
         header = struct.pack('<5h2xf4x', 1, 0, 0, 0, 0, 3.5)
         raw = header + struct.pack('<16f', *([1, 2, 3, 1] * 4))
         path = read_supply_path(raw, 2)
-        self.assertEqual(path['segments'], [[[2, -4, -6]] * 4])
+        self.assertEqual(path['segments'], [[[2, -4, 6]] * 4])
         self.assertEqual(path['source_header_float'], 3.5)
         self.assertEqual(path['floor'], -7)  # source y points down
         self.assertEqual(read_supply_path(bytes(20), 2)['floor'], 0.0)

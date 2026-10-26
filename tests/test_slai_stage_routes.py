@@ -48,8 +48,8 @@ class StageRouteTests(unittest.TestCase):
         self.assertEqual(first["points"][0], [0, 0, 0])
         self.assertEqual(first["points"][-1], [15, 0, 0])
         self.assertEqual(len(first["points"]), 5)
-        # PS2 z runs the other way; y is flipped as well.
-        self.assertEqual(second["points"][-1], [15, 0, 15])
+        # PS2 y points down; x and z keep their sense in the port.
+        self.assertEqual(second["points"][-1], [15, 0, -15])
 
     def test_rejects_a_link_to_no_record(self):
         raw = bytearray(_route([STRAIGHT], [0], [[0]]))
@@ -68,7 +68,7 @@ class StageRouteTests(unittest.TestCase):
                  {"points": [[-50, 0, -50], [-50, 0, 50], [50, 0, 50]]}]
         player, starts = route_spawns(route, floor, count=3)
         self.assertEqual(player, starts[0])
-        self.assertEqual(player, [30, 0.05, 30])
+        self.assertEqual(player, [30, 0.05, -30])
         self.assertEqual(len(starts), 3)
         points = {tuple(p) for s in route["segments"] for p in s["points"]}
         for x, y, z in starts:

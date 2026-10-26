@@ -30,6 +30,7 @@ from .assets import save
 from .resources import resource_packages
 from .stage_spawns import route_spawns
 from .stages import move_lids
+from .world_units import STAGE_AXES
 
 # Stage source city -> PATH file (city table order, 0x10 apart in the name).
 ROUTE_FILES = {"TOKYO": "PATH000.PTH", "TOKYO2": "PATH000.PTH", "GERMAN": "PATH010.PTH",
@@ -69,7 +70,7 @@ def read_route(raw: bytes, scale: float, spacing: float = POINT_SPACING) -> dict
             x, y, z, w = struct.unpack_from("<4f", raw, curve + 16 + 16 * i)
             if not all(math.isfinite(v) for v in (x, y, z)) or w != 1:
                 raise ValueError("Invalid route point")
-            controls.append([x * scale, -y * scale, -z * scale])
+            controls.append([x * scale * STAGE_AXES[0], y * scale * STAGE_AXES[1], z * scale * STAGE_AXES[2]])
         points = [controls[0]]
         for piece in range(knots - 1):
             cubic = controls[3 * piece:3 * piece + 4]

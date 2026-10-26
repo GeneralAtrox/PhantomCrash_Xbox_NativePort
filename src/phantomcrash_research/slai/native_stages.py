@@ -29,7 +29,9 @@ def stage_label(source):
 def merge_model(target, source, prefix, texture_paths):
     from .native_winding import port_winding
     source = copy.deepcopy(source)
-    port_winding(source, False)
+    # The stage root's z reflection (restore_world_units) reverses the
+    # winding again, so the canonical fronts stand.
+    port_winding(source, True)
     starts = {k: len(target[k]) for k in ("nodes", "meshes", "materials", "accessors",
                                          "bufferViews", "buffers", "images", "textures", "samplers")}
     def add(index, kind):
@@ -100,7 +102,7 @@ def register_stages(image: Path, data: Path, mods: Path) -> dict:
         resources = resource_packages(disc)
         entries = export_stages(disc, root, index, model_sources, resources)
         program = ProgramData(disc)
-        from .world_units import world_units, restore_world_units, export_world_model
+        from .world_units import world_units, restore_world_units, export_world_model, STAGE_AXES
         units = world_units(program)
         from .battle_camera import battle_camera
         camera_view = battle_camera(program)
@@ -161,18 +163,16 @@ def register_stages(image: Path, data: Path, mods: Path) -> dict:
                 if any(m.get("extras", {}).get("texture_binding") == "unresolved" for m in model.get("materials", [])):
                     unresolved.append(model_path.stem)
         prop_count = compose_props(target, stage, root, manifest, resources, prop_resources)
-        restore_world_units(target, units)
-        # Native glTF loading flips Z. Collision JSON is already game space.
+        restore_world_units(target, units, stage=True)
+        # Canonical collision is already in STAGE_AXES; only its scale changes.
         for group in ("floor", "walls"):
             for triangle in collision[group]:
                 for p in triangle["points"]:
                     p[:] = [v * units["canonical_to_world"] for v in p]
-                    p[2] = -p[2]
         collision["extras"]["coordinate_space"] = "native game space"
         collision["extras"]["world_units"] = units
         collision["extras"]["canonical_coordinate_conversion"] = collision["extras"]["coordinate_conversion"]
-        collision["extras"]["coordinate_conversion"] = [units["world_scale"],
-                                                         -units["world_scale"], -units["world_scale"]]
+        collision["extras"]["coordinate_conversion"] = [units["world_scale"] * a for a in STAGE_AXES]
         camera = training["battle"]["chase_camera"]
         try:
             spawn, player_spawns = ground_spawns(

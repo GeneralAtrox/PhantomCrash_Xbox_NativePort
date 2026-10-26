@@ -115,6 +115,12 @@ class WorldUnits(unittest.TestCase):
         self.assertEqual(model["nodes"][3]["children"], [0, 2])
         np.testing.assert_allclose(model["nodes"][3]["scale"], [10] * 3)
 
+    def test_a_stage_root_reverses_z_so_the_loaded_stage_is_not_mirrored(self):
+        model = {"scenes": [{"nodes": [0]}], "nodes": [{"translation": [1, 2, 3]}]}
+        restore_world_units(model, world_units(Program()), stage=True)
+        # The port's loader reverses z again: canonical (x, -y, z) stays.
+        np.testing.assert_allclose(model["nodes"][1]["scale"], [10, 10, -10])
+
     def test_light_positions_ranges_and_volume_axes_share_the_world_scale(self):
         light = {"ambient": [1, 1, 1], "sun_colour": [1, 1, 1],
                  "sun_angles_source": [0, 0, 0], "records": [{
@@ -123,9 +129,9 @@ class WorldUnits(unittest.TestCase):
                      "parameters_source": [5, 2, 3, struct.unpack("<f", struct.pack("<I", 2))[0]]}]}
         result = native_lighting(light, world_units(Program())["world_scale"])
         local, = result["source_lights"]
-        np.testing.assert_allclose(local["position"], [10, 20, -30])
+        np.testing.assert_allclose(local["position"], [10, 20, 30])
         np.testing.assert_allclose(local["half_x"], [2, 0, 0])
-        np.testing.assert_allclose(local["half_z"], [0, 0, -3])
+        np.testing.assert_allclose(local["half_z"], [0, 0, 3])
         self.assertAlmostEqual(local["radius"], 5, places=6)
 
     def test_registered_stages_collision_fog_and_models_use_the_same_world_units(self):
@@ -147,11 +153,11 @@ class WorldUnits(unittest.TestCase):
                 a = np.array([t["points"] for t in collision[group]])
                 b = np.array([t["points"] for t in canonical[group]])
                 if a.size:
-                    np.testing.assert_allclose(a, b * [1, 1, -1] * units["canonical_to_world"])
+                    np.testing.assert_allclose(a, b * units["canonical_to_world"])
             fog = next((v for k, v in source["directives"] if k == "FOG_INFO"), [0, 0, 10000])
             self.assertAlmostEqual(stage["fog"]["end"], float(fog[2]) * units["world_scale"])
             model = json.loads((mods / stage["model"]).read_text(encoding="utf-8"))
             root = model["nodes"][model["scenes"][0]["nodes"][0]]
-            np.testing.assert_allclose(root["scale"], [units["canonical_to_world"]] * 3)
+            np.testing.assert_allclose(root["scale"], np.array([1, 1, -1]) * units["canonical_to_world"])
             pickup = json.loads((mods / stage["supply_pickups"]["model"]).read_text(encoding="utf-8"))
             self.assertEqual(pickup["extras"]["slai_world_units"], units)

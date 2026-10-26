@@ -168,7 +168,7 @@ class NativeAdapterTests(unittest.TestCase):
         result = native_lighting(light)
         np.testing.assert_allclose(result["sun_direction"], [1, 0, 0], atol=1e-7)
         local, = result["source_lights"]
-        np.testing.assert_allclose(local["position"], [10, 20, -30])
+        np.testing.assert_allclose(local["position"], [10, 20, 30])
         np.testing.assert_allclose(local["half_x"], [0, -2, 0], atol=1e-7)
         self.assertEqual(local["radius"], 10)
         self.assertEqual(local["half_z"], [0, 0, 0])

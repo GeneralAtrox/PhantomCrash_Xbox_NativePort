@@ -8,6 +8,10 @@ from .assets import save
 from .model import SCALE
 from .native_winding import port_winding
 
+# S.L.A.I.'s world is right-handed (x right, y down, z ahead) and the port's
+# left-handed (x right, y up, z ahead): a stage keeps x and z and reverses y.
+STAGE_AXES = (1.0, -1.0, 1.0)
+
 
 def world_units(program):
     """The part loader scales slot 0 (legs); attached slots inherit its scale.
@@ -36,12 +40,16 @@ def world_units(program):
                            "root_slot_switch": "0x41eca0", "part_loader": "0x2524c8"}}
 
 
-def restore_world_units(model, units):
-    """Compose one world conversion above all canonical model/prop nodes."""
+def restore_world_units(model, units, stage=False):
+    """Compose one world conversion above all canonical model/prop nodes.
+
+    The canonical export reverses y and the port's loader z; a stage also
+    reverses z here, so it lands in STAGE_AXES rather than mirrored."""
     scene = model["scenes"][model.get("scene", 0)]
     index = len(model["nodes"])
+    scale = units["canonical_to_world"]
     model["nodes"].append({"name": "slai_source_world_units",
-                           "scale": [units["canonical_to_world"]] * 3,
+                           "scale": [scale, scale, -scale if stage else scale],
                            "children": list(scene["nodes"])})
     scene["nodes"] = [index]
     model.setdefault("extras", {})["slai_world_units"] = units

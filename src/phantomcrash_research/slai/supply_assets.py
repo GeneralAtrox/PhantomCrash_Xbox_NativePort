@@ -5,6 +5,7 @@ import struct
 from pathlib import PurePosixPath
 
 from .resources import resource_packages
+from .world_units import STAGE_AXES
 
 
 def read_supply_path(raw, scale):
@@ -22,7 +23,7 @@ def read_supply_path(raw, scale):
             x, y, z, w = struct.unpack_from('<4f', raw, 20 + i * 64 + j * 16)
             if not all(math.isfinite(v) for v in (x, y, z, w)) or w != 1:
                 raise ValueError('Invalid supply path point')
-            points.append([x * scale, -y * scale, -z * scale])
+            points.append([x * scale * STAGE_AXES[0], y * scale * STAGE_AXES[1], z * scale * STAGE_AXES[2]])
         segments.append(points)
     # +6 is copied to gp-0x4ddc (0x5240e0) and never read again; +12 is the
     # crates' floor (0x5240f4 stores it, 0x525058 reads it), y pointing down.

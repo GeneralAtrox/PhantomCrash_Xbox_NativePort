@@ -10,7 +10,9 @@ import struct
 
 import numpy as np
 
-NATIVE_AXES = np.array([1., -1., -1.])
+from .world_units import STAGE_AXES
+
+NATIVE_AXES = np.array(STAGE_AXES)
 
 
 def source_rotation(angles):
