@@ -62,6 +62,7 @@ struct SlaiTalkSprite {
   float alpha{128.0F};
   std::uint32_t colour{gs_white};
   bool visible{};
+  AnbBlend blend{AnbBlend::alpha}; // the sprite's +0x74 mode 1 adds
 };
 
 struct SlaiTalkText {
@@ -94,14 +95,37 @@ struct SlaiTalkPortrait {
   AnbObject body, mouth, eyes;
 };
 
+// A character who has joined, shown on a HAVEN petal (FaceWork,
+// TALK_JOIN_CHARA_MAX; VM+0x490): its face and its name.
+struct SlaiTalkBadge {
+  int character{};
+  SlaiTalkText name;
+  SlaiTalkSprite face;
+  bool shown{}; // VM+0x4C0's bit: coming in, not going out
+};
+
+// An ambient loop (ambient_loop): its sound and how far it has faded.
+struct SlaiTalkLoop {
+  std::string sound;
+  int id{};   // tells loops of the same sound apart
+  int fade{}; // frames of the fade done
+  int step{}; // +1 fading in, -1 fading out
+  static constexpr int fade_frames = 30;
+  [[nodiscard]] float gain() const {
+    return static_cast<float>(fade) / fade_frames;
+  }
+};
+
 // SlaiTalkScene's object and sprite slots (VM+0x64.. and VM+0xC0..).
 namespace slai_talk_stage {
 inline constexpr int haven_a = 0, haven_b = 1, haven_c = 2, haven_d = 3, haven_e = 4, panel_a = 5,
-                     panel_b = 6, panel_c = 7, panel_d = 8, news_frame = 10, news_anim = 11,
-                     panel_e = 12, prompt = 13, nameplate = 14;
+                     panel_b = 6, panel_c = 7, panel_d = 8, chip_shade = 9, news_frame = 10,
+                     news_anim = 11, panel_e = 12, prompt = 13, nameplate = 14, ambient = 16,
+                     badge_frames = 19;
 inline constexpr int objects = 0x17;
-inline constexpr int petals = 0, ring_1 = 24, ring_2 = 30, ring_3 = 38, meters = 44,
-                     sprite_count = 0x33;
+inline constexpr int ambient_count = 3, badge_count = 4;
+inline constexpr int petals = 0, focus_glow = 12, lit_petal = 16, dim_petal = 20, ring_1 = 24,
+                     ring_2 = 30, ring_3 = 38, meters = 44, sprite_count = 0x33;
 } // namespace slai_talk_stage
 
 // Sprites placed round the HAVEN ellipse: the first, how many, the degrees
@@ -130,6 +154,10 @@ public:
     return music_;
   }
   [[nodiscard]] std::vector<std::string> take_sounds();
+  // The ambient loops playing or fading out.
+  [[nodiscard]] const std::vector<SlaiTalkLoop> &loops() const {
+    return loops_;
+  }
   [[nodiscard]] int frame() const {
     return frame_;
   }
@@ -169,11 +197,15 @@ private:
   bool poll_background();
   void step_meter();
 
-  // slai_talk_effects.cpp: fades, the glitch, the login screen, panel icons.
+  // slai_talk_effects.cpp: fades, the glitch, the login screen, panel
+  // icons, the ambient loops.
   bool exec_effect(int op, const std::vector<int> &args);
   bool poll_effect(int op);
   bool poll_glitch();
   bool poll_login();
+  bool exec_ambient(int loop);
+  bool poll_ambient();
+  void step_loops();
 
   // slai_talk_text.cpp: windows, styles, say, the prompt.
   bool exec_text(int op, const std::vector<int> &args);
@@ -198,6 +230,20 @@ private:
   [[nodiscard]] int chip_icon_of(int character) const;
   void animate_talk();
   unsigned next_random();
+
+  // slai_talk_join.cpp: badges, the chip and character windows and the
+  // partner.
+  void make_badge_petals();
+  bool exec_join(int op, const std::vector<int> &args);
+  bool poll_join(int op);
+  bool exec_badge(int character, int slot, bool unknown);
+  bool poll_badge_in();
+  bool exec_badge_remove(int character);
+  bool poll_badge_out();
+  void set_focus(int character);
+  bool poll_focus();
+  void open_character_window(int chip);
+  void close_character_window();
 
   // slai_talk_draw.cpp
   void text_quads(const SlaiTalkText &text, std::vector<SlaiTalkQuad> &out) const;
@@ -253,7 +299,8 @@ private:
   int knocker_target_x_{};
 
   SlaiTalkPortrait portrait_, previous_portrait_;
-  AnbObject chip_;
+  AnbObject chip_;        // the character window (pCharaWindowChip, VM+0x69C)
+  AnbObject chip_window_; // the chip window (pChipWindowChip, VM+0x6A0)
   int portrait_chip_{};
   int portrait_counter_{};
   bool portrait_same_{};
@@ -272,6 +319,13 @@ private:
 
   int login_frame_{-1};
   int login_percent_{};
+
+  std::array<SlaiTalkBadge, slai_talk_stage::badge_count> badges_{};
+  int focus_{}; // VM+0x4C1: the badge lit up
+
+  int ambient_{}; // VM+0x6D8
+  std::vector<SlaiTalkLoop> loops_;
+  int next_loop_id_{1};
 
   std::string music_;
   std::vector<std::string> sounds_;

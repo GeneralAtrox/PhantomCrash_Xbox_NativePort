@@ -23,16 +23,22 @@ inline constexpr int end = 0x00, backdrop_in = 0x01, haven_open = 0x02, haven_op
                      haven_open_3 = 0x04, haven_close = 0x05, rings_out = 0x06, rings_out_2 = 0x07,
                      login_screen = 0x08, panel_open = 0x09, panel_close = 0x0A, open_window = 0x0B,
                      close_window = 0x0C, news_open = 0x0D, news_close = 0x0E,
-                     preload_backgrounds = 0x0F, background = 0x10, town_hud = 0x13, fade_in = 0x14,
-                     fade_out = 0x15, load_portrait = 0x16, portrait = 0x17, load_icon = 0x1A,
-                     wait_frames = 0x1F, wait_button = 0x20, say = 0x21, load_wait = 0x22,
-                     knocker_in = 0x23, knocker_out = 0x24, knocker_pose = 0x25, load_wait_2 = 0x26,
-                     glitch = 0x2B, panel_sprites = 0x2C, sync = 0x2E, sync_portrait = 0x2F,
-                     sync_loads = 0x30, select_window = 0x31, window_style = 0x34, case_ = 0x35,
+                     preload_backgrounds = 0x0F, background = 0x10, event_portrait = 0x11,
+                     event_portrait_close = 0x12, town_hud = 0x13, fade_in = 0x14, fade_out = 0x15,
+                     load_portrait = 0x16, portrait = 0x17, badge = 0x18, badge_remove = 0x19,
+                     load_icon = 0x1A, event_image = 0x1B, event_image_open = 0x1C,
+                     event_image_close = 0x1D, badge_focus = 0x1E, wait_frames = 0x1F,
+                     wait_button = 0x20, say = 0x21, load_wait = 0x22, knocker_in = 0x23,
+                     knocker_out = 0x24, knocker_pose = 0x25, load_wait_2 = 0x26, partner_in = 0x27,
+                     partner_out = 0x28, knocker_only_pose = 0x29, ambient_loop = 0x2A,
+                     glitch = 0x2B, panel_sprites = 0x2C, partner_path = 0x2D, sync = 0x2E,
+                     sync_portrait = 0x2F, sync_loads = 0x30, select_window = 0x31,
+                     unload_character = 0x32, unload_all = 0x33, window_style = 0x34, case_ = 0x35,
                      glyph_size = 0x37, ruby_size = 0x38, text_speed = 0x39, text_cursor = 0x3A,
                      text_offset = 0x3B, clear_text = 0x3C, end_case = 0x3D, text_flag_1 = 0x3E,
                      line_feed = 0x3F, allow_skip = 0x40, talk_sounds = 0x41, bgm = 0x42,
-                     bgm_stop = 0x43, se = 0x44, se_stop = 0x45, nop = 0x46;
+                     bgm_stop = 0x43, se = 0x44, se_stop = 0x45, nop = 0x46, unload_knocker = 0x47,
+                     unload_knocker_2 = 0x48, partner_path_stop = 0x49;
 inline constexpr int count = 0x4A;
 } // namespace slai_talk_op
 
@@ -100,6 +106,11 @@ struct SlaiTalkTable {
   std::vector<std::uint32_t> window_colours, prompt_colours;
   std::vector<std::array<std::uint32_t, 2>> style_text_colours; // text, name
   std::vector<std::array<int, 2>> panel_sprites;
+  // ambient_loop's sound cues and sprite masks by loop (0 silence, none).
+  std::vector<int> ambient_sounds, ambient_objects;
+  // badge's joined-character places: x right of the centre, y up.
+  std::vector<std::array<int, 2>> badge_slots;
+  std::string badge_unknown_name;                 // a badge's name until the character is met
   std::vector<std::array<int, 2>> login_progress; // (frame, percent)
   std::string login_message, login_label;
   std::vector<std::string> knocker_textures;

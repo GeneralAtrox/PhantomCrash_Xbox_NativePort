@@ -12,13 +12,16 @@ table", "Talk scene assets", "EVT script format and interpreter").
 ## Status
 
 - **Done.** Extraction (`register-slai-talk`, also part of the S.L.A.I.
-  install); the scene player for every opcode the opening uses; the event
-  selector on the shared save; the screen hook. The opening plays:
-  MAIN01T, MAIN02K and MAIN03T in order on the first town-map visit, the
-  Battle School scenes BS01K/BS03K/BS04K/BS05K, and MAIN05K (pro license).
-- **Not yet.** The partner robot (partner_in/out/path), badges, event
-  images and portraits, ambient loops (none in the opening); the sponsor and
-  completion-score conditions; a S.L.A.I. Battle School battle in the port.
+  install); the scene player for every opcode; the event selector on the
+  shared save; the screen hook. The opening plays: MAIN01T, MAIN02K and
+  MAIN03T in order on the first town-map visit, the Battle School scenes
+  BS01K/BS03K/BS04K/BS05K, and MAIN05K (pro license). The later scenes'
+  features play too: joined characters' badges, the chip and character
+  windows, the partner (as the Knocker: the port has no partner chips) and
+  the ambient loops. All 146 event scenes run to their end.
+- **Not yet.** A partner chip's own robot and paths (case selector > 0);
+  the sponsor and completion-score conditions; a S.L.A.I. Battle School
+  battle in the port; the places later scenes play in (see below).
 
 ## Where scenes play
 
@@ -130,16 +133,23 @@ triggers held hurry the typing; START skips the scene (a port addition).
   window's edges.
 - **Text** is drawn from the original font pages; sharp text is a later
   option (memory: sharp UI only for text, lines and simple shapes).
+- **Ambient loops** are the rendered cues 11, 12 and 26 (each one pass of
+  its Sony loop region), looped by the mixer and faded over 30 frames by
+  gain moves.
 - Assumptions to check at runtime in PCSX2: the voice meter's placement,
   `end_case` resetting the case, character 0 removing a portrait, the
-  threshold as one running count, cues 11, 12 and 26.
+  threshold as one running count, cues 11, 12 and 26; the badge name's
+  colour (0x805E22 written over 0x807D8070 by 0x207510) and the text flag
+  0x10 (placed here from its top left); the ambient SE's 30 as a fade-in;
+  VM+0x30, which event_portrait and the portrait's count 8 clear (not
+  modelled).
 
 ## Next steps
 
 1. Rumble S.L.A.I.'s tutorial match (record 0x18) and S.L.A.I. battle
    returns: map `tutorial` and `battle_return` to their screens.
-2. Partner robot, badges, event images and portraits, ambient loops: the
-   remaining opcodes, needed from MAIN06K on.
+2. The places MAIN06K's successors play in, checked scene by scene
+   against the port's screens; partner chips, if the port gains them.
 3. Sponsors and the completion score as save state, then their conditions.
 4. NEWS_T (threshold rows) once Rumble records fill in.
 5. A language setting in the S.L.A.I. settings page.

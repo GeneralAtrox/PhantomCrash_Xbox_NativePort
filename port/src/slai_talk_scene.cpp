@@ -13,6 +13,33 @@ namespace {
 constexpr int max_ops_per_frame = 4096;
 constexpr std::uint64_t all_ops = ~std::uint64_t{0};
 
+// The ops slai_talk_join.cpp runs.
+bool join_op(int op) {
+  switch (op) {
+  case slai_talk_op::event_portrait:
+  case slai_talk_op::event_portrait_close:
+  case slai_talk_op::badge:
+  case slai_talk_op::badge_remove:
+  case slai_talk_op::event_image:
+  case slai_talk_op::event_image_open:
+  case slai_talk_op::event_image_close:
+  case slai_talk_op::badge_focus:
+  case slai_talk_op::partner_in:
+  case slai_talk_op::partner_out:
+  case slai_talk_op::knocker_only_pose:
+  case slai_talk_op::ambient_loop:
+  case slai_talk_op::partner_path:
+  case slai_talk_op::unload_character:
+  case slai_talk_op::unload_all:
+  case slai_talk_op::unload_knocker:
+  case slai_talk_op::unload_knocker_2:
+  case slai_talk_op::partner_path_stop:
+    return true;
+  default:
+    return false;
+  }
+}
+
 std::string numbered(const char *format, int value) {
   std::array<char, 64> buffer{};
   std::snprintf(buffer.data(), buffer.size(), format, value);
@@ -87,6 +114,7 @@ void SlaiTalkScene::step_objects(float ticks) {
     portrait->eyes.step(ticks);
   }
   chip_.step(ticks);
+  chip_window_.step(ticks);
 }
 
 void SlaiTalkScene::tick(const SlaiTalkInput &input) {
@@ -99,9 +127,11 @@ void SlaiTalkScene::tick(const SlaiTalkInput &input) {
   if (input.skip_all) {
     done_ = true;
     music_.clear();
+    loops_.clear();
     return;
   }
   step_objects(1.0F);
+  step_loops();
   if (fade_step_ != 0.0F) {
     fade_ = std::clamp(fade_ + fade_step_, 0.0F, 1.0F);
     if (fade_ == 0.0F || fade_ == 1.0F) {
@@ -212,6 +242,9 @@ bool SlaiTalkScene::execute(const SlaiTalkInstruction &instruction) {
   default:
     break;
   }
+  if (join_op(instruction.op)) {
+    return exec_join(instruction.op, args);
+  }
   if (instruction.op <= slai_talk_op::background || instruction.op == slai_talk_op::town_hud ||
       instruction.op == slai_talk_op::fade_in || instruction.op == slai_talk_op::fade_out ||
       instruction.op == slai_talk_op::glitch || instruction.op == slai_talk_op::panel_sprites) {
@@ -228,6 +261,9 @@ bool SlaiTalkScene::execute(const SlaiTalkInstruction &instruction) {
 }
 
 bool SlaiTalkScene::poll(int op) {
+  if (join_op(op)) {
+    return poll_join(op);
+  }
   switch (op) {
   case slai_talk_op::wait_frames:
     return --wait_ <= 0;

@@ -136,6 +136,7 @@ void SlaiTalkScene::new_portrait(int character, int expression) {
     set_alpha(portrait_.body, 0);
     return;
   }
+  set_focus(0);
   portrait_counter_ = had ? 0 : portrait_out_frames;
   objects_[slai_talk_stage::nameplate].flags |= anb_flag::hidden;
   clear_window_text(0);
@@ -215,17 +216,25 @@ bool SlaiTalkScene::poll_portrait() {
       return false;
     }
   } else {
+    // 0x4EF5E0: the old character's window closes as its portrait goes.
+    if (portrait_counter_ == 0 && previous_portrait_.character != 0 && chip_.visible() &&
+        (portrait_.character != 0 || portrait_chip_ == 0)) {
+      close_character_window();
+      pending_ |= std::uint64_t{1} << slai_talk_op::event_image_open;
+    }
+    // 0x4EF550: the new character's badge lights and its window opens
+    // (before the count moves on, so a first portrait, from 8, opens too).
+    if (portrait_counter_ == portrait_out_frames && portrait_.character != 0) {
+      set_focus(portrait_.character);
+      if (portrait_chip_ != 0) {
+        open_character_window(portrait_chip_);
+        pending_ |= std::uint64_t{1} << slai_talk_op::event_image;
+      }
+    }
     ++portrait_counter_;
     if (portrait_counter_ <= portrait_out_frames) {
       set_alpha(previous_portrait_.body,
                 0x80 * (portrait_out_frames - portrait_counter_) / portrait_out_frames);
-    }
-    if (portrait_counter_ == portrait_out_frames && portrait_chip_ != 0 &&
-        portrait_.character != 0) {
-      icon_texture_ = character_texture(portrait_chip_);
-      chip_.x = 256.0F;
-      chip_.y = 224.0F;
-      chip_.play(0x24);
     }
     if (portrait_counter_ > portrait_out_frames) {
       set_alpha(portrait_.body, 0x80 * (portrait_counter_ - portrait_out_frames) /

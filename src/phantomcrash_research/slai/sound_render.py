@@ -1,7 +1,8 @@
 """Render static Sony sample sequences for the native WAV effect player.
 
-Supports authored notes, regions, volumes, tuning, pan, loops and ADSR. Rejects
-dynamic modulation rather than silently flattening it. Float resampling is a
+Supports authored notes, regions, volumes, tuning, pan, loops and ADSR, and
+volume, pan and expression changes under held notes. Rejects other dynamic
+modulation rather than silently flattening it. Float resampling is a
 native adapter; this is not SPU2 hardware interpolation or reverb emulation.
 """
 
@@ -106,8 +107,12 @@ def sequence_notes(data, *, sony_loops=False, loop_info=None):
             if values[0] not in fields:
                 raise ValueError(f"Dynamic MIDI controller {values[0]} requires source semantics")
             field = fields[values[0]]
-            if any(k[0] == channel for k in active) and state[field] != values[1]:
-                raise ValueError("Controller changes during an active voice")
+            if state[field] != values[1]:
+                # A held voice follows its channel's volume, pan and
+                # expression from here on (the talk ambient loops swell).
+                for (held_channel, _), note in active.items():
+                    if held_channel == channel:
+                        note.setdefault("changes", []).append((time, field, values[1]))
             state[field] = values[1]
         elif kind == 14:
             if list(values) != [0, 64]:
@@ -161,7 +166,20 @@ def _voice(bank, root, note, program, split, sample):
         positions, env = positions[keep], env[keep]
     out = np.interp(positions, np.arange(len(pcm)), pcm) * env
     # Native WAV stereo gains. Preserve center volume on both speakers.
-    return out[:, None] * np.array([parameters["gain_left"], parameters["gain_right"]])[None, :]
+    return out[:, None] * _voice_gains(note, program, split, sample, len(out), parameters)
+
+
+def _voice_gains(note, program, split, sample, length, parameters):
+    """Per-sample stereo gains: the note's controllers, then each change it heard."""
+    gains = np.empty((length, 2), np.float32)
+    gains[:] = (parameters["gain_left"], parameters["gain_right"])
+    state = dict(note)
+    for time, field, value in note.get("changes", ()):
+        state[field] = value
+        changed = voice_parameters(state, program, split, sample)
+        at = max(0, round((time - note["start"]) * RATE))
+        gains[at:] = (changed["gain_left"], changed["gain_right"])
+    return gains
 
 
 def sequence_regions(bank, notes):
@@ -191,14 +209,22 @@ def sequence_regions(bank, notes):
             raise ValueError("No authored sample region for MIDI note")
 
 
-def render_sequence(bank, sequence, root):
-    notes = sequence_notes((root / sequence["file"]).read_bytes(), sony_loops=True)
+def render_sequence(bank, sequence, root, *, loop=False):
+    """The sequence as PCM16 stereo. With `loop`, one pass of its Sony loop
+    region, cut at the loop's end so the WAV repeats in time."""
+    loop_info = {} if loop else None
+    notes = sequence_notes((root / sequence["file"]).read_bytes(), sony_loops=True,
+                           loop_info=loop_info)
     voices = [(round(note["start"]*RATE), _voice(bank, root, note, program, split, sample))
               for note, program, split, sample in sequence_regions(bank, notes)]
     if not voices:
         raise ValueError("Sequence has no audible voices")
     length = max(at+len(v) for at, v in voices)
+    if loop:
+        if "end" not in loop_info:
+            raise ValueError("Looped render needs a Sony loop region")
+        length = round(loop_info["end"] * RATE)
     out = np.zeros((length, 2), np.float32)
     for at, voice in voices:
-        out[at:at+len(voice)] += voice
+        out[at:at+len(voice)] += voice[:max(0, length-at)]
     return (np.clip(out, -1, 1)*32767).round().astype("<i2")

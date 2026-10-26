@@ -372,14 +372,16 @@ from them:
 | 0B/0C/31 | open_window, close_window, select_window | talk windows 0..3 |
 | 0F, 16, 1A, 22, 26, 30 | loads and their waits | instant in the port |
 | 10 | background | 0 none, 1 news frame, n>1 news picture n (256×256 at 256,169); alpha ±0x20 a frame, SE 0x2C |
-| 11/12, 1B–1D, 18/19/1E | event portraits, event images, badges | not used by the opening; not ported yet |
+| 11/12 | event_portrait, event_portrait_close | the chip window and its shade (see below) |
+| 18/19/1E | badge, badge_remove, badge_focus | joined characters' faces on H.A.V.E.N.'s petals (see below) |
+| 1B/1C/1D | event_image, event_image_open, event_image_close | the character window: open, close, keep the chip window as it (see below) |
 | 13 | town_hud | the town HUD's state (0x26FFF0: state 1 keeps town text at y 409, otherwise 379) |
 | 14/15 | fade_in/out | from/to black over 2n frames |
 | 17 | portrait | character, expression, chip icon (-1: the character's own) |
 | 1F/20/21/2E/2F | wait_frames, wait_button, say, sync, sync_portrait | waits are the table's blocking masks |
 | 23/24/25/29 | knocker_in/out/pose, knocker_only_pose | the Knocker (see below) |
-| 27/28/2D/49 | partner_in/out, partner_path(_stop) | the partner robot; not ported yet |
-| 2A | ambient_loop | not ported yet |
+| 27/28/2D/49 | partner_in/out, partner_path(_stop) | the partner chip's robot; with case selector 0 (no partner chip) they are the Knocker's ops and the path ops do nothing |
+| 2A | ambient_loop | a looped SE and three TAL01 objects (see below) |
 | 2B | glitch | the town break-up and text rate (see below) |
 | 2C | panel_sprites | the panel's seven icons at 0x337C20, alpha ±0x20 over 4 frames |
 | 34/37/38/39/3A/3B/3C | window_style, glyph_size, ruby_size, text_speed, text_cursor, text_offset, clear_text | text layout |
@@ -389,10 +391,49 @@ from them:
 | 40 | allow_skip (0x270BC0) | arg 0 sets bit 2: typing cannot be skipped |
 | 41 | talk_sounds | VM[0x1AD]: the talk animation and voice meter set |
 | 42/43, 44/45 | bgm, bgm_stop, se, se_stop | 0x203470(id, 0, 0x76) clamps: the bgm id is the stream index (`sound/slai/bgm_NN.ogg`) |
-| 32, 33, 36, 46, 47, 48 | unload_character, op_33, ruby, nop, op_47, op_48 | not used by the opening |
+| 32, 33, 47, 48 | unload_character, unload_all, unload_knocker(_2) | free loaded files; nothing to do in the port |
+| 36, 46 | ruby, nop | |
 
 **Talk scene player details** (**High** unless noted; all static, from the
 exec/poll functions named):
+
+- **Badges** (FaceWork, TALK_JOIN_CHARA_MAX = 4; slots at VM+0x490, 12
+  bytes: character, name text, face sprite; shown bits VM+0x4C0). `badge`
+  (0x26EED0; character, slot, flag): the same character only renames the
+  slot (flag ≠ 0: "???" from 0x4390E8). Otherwise slot (x,y) from 0x337A30
+  = (41,191) (122,159) (177,76) (187,−11): frame object VM+0xB0+4·slot plays
+  TAL01 anim 0xB at (x+256, 224−y); the name (16×17) at (x+0xD0, 224−y) in
+  0x805E22 from alpha 0; the face (the icon picture, uv 4,0 56×64) centred
+  at (x+0xEA, 0x10A−y), grey 0x40, alpha 0; sprite 20+slot shown. Poll
+  0x26F1B0: faces +0x20 a frame; names +0x20 once their frame has ended.
+  `badge_remove` (0x26F2F0): frame anim 0xC, name deleted; poll 0x26F3D0
+  fades the face −0x20, then hides sprite 20+slot and empties the slot.
+  `badge_focus` (0x270DB0) and 0x4EF850 set VM+0x4C1; poll 0x270DE0: the
+  focused slot's sprite 20+i fades out, 16+i fades in, 12+i shows; others
+  the reverse; face grey = alpha(16+i)/2 + 0x40. Sprites 12–23 (0x4EC4D0)
+  are TAL02 128×160 pieces on petals 0–3 (12–19 u=256, 20–23 u=128), start
+  hidden at alpha 0x80; 12–15 have +0x74 = 1, which 0x1CD300 draws with GS
+  ALPHA 0x48 (Cs·As + Cd: additive).
+- **Chip and character windows.** `event_portrait` (0x26DC70): the
+  character's icon becomes TAL01's fifth texture; a new object
+  (pChipWindowChip, VM+0x6A0) plays anim 0x1D at (256,224); object 9 plays
+  0x1B at full colour; focus the character; SE 0x2A. `event_portrait_close`
+  (0x26DE50): anim 0x1E, object 9 anim 0x1C, nameplate hidden, focus the
+  portrait's character, SE 0x2B. `event_image` (0x26F7B0) opens the
+  character window (pCharaWindowChip, VM+0x69C) with anim 0x24;
+  `event_image_open` (0x26F930) closes it with 0x25 and frees it when that
+  ends; `event_image_close` (0x26F9B0) moves the chip window into the
+  character window with anim 0x1F while object 9 fades −0x20 a frame. The
+  portrait op drives the same window: 0x4EF5E0 closes it at count 0 as a
+  different character comes in; 0x4EF550 at count 8 focuses the new
+  character and opens its chip's window. Both run before the count moves
+  on (0x26F600), so a first portrait (count from 8) opens it at once.
+- **Ambient loops** (0x271070): VM+0x6D8 = n; the playing SE stops through
+  0x26A3B0(handle, 30); n ≠ 0 starts SE (11, 12, 26)[n−1] through
+  0x1FB250(se, 30). The 30 is read as a fade in frames (**Medium**). Poll
+  0x271110: objects 16–18 by the mask (0, 1, 3, 4)[n] at 0x4390F8; on: a
+  hidden object starts (anim 0x23, the third 0x22; the second at speed 1.5)
+  from alpha 0 and fades +0x10 a frame; off: −0x10, hidden below 0.
 
 - **Text rate.** 0x20A920 sets the rate; the step interval is 60/rate.
   Typing advances speed/interval glyphs a frame, and a window's default speed

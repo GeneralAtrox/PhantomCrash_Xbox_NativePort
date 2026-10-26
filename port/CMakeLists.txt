@@ -35,6 +35,7 @@ add_library(phantomcrash_core
   src/slai_talk_data.cpp
   src/slai_talk_draw.cpp
   src/slai_talk_effects.cpp
+  src/slai_talk_join.cpp
   src/slai_talk_scene.cpp
   src/slai_talk_stage.cpp
   src/slai_talk_text.cpp
@@ -474,6 +475,7 @@ if(BUILD_TESTING)
     tests/slai_rumble_table_tests.cpp
     tests/slai_lineup_tests.cpp
     tests/slai_talk_tests.cpp
+    tests/slai_talk_join_tests.cpp
     tests/source_suspension_tests.cpp
     tests/source_roll_tests.cpp
     tests/source_steering_tests.cpp

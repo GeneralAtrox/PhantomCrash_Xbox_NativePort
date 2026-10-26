@@ -26,6 +26,15 @@ ICON_TABLE, ICON_STRIDE, ICON_LIMIT = 0x5C4650, 8, 0x44
 KNOCKER, PARTNER = 0, 1  # character ids 0 and 1 are special-cased by 0x4EECB0
 AMBIENT_TABLE = 0x4390F0  # u16 SE ids for opcode 0x2A, index 0 = silence
 AMBIENT_COUNT = 4
+# ambient_loop's sprite masks by loop (0x271110): bit n shows ambient
+# object n (VM+0xA4..0xAC).
+AMBIENT_OBJECTS = 0x4390F8
+# badge's four joined-character places (0x337A30, s32 x/y pairs in the
+# centred frame: x right of the centre, y up).
+BADGE_SLOTS, BADGE_SLOT_COUNT = 0x337A30, 4
+# badge's name for a character not yet met (flag set): a NUL-ended string
+# 0x26EED0 copies to its stack.
+BADGE_UNKNOWN_NAME = 0x4390E8
 # Opcode 0x10's pictures: u8 numbers n -> talk/news/<n // 100>/news<n>.png;
 # ids 0 and 1 show none (0x26D390).
 NEWS_TABLE, NEWS_COUNT, NEWS_FIRST = 0x3377FE, 40, 2
@@ -200,12 +209,18 @@ def talk_table(program):
     panel = struct.unpack("<%dh" % (2 * PANEL_SPRITE_COUNT),
                           program.read(PANEL_SPRITES, 4 * PANEL_SPRITE_COUNT, TALK_OVERLAY))
     news = program.read(NEWS_TABLE, NEWS_COUNT, TALK_OVERLAY)
+    badges = struct.unpack("<%di" % (2 * BADGE_SLOT_COUNT),
+                           program.read(BADGE_SLOTS, 8 * BADGE_SLOT_COUNT, TALK_OVERLAY))
     return {
         "opcodes": opcodes(program),
         "characters": {str(k): v for k, v in characters(program).items()},
         "events": talk_events(program),
         "scenes": {str(k): v for k, v in SCENES.items()},
         "ambient_sounds": list(ambient),
+        "ambient_objects": list(program.read(AMBIENT_OBJECTS, AMBIENT_COUNT, TALK_OVERLAY)),
+        "badge_slots": [list(badges[i:i + 2]) for i in range(0, len(badges), 2)],
+        "badge_unknown_name": program.read(BADGE_UNKNOWN_NAME, 4, TALK_OVERLAY).split(b"\0")[0]
+                                     .decode("ascii"),
         "news_pictures": ["talk/news/%d/news%03d.png" % (n // 100, n) if i >= NEWS_FIRST else ""
                           for i, n in enumerate(news)],
         "style_colours": ["%08x" % c for c in STYLE_COLOURS],

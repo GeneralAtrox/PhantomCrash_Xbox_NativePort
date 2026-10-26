@@ -78,8 +78,9 @@ def _cues(table, scripts):
     return sorted(wanted)
 
 
-def _render_cues(program, cue_ids, output):
-    """Render the talk cues like register_sound does; missing banks skip it."""
+def _render_cues(program, cue_ids, output, loops=()):
+    """Render the talk cues like register_sound does; missing banks skip it.
+    Cues in `loops` (the ambient loops) are one pass of their loop region."""
     from .sound_cues import recover_cues
     from .sound_envelope import RATE
     from .sound_render import render_sequence
@@ -97,7 +98,8 @@ def _render_cues(program, cue_ids, output):
             continue
         bank = banks[cue["bank"]]
         try:
-            pcm = render_sequence(bank, bank["sequences"][cue["sequence"]], root)
+            pcm = render_sequence(bank, bank["sequences"][cue["sequence"]], root,
+                                  loop=cue_id in loops)
         except ValueError:
             pending.append(cue_id)
             continue
@@ -128,7 +130,8 @@ def register_talk(image: Path, output: Path):
         scripts = _scripts(disc, packages, folders, output)
         table = talk_table(program)
         table["sound_cues"] = _cues(table, scripts)
-        rendered, pending = _render_cues(program, table["sound_cues"], output)
+        rendered, pending = _render_cues(program, table["sound_cues"], output,
+                                         set(table["ambient_sounds"]) - {0})
         table["pending_sound_cues"] = pending
         save(output / TABLE_FILE, table)
     return {"talk_pictures": pictures, "talk_animations": animations,

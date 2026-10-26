@@ -1,15 +1,31 @@
 // The talk VM's screen effects: fades, the town glitch, the login screen,
-// the town HUD and the panel's icons (0x26C070, 0x271300, 0x2716F0).
+// the town HUD, the panel's icons and the ambient loops (0x26C070, 0x271300,
+// 0x2716F0, 0x271070, 0x271110).
 
 #include "phantomcrash/slai_talk_scene.hpp"
 
 #include <algorithm>
+#include <cstdio>
 
 namespace phantomcrash {
 namespace {
 
 constexpr int panel_alpha_step = 0x20;
 constexpr int panel_fade_frames = 4;
+
+// ambient_loop's objects: the first two play one anim, the third another;
+// the second runs half as fast again.
+constexpr int ambient_alpha_step = 0x10, ambient_alpha_full = 0x80;
+constexpr int ambient_anim = 0x23, ambient_anim_last = 0x22;
+constexpr float ambient_fast = 1.5F;
+
+int alpha_of(const AnbObject &object) {
+  return static_cast<int>(object.colour >> 24U);
+}
+
+void set_alpha(AnbObject &object, int alpha) {
+  object.colour = (object.colour & 0x00FFFFFFU) | (static_cast<std::uint32_t>(alpha) << 24U);
+}
 
 // 0x271300's restores: glitch arg -> the cells shown again and the rate
 // left after (0: unchanged).
@@ -176,6 +192,64 @@ bool SlaiTalkScene::poll_login() {
     }
   }
   return false;
+}
+
+// 0x271070: the old loop fades out over 30 frames as the new one fades in.
+bool SlaiTalkScene::exec_ambient(int loop) {
+  ambient_ = loop;
+  for (auto &playing : loops_) {
+    playing.step = -1;
+  }
+  const auto index = static_cast<std::size_t>(ambient_);
+  if (ambient_ > 0 && index < table_.ambient_sounds.size() && table_.ambient_sounds[index] > 0) {
+    std::array<char, 48> name{};
+    std::snprintf(name.data(), name.size(), "slai/assets/sound/cue_%03d.wav",
+                  table_.ambient_sounds[index]);
+    loops_.push_back({name.data(), next_loop_id_++, 0, 1});
+  }
+  return true;
+}
+
+// 0x271110: the loop's objects fade in on its mask and out off it.
+bool SlaiTalkScene::poll_ambient() {
+  using namespace slai_talk_stage;
+  const auto index = static_cast<std::size_t>(ambient_);
+  const int mask = index < table_.ambient_objects.size() ? table_.ambient_objects[index] : 0;
+  bool done = true;
+  for (int i = 0; i < ambient_count; ++i) {
+    auto &object = objects_[static_cast<std::size_t>(ambient + i)];
+    if ((mask & (1 << i)) == 0) {
+      const int alpha = alpha_of(object) - ambient_alpha_step;
+      if (alpha < 0) {
+        object.flags |= anb_flag::hidden;
+      } else {
+        set_alpha(object, alpha);
+        done = false;
+      }
+    } else if (!object.has(anb_flag::hidden)) {
+      const int alpha = alpha_of(object) + ambient_alpha_step;
+      set_alpha(object, std::min(alpha, ambient_alpha_full));
+      done = done && alpha >= ambient_alpha_full;
+    } else {
+      object.reset(false);
+      object.set_anim(i < 2 ? ambient_anim : ambient_anim_last);
+      set_alpha(object, 0);
+      if (i == 1) {
+        object.speed = ambient_fast;
+      }
+      object.flags = (object.flags | anb_flag::hold) & ~(anb_flag::hidden | anb_flag::ended);
+      done = false;
+    }
+  }
+  return done;
+}
+
+// Once a frame: the loops' 30-frame fades; a faded-out loop stops.
+void SlaiTalkScene::step_loops() {
+  for (auto &loop : loops_) {
+    loop.fade = std::clamp(loop.fade + loop.step, 0, SlaiTalkLoop::fade_frames);
+  }
+  std::erase_if(loops_, [](const SlaiTalkLoop &loop) { return loop.step < 0 && loop.fade == 0; });
 }
 
 } // namespace phantomcrash

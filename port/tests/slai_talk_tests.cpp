@@ -194,7 +194,7 @@ TEST_CASE("The opening's events follow each other on the shared save") {
   CHECK(story->places_of("club_wired") == std::vector<std::string>{"wired"});
 }
 
-TEST_CASE("The opening talk scenes play to their end on the installed data") {
+TEST_CASE("The opening and later talk scenes play to their end on the installed data") {
   const auto roots = DataRoots::configured(PHANTOMCRASH_SOURCE_ROOT, true);
   auto story = SlaiStory::load(roots);
   if (!story) {
@@ -202,7 +202,9 @@ TEST_CASE("The opening talk scenes play to their end on the installed data") {
                              "assets again (register-slai-talk)");
   }
   for (const char *name :
-       {"main01t", "main02k", "main03t", "bs01k", "bs03k", "bs04k", "bs05k", "main05k"}) {
+       {"main01t", "main02k", "main03t", "bs01k", "bs03k", "bs04k", "bs05k", "main05k",
+        // badges, the chip window and the partner; an ambient loop
+        "main06k", "main09k", "main17k"}) {
     auto scene = story->scene(name, {});
     REQUIRE(scene != nullptr);
     const int frames = run_until_done(*scene, 60 * 60 * 10, 7);

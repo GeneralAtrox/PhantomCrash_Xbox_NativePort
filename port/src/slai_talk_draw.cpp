@@ -44,6 +44,7 @@ void push_sprite(std::vector<SlaiTalkQuad> &out, const SlaiTalkSprite &sprite) {
   const float s = std::sin(sprite.rotation);
   SlaiTalkQuad quad = rect(0, 0, 0, 0, rgba, sprite.texture,
                            {sprite.u, sprite.v, sprite.u + sprite.w, sprite.v + sprite.h});
+  quad.blend = sprite.blend;
   const std::array<std::array<float, 2>, 4> corners{{{-hw, -hh}, {hw, -hh}, {-hw, hh}, {hw, hh}}};
   for (std::size_t i = 0; i < corners.size(); ++i) {
     quad.corners[i].x = sprite.x + corners[i][0] * c - corners[i][1] * s;
@@ -164,6 +165,9 @@ std::vector<SlaiTalkQuad> SlaiTalkScene::draw() const {
       push_sprite(out, sprite);
     }
   }
+  for (const auto &badge : badges_) {
+    push_sprite(out, badge.face);
+  }
   const auto common = [this](int index) -> std::string {
     if (index >= 0 && index < static_cast<int>(common_pictures.size())) {
       return common_pictures[static_cast<std::size_t>(index)];
@@ -181,6 +185,7 @@ std::vector<SlaiTalkQuad> SlaiTalkScene::draw() const {
     push_object(out, portrait->mouth, picture);
   }
   push_object(out, chip_, common);
+  push_object(out, chip_window_, common);
   for (const auto &window : windows_) {
     push_object(out, window.frame, common);
     push_object(out, window.layer, common);
@@ -195,6 +200,9 @@ std::vector<SlaiTalkQuad> SlaiTalkScene::draw() const {
   const auto &main = windows_[0];
   if (mode_ == SlaiTalkMode::town && (!main.lines.empty() || main.name)) {
     out.push_back(rect(-screen_w, town_bar_top, 2 * screen_w, screen_h, town_bar_rgba));
+  }
+  for (const auto &badge : badges_) {
+    text_quads(badge.name, out);
   }
   for (const auto &window : windows_) {
     if (window.name) {

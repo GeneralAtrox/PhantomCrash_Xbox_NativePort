@@ -8,6 +8,8 @@
 #include "desktop_textures.hpp"
 #include "phantomcrash/slai_talk_scene.hpp"
 
+#include <cstdint>
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
@@ -24,6 +26,8 @@ public:
   void draw(const Viewport &viewport) override;
   [[nodiscard]] std::string music() const override;
   [[nodiscard]] std::vector<std::string> take_sounds() override;
+  // The scene's ambient loops: started, faded and stopped by key.
+  [[nodiscard]] std::vector<SoundCue> take_sound_cues() override;
   [[nodiscard]] bool done() const override {
     return scene_->done();
   }
@@ -38,6 +42,7 @@ private:
   std::string next_;
   std::unique_ptr<Screen> behind_;
   double pending_frames_{};
+  std::map<int, float> loop_gains_; // by SlaiTalkLoop::id, as last sent
 };
 
 } // namespace phantomcrash

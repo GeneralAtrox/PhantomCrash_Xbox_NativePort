@@ -76,6 +76,7 @@ void SlaiTalkScene::make_stage() {
     window.layer.bank = common;
   }
   chip_.bank = common;
+  chip_window_.bank = common;
   sprites_.assign(slai_talk_stage::sprite_count, {});
   for (const auto &group : sprite_groups) {
     for (int i = 0; i < group.count; ++i) {
@@ -88,6 +89,7 @@ void SlaiTalkScene::make_stage() {
     }
   }
   backdrop_ = {backdrop_picture, 0, 0, 512, 448};
+  make_badge_petals();
 }
 
 void SlaiTalkScene::place_ring(const SlaiTalkRing &ring) {

@@ -119,10 +119,11 @@ EVT_OPCODE_NAMES = dict(enumerate((
     "wait_frames", "wait_button", "say", "load_wait", "knocker_in", "knocker_out",
     "knocker_pose", "load_wait_2", "partner_in", "partner_out", "knocker_only_pose",
     "ambient_loop", "glitch", "panel_sprites", "partner_path", "sync", "sync_portrait",
-    "sync_loads", "select_window", "unload_character", "op_33", "window_style", "case",
+    "sync_loads", "select_window", "unload_character", "unload_all", "window_style", "case",
     "ruby", "glyph_size", "ruby_size", "text_speed", "text_cursor", "text_offset",
     "clear_text", "end_case", "text_flag_1", "line_feed", "allow_skip", "talk_sounds",
-    "bgm", "bgm_stop", "se", "se_stop", "nop", "op_47", "op_48", "partner_path_stop",
+    "bgm", "bgm_stop", "se", "se_stop", "nop", "unload_knocker", "unload_knocker_2",
+    "partner_path_stop",
 )))
 # Which argument is a string index (the say text, ruby text, nameplates).
 EVT_STRING_ARGS = {0x21: 0, 0x36: 0, 0x34: 1, 0x35: 1}

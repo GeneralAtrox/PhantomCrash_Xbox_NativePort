@@ -29,6 +29,16 @@ std::vector<std::uint32_t> colours(const json::JsonValue &value, std::string_vie
   return out;
 }
 
+std::vector<int> integers(const json::JsonValue &value, std::string_view key) {
+  std::vector<int> out;
+  if (const auto *items = value.find(key); items != nullptr && items->is_array()) {
+    for (const auto &item : items->array()) {
+      out.push_back(static_cast<int>(item.number()));
+    }
+  }
+  return out;
+}
+
 std::vector<std::array<int, 2>> pairs(const json::JsonValue &value, std::string_view key) {
   std::vector<std::array<int, 2>> out;
   if (const auto *items = value.find(key); items != nullptr && items->is_array()) {
@@ -149,6 +159,10 @@ SlaiTalkTable slai_talk_table_from_json(const json::JsonValue &value) {
     }
   }
   table.panel_sprites = pairs(value, "panel_sprites");
+  table.ambient_sounds = integers(value, "ambient_sounds");
+  table.ambient_objects = integers(value, "ambient_objects");
+  table.badge_slots = pairs(value, "badge_slots");
+  table.badge_unknown_name = value.string_or("badge_unknown_name", "");
   table.login_progress = pairs(value, "login_progress");
   if (const auto *login = value.find("login_text"); login != nullptr) {
     table.login_message = login->string_or("message", "");
