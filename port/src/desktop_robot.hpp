@@ -70,6 +70,8 @@ private:
   int torso_slot_{-1};
   int emblem_{-1};
   int emblem_texture_{-1};
+  int emblem_node_{};
+  Mat4 source_body_frame_{}; // that node of a S.L.A.I. body this frame
   std::vector<Part> parts_;
   std::vector<Part> shoulders_;
   std::array<Mat4, 2> shoulder_shifts_{}; // RobotAssembly::shoulder_shifts

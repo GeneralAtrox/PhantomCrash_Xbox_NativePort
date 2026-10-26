@@ -42,6 +42,7 @@ struct RobotCatalogue {
     // A S.L.A.I. body's arm aim on another maker's legs (an adapter: its
     // first own legs' row).
     std::optional<SourceArmAim> source_arm_aim;
+    int emblem_node{}; // a S.L.A.I. body's rig node the sticker rides
   };
   struct LegType {
     int model{-1};
@@ -153,6 +154,7 @@ struct RobotAssembly {
   std::array<Vec3, 2> shoulder_shifts{};
   std::string emblem_model;
   std::string emblem_image;
+  int emblem_node{}; // the body type's (RobotCatalogue::BodyType)
   // S.L.A.I. arm aim: the legs' row (else the body's), the weapons' aim
   // nodes, and each arm's raise time (0 keeps CombatAnimation's).
   std::optional<SourceArmAim> source_arm_aim;

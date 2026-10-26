@@ -5,7 +5,7 @@ from pathlib import Path
 from .archive import SlaiDisc
 from .assets import save
 from .native_parts import read
-from .native_geometry import flat_model
+from .native_geometry import flat_model, sticker_frame
 from .pod import read_pod
 from .progression import calendar_load, rotating_deliveries, apply_deliveries
 
@@ -46,19 +46,26 @@ def register_cosmetics(image, assets, data, mods):
         for body in (p for p in native["parts"] if p["category"] == "body"):
             # The ST02 carrier and body share the source root transform;
             # ST01 belongs to a different attachment and is kept as an asset.
+            # The body's clips move its hull nodes, so the sticker is set in
+            # the frame of the node it lies on and rides that node.
             source = body["model"][:2] + "ST02H.PO2"
             candidates = disc.find(source)
             definition = catalogue["body_types"][body["type"]]
             definition["emblem_model"] = -1
+            definition.pop("emblem_node", None)
             if candidates:
                 resource = definition["model"] + 1
-                model = flat_model(read_pod(disc.read(candidates[0])), "")
+                carrier = read_pod(disc.read(candidates[0]))
+                hull = read_pod(disc.read(disc.find(body["model"] + ".PO2")[0]))
+                node, frame = sticker_frame(carrier, hull)
+                model = flat_model(carrier, "", frame=frame)
                 material = model["materials"][0]
                 material["pbrMetallicRoughness"]["baseColorTexture"] = {"index": 0}
                 model["images"], model["textures"] = [{"uri": "../../slai/assets/" + manifest["stickers"][0]}], [{"source": 0}]
                 material["alphaMode"] = "BLEND"
                 save(mods / f"models/binlink/{resource}.gltf", model)
                 definition["emblem_model"] = resource
+                definition["emblem_node"] = node
     schedule = mods / "slai/cosmetic_deliveries.json"
     rows = calendar_load(read(assets / "tables/town.json"), base)
     if schedule.exists():

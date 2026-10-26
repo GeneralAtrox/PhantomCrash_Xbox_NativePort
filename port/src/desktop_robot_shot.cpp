@@ -96,8 +96,10 @@ void render_robot_shot(const Options::RobotShot &shot, const DataRoots &roots) {
   if (!world.available() || !library.available()) {
     throw std::runtime_error("The 3D renderer or the robots are unavailable");
   }
-  const RobotAssembly assembly =
-      assemble_robot(library.catalogue(), library.skeletons(), robot.parts());
+  // The record's emblem too, which the shop preview leaves off.
+  RobotParts parts = robot.parts();
+  parts.emblem = tables.robots[static_cast<std::size_t>(shot.record)].emblem;
+  const RobotAssembly assembly = assemble_robot(library.catalogue(), library.skeletons(), parts);
   RobotAnimator animator(library, assembly);
   animator.play(robot_motion::stand, true, 0.0F);
   RobotVisual visual(world, assembly);

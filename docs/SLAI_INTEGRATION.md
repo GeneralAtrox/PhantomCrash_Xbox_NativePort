@@ -829,6 +829,25 @@ rows (0x382390) were checked: only drones carry them.
 - A stored delivery schedule keeps its days but now takes the parts'
   current names.
 
+### Body stickers (2026-10-26)
+
+- A S.L.A.I. body's sticker is its ST02 carrier model (`emblem_model`)
+  wearing the chosen emblem's picture. The carrier's root equals the body's,
+  but every body clip moves the body's nodes 0, 1 and 6, so a sticker kept
+  on the root ended up inside the posed hull and never showed.
+- Registration now matches the two roots (KHT's body file keeps its root
+  at y 0.11, its carrier's at -18.41; the others agree), finds the body node
+  whose geometry lies nearest the sticker (`sticker_frame`: PROTON 31,
+  HARTMAN 24, CARRO 27, KHT 26, ZWERG 28, ELINT 23, MOLNIYA 15, ARDITO 27),
+  writes the sticker in that node's frame (`flat_model(..., frame=...)`)
+  and records it as the body type's `emblem_node`. DUSTER and SWEEPER have
+  no carrier. `RobotVisual` draws the sticker on that node's posed
+  frame, reflected like the body.
+- `--render-robot` now shows the record's emblem.
+- Checked by renders of all eight bodies with "TOO LATE TO DIE": each
+  sticker shows on the back of the hull and reads correctly.
+- Installed packs must be re-registered for `emblem_node`.
+
 ## Commands and verification
 
 Build the standard port with `pwsh -File scripts/build-port.ps1`. Generate
@@ -2691,7 +2710,9 @@ Values are read behind instruction guards in `slai/battle_camera.py`
 - `math3d.hpp reflects()` is the shared test.
 - Checked by an A/B render of DUSTER (its head eye moved across the centre)
   and in New York Quick Battle.
-- Still mirrored: the "ZERO-ONE" emblem on the torso. It is the port's
-  emblem decal (`body.emblem_model`), not S.L.A.I. geometry.
+- The "ZERO-ONE" emblem is not mirrored after all (checked 2026-10-26). It
+  sits on a Phantom Crash body (AEBody), on the top front facing forward,
+  so the behind view sees it upside down; from the front it reads
+  correctly. See "Body stickers" below for S.L.A.I. bodies.
 - Installed packs must be re-registered so `skeletons.json` carries
   `source_reflect`.

@@ -179,6 +179,7 @@ RobotCatalogue parse_robot_catalogue(const json::JsonValue &document) {
                                     static_cast<float>(value.number_or("forearm_turn", 0.0)),
                                     paint_images(value)});
     read_body_model_variants(value, catalogue.body_types.back());
+    catalogue.body_types.back().emblem_node = static_cast<int>(value.number_or("emblem_node", 0));
     catalogue.body_types.back().source_arm_aim = parse_source_arm_aim(value.find("source_arm_aim"));
   }
   for (const json::JsonValue &value : list(document, "leg_types")) {
@@ -301,6 +302,7 @@ RobotAssembly assemble_robot(const RobotCatalogue &catalogue, const RobotSkeleto
   robot.body_model = robot_model_path(body_model_for_legs(body, robot.leg_type));
   if (parts.emblem >= 0 && parts.emblem != emblem_none) {
     robot.emblem_model = robot_model_path(body.emblem_model);
+    robot.emblem_node = body.emblem_node;
     if (parts.emblem < static_cast<int>(catalogue.emblem_images.size())) {
       robot.emblem_image = catalogue.emblem_images[static_cast<std::size_t>(parts.emblem)];
     }

@@ -39,6 +39,7 @@ RobotVisual::RobotVisual(WorldRenderer &world, const RobotAssembly &assembly) : 
   paint_ = world.texture(assembly.paint);
   emblem_ = load(world, assembly.emblem_model);
   emblem_texture_ = world.texture(assembly.emblem_image);
+  emblem_node_ = assembly.emblem_node;
   if (assembly.skeleton != nullptr) {
     torso_slot_ = flagged_bone(*assembly.skeleton, node_turns_with_aim);
   }
@@ -91,7 +92,11 @@ void RobotVisual::add(Part &part, const Pose &pose, const Mat4 &root, std::vecto
                        : part.model == body_ ? source_body_root(pose, root)
                        : p.set[0]            ? p.bones[0]
                                              : root;
-    rigid(*model, source_frame(mount), weapon_slot, part.node_worlds);
+    // A S.L.A.I. body's sticker rides one of its nodes.
+    const bool body = part.model == body_ && emblem_node_ >= 0 &&
+                      emblem_node_ < static_cast<int>(model->rig->nodes.size());
+    rigid(*model, source_frame(mount), weapon_slot, part.node_worlds, body ? emblem_node_ : -1,
+          body ? &source_body_frame_ : nullptr);
   } else {
     skin_nodes(*model, p, part.first_slot, root, part.node_worlds);
   }
@@ -123,6 +128,12 @@ void RobotVisual::add_items(const Pose &pose, const Mat4 &root, std::vector<Worl
     WorldItem decal;
     decal.model = emblem_;
     decal.world = mount;
+    // A S.L.A.I. body's sticker carrier (ST02), set in its node's frame
+    // with the body's right-handed axes.
+    if (const ModelData *model = world_.model_data(body_); model != nullptr && model->rig) {
+      decal.world = source_body_frame_;
+      decal.reflected = true;
+    }
     decal.paint = emblem_texture_;
     decal.part_paint = emblem_texture_;
     items.push_back(std::move(decal));

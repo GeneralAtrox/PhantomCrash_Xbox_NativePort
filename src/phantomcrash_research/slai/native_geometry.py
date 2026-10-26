@@ -52,29 +52,72 @@ def native_matrix(matrix):
     return m
 
 
-def flat_model(nodes, texture, *, side=None, offset=None):
+def flat_model(nodes, texture, *, side=None, offset=None, frame=None):
+    """One mesh from every node, relative to the root's origin, or in
+    `frame` (a source world matrix, row vectors) when one is given."""
     builder = Builder()
     primitives = []
     worlds = [np.array(w).reshape(4, 4) for w in world_matrices(nodes)]
-    origin = worlds[0][3, :3]
+    if frame is None:
+        frame = np.eye(4)
+        frame[3, :3] = worlds[0][3, :3]
+    inverse = np.linalg.inv(np.array(frame))
     axes = GLTF.copy()
     if side == 0:
         axes[0] *= -1
     for node, world in zip(nodes, worlds):
+        local = world @ inverse
         for material in node.materials:
             b = material.batch
             if not b.triangles:
                 continue
-            positions = (np.array(b.positions) @ world[:3, :3] + world[3, :3] - origin) * axes
+            positions = (np.array(b.positions) @ local[:3, :3] + local[3, :3]) * axes
             if offset is not None:
                 positions += offset
-            normals = np.array(b.normals) @ world[:3, :3] * np.sign(axes)
+            normals = np.array(b.normals) @ local[:3, :3] * np.sign(axes)
             indices = _facing(np.array(b.triangles, np.uint32), positions, normals)
             colours = np.clip(np.array(b.colours) * np.append(material.colour, 1.) * 255, 0, 255)
             primitives.append(builder.primitive(positions, normals, np.array(b.uvs),
                                                  colours.round(), indices, 0))
     return document(builder, [{"name": "slai_bind_geometry", "mesh": 0}],
                     [{"primitives": primitives}], texture)
+
+
+def nearest_node(nodes, points):
+    """The drawn node whose geometry comes nearest `points` (source world)."""
+    centre = np.asarray(points).mean(0)
+    best = None
+    for i, (node, world) in enumerate(zip(nodes, world_matrices(nodes))):
+        world = np.array(world).reshape(4, 4)
+        for material in node.materials:
+            if material.batch.triangles:
+                spots = np.array(material.batch.positions) @ world[:3, :3] + world[3, :3]
+                distance = np.linalg.norm(spots - centre, axis=1).min()
+                if best is None or distance < best[0]:
+                    best = (distance, i)
+    return best[1]
+
+
+def sticker_frame(carrier, body):
+    """The body node a sticker carrier (ST02) lies on, and that node's frame
+    in the carrier's space. The two roots are matched: KHT's body file keeps
+    its root at 0.11 while its carrier's stands at -18.41, the others agree."""
+    shift = (np.array(world_matrices(body)[0]).reshape(4, 4)[3, :3]
+             - np.array(world_matrices(carrier)[0]).reshape(4, 4)[3, :3])
+    node = nearest_node(body, world_points(carrier) + shift)
+    frame = np.array(world_matrices(body)[node]).reshape(4, 4)
+    frame[3, :3] -= shift
+    return node, frame
+
+
+def world_points(nodes):
+    """Every drawn vertex in source world space."""
+    points = []
+    for node, world in zip(nodes, world_matrices(nodes)):
+        world = np.array(world).reshape(4, 4)
+        points += [np.array(m.batch.positions) @ world[:3, :3] + world[3, :3]
+                   for m in node.materials if m.batch.triangles]
+    return np.vstack(points)
 
 
 def document(builder, nodes, meshes, texture):
