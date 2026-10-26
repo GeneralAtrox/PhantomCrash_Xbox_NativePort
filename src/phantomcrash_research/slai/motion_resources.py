@@ -91,6 +91,8 @@ def read_motion_resources(disc):
     result['sampling'] = decode_motion_sampling(program)
     from .arm_aim import arm_aim_rows
     result['arm_aim'] = arm_aim_rows(program)
+    from .battle_camera import chase_rows
+    result['chase_camera'] = chase_rows(program)
     for row in result['tables']['bodies']:
         row['native_transition_frames'] = result['transitions']['native_transition_frames']
     return result

@@ -36,6 +36,16 @@ struct ChaseCameraSettings {
   std::optional<float> eye_height;
 };
 
+// A S.L.A.I. legs' behind-view eye: its row of 0x335170 plus (0, -4.5, -12)
+// (0x260070), from the feet. The leg type's "source_chase_camera".
+struct SourceChaseEye {
+  float behind{};
+  float eye_height{};
+};
+
+// {"behind": 9.5, "eye_height": 5.4}; nullopt without one.
+[[nodiscard]] std::optional<SourceChaseEye> parse_source_chase_eye(const json::JsonValue *value);
+
 // The fields `value` gives replace those of `base`.
 [[nodiscard]] ChaseCameraSettings parse_chase_camera(const json::JsonValue &value,
                                                      ChaseCameraSettings base = {});
@@ -58,6 +68,9 @@ struct CameraSubject {
   Vec3 torso;          // the torso node (camera +0xa0)
   int legs_model{};    // picks the first-person eye
   bool grounded{true}; // robot +0x252c
+  // Its legs' eye, used in place of the settings' in the S.L.A.I. behind
+  // view (with eye_height set).
+  std::optional<SourceChaseEye> source_eye;
 };
 
 class ChaseCamera final {

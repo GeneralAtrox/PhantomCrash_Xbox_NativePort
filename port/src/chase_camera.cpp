@@ -40,6 +40,13 @@ ChaseCameraSettings parse_chase_camera(const json::JsonValue &value, ChaseCamera
   return s;
 }
 
+std::optional<SourceChaseEye> parse_source_chase_eye(const json::JsonValue *value) {
+  if (value == nullptr || !value->is_object()) {
+    return std::nullopt;
+  }
+  return SourceChaseEye{number(*value, "behind", 0.0F), number(*value, "eye_height", 0.0F)};
+}
+
 void ChaseCamera::tick(const CameraSubject &subject, const StageCollision &stage,
                        const float seconds, const bool snap) {
   const float ticks = seconds * settings_.tick_rate;
@@ -59,11 +66,16 @@ void ChaseCamera::tick(const CameraSubject &subject, const StageCollision &stage
   const float lift = settings_.height + settings_.pitch_lift * std::fabs(pitch_);
   target_ = subject.position + transform_point({0.0F, lift, -settings_.look_ahead}, aim);
   const float pitch_rise = settings_.pitch_lift * std::fabs(pitch_);
-  Vec3 wanted =
-      settings_.eye_height
-          ? subject.position +
-                transform_point({0.0F, *settings_.eye_height + pitch_rise, settings_.behind}, aim)
-          : subject.torso + transform_point({0.0F, lift, settings_.behind}, aim);
+  Vec3 wanted{};
+  if (settings_.eye_height) {
+    // 0x260070: the legs' row, else the stage's.
+    const SourceChaseEye source =
+        subject.source_eye.value_or(SourceChaseEye{settings_.behind, *settings_.eye_height});
+    wanted = subject.position +
+             transform_point({0.0F, source.eye_height + pitch_rise, source.behind}, aim);
+  } else {
+    wanted = subject.torso + transform_point({0.0F, lift, settings_.behind}, aim);
+  }
   const float r = subject.height;
   const float top = settings_.robot_top;
   // In the air the eye rises to look down on the robot, and the sight

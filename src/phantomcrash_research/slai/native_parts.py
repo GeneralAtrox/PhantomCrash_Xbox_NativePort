@@ -168,6 +168,7 @@ def register_parts(image: Path, assets: Path, data: Path, mods: Path) -> dict:
         profiles = {Path(p["model"]).stem: p for p in motion_resources["tables"]["legs"]}
         weapon_profiles = {Path(p["model"]).stem: p for p in motion_resources["tables"]["arms"]}
         from .arm_aim import body_arm_aim, leg_arm_aim, weapon_nodes
+        from .battle_camera import leg_chase_camera
         from .resources import resource_packages
         records = source_records(stats, manifest["models"], resource_packages(disc), disc)
         for entry in manifest["models"]:
@@ -283,6 +284,7 @@ def register_parts(image: Path, assets: Path, data: Path, mods: Path) -> dict:
                 definition.update({"model": resource, "motions": resource, "timings": timings, "shadow_mesh": -1})
                 definition['source_melee_motions'] = list(range(37, 45))
                 definition["source_arm_aim"] = leg_arm_aim(motion_resources["arm_aim"], source)
+                definition["source_chase_camera"] = leg_chase_camera(motion_resources["chase_camera"], source)
                 from .motion_resources import native_motion_actions
                 definition['source_motion_actions'] = native_motion_actions()
                 definition['source_transition_frames'] = motion_resources['transitions']['native_transition_frames']

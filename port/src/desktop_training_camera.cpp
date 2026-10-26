@@ -73,6 +73,7 @@ CameraSubject TrainingScreen::camera_subject(const std::size_t index) const {
   // Without a posed robot, the torso is taken as two leg radii up.
   subject.torso = torso.value_or(subject.position + Vec3{0.0F, robot.radius * 2.0F, 0.0F});
   subject.legs_model = view_ ? view_->legs_model(index) : 0;
+  subject.source_eye = view_ ? view_->source_chase_eye(index) : std::nullopt;
   subject.grounded = robot.mover.grounded();
   return subject;
 }

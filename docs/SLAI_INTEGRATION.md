@@ -2417,9 +2417,9 @@ guns pointing at the ground, and the target's armour never dropped.
   5.40 above; the earlier 8.6/5.0 measurement was a robot not recorded.
   The look point is 20 ahead and 0.5 above in every case. The port uses
   the fixed 8.6/5.0 for every S.L.A.I. robot, so most draw smaller on
-  screen than in the original. The rule that picks the offset (robot
-  size, body or legs table) is not traced; the code writing `+0xb0` is
-  the place to start.
+  screen than in the original. Superseded: the offset is the legs' row
+  of a table, and these at-rest values were cut short by a wall; see
+  "Behind-view eye by legs" below.
 - The PROTON body faces backwards in the port. In the original the body
   matrix maps the model's +z (the long end, 2.41) to the robot's back; from
   behind, PCSX2 shows the body's grey-blue back. The port draws the
@@ -2473,3 +2473,52 @@ guns pointing at the ground, and the target's armour never dropped.
   Not checked frame by frame.
 - Installed packs must be re-registered (`register-slai-assets`) to pick
   up the turned leg skeletons in `robots/skeletons.json`.
+
+## Behind-view eye by legs (2026-10-26)
+
+- The S.L.A.I. behind view is camera mode 1, `0x260070` (entry 1 of the
+  mode table `0x335360`; the camera block is `0x4b2f00 + robot * 0x100`,
+  held at actor `+0x170`). Read from PCSX2 RAM and checked against the
+  disc's program.
+  - It picks a row of the 35-row table at `0x335170` (x, y, z floats)
+    through `0x254890`: the legs record's `+6` (`alternate_model`), the
+    same index the arm aim uses.
+  - Eye: the row plus (0, -4.5, -12). Look point: (0, -0.5, 20). Both are
+    from the feet in source axes (y down, z ahead), turned by the
+    camera's pitch (`+0x44`) and heading (`+0x3c` plus a half turn), so
+    the eye stands `12 - z` behind and `4.5 - y` above the feet. Every
+    shipped row has x 0.
+  - A ray from the robot to the eye (`0x4d0d50`, over the world's hit
+    lists) brings the eye 0.15 off a surface it meets. The eye then
+    closes a third of its gap a frame. Camera `+0xb0` is only the eye
+    minus the feet, written after the fact by `0x25b6d0`.
+  - Not carried over: with actor `+0xe4` at or below 0, or `+0xb64` at
+    least 4 times `0x2230c0()`, the view zooms to 0.75 (`+0x4c`/`+0x50`,
+    0.05 a frame) with the eye 2 higher; legs row 33 keeps the eye at
+    least 1.2 above the feet; row 31 changes the ray's wall response.
+    The states behind `+0xe4` and `+0xb64` are not identified.
+- PCSX2 check: SV 02 (legs row 19, so 9.5 behind and 5.4 up) turned to
+  face the open street showed its eye 9.50 behind and 5.40 above the
+  feet. A port frame at the same spot and heading frames the street the
+  same way.
+- Why the Quick Battle readings were shorter: at the spawn every robot's
+  eye stopped at x -210.03, 0.15 off a surface at x -210.18 behind it.
+  The port's New York collision has no surface there (its street ends at
+  x -225.6, with an overhang at height 8.17), so at that spawn the port's
+  eye stands at the full row distance. Open: what the original's ray
+  meets there (an invisible boundary or a hit block the port's collision
+  export lacks).
+- Implementation:
+  - `slai/battle_camera.py` reads the rows behind instruction guards
+    (`chase_rows`); `native_parts` writes each S.L.A.I. leg type's
+    `source_chase_camera` (`behind`, `eye_height`, provenance).
+  - The stage block's `height` 0.5 and `look_ahead` 20 are now read from
+    `0x260070`. Its `eye_height` 5.0 and `behind` 8.6 remain the
+    measured stand-in for legs without a row (Phantom Crash legs on a
+    S.L.A.I. stage).
+  - The port carries the row through `LegType`, `RobotAssembly` and
+    `CameraSubject::source_eye`. `ChaseCamera` uses it only in the
+    S.L.A.I. behind view (with `eye_height` set); Phantom Crash stages
+    keep their own camera.
+  - Rows range from 7.0 to 10.1 behind and 3.8 to 5.8 above.
+- Installed packs must be re-registered to get the rows.

@@ -82,6 +82,28 @@ TEST_CASE("an eye height sets the behind view's eye over the feet") {
   camera.tick(standing(start), stage, tick, true);
   CHECK(near(camera.eye(), start + Vec3{0.0F, 5.0F, 8.6F}));
   CHECK(near(camera.target(), start + Vec3{0.0F, 0.5F, -20.0F}));
+
+  // S.L.A.I. legs bring their own eye (0x335170 row 19: 9.5 behind, 5.4 up).
+  CameraSubject legs = standing(start);
+  legs.source_eye = SourceChaseEye{9.5F, 5.4F};
+  camera.tick(legs, stage, tick, true);
+  CHECK(near(camera.eye(), start + Vec3{0.0F, 5.4F, 9.5F}));
+  CHECK(near(camera.target(), start + Vec3{0.0F, 0.5F, -20.0F}));
+
+  // The Phantom Crash behind view ignores it.
+  ChaseCamera crash{ChaseCameraSettings{}};
+  crash.tick(legs, stage, tick, true);
+  ChaseCamera plain{ChaseCameraSettings{}};
+  plain.tick(standing(start), stage, tick, true);
+  CHECK(near(crash.eye(), plain.eye()));
+
+  const json::JsonValue row =
+      json::parse(std::string_view{R"({"behind": 9.5, "eye_height": 5.4})"});
+  const std::optional<SourceChaseEye> parsed = parse_source_chase_eye(&row);
+  REQUIRE(parsed.has_value());
+  CHECK(std::abs(parsed->behind - 9.5F) < 1e-5F);
+  CHECK(std::abs(parsed->eye_height - 5.4F) < 1e-5F);
+  CHECK(!parse_source_chase_eye(nullptr).has_value());
 }
 
 TEST_CASE("the behind view rises in the air and keeps off walls") {

@@ -4,6 +4,7 @@
 #include "phantomcrash/json.hpp"
 #include "phantomcrash/math3d.hpp"
 #include "phantomcrash/skeleton.hpp"
+#include "phantomcrash/chase_camera.hpp"
 #include "phantomcrash/source_arm_aim.hpp"
 #include "phantomcrash/world_model.hpp"
 
@@ -55,7 +56,8 @@ struct RobotCatalogue {
     float radius{};      // collision radius, 0 if unknown
     int shadow_mesh{-1}; // its flat shadow: a mesh of resource 184 (0x242750), -1 for none
     std::vector<std::string> paint_images;
-    std::optional<SourceArmAim> source_arm_aim; // S.L.A.I. legs: the row 0x4e7a90 reads
+    std::optional<SourceArmAim> source_arm_aim;     // S.L.A.I. legs: the row 0x4e7a90 reads
+    std::optional<SourceChaseEye> source_chase_eye; // S.L.A.I. legs: the row 0x260070 reads
   };
   struct ArmType {
     std::array<int, 2> models{-1, -1}; // [side]
@@ -156,6 +158,8 @@ struct RobotAssembly {
   std::optional<SourceArmAim> source_arm_aim;
   std::array<int, 2> source_weapon_aim_nodes{-1, -1};
   std::array<float, 2> arm_raise_seconds{};
+  // The S.L.A.I. behind view's eye for these legs (their leg type's).
+  std::optional<SourceChaseEye> source_chase_eye;
 };
 
 [[nodiscard]] std::string robot_model_path(int resource);

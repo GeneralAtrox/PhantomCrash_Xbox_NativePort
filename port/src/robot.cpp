@@ -209,6 +209,7 @@ RobotCatalogue parse_robot_catalogue(const json::JsonValue &document) {
     legs.radius = static_cast<float>(value.number_or("radius", 0.0));
     legs.shadow_mesh = static_cast<int>(value.number_or("shadow_mesh", -1.0));
     legs.source_arm_aim = parse_source_arm_aim(value.find("source_arm_aim"));
+    legs.source_chase_eye = parse_source_chase_eye(value.find("source_chase_camera"));
     catalogue.leg_types.push_back(std::move(legs));
   }
   for (const json::JsonValue &value : list(document, "arm_types")) {
@@ -323,6 +324,7 @@ RobotAssembly assemble_robot(const RobotCatalogue &catalogue, const RobotSkeleto
   robot.radius = std::clamp(legs.radius, 0.0F, max_robot_radius);
   robot.shadow_mesh = legs.shadow_mesh;
   robot.source_arm_aim = legs.source_arm_aim ? legs.source_arm_aim : body.source_arm_aim;
+  robot.source_chase_eye = legs.source_chase_eye;
   if (const auto &paints = native_paints(catalogue, body_type, robot.leg_type); !paints.empty()) {
     const int colour =
         parts.colour >= 0 && parts.colour < static_cast<int>(paints.size()) ? parts.colour : 0;

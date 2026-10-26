@@ -105,6 +105,10 @@ int BattleView::legs_model(const std::size_t index) const {
   return index < visuals_.size() ? visuals_[index]->assembly.leg_type : -1;
 }
 
+std::optional<SourceChaseEye> BattleView::source_chase_eye(const std::size_t index) const {
+  return index < visuals_.size() ? visuals_[index]->assembly.source_chase_eye : std::nullopt;
+}
+
 std::optional<Vec3> BattleView::torso(const std::size_t index) const {
   if (index >= visuals_.size()) {
     return std::nullopt;

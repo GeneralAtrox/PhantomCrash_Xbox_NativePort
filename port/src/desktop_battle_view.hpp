@@ -45,6 +45,8 @@ public:
   [[nodiscard]] float radius(std::size_t index, float fallback) const;
   // Robot `index`'s legs model (0x05f788), or -1.
   [[nodiscard]] int legs_model(std::size_t index) const;
+  // Robot `index`'s S.L.A.I. behind-view eye, from its legs, if they have one.
+  [[nodiscard]] std::optional<SourceChaseEye> source_chase_eye(std::size_t index) const;
   // Where robot `index`'s upper body is, as last posed.
   [[nodiscard]] std::optional<Vec3> torso(std::size_t index) const;
 
