@@ -623,7 +623,16 @@ S.L.A.I.'s computer robots walk a route graph per city, in resource folder
   Hong Kong 040, Egypt 050, Las Vegas 060, practice 070, motion 080. The
   mapping is shown by geometry: each file lies 89 to 99 per cent within three
   units of its own stage's navigation grid and far less on any other. The
-  loader that reads `Z/PATH` is not traced yet.
+  loader that reads `Z/PATH` is not traced yet. Trail so far (2026-10-26):
+  - The program's file table starts at 0x34e1d0: 0x2011 entries of 16
+    bytes, {name pointer, u16 key, u16 count, two words}. `Z/PATH` is the
+    entry at 0x34e210, key 0x2ff, count 9.
+  - 0x204a30 looks a path string up in it: it hashes the folder part
+    (0x204900), binary-searches the keys (0x204940) and compares names. Its
+    one caller is 0x204c24.
+  - No code holds 0x2ff, "PATH" or ".PTH" as a constant, so the route
+    file's name is built or looked up some other way. Next step: follow
+    0x204c24's callers, or watch the loaded file in PCSX2 during a battle.
 - Format: an i32 count and a table of u32 record offsets. A record is a u16
   kind, a u16 link count, a word (usually 0, sometimes stale), the u32 offset
   of its curve and the offsets of the records that may follow. A curve is a
