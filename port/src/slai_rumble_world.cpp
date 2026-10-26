@@ -145,7 +145,6 @@ SlaiRumbleWorld parse_slai_rumble_world(const JsonValue &document) {
     city.name = required(value, "name").string();
     city.day_stage = required(value, "day_stage").string();
     city.night_stage = required(value, "night_stage").string();
-    city.night_lighting = value.string_or("night_lighting", "");
     world.cities.push_back(std::move(city));
   }
   world.start_city = static_cast<int>(document.number_or("start_city", 0));
@@ -171,6 +170,9 @@ SlaiRumbleWorld parse_slai_rumble_world(const JsonValue &document) {
   }
   if (document.find("opponents") != nullptr) {
     world.opponents = member(document, "opponents", opponent_rules_from);
+  }
+  if (document.find("entry") != nullptr) {
+    world.entry = member(document, "entry", parse_slai_entry_rules);
   }
   return world;
 }

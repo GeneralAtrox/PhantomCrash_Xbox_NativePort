@@ -1,15 +1,16 @@
 {
  "notes": [
   "S.L.A.I. Rumble (docs/SLAI_RUMBLE_PLAN.md): S.L.A.I.'s Club Wired campaign as arena battles, beside Phantom Crash's calendar. The rota, regulations and matches come from the user's disc in tables/slai_rumble.json; this file holds the port's choices for them. Defaults reproduce the original (PAL SLES-52940 addresses).",
-  "cities: by the table's city column (0 Tokyo, 1 Stuttgart, 2 New York, 3 London, 4 Hong Kong, 5 Cairo, 6 Las Vegas), the imported stages (world/stages.json) a day or night match is fought on. The disc has no NIGHT_LASVEGAS.BG; the original draws Las Vegas at night on the day scene with LASVEGAS_NIGHT.MED lighting (night_lighting), which the importer does not convert yet. start_city is where a new game stands.",
+  "cities: by the table's city column (0 Tokyo, 1 Stuttgart, 2 New York, 3 London, 4 Hong Kong, 5 Cairo, 6 Las Vegas), the imported stages (world/stages.json) a day or night match is fought on. The disc has no NIGHT_LASVEGAS.BG and battledvd.bin names only day_lasvegas, so the original fights Las Vegas night matches on the day scene and its lighting (VLIGHT.DAT). LASVEGAS_NIGHT.MED is not lighting: the MED files are the stages' effect lists (0x50a040 loads z_zbattle/effect/<name> from 0x59d580 by save + 0x476a), and both Las Vegas lists are empty. start_city is where a new game stands.",
   "makers: S.L.A.I.'s maker ids (a regulation's +8 and a body's +2): 0 Carro, 1 Proton, 2 Hartman, 3 KHT, 4 Zwerg. The port's imported S.L.A.I. legs keep these ids as their maker.",
   "leg_classes: the S.L.A.I. leg types (0x24d7d0, the legs record + 6 through 0x41ea00) each class allows (0x259a40). A class not named here, such as any, allows every leg type.",
+  "entry: how the player's robot answers the entry check (0x259a40; slai_entry_robot.hpp). Imported S.L.A.I. parts answer with their own values (tables/slai_rumble.json parts: a body's maker, legs' leg type, a weapon's class and aim kind). Phantom Crash's parts have none, so these are port choices: leg_types gives the S.L.A.I. leg type of each Phantom Crash legs type (rumbling.json legs_types: 2, 4, 6 legs, rollers on 2, 3, 4, 6 wheels, hover), weapons a class and aim kind by the weapon's HUD kind (melee 6 close range, grenade 3 grenade, missile 1 lock-on; others 0), e_chips the CHIP records that pass as E-Chips. A Phantom Crash body has no S.L.A.I. maker, so a maker's rumble refuses it; optical camouflage is the modules' O.C. time. A rental-only rumble refuses the player's own robot (the original's case 0); the port then lends one of rental_robots (tables/garage.json robots; empty lends RUMBLING's rentals), S.L.A.I.'s own rentals being untraced.",
   "special: what the special rules test (0x259a40): close-range and grenade by the weapon class (+0x134), lock-on by the aim kind (+0x18), E-Chip by the CHIP record. Rental-only rumbles refuse the player's own robot.",
   "status_rules: by regulation, when a record's leader joins (0x2225a0, re-checked after each defeat by 0x223ed0): open from the start, after the first flags members are beaten, or held (regulation 30). A record is cleared once its leader is beaten (record byte 0).",
   "ladder: the stage (save + 0xa21) moves on one step after a battle (0x25a4e0): 0 to 1 when the tutorial record is cleared (+0x168, 0x257410); 1 to 2 when rankers_needed of the ranker records are (0x257440); 2 to 3 when all regional records are (0x257490); 3 to 4 when all finals records are (0x2574e0). Ranges are save record ids, first and one past the last.",
   "balance: entry_scale scales a regulation's entry requirement, the money the player must hold (0x259a40 compares save + 0xa14, which 0x24b470 treats as money); charge_entry also takes it (the original does not). prize_scale scales the prize, paid when the player's score reaches the regulation's target (0x24b0b0). robots_max caps a match's robots (0x222070).",
   "battle: how a rumble's battle is laid out. The opponents walk the stage's own S.L.A.I. route (Z/PATH, the stage's enemy_path, written by register-slai-routes), the player starting at its spawn, which the importer takes from that route. Port choices while the opponents are training-drone stand-ins, which walk straight from point to point and never jump: with spawn_route on, they keep to the part of the route they can walk from the player's start, a segment left leading nowhere walked on to a near one over the navigation grid; one that comes no nearer its next point for unstick_seconds holds jump for hop_seconds, and after hops such hops goes on to a next segment (0 seconds: never). For a stage without a route: spawn_route sends the opponents in at the stage's player spawns and round between them, each leg planned by walks and drops over the live RUMBLING's navigation grid (rumbling.json live.ai.navigation) and straightened where a straight walk is clear; spawns closer than spawn_merge units are one. false keeps the training ground's route, which does not fit these stages.",
-  "opponents: who a rumble fields (docs/SLAI_OPPONENTS_RESEARCH.md): the opponents the table carries, drawn place by place as the original does (0x2225a0, 0x223420), each on its own robot with the live RUMBLING's AI. always_eligible_makers are the body makers 0x222a60 lets into any rumble. story_flags are the story flags set, which the substitutions test (0x256cc0); the port keeps no S.L.A.I. story, so none are. leader_session stands for the rumble manager's unresolved session check before a leader whose members are all beaten joins (0x222f70); leader_counter for regulation 30's counter. Port choices, S.L.A.I.'s CPU rows and behaviour values being undecoded: an opponent fights with the chips row its level reaches (tables/parts.json chips, Phantom Crash's enemy chips LV1 95 to LV5 91, at chip_level), at its level as the AI's ability, with the AI profile profiles names for its behaviour value, else profile (the profile nearly every Phantom Crash entrant has). paint and emblem, when given, replace every opponent's (the original's 16-region paint is undecoded; its robots keep the default). A place emptied by a shootdown draws its next opponent arrival_seconds later, the original's 20 to 30 shootdown targets needing more opponents than a line-up holds (a port reading). Shooting a pool drone down sets its pool roster's flag only with pool_flags."
+  "opponents: who a rumble fields (docs/SLAI_OPPONENTS_RESEARCH.md): the opponents the table carries, drawn place by place as the original does (0x2225a0, 0x223420), each on its own robot with the live RUMBLING's AI. always_eligible_makers are the body makers 0x222a60 lets into any rumble. The substitutions (0x256cc0) test the story flags the save has set (save + 0x426f, which the port's S.L.A.I. story sets as its scenes complete; flags 0x16, 0x24 and 0x25 decide them); story_flags adds flags treated as set besides, none by default. leader_session stands for the rumble manager's unresolved session check before a leader whose members are all beaten joins (0x222f70); leader_counter for regulation 30's counter. Port choices, S.L.A.I.'s CPU rows and behaviour values being undecoded: an opponent fights with the chips row its level reaches (tables/parts.json chips, Phantom Crash's enemy chips LV1 95 to LV5 91, at chip_level), at its level as the AI's ability, with the AI profile profiles names for its behaviour value, else profile (the profile nearly every Phantom Crash entrant has). paint and emblem, when given, replace every opponent's (the original's 16-region paint is undecoded; its robots keep the default). A place emptied by a shootdown draws its next opponent arrival_seconds later, the original's 20 to 30 shootdown targets needing more opponents than a line-up holds (a port reading). Shooting a pool drone down sets its pool roster's flag only with pool_flags."
  ],
  "cities": [
   {"name": "Tokyo", "day_stage": "slai_day_tokyo2", "night_stage": "slai_night_tokyo"},
@@ -18,8 +19,7 @@
   {"name": "London", "day_stage": "slai_day_england", "night_stage": "slai_night_england"},
   {"name": "Hong Kong", "day_stage": "slai_day_hongkong", "night_stage": "slai_night_hongkong"},
   {"name": "Cairo", "day_stage": "slai_day_egypt", "night_stage": "slai_night_egypt"},
-  {"name": "Las Vegas", "day_stage": "slai_day_lasvegas", "night_stage": "slai_day_lasvegas",
-   "night_lighting": "lasvegas_night"}
+  {"name": "Las Vegas", "day_stage": "slai_day_lasvegas", "night_stage": "slai_day_lasvegas"}
  ],
  "start_city": 0,
  "makers": ["Carro", "Proton", "Hartman", "KHT", "Zwerg"],
@@ -27,6 +27,16 @@
   "legged": [0, 1, 2],
   "wheeled": [3, 4, 5, 6],
   "caterpillar/hover": [7, 8, 9, 10]
+ },
+ "entry": {
+  "leg_types": [0, 1, 2, 3, 4, 5, 6, 7],
+  "weapons": [
+   {"kind": 6, "class": 2},
+   {"kind": 3, "class": 3},
+   {"kind": 1, "aim": 1}
+  ],
+  "e_chips": [0, 1],
+  "rental_robots": []
  },
  "special": {
   "close_range_classes": [2],

@@ -5,7 +5,8 @@ regulations, the 157 match templates, the 100-day rota with its 700 city-day
 rows, and the finals injection of 0x257070 stated as data. Values come from
 the decoders in campaign.py; see docs/SLAI_CAMPAIGN_RESEARCH.md for the
 format and the confidence of each field. With the port's part registration
-in place, the campaign's opponents go along (opponent_table.py).
+in place, the campaign's opponents and the imported parts' entry-check
+facts go along (opponent_table.py).
 """
 
 import json
@@ -20,11 +21,12 @@ from .campaign import (
     REGULATION_TABLE, SCHEDULE_DAYS, STAGES, _CITY_DAY_CODE, _DAY_CODE, matches,
     read_msg, regulations, schedule,
 )
-from .opponent_table import opponent_table
+from .opponent_rules import Rules
+from .opponent_table import opponent_table, part_facts
 from .program import ProgramData
 
 TABLE_FILE = "tables/slai_rumble.json"
-TABLE_VERSION = 2  # 2: the opponents block
+TABLE_VERSION = 3  # 2: the opponents block; 3: the parts block
 NAMES_FILE = "UK_RUMBLETYPENAME.MSG"
 MAKERS = ("Carro", "Proton", "Hartman", "KHT", "Zwerg")
 DISPLAY_ORDER = (2, 6, 0, 4, 5, 1, 3)  # schedule screen byte order 0x43ACF0
@@ -176,10 +178,12 @@ def register_rumble(image: Path, mods: Path):
         table = rumble_table(program, names)
         registration = mods / "slai/native_parts.json"
         if registration.is_file():
-            table["opponents"] = opponent_table(
-                disc, json.loads(registration.read_text(encoding="utf-8")))
+            parts = json.loads(registration.read_text(encoding="utf-8"))
+            table["opponents"] = opponent_table(disc, parts)
+            table["parts"] = part_facts(Rules(program), parts)
     save(mods / TABLE_FILE, table)
     return {"rumble_regulations": len(table["regulations"]),
             "rumble_matches": len(table["matches"]),
             "rumble_city_days": len(table["rota"]["city_days"]),
-            "rumble_opponents": len(table.get("opponents", {}).get("opponents", []))}
+            "rumble_opponents": len(table.get("opponents", {}).get("opponents", [])),
+            "rumble_parts": sum(len(rows) for rows in table.get("parts", {}).values())}

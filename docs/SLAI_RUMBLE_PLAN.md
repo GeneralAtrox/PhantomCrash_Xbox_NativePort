@@ -164,8 +164,8 @@ Native C++ under `port/`, with no UI and no battle launch yet:
   through the asset roots, so `mods/tables/` replaces it. It reads
   `data/world/slai_rumble.json` through the data roots, so mods overlay it.
   The world file holds:
-  - city → day/night stage (Las Vegas night is `slai_day_lasvegas` with
-    `night_lighting: lasvegas_night`);
+  - city → day/night stage (Las Vegas night is `slai_day_lasvegas`, as in
+    the original);
   - maker names, and leg class → S.L.A.I. leg types;
   - the special-rule values and the status rule of each regulation;
   - the ladder ranges and the balance knobs.
@@ -240,8 +240,8 @@ reports, and which opponents (record, flag) it beat.
     player is standing with at least that many shootdowns.
 - Still to do:
   - opponent rosters (phase 1b; done below);
-  - the `SlaiRobot` adapter (maker, legs, special rules);
-  - Las Vegas night lighting;
+  - the `SlaiRobot` adapter (maker, legs, special rules; done below);
+  - Las Vegas night lighting (none exists; see Gaps);
   - the RUMBLING lettering on the wedge art the Club Wired item reuses.
 
 ### Armed opponents from the original's rosters (done, 2026-10-26)
@@ -280,24 +280,58 @@ reports, and which opponents (record, flag) it beat.
   - AI chips by level (Phantom Crash's enemy chips 95…91), since the CPU rows
     are undecoded;
   - the AI profile, 4 for every behaviour value;
-  - no story flags set;
+  - no story flags set beyond the save's (see below);
   - the leader's session check passes; regulation 30's counter does not;
   - default paint, since the 16-region paint is undecoded.
 
+### Entry rules, story flags and the current city (done, 2026-10-26)
+
+- Entry: Rumble S.L.A.I. runs the whole of 0x259A40 over the ridden robot
+  (`slai_entry_robot.hpp`): money, ready, the regulation's maker, its leg
+  classes and its special rule. Each refusal has its own notice
+  (`data/ui/slai_rumble.json` refusals).
+  - Imported S.L.A.I. parts answer with their own values. Registration
+    writes a `"parts"` block into `tables/slai_rumble.json` (table version
+    3, `opponent_table.part_facts`): each body's maker, legs' leg type and
+    weapon's class and aim kind, by port part id.
+  - Phantom Crash's parts answer through `data/world/slai_rumble.json`
+    "entry" (port choices): leg types by Phantom Crash legs type (the
+    classes line up one to one), weapon class and aim by HUD kind (melee
+    close range, grenade, missile lock-on), and the CHIPs that pass as
+    E-Chips (0 and 1). A Phantom Crash body has no S.L.A.I. maker, so maker
+    rumbles want a S.L.A.I. body. Optical camouflage is the modules' O.C.
+    time.
+  - Rental-only rumbles (regulation 15) refuse the player's robot, as the
+    original's case 0 does. The port lends one of "entry" `rental_robots`
+    (empty: RUMBLING's rentals) in a garage of its own, as RUMBLING does
+    (S.L.A.I.'s own rentals are untraced).
+- Story flags: `f_256CC0`'s flag test (0x204E50) reads the same 256 event
+  flags at save + 0x426F that the port's S.L.A.I. story keeps
+  (`QuestSave::slai_story`). The line-up now passes the save's set flags to
+  the substitutions; the world's `story_flags` only adds to them.
+- Current city: a finished rumble leaves the player in its city
+  (save + 0x4769), so the story's city rows can fire. The hub still lists
+  every open city of the day: Club Wired stands in for travelling, which
+  is untraced.
+
 ## Gaps found so far
 
-- **Opponent builds** are decoded and fielded (see above). Still undecoded:
-  the CPU row, the behaviour value, the 16-region paint, the emblem, and
-  the story flags behind the substitutions.
-- **No Las Vegas night stage** was imported, although the disc has
-  `LASVEGAS_NIGHT.MED` and the matches have Las Vegas night sets. The disc
-  has no `NIGHT_LASVEGAS.BG`, so night Las Vegas is the day scene with night
-  MED lighting. The importer reads no MED files at all (see
-  SLAI_CAMPAIGN_RESEARCH.md, "Las Vegas night stage").
+- **Opponent builds** are decoded and fielded (see above). Still undecoded,
+  needing runtime traces: the CPU row (556 bytes of AI parameters), the
+  behaviour value, the emblem, and the paint. The paint is 16 region colour
+  indices (0–30, robot +0x1A) with 16 shade values (+0x40). The port's
+  whole-robot paint cannot express it until a region recolour exists.
+- **Las Vegas at night** is the day scene with day lighting, as in the
+  original. `LASVEGAS_NIGHT.MED` turned out to be an empty effect list, not
+  lighting (SLAI_CAMPAIGN_RESEARCH.md, "Las Vegas night stage"). The other
+  cities' MED effect lists are not imported yet.
 - **Unconfirmed meanings:** the 10 match weights, and what the score
   compared with the regulation's `+0x20` target counts (see Status).
 - **Economy:** S.L.A.I.'s prizes (2,000–25,000) enter the same wallet as Phantom
   Crash money. The defaults stay the original's; the knobs sit in
   `slai_rumble.json`.
 - **Current city:** the original allows rumbles only in the current city.
-  How the player travels there is not yet traced.
+  How the player travels there is not yet traced, so the hub lists every
+  open city (see the entry-rules section).
+- **Not started (optional):** the S.L.A.I. shop, sponsors and English
+  briefings.

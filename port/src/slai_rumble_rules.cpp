@@ -130,8 +130,8 @@ std::optional<SlaiCityMatch> slai_city_match(const SlaiRumbleData &data, const i
   }
   SlaiCityMatch found{city, *source};
   for (const bool night : {false, true}) {
-    found.match = slai_scheduled_match(data.table, *source, city, save.stage, night,
-                                       save.finals_cleared);
+    found.match =
+        slai_scheduled_match(data.table, *source, city, save.stage, night, save.finals_cleared);
     found.night = night;
     if (found.match != slai_no_match) {
       break;
@@ -299,6 +299,9 @@ SlaiMatchOutcome slai_finish_match(QuestSave &quest, const SlaiRumbleData &data,
   }
   save.stage = slai_next_stage(save, data.world.ladder);
   outcome.stage_after = save.stage;
+  if (result.city >= 0) {
+    save.city = result.city;
+  }
   return outcome;
 }
 

@@ -123,9 +123,8 @@ TEST_CASE("S.L.A.I. Rumble's world data names a stage pair for each city") {
   REQUIRE(world.cities.size() == 7);
   CHECK(slai_match_stage(world, 0, false) == "slai_day_tokyo2");
   CHECK(slai_match_stage(world, 5, true) == "slai_night_egypt");
-  // No NIGHT_LASVEGAS.BG: the day scene with the night lighting.
+  // No NIGHT_LASVEGAS.BG: the original fights at night on the day scene.
   CHECK(slai_match_stage(world, 6, true) == "slai_day_lasvegas");
-  CHECK(world.cities[6].night_lighting == "lasvegas_night");
   CHECK(world.makers.size() == 5);
   CHECK(world.makers[3] == "KHT");
   CHECK(world.status_rules.size() == 32);
@@ -259,6 +258,9 @@ TEST_CASE("a S.L.A.I. match's result fills its records, pays its prize and moves
   CHECK(!lost.cleared);
   CHECK(quest.money == 1000);
   CHECK(quest.slai_rumble.finals_cleared == 2);
+  CHECK(quest.slai_rumble.city == 0); // no city given: the save's
+  slai_finish_match(quest, data, {0, 0, {}, 5});
+  CHECK(quest.slai_rumble.city == 5);
   const auto won = slai_finish_match(quest, data, {0, 1, {{0x1c, slai_leader_flag}}});
   CHECK(won.prize == 25000);
   CHECK(won.cleared);

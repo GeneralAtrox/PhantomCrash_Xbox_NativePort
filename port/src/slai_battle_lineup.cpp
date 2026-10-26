@@ -63,9 +63,10 @@ RobotRecord slai_opponent_robot(const SlaiOpponentRules &rules, const SlaiOppone
 }
 
 SlaiBattleLineup::SlaiBattleLineup(const SlaiRumbleData &data, const SlaiMatch &match,
-                                   const SlaiRumbleSave &save, const RumblingTables &tables,
-                                   const MovementTuning &movement, const unsigned int seed)
-    : data_(data), draw_(data, match, save), rules_(tables.rules),
+                                   const SlaiRumbleSave &save, std::vector<int> story_flags,
+                                   const RumblingTables &tables, const MovementTuning &movement,
+                                   const unsigned int seed)
+    : data_(data), draw_(data, match, save, std::move(story_flags)), rules_(tables.rules),
       tables_{tables.parts, tables.garage,    tables.contests, rules_,
               tables.drive, tables.templates, tables.hud},
       movement_(movement), random_(seed) {}

@@ -33,11 +33,11 @@ struct SlaiCityMatch {
   bool night{};
 };
 // The city's rumble on calendar day `day`, or nothing while it is closed.
-[[nodiscard]] std::optional<SlaiCityMatch>
-slai_city_match(const SlaiRumbleData &data, int day, int city, const SlaiRumbleSave &save);
+[[nodiscard]] std::optional<SlaiCityMatch> slai_city_match(const SlaiRumbleData &data, int day,
+                                                           int city, const SlaiRumbleSave &save);
 // The day's open cities' rumbles, in the rota's (display) order.
-[[nodiscard]] std::vector<SlaiCityMatch>
-slai_day_matches(const SlaiRumbleData &data, int day, const SlaiRumbleSave &save);
+[[nodiscard]] std::vector<SlaiCityMatch> slai_day_matches(const SlaiRumbleData &data, int day,
+                                                          const SlaiRumbleSave &save);
 // Today's (day, night) matches in the save's city; none while it is closed.
 [[nodiscard]] std::array<int, 2> slai_todays_matches(const SlaiRumbleData &data, int day,
                                                      const SlaiRumbleSave &save);
@@ -106,6 +106,7 @@ struct SlaiMatchResult {
   int match{slai_no_match};
   int score{};
   std::vector<std::pair<int, int>> beaten; // (save record, flag)
+  int city{-1};                            // where it was fought; -1 leaves the save's
 };
 struct SlaiMatchOutcome {
   std::int64_t prize{};
@@ -114,7 +115,9 @@ struct SlaiMatchOutcome {
   int stage_after{};
 };
 // The records filled, the finals counted, the prize paid into the shared
-// wallet (up to money_limit) and the stage moved on.
+// wallet (up to money_limit) and the stage moved on. The player stands in
+// the match's city afterwards (save + 0x4769), as the original's rumbles
+// are fought only where the player is; the story's city rows test it.
 SlaiMatchOutcome slai_finish_match(QuestSave &quest, const SlaiRumbleData &data,
                                    const SlaiMatchResult &result);
 

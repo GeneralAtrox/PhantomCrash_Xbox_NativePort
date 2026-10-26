@@ -552,25 +552,28 @@ tests check this.
 ### Las Vegas night stage
 
 The disc has no `NIGHT_LASVEGAS.BG`. It ships 7 `DAY_*.BG` scenes and only 6
-`NIGHT_*.BG` scenes. battledvd.bin names only `z_zbattle/bg/day_lasvegas`,
-plus the lighting names `lasvegas_day` and `lasvegas_night` (0x59D540).
-The original therefore draws Las Vegas night matches on the day geometry
-with `LASVEGAS_NIGHT.MED` lighting (**Medium**: inferred from the names, not
-yet traced through the stage loader).
+`NIGHT_*.BG` scenes, and battledvd.bin names only `z_zbattle/bg/day_lasvegas`.
+The original therefore fights Las Vegas night matches on the day scene, with
+the day package's `VLIGHT.DAT` lighting (**Medium**: the stage loader itself
+is not traced).
 
-The importer does not skip anything. It builds one stage for each `.BG`
-scene and takes its lighting from the scene package's `VLIGHT.DAT`. Its
-`.MED` lookup expects `<CITY>.MED`, but the disc names these files
-`<CITY>_DAY.MED` and `<CITY>_NIGHT.MED`, so no MED lighting is imported for
-any stage.
+`LASVEGAS_NIGHT.MED` is not night lighting (traced 2026-10-26, **High**):
 
-A `slai_night_lasvegas` stage needs two things:
+- The names at 0x59D480..0x59D570 (`sinjyuku_day`, `sinjyuku_night`, …,
+  `lasvegas_day`, `lasvegas_night`, `practice_day`, `practice_night`) follow
+  the path `host0:data/z_zbattle/effect/`.
+- 0x50A040 takes the save's byte `+0x476A` (city × 2 + night) as an index
+  into the pointer table 0x59D580. It appends the name to that path and
+  reads a count followed by records, allocating 96 bytes each. A `.MED` file
+  is a stage's effect list.
+- Both `LASVEGAS_DAY.MED` and `LASVEGAS_NIGHT.MED` are empty (count 0).
 
-- the MED lighting format decoded and mapped onto the port's stage lighting;
-- a stage registered from `DAY_LASVEGAS.BG` with that lighting.
-
-This is not a trivial fix, so it is left for the battle phase. Until then,
-a Las Vegas night match can use `slai_day_lasvegas`.
+So the port's `slai_day_lasvegas` for night matches is the original's
+choice. The other cities' effect lists are not imported: the stage importer
+looks for `<CITY>.MED`, but the disc names them `<CITY>_DAY.MED` and
+`<CITY>_NIGHT.MED`, and it would file them as lighting. Importing them
+means decoding the effect records. For example, `SINJYUKU_NIGHT.MED` holds
+17 records and `EGYPT_NIGHT.MED` holds 10.
 
 ## Open questions (most need runtime checks in PCSX2)
 

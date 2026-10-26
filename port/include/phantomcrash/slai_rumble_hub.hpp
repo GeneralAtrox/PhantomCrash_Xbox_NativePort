@@ -78,9 +78,14 @@ struct SlaiRumbleHubScript : TownBasics {
   ContestInfoStyle info;
   std::vector<std::string> city_names; // by the table's city column
   std::vector<std::string> closed;     // shown when no city is open
-  // A notice when entry is refused: the money held is short, or the
-  // ridden robot is not ready ({entry} is the money the rumble needs).
-  std::vector<std::string> short_of_money, not_ready;
+  // A notice when entry is refused (0x259a40's order): the money held is
+  // short, the ridden robot is not ready, its body is not the rumble's
+  // maker, its legs not of the rumble's classes, or it breaks the rumble's
+  // special rule; or a rental-only rumble has no robot to lend. {entry} is
+  // the money the rumble needs, {rumble} its regulation's name and {maker}
+  // the maker it takes.
+  std::vector<std::string> short_of_money, not_ready, wrong_maker, wrong_legs, special_unmet,
+      no_rental;
   std::string battle; // the screen a rumble entered leads to
 };
 
@@ -94,8 +99,10 @@ struct SlaiRumbleHubScript : TownBasics {
 class SlaiRumbleHub final {
 public:
   // `back` is where EXIT leads.
+  // `riding` is the ridden robot in S.L.A.I.'s terms (slai_entry_robot.hpp);
+  // `rentals` that a rental-only rumble has robots to lend.
   SlaiRumbleHub(SlaiRumbleHubScript script, const SlaiRumbleData &data, const QuestSave &quest,
-                std::string back, MessageBoxStyle box = {});
+                SlaiRobot riding, bool rentals, std::string back, MessageBoxStyle box = {});
 
   void update(double tick_seconds, const InputFrame &input);
 
@@ -157,6 +164,8 @@ private:
   SlaiRumbleHubScript script_;
   const SlaiRumbleData &data_;
   QuestSave quest_;
+  SlaiRobot riding_;
+  bool rentals_{};
   std::string back_;
   std::vector<SlaiCityMatch> matches_;
   ScreenFade fade_;

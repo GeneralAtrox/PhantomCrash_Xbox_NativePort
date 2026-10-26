@@ -18,6 +18,7 @@
 #include "desktop_sonic_amp.hpp"
 #include "desktop_sv_spec.hpp"
 #include "phantomcrash/added_chips.hpp"
+#include "phantomcrash/slai_entry_robot.hpp"
 
 #include <SDL3/SDL_log.h>
 
@@ -309,9 +310,12 @@ std::unique_ptr<Screen> GameScreens::make(const std::string &name, const std::st
                                             credits_, quest, message_box_, slai_rumble());
   }
   if (name == "slai_rumble" && slai_rumble_ && slai_hub_) {
-    return std::make_unique<SlaiRumbleScreen>(textures_, font_, *slai_hub_, *slai_rumble_, from,
-                                              resolve(slai_hub_->exit_to, place_before), frame_,
-                                              credits_, quest, message_box_);
+    const RegulationCheck check = regulation_check();
+    return std::make_unique<SlaiRumbleScreen>(
+        textures_, font_, *slai_hub_, *slai_rumble_, from,
+        resolve(slai_hub_->exit_to, place_before), frame_, credits_, quest, message_box_,
+        slai_riding_robot(*slai_rumble_, check, quest),
+        !slai_rental_robots(slai_rumble_->world, check.rules).empty());
   }
   if (name == "records") {
     return std::make_unique<RecordsScreen>(textures_, font_, records_, contests_,

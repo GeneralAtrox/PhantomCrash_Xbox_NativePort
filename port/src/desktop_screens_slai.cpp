@@ -7,6 +7,7 @@
 #include "desktop_slai_rumble.hpp"
 #include "desktop_training.hpp"
 #include "phantomcrash/slai_battle_lineup.hpp"
+#include "phantomcrash/slai_entry_robot.hpp"
 
 #include <SDL3/SDL.h>
 
@@ -32,6 +33,19 @@ NavTuning slai_route_grid(const DataRoots &roots) {
     SDL_Log("S.L.A.I. route grid: %s; using the default grid", error.what());
     return {};
   }
+}
+
+// A rental-only rumble's robot, one of its rentals at random
+// (slai_entry_robot.hpp); none for another rumble or with no rental.
+const RobotRecord *slai_rental(const SlaiRumbleWorld &world, const SlaiRegulation &rule,
+                               const RegulationCheck &check) {
+  const std::vector<int> &rentals = slai_rental_robots(world, check.rules);
+  if (rule.special != SlaiSpecialRule::rental_only || rentals.empty()) {
+    return nullptr;
+  }
+  std::minstd_rand random{std::random_device{}()};
+  std::uniform_int_distribution<std::size_t> pick(0, rentals.size() - 1);
+  return check.garage.robot(rentals[pick(random)]);
 }
 
 } // namespace
@@ -62,11 +76,13 @@ std::shared_ptr<SlaiBattleLineup> ScreenRunner::make_slai_lineup(const SlaiRumbl
                               test_drive_,
                               training_.battle.settings.weapons,
                               parse_battle_hud_style(roots_.document("ui/battle_hud.json"))};
-  return std::make_shared<SlaiBattleLineup>(data, match, quest_.slai_rumble, tables,
+  return std::make_shared<SlaiBattleLineup>(data, match, quest_.slai_rumble,
+                                            slai_story_flags_set(quest_.slai_story), tables,
                                             settings.movement, std::random_device{}());
 }
 
-// The ridden robot as TEST DRIVE fits it, against the match's opponents
+// The ridden robot as TEST DRIVE fits it, or in a rental-only rumble a
+// rental in a garage of its own (as RUMBLING's), against the match's opponents
 // (make_slai_lineup), or, without them, training drones, one fewer than the
 // match's robots, which come back as they fall. They walk the stage's own
 // S.L.A.I. route (its enemy_path, Z/PATH); a stage without one has them
@@ -83,8 +99,15 @@ std::unique_ptr<Screen> ScreenRunner::make_slai_battle() {
   const SlaiMatch *match = slai_match(data->table, slai_match_->match);
   const SlaiRegulation *rule = slai_regulation(data->table, match->regulation);
   slai_pay_entry(quest_, data->world, *rule);
-  battle_training_ = test_drive_training(training_, test_drive_, quest_.garage,
-                                         quest_.garage.riding, game_->part_tables());
+  if (const RobotRecord *rental = slai_rental(data->world, *rule, game_->regulation_check())) {
+    Garage lent;
+    install_robot(lent, 0, *rental, game_->part_tables(), game_->garage_tables());
+    battle_training_ = test_drive_training(training_, test_drive_, lent, 0, game_->part_tables());
+    SDL_Log("S.L.A.I. rental: %s", rental->name.c_str());
+  } else {
+    battle_training_ = test_drive_training(training_, test_drive_, quest_.garage,
+                                           quest_.garage.riding, game_->part_tables());
+  }
   const std::string &stage = slai_match_stage(data->world, slai_match_->city, slai_match_->night);
   if (stages_.contains(stage)) {
     battle_training_.stage = stage;
@@ -135,6 +158,7 @@ void ScreenRunner::finish_slai_match() {
   SlaiMatchResult result;
   result.match = slai_match_->match;
   result.score = summary.shootdowns;
+  result.city = slai_match_->city;
   const bool standing = summary.outcome != MatchOutcome::retire && summary.armour > 0.0F;
   if (slai_lineup_) {
     result.beaten = slai_lineup_->beaten();

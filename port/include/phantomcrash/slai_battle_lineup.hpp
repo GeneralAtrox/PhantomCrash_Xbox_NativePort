@@ -27,8 +27,10 @@ class SlaiBattleLineup final : public BattleLineup {
 public:
   // `data`, `match` and the tables `tables` refers to (but its rules,
   // copied) outlive the line-up.
+  // `story_flags` as slai_candidates takes them.
   SlaiBattleLineup(const SlaiRumbleData &data, const SlaiMatch &match, const SlaiRumbleSave &save,
-                   const RumblingTables &tables, const MovementTuning &movement, unsigned int seed);
+                   std::vector<int> story_flags, const RumblingTables &tables,
+                   const MovementTuning &movement, unsigned int seed);
 
   [[nodiscard]] int places() const override {
     return slai_battle_places;

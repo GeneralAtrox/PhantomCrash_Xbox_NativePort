@@ -24,6 +24,8 @@ add_library(phantomcrash_core
   src/slai_rumble_table.cpp
   src/slai_rumble_world.cpp
   src/slai_opponent_table.cpp
+  src/slai_part_facts.cpp
+  src/slai_entry_robot.cpp
   src/slai_lineup.cpp
   src/slai_battle_lineup.cpp
   src/slai_anb.cpp
@@ -440,6 +442,7 @@ if(BUILD_TESTING)
     tests/effect_tests.cpp
     tests/effect_cluster_tests.cpp
     tests/slai_rumble_tests.cpp
+    tests/slai_entry_robot_tests.cpp
     tests/shop_variant_tests.cpp
     tests/slai_screens_tests.cpp
   )

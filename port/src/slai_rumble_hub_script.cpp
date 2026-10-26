@@ -112,6 +112,10 @@ SlaiRumbleHubScript parse_slai_rumble_hub(const json::JsonValue &document) {
     const auto &refusals = required(document, "refusals");
     script.short_of_money = strings(required(refusals, "money"));
     script.not_ready = strings(required(refusals, "not_ready"));
+    script.wrong_maker = strings(required(refusals, "maker"));
+    script.wrong_legs = strings(required(refusals, "legs"));
+    script.special_unmet = strings(required(refusals, "special"));
+    script.no_rental = strings(required(refusals, "rental"));
     script.battle = required(document, "battle").string();
     if (script.row_step[1] <= 0 || script.badges.empty()) {
       throw std::runtime_error("needs a row step above 0 and badges");

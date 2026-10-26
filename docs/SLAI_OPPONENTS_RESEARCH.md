@@ -193,7 +193,10 @@ The conditions per row:
 - Row 2 applies while 0x24 is set and 0x25 is clear.
 - Rows 3–5 apply while 0x25 is clear.
 
-What these story flags mean is unknown.
+The test (0x204E50) reads the 256 event flags at save + 0x426F, the same
+field the S.L.A.I. story's scripts set, so the port takes them from its
+story save (`QuestSave::slai_story`). Which story events set flags 0x16,
+0x24 and 0x25 is still unknown.
 
 ### Candidate lists (`f_2225A0`, constructor arguments 0, 0)
 
@@ -355,8 +358,8 @@ The line-up is the player plus Masami.
   non-zero `f_2225A0` constructor arguments are untraced.
 - **Special slots and modes.** Match 0x7E's special slot rules, the
   save+0x4768 == 3 mode and the `f_20CB00` debug path are untraced.
-- **Story flags.** What flags 0x16, 0x24 and 0x25 mean, which gate the
-  substitutions.
+- **Story flags.** Which story events set flags 0x16, 0x24 and 0x25,
+  which gate the substitutions (the field itself is save + 0x426F).
 - **Runtime confirmation.** Nothing has been checked in PCSX2 yet. The lists
   and draws are static mirrors.
 

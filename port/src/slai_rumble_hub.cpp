@@ -3,7 +3,6 @@
 #include "phantomcrash/slai_rumble_hub.hpp"
 
 #include "phantomcrash/money.hpp"
-#include "phantomcrash/rumbling_rules.hpp"
 #include "phantomcrash/shop_pointer.hpp"
 
 #include <algorithm>
@@ -12,25 +11,44 @@
 namespace phantomcrash {
 namespace {
 
-// Every "{entry}" in the lines replaced by the money the rumble needs.
-std::vector<std::string> filled(std::vector<std::string> lines, const std::int64_t entry) {
-  const std::string key = "{entry}";
-  const std::string value = std::to_string(shown_ny(entry));
-  for (std::string &line : lines) {
-    for (auto at = line.find(key); at != std::string::npos; at = line.find(key, at)) {
-      line.replace(at, key.size(), value);
-      at += value.size();
+// Every key in the lines replaced by its value.
+std::vector<std::string> filled(std::vector<std::string> lines,
+                                const std::vector<std::pair<std::string, std::string>> &values) {
+  for (const auto &[key, value] : values) {
+    for (std::string &line : lines) {
+      for (auto at = line.find(key); at != std::string::npos; at = line.find(key, at)) {
+        line.replace(at, key.size(), value);
+        at += value.size();
+      }
     }
   }
   return lines;
 }
 
+const std::vector<std::string> &refusal(const SlaiRumbleHubScript &script, const SlaiEntry entry) {
+  switch (entry) {
+  case SlaiEntry::money:
+    return script.short_of_money;
+  case SlaiEntry::maker:
+    return script.wrong_maker;
+  case SlaiEntry::legs:
+    return script.wrong_legs;
+  case SlaiEntry::special:
+    return script.special_unmet;
+  case SlaiEntry::allowed:
+  case SlaiEntry::not_ready:
+    break;
+  }
+  return script.not_ready;
+}
+
 } // namespace
 
 SlaiRumbleHub::SlaiRumbleHub(SlaiRumbleHubScript script, const SlaiRumbleData &data,
-                             const QuestSave &quest, std::string back, MessageBoxStyle box)
-    : script_(std::move(script)), data_(data), quest_(quest), back_(std::move(back)),
-      fade_(script_.fade_in, script_.fade_out),
+                             const QuestSave &quest, SlaiRobot riding, const bool rentals,
+                             std::string back, MessageBoxStyle box)
+    : script_(std::move(script)), data_(data), quest_(quest), riding_(std::move(riding)),
+      rentals_(rentals), back_(std::move(back)), fade_(script_.fade_in, script_.fade_out),
       rows_repeat_(script_.repeat_delay, script_.repeat_interval), popup_(script_.info.growth),
       box_(std::move(box)) {
   for (const SlaiCityMatch &match : slai_day_matches(data_, quest_.day, quest_.slai_rumble)) {
@@ -133,18 +151,32 @@ void SlaiRumbleHub::handle_input(const double tick_seconds, InputFrame input) {
   }
 }
 
-// What the port's robot can answer of 0x259a40's check: the money held and
-// a ridden robot that is ready. Its maker, legs and weapons wait for the
-// S.L.A.I. robot adapter (SLAI_RUMBLE_PLAN.md, Status).
+// 0x259a40 over the ridden robot. A rental-only rumble refuses it (the
+// original's case 0), so there the port lends a robot instead (a port
+// path; S.L.A.I.'s rentals are untraced) once the money is held.
 void SlaiRumbleHub::enter() {
   const SlaiMatch *match = slai_match(data_.table, selected()->match);
   const SlaiRegulation *rule = slai_regulation(data_.table, match->regulation);
   const std::int64_t requirement = slai_entry_requirement(data_.world, *rule);
-  const bool money = quest_.money >= requirement;
-  if (!money || !riding_ready(quest_)) {
+  const std::vector<std::string> *lines = nullptr;
+  if (rule->special == SlaiSpecialRule::rental_only) {
+    lines = quest_.money < requirement ? &script_.short_of_money
+            : !rentals_                ? &script_.no_rental
+                                       : nullptr;
+  } else if (const SlaiEntry entry = slai_entry_check(data_.world, *rule, quest_.money, riding_);
+             entry != SlaiEntry::allowed) {
+    lines = &refusal(script_, entry);
+  }
+  if (lines != nullptr) {
+    const auto &makers = data_.world.makers;
+    const std::string maker = rule->maker >= 0 && rule->maker < static_cast<int>(makers.size())
+                                  ? makers[static_cast<std::size_t>(rule->maker)]
+                                  : std::string{};
     sounds_.play(script_.refuse_sound);
     box_.open(MessageBox::Kind::notice,
-              filled(money ? script_.not_ready : script_.short_of_money, requirement));
+              filled(*lines, {{"{entry}", std::to_string(shown_ny(requirement))},
+                              {"{rumble}", rule->name},
+                              {"{maker}", maker}}));
     sounds_.play(box_.style().open_sound);
     return;
   }

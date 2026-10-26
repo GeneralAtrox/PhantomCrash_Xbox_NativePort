@@ -3,7 +3,7 @@
 import struct
 
 from phantomcrash_research.slai.opponent_table import (AIM_KIND, EMBLEM_NONE, WEAPON_CLASS,
-                                                       _check, _robot_record)
+                                                       _check, _robot_record, part_facts)
 
 
 def part(port_part, level=1):
@@ -47,3 +47,16 @@ def test_the_check_carries_what_the_opponent_check_reads():
     check = _check(Rules(), None, raw)
     assert check == {"maker": 3, "leg_type": 7, "arms": [{"class": 2, "aim": 9}, None],
                      "shoulders": [None, {"class": 15, "aim": 9}], "option_points": 0, "cpu": 1}
+
+
+def test_part_facts_answer_the_entry_check_by_port_part():
+    registration = {"parts": [
+        {"part": 77, "category": "shoulder", "source_record": 4},
+        {"part": 76, "category": "arm", "source_record": 0},
+        {"part": 43, "category": "leg", "source_record": 0},
+        {"part": 16, "category": "body", "source_record": 0},
+        {"part": None, "category": "body", "source_record": 1}]}
+    assert part_facts(Rules(), registration) == {
+        "bodies": [{"part": 16, "maker": 3}], "legs": [{"part": 43, "leg_type": 7}],
+        "arm_weapons": [{"part": 76, "class": 2, "aim": 9}],
+        "shoulder_weapons": [{"part": 77, "class": 15, "aim": 9}]}

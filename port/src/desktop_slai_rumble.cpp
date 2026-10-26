@@ -30,9 +30,10 @@ SlaiRumbleScreen::SlaiRumbleScreen(TextureCache &textures, const GlyphFont &font
                                    SlaiRumbleHubScript script, const SlaiRumbleData &data,
                                    const std::string &from, const std::string &back,
                                    const FrameStyle &frame, const std::vector<MusicCredit> &credits,
-                                   const QuestSave &quest, const MessageBoxStyle &box)
+                                   const QuestSave &quest, const MessageBoxStyle &box,
+                                   SlaiRobot riding, const bool rentals)
     : TownScreen(textures, font, script, from, frame, credits, quest), money_font_(frame.hud.font),
-      hub_(std::move(script), data, quest, back, box) {
+      hub_(std::move(script), data, quest, std::move(riding), rentals, back, box) {
   static_cast<void>(textures_.get(hub_.script().cell_image));
 }
 

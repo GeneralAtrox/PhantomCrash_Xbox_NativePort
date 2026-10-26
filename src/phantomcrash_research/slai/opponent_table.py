@@ -11,6 +11,10 @@ line-up (f_223420) itself; opponent_rules.py mirrors the same code.
 Not decoded, so kept as source values and left to the port's data
 (data/world/slai_rumble.json "opponents"): the CPU row (an AI chip), the
 behaviour value, the 16-region paint and the emblem.
+
+part_facts gives the "parts" block: what the player's entry check (f_259A40)
+reads of each imported part, by the port's part id, so a robot fitted with
+them answers it as S.L.A.I.'s own would.
 """
 
 import struct
@@ -57,6 +61,30 @@ def _check(rules, program, raw):
     return {"maker": rules.body_maker(raw), "leg_type": rules.leg_type(raw),
             "arms": weapons[:2], "shoulders": weapons[2:], "option_points": points,
             "cpu": raw["cpu"]}
+
+
+def part_facts(rules, registration):
+    """The "parts" block: each imported body's maker, legs' leg type and
+    weapon's class and aim kind, by port part id (native_parts.json)."""
+    facts = {"bodies": [], "legs": [], "arm_weapons": [], "shoulder_weapons": []}
+    for entry in registration["parts"]:
+        record, part, category = entry["source_record"], entry["part"], entry["category"]
+        if part is None or record is None:
+            continue
+        if category == "body":
+            facts["bodies"].append({"part": part,
+                                    "maker": rules.body_maker({"body": {"id": record}})})
+        elif category == "leg":
+            facts["legs"].append({"part": part,
+                                  "leg_type": rules.leg_type({"legs": {"id": record}})})
+        elif category in ("arm", "shoulder"):
+            raw = rules._weapon(0 if category == "arm" else 2, record)
+            facts[category + "_weapons"].append(
+                {"part": part, "class": struct.unpack_from("<h", raw, WEAPON_CLASS)[0],
+                 "aim": raw[AIM_KIND]})
+    for rows in facts.values():
+        rows.sort(key=lambda row: row["part"])
+    return facts
 
 
 def _opponent(catalogue, opponent_id):

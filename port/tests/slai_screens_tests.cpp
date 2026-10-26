@@ -4,6 +4,7 @@
 #include "test_support.hpp"
 
 #include "phantomcrash/data_roots.hpp"
+#include "phantomcrash/rumbling_rules.hpp"
 #include "phantomcrash/schedule.hpp"
 #include "phantomcrash/slai_rumble_hub.hpp"
 
@@ -79,10 +80,31 @@ Schedule schedule_with(const SlaiRumbleData *slai, const QuestSave &quest = {}) 
                   slai);
 }
 
-SlaiRumbleHub hub_with(const SlaiRumbleData &data, const QuestSave &quest) {
+// The ridden robot as slai_entry_robot reads it: ready when one is ridden,
+// on legs, with no maker of S.L.A.I.'s.
+SlaiRobot robot_of(const QuestSave &quest) {
+  SlaiRobot robot;
+  robot.ready = riding_ready(quest);
+  robot.leg_type = 0;
+  return robot;
+}
+
+SlaiRumbleHub hub_with(const SlaiRumbleData &data, const QuestSave &quest,
+                       const std::optional<SlaiRobot> &robot = std::nullopt,
+                       const bool rentals = false) {
   const DataRoots roots = shipped();
   return SlaiRumbleHub(parse_slai_rumble_hub(roots.document("ui/slai_rumble.json")), data, quest,
-                       "club_wired", parse_message_box(roots.document("ui/message_box.json")));
+                       robot.value_or(robot_of(quest)), rentals, "club_wired",
+                       parse_message_box(roots.document("ui/message_box.json")));
+}
+
+// Confirms the first row's rumble twice: its INFORMATION, then entry.
+template <class Hub> bool try_first(Hub &hub) {
+  settle(hub);
+  tap(hub, hub.script().confirm_buttons);
+  settle(hub);
+  tap(hub, hub.script().confirm_buttons);
+  return hub.entered().has_value();
 }
 
 QuestSave riding_quest(const std::int64_t money) {
@@ -200,4 +222,41 @@ TEST_CASE("Rumble S.L.A.I. enters the rumble under the cursor and leaves for its
   settle(hub);
   CHECK(hub.done());
   CHECK(hub.next() == "slai_battle");
+}
+
+TEST_CASE("Rumble S.L.A.I. refuses a robot the regulation's maker or special rule shuts out") {
+  SlaiRumbleData data = hand_made();
+  SlaiRegulation &rule = data.table.regulations[24]; // New York's, the first row
+  rule.maker = 2;
+  const QuestSave quest = riding_quest(1'000'000);
+  SlaiRumbleHub other = hub_with(data, quest);
+  CHECK(!try_first(other));
+  CHECK(other.box().is_open());
+  SlaiRobot hartman = robot_of(quest);
+  hartman.maker = 2;
+  SlaiRumbleHub fitting = hub_with(data, quest, hartman);
+  CHECK(try_first(fitting));
+
+  rule.maker = slai_any_maker;
+  rule.special = SlaiSpecialRule::shoulder_weapons_only;
+  SlaiRobot armed = robot_of(quest);
+  armed.arms[0] = SlaiWeapon{};
+  SlaiRumbleHub refused = hub_with(data, quest, armed);
+  CHECK(!try_first(refused));
+  CHECK(refused.box().is_open());
+}
+
+TEST_CASE("a rental-only S.L.A.I. rumble lends a robot, given the money and a rental") {
+  SlaiRumbleData data = hand_made();
+  data.table.regulations[24].special = SlaiSpecialRule::rental_only;
+  QuestSave walking;
+  walking.money = 1'000'000; // no robot ridden
+  SlaiRumbleHub lent = hub_with(data, walking, std::nullopt, true);
+  CHECK(try_first(lent));
+  SlaiRumbleHub none = hub_with(data, walking, std::nullopt, false);
+  CHECK(!try_first(none));
+  CHECK(none.box().is_open());
+  walking.money = 0;
+  SlaiRumbleHub poor = hub_with(data, walking, std::nullopt, true);
+  CHECK(!try_first(poor));
 }

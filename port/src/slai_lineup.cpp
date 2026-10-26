@@ -41,13 +41,12 @@ SlaiRumbleRecord record_of(const SlaiRumbleSave &save, const int record) {
 }
 
 const SlaiOpponent *eligible(const SlaiRumbleData &data, const SlaiRegulation &regulation,
-                             const int id) {
+                             const int id, const std::vector<int> &flags) {
   if (id < 0) {
     return nullptr;
   }
   const SlaiOpponentTable &table = data.table.opponents;
-  const SlaiOpponent *opponent =
-      table.opponent(slai_substitute(table, id, data.world.opponents.story_flags));
+  const SlaiOpponent *opponent = table.opponent(slai_substitute(table, id, flags));
   return opponent != nullptr && slai_opponent_eligible(data.world, regulation, *opponent) ? opponent
                                                                                           : nullptr;
 }
@@ -103,8 +102,10 @@ bool slai_leader_ready(const SlaiRumbleData &data, const int regulation,
 }
 
 SlaiCandidates slai_candidates(const SlaiRumbleData &data, const SlaiMatch &match,
-                               const SlaiRumbleSave &save) {
+                               const SlaiRumbleSave &save, const std::vector<int> &story_flags) {
   SlaiCandidates found;
+  std::vector<int> flags = data.world.opponents.story_flags;
+  flags.insert(flags.end(), story_flags.begin(), story_flags.end());
   const SlaiRegulation *regulation = slai_regulation(data.table, match.regulation);
   if (regulation == nullptr) {
     return found;
@@ -123,7 +124,7 @@ SlaiCandidates slai_candidates(const SlaiRumbleData &data, const SlaiMatch &matc
       found.status = slai_record_status(data.world, match.regulation, record);
     }
     for (std::size_t member = 0; member < roster->members.size(); ++member) {
-      const SlaiOpponent *opponent = eligible(data, *regulation, roster->members[member]);
+      const SlaiOpponent *opponent = eligible(data, *regulation, roster->members[member], flags);
       if (opponent == nullptr) {
         continue;
       }
@@ -137,7 +138,7 @@ SlaiCandidates slai_candidates(const SlaiRumbleData &data, const SlaiMatch &matc
     if (second != 0) {
       continue;
     }
-    const SlaiOpponent *leader = eligible(data, *regulation, roster->leader);
+    const SlaiOpponent *leader = eligible(data, *regulation, roster->leader, flags);
     if (leader != nullptr && slai_leader_ready(data, match.regulation, found.status)) {
       found[record.cleared ? SlaiList::beaten : SlaiList::leader].push_back(
           {leader->id, id, slai_leader_flag});
@@ -147,7 +148,7 @@ SlaiCandidates slai_candidates(const SlaiRumbleData &data, const SlaiMatch &matc
                                ? &table.rosters[static_cast<std::size_t>(match.pool)]
                                : nullptr;
   for (std::size_t member = 0; pool != nullptr && member < pool->members.size(); ++member) {
-    if (const SlaiOpponent *opponent = eligible(data, *regulation, pool->members[member])) {
+    if (const SlaiOpponent *opponent = eligible(data, *regulation, pool->members[member], flags)) {
       found[SlaiList::pool].push_back({opponent->id, match.pool, static_cast<int>(member) + 1});
     }
   }
@@ -155,8 +156,8 @@ SlaiCandidates slai_candidates(const SlaiRumbleData &data, const SlaiMatch &matc
 }
 
 SlaiLineupDraw::SlaiLineupDraw(const SlaiRumbleData &data, const SlaiMatch &match,
-                               SlaiRumbleSave save)
-    : data_(data), match_(match), save_(std::move(save)) {
+                               SlaiRumbleSave save, std::vector<int> story_flags)
+    : data_(data), match_(match), save_(std::move(save)), story_flags_(std::move(story_flags)) {
   const auto [low, high] = slai_match_robots(data.world, match);
   robots_min_ = low;
   // robots_max counts the player's robot (0x222070).
@@ -180,7 +181,7 @@ std::optional<SlaiDrawn> SlaiLineupDraw::draw(const int place,
     return std::nullopt;
   }
   // 0x223420 takes each drawn entry out of its list.
-  SlaiCandidates found = slai_candidates(data_, match_, save_);
+  SlaiCandidates found = slai_candidates(data_, match_, save_, story_flags_);
   for (auto &list : found.lists) {
     std::erase_if(list, [&](const SlaiCandidate &entry) {
       return std::ranges::any_of(out_, [&](const std::optional<SlaiDrawn> &drawn) {

@@ -20,7 +20,8 @@ public:
   SlaiRumbleScreen(TextureCache &textures, const GlyphFont &font, SlaiRumbleHubScript script,
                    const SlaiRumbleData &data, const std::string &from, const std::string &back,
                    const FrameStyle &frame, const std::vector<MusicCredit> &credits,
-                   const QuestSave &quest, const MessageBoxStyle &box);
+                   const QuestSave &quest, const MessageBoxStyle &box, SlaiRobot riding,
+                   bool rentals);
 
   void tick(const InputFrame &input, double tick_seconds) override;
   void draw(const Viewport &viewport) override;

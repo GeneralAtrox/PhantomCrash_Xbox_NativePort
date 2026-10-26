@@ -8,6 +8,7 @@
 
 #include "phantomcrash/json.hpp"
 #include "phantomcrash/slai_opponent_table.hpp"
+#include "phantomcrash/slai_part_facts.hpp"
 #include "phantomcrash/slai_rota.hpp"
 
 #include <array>
@@ -102,16 +103,18 @@ struct SlaiRumbleTable {
   std::vector<std::array<int, 2>> finals_fallback; // by city (0x334a80)
   // The campaign's opponents; empty in a table converted before they were.
   SlaiOpponentTable opponents;
+  // What the entry check reads of the imported S.L.A.I. parts; empty as
+  // the opponents.
+  SlaiPartFacts parts;
 };
 
 // A city's arena: the imported stages (data/world/stages.json) its day and
-// night matches are fought on, and the lighting a night match uses when
-// the disc has no night scene for it (Las Vegas: LASVEGAS_NIGHT.MED).
+// night matches are fought on. The disc has no night scene for Las Vegas,
+// whose night matches the original fights on the day scene.
 struct SlaiRumbleCity {
   std::string name;
   std::string day_stage;
   std::string night_stage;
-  std::string night_lighting;
 };
 
 // The records the stage ladder counts (0x257410 to 0x2574e0), as ranges of
@@ -177,8 +180,8 @@ struct SlaiOpponentChip {
 struct SlaiOpponentRules {
   // 0x222a60 lets these body makers into any rumble (the drones').
   std::vector<int> always_eligible_makers{8, 9};
-  // The story flags set, which 0x256cc0's substitutions test; the port keeps
-  // no S.L.A.I. story, so by default none are.
+  // Story flags treated as set besides the save's (save + 0x426f), which
+  // 0x256cc0's substitutions test; none by default.
   std::vector<int> story_flags;
   // 0x222f70's unresolved inputs: the rumble manager's session check, and
   // regulation 30's counter.
@@ -212,6 +215,7 @@ struct SlaiRumbleWorld {
   SlaiRumbleBalance balance;
   SlaiBattleRules battle;
   SlaiOpponentRules opponents;
+  SlaiEntryRules entry;
   int start_city{};
 };
 

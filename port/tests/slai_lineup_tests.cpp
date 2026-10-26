@@ -149,3 +149,26 @@ TEST_CASE("the shipped S.L.A.I. world fields opponents as the original") {
   CHECK(rules.arrival_seconds > 0.0F);
   CHECK(!rules.pool_flags);
 }
+
+TEST_CASE("the save's story flags decide S.L.A.I.'s substitutions as the world's do") {
+  SlaiRumbleData data = installed();
+  const SlaiOpponentTable &table = data.table.opponents;
+  REQUIRE(!table.substitutions.empty());
+  // Row 0 stands in while flag 0x16 is clear (0x256cc0).
+  const SlaiSubstitution &first = table.substitutions[0];
+  REQUIRE(!first.ids.empty());
+  CHECK(slai_substitute(table, first.ids[0], {}) == first.replacement);
+  CHECK(slai_substitute(table, first.ids[0], {0x16}) == first.ids[0]);
+  const std::vector<int> story{0x16, 0x24, 0x25};
+  for (const int id : {0, 9, 42, 126, 130}) {
+    const SlaiMatch *match = slai_match(data.table, id);
+    REQUIRE(match != nullptr);
+    const SlaiCandidates by_save = slai_candidates(data, *match, {}, story);
+    data.world.opponents.story_flags = story;
+    const SlaiCandidates by_world = slai_candidates(data, *match, {});
+    data.world.opponents.story_flags.clear();
+    for (std::size_t list = 0; list < slai_lists; ++list) {
+      CHECK(by_save.lists[list] == by_world.lists[list]);
+    }
+  }
+}

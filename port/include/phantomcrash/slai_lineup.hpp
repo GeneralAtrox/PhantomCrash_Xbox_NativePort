@@ -59,8 +59,12 @@ struct SlaiCandidates {
 // 0x2225a0 (constructor arguments 0, 0): the match's record roster sorted
 // into unbeaten and beaten, its second record's into cameos (regulation 5
 // sorts those as its own), the leader once ready, and the pool roster.
+// `story_flags` are the story flags the save has set (save + 0x426f,
+// slai_story_flags_set), which the substitutions test along with the
+// world's.
 [[nodiscard]] SlaiCandidates slai_candidates(const SlaiRumbleData &data, const SlaiMatch &match,
-                                             const SlaiRumbleSave &save);
+                                             const SlaiRumbleSave &save,
+                                             const std::vector<int> &story_flags = {});
 
 // The draw's limits (0x223420).
 inline constexpr int slai_first_pool_place = 4; // places below draw the rosters
@@ -87,7 +91,8 @@ struct SlaiDrawn {
 // targets need it).
 class SlaiLineupDraw {
 public:
-  SlaiLineupDraw(const SlaiRumbleData &data, const SlaiMatch &match, SlaiRumbleSave save);
+  SlaiLineupDraw(const SlaiRumbleData &data, const SlaiMatch &match, SlaiRumbleSave save,
+                 std::vector<int> story_flags = {});
 
   // The opponent entering `place` (1..slai_battle_places), or none. `share`
   // stands for 0x249c50's rand() / 32768, in [0, 1).
@@ -105,6 +110,7 @@ private:
   const SlaiRumbleData &data_;
   const SlaiMatch &match_;
   SlaiRumbleSave save_;
+  std::vector<int> story_flags_;
   int robots_min_{};
   int opponents_max_{};
   std::array<std::optional<SlaiDrawn>, slai_battle_places + 1> out_{};

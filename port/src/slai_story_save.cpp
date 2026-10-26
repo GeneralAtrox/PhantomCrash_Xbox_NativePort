@@ -30,6 +30,16 @@ SlaiStorySave slai_story_from_json(const JsonValue &value) {
   return save;
 }
 
+std::vector<int> slai_story_flags_set(const SlaiStorySave &save) {
+  std::vector<int> set;
+  for (std::size_t flag = 0; flag < save.flags.size(); ++flag) {
+    if (save.flags[flag]) {
+      set.push_back(static_cast<int>(flag));
+    }
+  }
+  return set;
+}
+
 JsonValue slai_story_to_json(const SlaiStorySave &save) {
   JsonValue::Array flags;
   for (std::size_t flag = 0; flag < save.flags.size(); ++flag) {

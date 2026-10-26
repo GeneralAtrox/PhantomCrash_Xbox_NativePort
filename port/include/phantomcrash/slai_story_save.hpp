@@ -9,6 +9,7 @@
 
 #include <array>
 #include <cstddef>
+#include <vector>
 
 namespace phantomcrash {
 
@@ -22,6 +23,9 @@ struct SlaiStorySave {
 
   bool operator==(const SlaiStorySave &) const = default;
 };
+
+// The flags set, ascending (what 0x204e50 finds set).
+[[nodiscard]] std::vector<int> slai_story_flags_set(const SlaiStorySave &save);
 
 // Flags are written as the list of those set; out-of-range ones are dropped.
 [[nodiscard]] SlaiStorySave slai_story_from_json(const json::JsonValue &value);
