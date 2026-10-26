@@ -41,8 +41,23 @@ class ArmourBalanceTests(unittest.TestCase):
                                         {**SETTINGS, "enabled": False}), {})
         self.assertEqual(parts["bodies"][0]["armour"]["base"], 30000)
 
+    def test_sold_parts_are_the_reference_and_weight_scales_too(self):
+        flat = {"base": 0, "mid": 0, "top": 0, "knee": 0}
+        sold = {"base": 1000, "mid": 0, "top": 0, "knee": 0}
+        # An enemy body, priced 0, would pull the median down to 10000.
+        base = {"bodies": [part(10000, 10000, price=flat), part(10000, 10000, price=flat),
+                           part(20000, 20000, price=sold)]}
+        parts = {"bodies": [part(40000, 40000, slai_model="A")]}
+        parts["bodies"][0]["weight"] = {"base": 200, "mid": 0, "top": 0, "knee": 0}
+        settings = {**SETTINGS, "reference": "sold", "tables": {"bodies": ["armour", "weight"]}}
+        report = balance_armour(parts, base, settings)
+        self.assertEqual(report, {"bodies": {"armour": [0.5, 0.5], "weight": [0.5, 0.5]}})
+        self.assertEqual(value(parts["bodies"][0]["weight"], 0), 100)
+
     def test_the_shipped_rules_cover_bodies_and_legs(self):
-        self.assertEqual(rules()["tables"], {"bodies": ["armour"], "legs": ["armour"]})
+        self.assertEqual(rules()["reference"], "sold")
+        self.assertEqual(rules()["tables"], {"bodies": ["armour", "weight", "price"],
+                                             "legs": ["armour", "weight", "capacity", "price"]})
 
 
 if __name__ == "__main__":

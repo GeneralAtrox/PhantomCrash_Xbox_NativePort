@@ -73,6 +73,16 @@ def scale_curve(curve: dict, low: float, high: float, digits: int) -> dict:
     return out
 
 
+def reference(records: list, settings: dict) -> list:
+    """Phantom Crash's named records to measure against: with reference
+    "sold", only those priced at one of the levels, the parts its shops sell
+    (its enemies' own parts, named 敵, are priced 0)."""
+    named = [r for r in records if r.get("name")]
+    if settings.get("reference") != "sold":
+        return named
+    return [r for r in named if any(_scalar(r, "price", level) > 0 for level in settings["levels"])]
+
+
 def _has(record: dict, group: dict, settings: dict) -> bool:
     return any(metric(record, group, level, settings) > 0 for level in (0, LEVEL_MAX))
 
@@ -126,7 +136,7 @@ def balance_weapons(parts: dict, base_parts: dict, settings: dict | None = None)
         return report
     levels = settings["levels"]
     for table in TABLES:
-        native = [r for r in base_parts[table] if r.get("name")]
+        native = reference(base_parts[table], settings)
         imported = [r for r in parts[table] if r.get("slai_model")]
         table_report = report.setdefault(table, {})
         for name, group in settings["groups"].items():

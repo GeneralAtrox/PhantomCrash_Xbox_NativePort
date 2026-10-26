@@ -801,12 +801,45 @@ way (`src/phantomcrash_research/slai/armour_balance.py`, rules in
   blended between the levels, so each part keeps its rank among S.L.A.I.'s.
 - Each part records its factors in `slai_balance`; the pack's
   `slai/armour_balance.json` lists them by table.
-- Weight, capacity, price and movement stay as registered. Bodies still
-  weigh 1.4 to 2.0 times Phantom Crash's at the median; leg capacity is
-  already within 12 per cent.
+- Movement stays as registered. Weight, capacity and price were added later
+  (below), and the factors above were measured against every Phantom Crash
+  part, enemies' included.
 - Registration builds each part from its source record each run, so
   re-registering applies the pass again cleanly. Setting `enabled` to false
   in the rules keeps S.L.A.I.'s own armour.
+
+### Sold parts as the reference; body and leg weight, capacity and price (2026-10-26)
+
+Phantom Crash's part tables also hold its enemies' own parts (names with 敵,
+price 0 at every level): 34 of 76 arm weapons, 31 of 69 shoulder weapons, 9 of
+16 bodies and 21 of 43 legs. Their curves are flat or fall with level, so
+measuring against them skewed both passes: sold legs' median armour is 2,750
+against 2,000 for all legs, and per weapon kind the sold weapons' damage differs
+from all weapons' by 0.56 to 2.8 times. An earlier reading that S.L.A.I.
+weapons cost 2.5 to 7.9 times Phantom Crash's came from the same zero prices;
+per kind, the price match was already exact.
+
+Both rule files now set `reference` to `sold`: only Phantom Crash parts with a
+price at level 0 or 99, the parts its shops sell, are measured. The body and
+legs pass also scales weight, capacity and price. Against sold parts, S.L.A.I.
+bodies weighed 1.4 times as much, legs 1.4 times as much and carried 1.7
+times as much, and both cost ten times as much at level 0 and twice as much at
+99. A S.L.A.I. robot's spare load (capacity less body and legs) was about
+twice Phantom Crash's. Factors after the change:
+
+| Table | Armour | Weight | Capacity | Price |
+|---|---|---|---|---|
+| Bodies | 0.59, 1.01 | 0.71, 0.74 | | 0.10, 0.53 |
+| Legs | 0.61, 0.71 | 0.73, 0.69 | 0.58, 0.56 | 0.10, 0.48 |
+
+Every median now meets Phantom Crash's sold parts at both levels. Weight and
+capacity scale by different factors, so a S.L.A.I. loadout's own load ratio
+changes: the Fill Hangars HARTMAN-IP1 starter on its first legs weighed 1,131
+against 1,074. None of Phantom Crash's 1,190 starters is overloaded (the
+heaviest is at 0.98), so the S.L.A.I. starters (`cheat_robots.py`) now stand
+on the family's first legs that carry the body and weapons at level 0, or the
+legs that come closest. All ten carry their load; HARTMAN-IP1 takes S2L05H
+(1,241 against 1,325).
 
 ### Drone weapon names (2026-10-26)
 

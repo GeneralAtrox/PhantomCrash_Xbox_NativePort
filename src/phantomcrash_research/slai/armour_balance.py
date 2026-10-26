@@ -1,8 +1,8 @@
-"""Scale the imported S.L.A.I. bodies' and legs' armour to Phantom Crash's
-(armour_balance.json).
+"""Scale the imported S.L.A.I. bodies' and legs' armour, weight, capacity and
+price to Phantom Crash's (armour_balance.json).
 
-Per table, the ratio of the two games' median armour at each reference level
-scales every imported part's armour curve, as weapon_balance.py does for the
+Per table and field, the ratio of the two games' median at each reference
+level scales every imported part's curve, as weapon_balance.py does for the
 weapons. This is a port adaptation, not recovered S.L.A.I. behaviour; the
 source values remain in source_stats.json.
 """
@@ -13,7 +13,7 @@ import json
 import statistics
 from pathlib import Path
 
-from .weapon_balance import scale_curve, value
+from .weapon_balance import reference, scale_curve, value
 
 
 def rules(path: Path | None = None) -> dict:
@@ -49,7 +49,7 @@ def balance_armour(parts: dict, base_parts: dict, settings: dict | None = None) 
         return report
     levels = settings["levels"]
     for table, fields in settings["tables"].items():
-        native = [r for r in base_parts[table] if r.get("name")]
+        native = reference(base_parts[table], settings)
         imported = [r for r in parts[table] if r.get("slai_model")]
         for field in fields:
             pair = factors(native, imported, field, levels)

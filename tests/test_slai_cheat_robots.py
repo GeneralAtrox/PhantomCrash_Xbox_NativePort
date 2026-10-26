@@ -56,3 +56,22 @@ def test_repeated_registration_updates_the_existing_records_instead_of_duplicati
     assert len(again['robots']) == 4
     assert again['robots'][1]['name'] == 'SLAI Revised'
     assert cheats['hangar_robots'] == [0, 1, 2, 3]
+
+
+def test_the_first_legs_that_carry_the_robot_are_chosen():
+    garage, cheats, registered, parts = fixture()
+
+    def curve(base):
+        return {'base': base, 'mid': 0, 'top': 0, 'knee': 0}
+
+    parts['bodies'][1]['weight'] = curve(500)
+    parts['legs'] = [{}, {'weight': curve(300), 'capacity': curve(900)},
+                     {'weight': curve(300), 'capacity': curve(1000)}]
+    parts['arm_weapons'] = [{}, {'weight': curve(100)}, {'weight': curve(100)}]
+    # Body and arms weigh 700: legs 1 carry 600 of it, legs 2 carry 700.
+    garage, _, _ = add_cheat_robots(garage, cheats, registered, parts)
+    assert garage['robots'][1]['parts']['legs']['id'] == 2
+    # With neither enough, the legs that come closest.
+    parts['legs'][2]['capacity'] = curve(800)
+    garage, _, _ = add_cheat_robots(garage, cheats, registered, parts)
+    assert garage['robots'][1]['parts']['legs']['id'] == 1

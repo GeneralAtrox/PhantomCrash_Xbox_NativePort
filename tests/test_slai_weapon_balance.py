@@ -91,8 +91,18 @@ class WeaponBalanceTests(unittest.TestCase):
         balance_weapons(parts, base, SETTINGS)
         self.assertEqual(parts, once)
 
+    def test_the_sold_reference_leaves_out_the_enemies_weapons(self):
+        # Two enemy weapons (priced 0) would make the median 100 a second.
+        base = {"arm_weapons": [weapon(0, 100, price=0), weapon(0, 100, price=0), weapon(0, 300)],
+                "shoulder_weapons": []}
+        parts = {"arm_weapons": [weapon(0, 600, slai_model="A")], "shoulder_weapons": []}
+        report = balance_weapons(parts, base, {**SETTINGS, "reference": "sold"})
+        self.assertEqual(report["arm_weapons"]["damage"]["0"], [0.5, 0.5])
+        self.assertEqual(parts["arm_weapons"][0]["damage"]["base"], 300)
+
     def test_the_shipped_rules_read(self):
         shipped = rules()
+        self.assertEqual(shipped["reference"], "sold")
         self.assertTrue(shipped["enabled"])
         self.assertTrue(shipped["groups"]["damage"]["cap_to_strongest"])
         self.assertNotIn("cap_to_strongest", shipped["groups"]["price"])
