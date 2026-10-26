@@ -73,13 +73,17 @@ def _collision(disc, files) -> dict:
                 batch = material.batch
                 points = np.array([transform(world, p) for p in batch.positions]) * SCALE
                 for a, b, c in batch.triangles:
-                    tri = points[[a, b, c]]
+                    # The source strips are clockwise after axis conversion;
+                    # stored counter-clockwise, as Phantom Crash's collision
+                    # is, a standing surface faces up. Stored clockwise, the
+                    # port found no ground under any S.L.A.I. floor and held
+                    # a robot landing every tick, unable to jump.
+                    tri = points[[a, c, b]]
                     normal = np.cross(tri[1] - tri[0], tri[2] - tri[0])
                     length = np.linalg.norm(normal)
                     if length < 1e-6:
                         continue
-                    # The source strips are clockwise after axis conversion.
-                    normal = -normal / length
+                    normal = normal / length
                     record = {"points": tri.tolist(), "surface": 0}
                     (floor if normal[1] > 0.5 else walls).append(record)
     collision = {"walls": walls, "floor": floor,

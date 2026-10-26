@@ -2,11 +2,15 @@
 
 import struct
 import unittest
+from types import SimpleNamespace
+from unittest import mock
 
 import numpy as np
 
 from phantomcrash_research.slai.stage_routes import read_route, route_file
 from phantomcrash_research.slai.stage_spawns import route_spawns
+from phantomcrash_research.slai import stages
+from phantomcrash_research.slai.pod import Batch, Material, Node
 from phantomcrash_research.slai.stages import move_lids
 
 
@@ -79,6 +83,22 @@ def _quad(low, high, y):
     (x0, z0), (x1, z1) = low, high
     return [{"points": [[x0, y, z0], [x1, y, z1], [x1, y, z0]], "surface": 0},
             {"points": [[x0, y, z0], [x0, y, z1], [x1, y, z1]], "surface": 0}]
+
+
+class CollisionWindingTests(unittest.TestCase):
+    def test_a_standing_surface_faces_up_as_phantom_crashs_do(self):
+        # A source floor triangle, clockwise once y is turned up.
+        batch = Batch([(0, 0, 0), (10, 0, 0), (0, 0, 10)], [(0, -1, 0)] * 3, [(1, 1, 1, 1)] * 3,
+                      [(0, 0)] * 3, [(0, 1, 2)])
+        nodes = [Node(-1, (1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
+                      [Material(flags=0, colour=(1, 1, 1), batch=batch)])]
+        disc = SimpleNamespace(read=lambda file: b"")
+        file = SimpleNamespace(name="FLOOR.PO2", package=0)
+        with mock.patch.object(stages, "read_pod", return_value=nodes):
+            collision = stages._collision(disc, [file])
+        self.assertEqual(len(collision["floor"]), 1)
+        a, b, c = np.array(collision["floor"][0]["points"], dtype=float)
+        self.assertGreater(np.cross(b - a, c - a)[1], 0)
 
 
 class ArenaLidTests(unittest.TestCase):

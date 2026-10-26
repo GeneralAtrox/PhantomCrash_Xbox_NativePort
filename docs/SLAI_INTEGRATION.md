@@ -881,6 +881,27 @@ rows (0x382390) were checked: only drones carry them.
   sticker shows on the back of the hull and reads correctly.
 - Installed packs must be re-registered for `emblem_node`.
 
+### Stage collision winding (2026-10-26)
+
+A jump on a S.L.A.I. stage only crouched: the robot never left the ground,
+and it walked slowly. Every S.L.A.I. stage stored its collision triangles in
+the source's order, which is clockwise once y is turned up, so all 534 New
+York floor triangles faced down and its ceilings faced up (Phantom Crash's,
+such as `choco_col`, face the other way). The port's ground test
+(`StageCollision::ground_height`) takes only upward-facing triangles, so the
+mover found no ground (-1000) under the street at 1.2. Each tick it "walked
+off an edge" into its jump state, and the battle's floor snap
+(`floor_under`, which ignores facing) landed it again, restarting the
+quarter-second landing that blocks a jump and brakes the walk.
+
+`stages.py` `_collision` now stores each triangle counter-clockwise, so
+standing surfaces face up; `move_lids` still turns an arena lid into a
+downward-facing ceiling. After re-registering, all fifteen S.L.A.I.
+collisions have every floor facing up and every ceiling down. A jump in the
+New York rumble rises and lands, the behind camera following it up and
+looking down, and the stand-in drones walk 186 of the stage's 244 route
+segments, where before they could walk none of it.
+
 ## Commands and verification
 
 Build the standard port with `pwsh -File scripts/build-port.ps1`. Generate
