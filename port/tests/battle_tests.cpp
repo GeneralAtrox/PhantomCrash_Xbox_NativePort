@@ -261,6 +261,25 @@ TEST_CASE("a robot placed a little under the ground stands on it") {
   CHECK(battle.player().mover.grounded());
 }
 
+TEST_CASE("a robot under a walkway stays on the street") {
+  // Imported stages stack floors; the walkway's triangles come first.
+  Battle battle(test_settings(), square_path());
+  battle.set_stage(parse_stage_collision(json::parse(R"({
+    "walls": [],
+    "floor": [
+      {"points": [[-5,20,-50],[5,20,50],[5,20,-50]], "surface": 9},
+      {"points": [[-5,20,-50],[-5,20,50],[5,20,50]], "surface": 9},
+      {"points": [[-50,0,-50],[50,0,50],[50,0,-50]], "surface": 9},
+      {"points": [[-50,0,-50],[-50,0,50],[50,0,50]], "surface": 9}
+    ]
+  })")));
+  battle.add_robot("player", 0, {0.0F, 0.0F, 10.0F}, 0.0F, {}, 100.0F);
+  for (int i = 0; i < 30; ++i) {
+    battle.tick({}, {}, tick);
+  }
+  CHECK(std::abs(battle.player().mover.position().y) < 0.01F);
+}
+
 TEST_CASE("the shown armour drains after a hit and flashes as it fills") {
   ShownArmour shown;
   shown.tick(1000.0F, 1000.0F, tick);

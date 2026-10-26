@@ -5,6 +5,7 @@
 
 #include <array>
 #include <cstdint>
+#include <limits>
 #include <memory>
 #include <span>
 #include <optional>
@@ -78,8 +79,10 @@ public:
                                     int *surface = nullptr) const;
   // The floor triangles' height under x, z however far above, or no_ground
   // (0x053337: the first of the cell's floor triangles over the point; no
-  // stage stacks them).
-  [[nodiscard]] float floor_under(float x, float z) const;
+  // Phantom Crash stage stacks them). Imported stages do (streets under
+  // walkways): the highest at or below `below` (a port reading).
+  [[nodiscard]] float floor_under(float x, float z,
+                                  float below = std::numeric_limits<float>::infinity()) const;
   // A point over stage ground, inside the force-field outline and below
   // its ceiling. Without a force field, uses the ground footprint.
   [[nodiscard]] bool in_play_area(Vec3 at) const;

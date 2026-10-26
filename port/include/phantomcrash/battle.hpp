@@ -139,6 +139,12 @@ public:
   void set_combat(int index, const CombatStats &combat);
   // The stage's walls and floor in place of the settings' box arena.
   void set_stage(StageCollision stage);
+  // Replaces the route drones walk (a stage without one: spawn_route.hpp);
+  // before any drone is added.
+  void set_path(EnemyPath path);
+  [[nodiscard]] const EnemyPath &path() const noexcept {
+    return path_;
+  }
   [[nodiscard]] const StageCollision &stage() const noexcept {
     return stage_;
   }
@@ -270,6 +276,8 @@ private:
   [[nodiscard]] int find_lock(const Combatant &robot, const WeaponTuning &weapon, std::size_t slot,
                               int held = -1) const;
   [[nodiscard]] RobotControl drone_control(Combatant &drone, float seconds);
+  // Whether a drone `distance` from its path target holds jump to get unstuck.
+  bool unstick(Combatant &drone, Vec3 target, float distance, float seconds);
   [[nodiscard]] RobotControl ai_control(Combatant &drone, float seconds);
   void ai_sense(Combatant &drone, float seconds);
   void ai_move(Combatant &drone, float seconds);

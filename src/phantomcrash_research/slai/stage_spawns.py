@@ -58,6 +58,69 @@ def _wall_distance(point, triangles):
     return float(np.sqrt(distance.min()))
 
 
+def _clear(point, wall_triangles, body_height, body_radius, camera_behind, camera_height):
+    """A body standing at `point` clears the walls, and so does a chase
+    camera behind it whichever way it faces."""
+    if any(_wall_distance(point+[0, h, 0], wall_triangles) < body_radius
+           for h in (body_radius, body_height-body_radius)):
+        return False
+    eyes = point+[0, camera_height, 0]
+    for direction in ([1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1]):
+        for fraction in (1/3, 2/3, 1):
+            camera = eyes+np.array(direction)*camera_behind*fraction
+            if _wall_distance(camera, wall_triangles) < body_radius:
+                return False
+    return True
+
+
+def _floor_at(point, triangles, rise):
+    """The floor under `point` nearest its height, within `rise`, or None."""
+    xz = triangles[:, :, [0, 2]]
+    edges = (xz[:, 1:]-xz[:, :1]).transpose(0, 2, 1)
+    valid = abs(np.linalg.det(edges)) > 1e-8
+    uv = np.einsum("nij,nj->ni", np.linalg.inv(edges[valid]), np.array(point)[[0, 2]]-xz[valid, 0])
+    covered = (uv.min(axis=1) >= -1e-5) & (uv.sum(axis=1) <= 1.00001)
+    corners = triangles[valid]
+    heights = corners[:, 0, 1] + (uv*(corners[:, 1:, 1]-corners[:, :1, 1])).sum(axis=1)
+    heights = heights[covered]
+    if not len(heights):
+        return None
+    nearest = heights[np.argmin(abs(heights-point[1]))]
+    return float(nearest) if abs(nearest-point[1]) <= rise else None
+
+
+def route_spawns(route, floor, walls=(), *, body_height=4.4, body_radius=1.5,
+                 camera_behind=6.15, camera_height=2.0, rise=2.0, count=4):
+    """Four starts on the stage's own route, so they lie in the arena its
+    robots walk, as far from where they come in (kind 0) and from each other
+    as the clearance tests allow; the first is the player's. Still adapter
+    starts: S.L.A.I.'s own start table is not recovered."""
+    triangles = np.array([t["points"] for t in floor])
+    wall_triangles = np.array([t["points"] for t in walls]) if len(walls) else np.zeros((0, 3, 3))
+    points = {tuple(p) for s in route["segments"] for p in s["points"]}
+    remaining = np.array(sorted(points))
+    entries = np.array([s["points"][0] for s in route["segments"] if s["kind"] == 0]).reshape(-1, 3)
+    anchors = entries if len(entries) else remaining.mean(axis=0, keepdims=True)
+    starts = []
+    while len(starts) < count and len(remaining):
+        others = np.array(starts) if starts else anchors
+        flat = remaining[:, None, [0, 2]] - others[None, :, [0, 2]]
+        pick = int(np.argmax(np.sqrt((flat*flat).sum(axis=2)).min(axis=1)))
+        point = remaining[pick].copy()
+        remaining = np.delete(remaining, pick, axis=0)
+        ground = _floor_at(point, triangles, rise)
+        if ground is None:
+            continue
+        point[1] = ground+.05
+        if not len(wall_triangles) or _clear(point, wall_triangles, body_height, body_radius,
+                                              camera_behind, camera_height):
+            starts.append(point)
+    if not starts:
+        raise ValueError("No route point has native body/camera clearance")
+    starts = [[round(float(v), 4) for v in p] for p in starts]
+    return starts[0], starts
+
+
 def ground_spawns(floor, walls=(), *, body_height=4.4, body_radius=1.5,
                   camera_behind=6.15, camera_height=2.0):
     """Prefer open standing surfaces over enclosed rooms and narrow corners.
@@ -101,20 +164,7 @@ def ground_spawns(floor, walls=(), *, body_height=4.4, body_radius=1.5,
             roofs = covered & (heights > ground+.1) & ~enclosure[valid]
             if roofs.any():
                 continue
-            if any(_wall_distance(point+[0, h, 0], wall_triangles) < body_radius
-                   for h in (body_radius, body_height-body_radius)):
-                continue
-            eyes = point+[0, camera_height, 0]
-            camera_clear = True
-            for direction in ([1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1]):
-                for fraction in (1/3, 2/3, 1):
-                    camera = eyes+np.array(direction)*camera_behind*fraction
-                    if _wall_distance(camera, wall_triangles) < body_radius:
-                        camera_clear = False
-                        break
-                if not camera_clear:
-                    break
-            if camera_clear:
+            if _clear(point, wall_triangles, body_height, body_radius, camera_behind, camera_height):
                 accepted.append(point.tolist())
     if not accepted:
         raise ValueError("No source standing surface has native body/camera clearance")

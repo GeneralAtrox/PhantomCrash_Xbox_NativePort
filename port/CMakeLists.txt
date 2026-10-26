@@ -100,6 +100,7 @@ add_library(phantomcrash_core
   src/nav_graph_build.cpp
   src/nav_tuning.cpp
   src/nav_graph_search.cpp
+  src/spawn_route.cpp
   src/stage_collision.cpp
   src/stage_fixes.cpp
     src/stage_play_area.cpp
@@ -376,6 +377,7 @@ if(BUILD_TESTING)
     tests/robot_wheels_tests.cpp
     tests/stage_collision_tests.cpp
     tests/nav_graph_tests.cpp
+    tests/spawn_route_tests.cpp
     tests/nav_recovery_tests.cpp
     tests/stage_doors_tests.cpp
     tests/stage_objects_tests.cpp

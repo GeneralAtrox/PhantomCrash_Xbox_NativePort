@@ -10,6 +10,7 @@
 #include <SDL3/SDL.h>
 
 #include <algorithm>
+#include <exception>
 
 namespace phantomcrash {
 namespace {
@@ -20,12 +21,26 @@ int slai_opponents(const SlaiRumbleWorld &world, const SlaiMatch &match) {
   return std::max(slai_match_robots(world, match).second - 1, 1);
 }
 
+// The live RUMBLING's navigation grid settings (rumbling.json live.ai),
+// so S.L.A.I.'s stages are walked as Phantom Crash's are.
+NavTuning slai_route_grid(const DataRoots &roots) {
+  try {
+    return parse_rumbling_live(roots.document("world/rumbling.json")).ai.navigation;
+  } catch (const std::exception &error) {
+    SDL_Log("S.L.A.I. route grid: %s; using the default grid", error.what());
+    return {};
+  }
+}
+
 } // namespace
 
 // A stand-in until S.L.A.I.'s opponent rosters are decoded (phase 1b): the
 // ridden robot as TEST DRIVE fits it, against training drones, one fewer
-// than the match's robots, which come back as they fall. The battle ends
-// when the player leaves it or is shot down.
+// than the match's robots, which come back as they fall. They walk the
+// stage's own S.L.A.I. route (its enemy_path, Z/PATH); a stage without one
+// has them come in at its spawns and roam between them over the live
+// RUMBLING's navigation grid (slai_rumble.json battle). The battle ends when
+// the player leaves it or is shot down.
 std::unique_ptr<Screen> ScreenRunner::make_slai_battle() {
   const auto *hub = dynamic_cast<const SlaiRumbleScreen *>(screen_.get());
   const SlaiRumbleData *data = game_->slai_rumble();
@@ -46,6 +61,18 @@ std::unique_ptr<Screen> ScreenRunner::make_slai_battle() {
             battle_training_.stage.c_str());
   }
   battle_training_.battle.drones = slai_opponents(data->world, *match);
+  const auto chosen = stages_.find(battle_training_.stage);
+  if (chosen != stages_.end() && !chosen->second.enemy_path.empty()) {
+    battle_training_.battle.enemy_path = chosen->second.enemy_path;
+  }
+  BattleSettings &settings = battle_training_.battle.settings;
+  settings.drone_unstick_seconds = data->world.battle.unstick_seconds;
+  settings.drone_hop_seconds = data->world.battle.hop_seconds;
+  settings.drone_hops = data->world.battle.hops;
+  if (data->world.battle.spawn_route) {
+    battle_training_.battle.spawn_route = slai_route_grid(roots_);
+    battle_training_.battle.spawn_route_merge = data->world.battle.spawn_merge;
+  }
   battle_training_.return_to = slai_result_route;
   SDL_Log("S.L.A.I. rumble: city=%d day=%d match=%d regulation=%d drones=%d (stand-in)",
           slai_match_->city, slai_match_->slai_day, slai_match_->match, match->regulation,

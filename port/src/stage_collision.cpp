@@ -271,13 +271,14 @@ float StageCollision::ground_height(const Vec3 at, const float step, const float
   return best;
 }
 
-float StageCollision::floor_under(const float x, const float z) const {
+float StageCollision::floor_under(const float x, const float z, const float below) const {
+  float best = no_ground;
   for (const std::uint32_t index : candidates(x, z, x, z, true)) {
-    if (const auto height = height_at(shape_->floor[index], x, z)) {
-      return *height;
+    if (const auto height = height_at(shape_->floor[index], x, z); height && *height <= below) {
+      best = std::max(best, *height);
     }
   }
-  return no_ground;
+  return best;
 }
 
 unsigned StageCollision::push_sphere(Vec3 &centre, const float radius,

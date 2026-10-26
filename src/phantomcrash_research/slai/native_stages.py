@@ -222,8 +222,11 @@ def register_stages(image: Path, data: Path, mods: Path) -> dict:
             crowd["xs"] = [42 + i * 64 for i in range(shown)]
             crowd["from_xs"] = [800 + i * 64 for i in range(shown)]
         save(mods / "data" / file, value)
+    from .stage_routes import register_stage_routes
+    with SlaiDisc(image) as disc:
+        routes = register_stage_routes(disc, data, mods)
     save(mods / "slai/native_stages.json", {"stages": registered, "unresolved": skipped,
-                                          "world_units": units})
+                                          "world_units": units, **routes})
     save(mods / "slai/prop_resources.json", prop_resources)
     save(mods / "slai/supply_assets.json", supply)
     return {"registered_stages": len(registered), "unresolved_stages": len(skipped)}

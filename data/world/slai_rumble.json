@@ -7,7 +7,8 @@
   "special: what the special rules test (0x259a40): close-range and grenade by the weapon class (+0x134), lock-on by the aim kind (+0x18), E-Chip by the CHIP record. Rental-only rumbles refuse the player's own robot.",
   "status_rules: by regulation, when a record's leader joins (0x2225a0, re-checked after each defeat by 0x223ed0): open from the start, after the first flags members are beaten, or held (regulation 30). A record is cleared once its leader is beaten (record byte 0).",
   "ladder: the stage (save + 0xa21) moves on one step after a battle (0x25a4e0): 0 to 1 when the tutorial record is cleared (+0x168, 0x257410); 1 to 2 when rankers_needed of the ranker records are (0x257440); 2 to 3 when all regional records are (0x257490); 3 to 4 when all finals records are (0x2574e0). Ranges are save record ids, first and one past the last.",
-  "balance: entry_scale scales a regulation's entry requirement, the money the player must hold (0x259a40 compares save + 0xa14, which 0x24b470 treats as money); charge_entry also takes it (the original does not). prize_scale scales the prize, paid when the player's score reaches the regulation's target (0x24b0b0). robots_max caps a match's robots (0x222070)."
+  "balance: entry_scale scales a regulation's entry requirement, the money the player must hold (0x259a40 compares save + 0xa14, which 0x24b470 treats as money); charge_entry also takes it (the original does not). prize_scale scales the prize, paid when the player's score reaches the regulation's target (0x24b0b0). robots_max caps a match's robots (0x222070).",
+  "battle: how a rumble's battle is laid out. The opponents walk the stage's own S.L.A.I. route (Z/PATH, the stage's enemy_path, written by register-slai-routes), the player starting at its spawn, which the importer takes from that route. Port choices while the opponents are training-drone stand-ins, which walk straight from point to point and never jump: with spawn_route on, they keep to the part of the route they can walk from the player's start, a segment left leading nowhere walked on to a near one over the navigation grid; one that comes no nearer its next point for unstick_seconds holds jump for hop_seconds, and after hops such hops goes on to a next segment (0 seconds: never). For a stage without a route: spawn_route sends the opponents in at the stage's player spawns and round between them, each leg planned by walks and drops over the live RUMBLING's navigation grid (rumbling.json live.ai.navigation) and straightened where a straight walk is clear; spawns closer than spawn_merge units are one. false keeps the training ground's route, which does not fit these stages."
  ],
  "cities": [
   {"name": "Tokyo", "day_stage": "slai_day_tokyo2", "night_stage": "slai_night_tokyo"},
@@ -54,5 +55,6 @@
   "charge_entry": false,
   "prize_scale": 1.0,
   "robots_max": 6
- }
+ },
+ "battle": {"spawn_route": true, "spawn_merge": 3.0, "unstick_seconds": 2.0, "hop_seconds": 0.3, "hops": 2}
 }

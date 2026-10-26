@@ -170,6 +170,16 @@ def _command_register_slai_assets(arguments: argparse.Namespace) -> int:
     return 0
 
 
+def _command_register_slai_routes(arguments: argparse.Namespace) -> int:
+    from .slai.archive import SlaiDisc
+    from .slai.stage_routes import register_stage_routes
+
+    with SlaiDisc(Path(arguments.disc)) as disc:
+        result = register_stage_routes(disc, Path(arguments.data), Path(arguments.pack))
+    print(json.dumps(result))
+    return 0
+
+
 def _command_balance_slai_weapons(arguments: argparse.Namespace) -> int:
     from .slai.weapon_balance import rebalance_pack
 
@@ -298,6 +308,12 @@ def build_parser() -> argparse.ArgumentParser:
     native.add_argument("--data", default=str(REPOSITORY_ROOT / "data"))
     native.add_argument("--output", default=str(DEFAULT_MODS))
     native.set_defaults(handler=_command_register_slai_assets)
+    routes = commands.add_parser("register-slai-routes",
+                                 help="Give an installed pack's S.L.A.I. stages their own robot routes and starts")
+    routes.add_argument("disc")
+    routes.add_argument("--data", default=str(REPOSITORY_ROOT / "data"))
+    routes.add_argument("--pack", default=str(REPOSITORY_ROOT / "artifacts" / "slai" / "assets"))
+    routes.set_defaults(handler=_command_register_slai_routes)
     balance = commands.add_parser("balance-slai-weapons",
                                   help="Scale an installed pack's S.L.A.I. weapons to Phantom Crash's")
     balance.add_argument("--assets", default=str(DEFAULT_ASSETS))

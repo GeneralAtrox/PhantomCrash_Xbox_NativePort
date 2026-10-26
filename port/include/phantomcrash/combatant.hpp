@@ -94,6 +94,14 @@ struct Combatant {
   float ammo_share{1.0F};   // robot +0x110 (0x08248b), as of the last tick
   float idle_seconds{};     // standing untouched (robot +0x251c)
   PathFollower path;
+  // A drone's headway toward its path target (Battle::unstick).
+  struct Headway {
+    Vec3 target{};
+    float best{};     // the nearest it has come
+    float seconds{};  // since it last came nearer
+    float hop_left{}; // jump held this much longer
+    int hops{};
+  } headway;
   RobotAiState ai;
 
   explicit Combatant(const MovementTuning &tuning) : mover(tuning) {}

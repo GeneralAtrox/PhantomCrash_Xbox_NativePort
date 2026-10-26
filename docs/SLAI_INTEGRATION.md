@@ -196,9 +196,11 @@ Native integration is incomplete in these specific areas:
   Germany's standing collision now spans about 406.8 by 424.3 native units.
   Source supply and ballistic models also restore world units before their
   original runtime scales (2.5 and 0.03/0.018 respectively).
-  Native starts are sampled from standing collision, avoiding building roofs,
-  walls and blocked camera approaches while recognizing broad arena ceilings.
-  These starts are adapters, not recovered original spawn tables. PTK lengths,
+  Native starts are taken from each stage's computer-robot route (see
+  "Computer-robot routes"), keeping the body and camera clearance tests; the
+  earlier starts sampled from standing collision alone fell outside the
+  arena in Tokyo, Egypt and Germany. These starts are adapters, not recovered
+  original spawn tables. PTK lengths,
   wheel displacement and suspension world offsets now also consume this world
   conversion. Full-frame particle attachments reconstruct the original model
   basis scale; masked Euler/translation attachments retain their source mask
@@ -610,6 +612,72 @@ Many later dates have zero first appearances despite rotating stock.
 | 59 | 60 | 0 | 49 | 3 |
 | 60 | 60 | 1 | 53 | 2 |
 
+## Computer-robot routes (2026-10-26)
+
+S.L.A.I.'s computer robots walk a route graph per city, in resource folder
+`Z/PATH` (folder 4; its directory entry is at ELF 0x34e210, the name at VA
+0x438690). `stage_routes.py` reads them.
+
+- Files: `PATH000.PTH` to `PATH080.PTH`, the city's index in the city table
+  times ten: Tokyo and Tokyo 2 000, Germany 010, New York 020, England 030,
+  Hong Kong 040, Egypt 050, Las Vegas 060, practice 070, motion 080. The
+  mapping is shown by geometry: each file lies 89 to 99 per cent within three
+  units of its own stage's navigation grid and far less on any other. The
+  loader that reads `Z/PATH` is not traced yet.
+- Format: an i32 count and a table of u32 record offsets. A record is a u16
+  kind, a u16 link count, a word (usually 0, sometimes stale), the u32 offset
+  of its curve and the offsets of the records that may follow. A curve is a
+  u32 knot count, 12 more header bytes, then 3(k-1)+1 points (x, y, z, 1):
+  cubic Bezier pieces, mostly a single one. Port space is (x, -y, -z) times
+  the world scale. A link runs from a record's last point to the next
+  record's first; 10 to 20 per cent are 1 to 10 units apart at junctions.
+- Kinds, read as Phantom Crash's ENPT kinds (inferred, not traced): 0 has no
+  incoming links (where robots come in: Tokyo 3, New York 3, England 2, Hong
+  Kong 4, Egypt 3, practice 2, none in Germany, Las Vegas or motion); 2
+  pauses, some a single point; 6 climbs, rising 11.6 units on average where
+  Phantom Crash's rise about 3; 1 and 4 are ordinary walks.
+- Registration writes `enepath/slai/<stage>.json` (curves sampled about every
+  four units) as the stage's `enemy_path`, and takes its four starts from
+  the route: far from the kind-0 entries and from each other, on the floor,
+  with body and camera clearance. The first is the player's.
+- Battles: the S.L.A.I. rumble's opponents walk their stage's route. Until
+  the rosters are decoded they are Phantom Crash's training drones, which
+  walk straight from point to point and never jump, so the port keeps them
+  to the part of the route they can walk from the player's start
+  (`walker_route`, port choices in `slai_rumble.json` `battle`):
+  - a segment is left out when a point is reached on the navigation grid
+    only by jumps, lies more than the grid's `point_rise` from the nearest
+    node, or a straight walk between its points (or along a link) meets a
+    wall, hole, drop or step up, as the grid tests its own walks;
+  - pruning breaks the route's cycles, so a segment left leading nowhere is
+    walked on over the grid to one of the three nearest segments left; one
+    the grid cannot join is left out too. Every stage keeps a connected
+    route: 37 of 37 (motion) to 78 of 204 (England) segments, joins included;
+  - a drone that comes no nearer its next point for `unstick_seconds` holds
+    jump for `hop_seconds`, and after `hops` such hops goes on to a next
+    segment. Reaching its point is what counts, not a hop's small gain.
+  A stage without a route has the drones roam its starts over the grid
+  instead (`spawn_route`).
+- Before this, drones stood at the foot of Tokyo's 27-unit climb and paced a
+  dead end there, and in Hong Kong held at a crack between floor triangles.
+  New York, Tokyo and Hong Kong (the hub's three rows) were each run for 200
+  seconds: drones roam the whole stage. The other stages are checked offline
+  with the same route pruning.
+
+### Arena lids and stacked floors
+
+- Germany (y 100), Hong Kong (74.3), Las Vegas (108.1) and the practice
+  stage (48) each have one flat quad over the whole arena above every other
+  standing surface. Registration (`move_lids`, also run by
+  `register-slai-routes` on an older pack) moves it from the floor to the
+  walls facing down, a ceiling.
+- S.L.A.I. stages stack floors (Hong Kong's walkways at 20 to 40 over its
+  streets). Phantom Crash's floor lookup (0x053337) takes the first floor
+  triangle over a point at any height, since none of its stages stack them,
+  so a robot walking under a walkway (the player too) was stood on top of it,
+  and every Hong Kong robot on the lid. The port now takes the highest floor
+  no higher than the robot's head (`StageCollision::floor_under`).
+
 ## Delivery policy
 
 The overlay has 141 part delivery entries (140 source models and the earlier
@@ -714,6 +782,13 @@ $env:PYTHONPATH = 'src'
 python -m phantomcrash_research convert-slai-music C:\Projects\SLAI\SLAI.iso --assets artifacts/europe/assets --data data --output mods
 python -m phantomcrash_research convert-slai-assets C:\Projects\SLAI\SLAI.iso --output mods
 python -m phantomcrash_research register-slai-assets C:\Projects\SLAI\SLAI.iso --assets artifacts/europe/assets --data data --output mods
+```
+
+Stage registration also writes the computer-robot routes. To redo only the
+routes on an installed pack:
+
+```powershell
+python -m phantomcrash_research register-slai-routes C:\Projects\SLAI\SLAI.iso --data data --pack artifacts/slai/assets
 ```
 
 Registration retains wheel resource IDs and native driving settings while

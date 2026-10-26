@@ -28,7 +28,7 @@ void TrainingScreen::build_battle(const TrainingContext &context) {
   } else {
     SDL_Log("Enemy path %s is missing; convert the robots again", setup.enemy_path.c_str());
   }
-  const bool drones = !path.entries().empty();
+  bool drones = !path.entries().empty();
   const std::optional<PartTables> parts = load_part_tables(context.roots);
   const bool modules = !setup.player.modules.empty() || !setup.drone.modules.empty() ||
                        std::ranges::any_of(setup.riders, [](const TrainingRider &rider) {
@@ -57,6 +57,7 @@ void TrainingScreen::build_battle(const TrainingContext &context) {
     battle_ = std::make_shared<Battle>(std::move(settings), std::move(path));
     if (context.stage != nullptr && !context.stage->collision.empty()) {
       load_stage_collision(context.roots, *context.stage, *battle_);
+      drones = roam_stage_spawns(*context.stage, setup, *battle_) || drones;
     }
     battle_->add_robot("player", 0, setup.player_start, setup.player_heading, setup.player.weapons,
                        player_hp);

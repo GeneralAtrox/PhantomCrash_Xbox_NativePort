@@ -132,6 +132,12 @@ TEST_CASE("S.L.A.I. Rumble's world data names a stage pair for each city") {
   CHECK(world.ladder.rankers_needed == 56);
   CHECK(world.balance.prize_scale == 1.0);
   CHECK(!world.balance.charge_entry);
+  // The stand-in opponents keep to what they can walk and get unstuck (port
+  // choices).
+  CHECK(world.battle.spawn_route);
+  CHECK(world.battle.spawn_merge > 0.0F);
+  CHECK(world.battle.unstick_seconds > 0.0F);
+  CHECK(world.battle.hops > 0);
 }
 
 TEST_CASE("the S.L.A.I. entry check follows 0x259a40's order and rules") {

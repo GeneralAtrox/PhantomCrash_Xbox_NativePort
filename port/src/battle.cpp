@@ -193,6 +193,7 @@ RobotControl Battle::drone_control(Combatant &drone, const float seconds) {
   const Vec3 at = drone.mover.position();
   Vec3 offset = drone.path.update(path_, at, settings_.drone_reach, random_) - at;
   offset.y = 0.0F;
+  control.jump = unstick(drone, at + offset, length(offset), seconds);
   if (length(offset) < 1e-3F) {
     return control;
   }
@@ -230,8 +231,9 @@ void Battle::collide(const int index, const float seconds) {
   Vec3 at = robot.mover.position();
   // The floor triangles never push, so the robot stands on the one under it
   // however far its feet have sunk below, and that grounds it: otherwise it
-  // walks into a step or a ramp's foot built from them.
-  const float floor = stage_.floor_under(at.x, at.z);
+  // walks into a step or a ramp's foot built from them. Not one above its
+  // head: a walkway over an imported stage's street.
+  const float floor = stage_.floor_under(at.x, at.z, at.y + head_height);
   const bool on_floor = floor != no_ground && at.y <= floor;
   if (on_floor) {
     at.y = floor;

@@ -83,6 +83,12 @@ void Battle::set_stage(StageCollision stage) {
                                                 : NavGraphFuture{};
 }
 
+void Battle::set_path(EnemyPath path) {
+  path_ = std::move(path);
+  nav_climbs_ =
+      nav_ ? blocked_climbs(*nav_, path_, settings_.ai.navigation.point_rise) : std::vector<bool>{};
+}
+
 const NavGraph *Battle::nav_graph() {
   if (!nav_ && nav_future_.valid() &&
       nav_future_.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {

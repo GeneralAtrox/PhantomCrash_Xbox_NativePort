@@ -36,4 +36,10 @@ inline constexpr const char *part_tables_asset = "tables/parts.json";
 // Gives the battle the stage's collision (converted), logging a problem.
 void load_stage_collision(const DataRoots &roots, const StageDefinition &stage, Battle &battle);
 
+// Keeps the drones to the part of the stage's own route they can walk, or
+// sends them round its player spawns when it has none (TrainingBattle
+// spawn_route), once the battle has the stage's collision. False, logged,
+// when the setup asks for neither or no route is left.
+bool roam_stage_spawns(const StageDefinition &stage, const TrainingBattle &setup, Battle &battle);
+
 } // namespace phantomcrash

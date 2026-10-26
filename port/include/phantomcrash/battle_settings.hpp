@@ -44,9 +44,17 @@ struct BattleSettings {
   float arena_wall_height{20.0F};
   float fence_contact_seconds{0.25F}; // port contact pulses; <= 0 disables
   float drone_respawn_seconds{4.0F};
-  float death_fallback_seconds{2.0F};            // presentation duration without a loaded pose
-  float drone_walk{0.6F};                        // the drones' stick when patrolling
-  float drone_reach{3.0F};                       // a path point counts as reached this close
+  float death_fallback_seconds{2.0F}; // presentation duration without a loaded pose
+  float drone_walk{0.6F};             // the drones' stick when patrolling
+  float drone_reach{3.0F};            // a path point counts as reached this close
+  // A port addition for drones walking a route not made for them (the
+  // S.L.A.I. stand-ins, slai_rumble.json "battle"): one that comes no nearer
+  // its target for drone_unstick_seconds holds jump for drone_hop_seconds,
+  // and after drone_hops such hops goes on to a next segment. 0 seconds:
+  // never, as the original's drones.
+  float drone_unstick_seconds{0.0F};
+  float drone_hop_seconds{0.3F};
+  int drone_hops{2};
   float camouflage_seconds{12.0F};               // a full gauge lasts this long ...
   float camouflage_recharge_seconds{20.0F};      // ... and refills in this long
   float camouflage_fade_seconds{1.0F};           // it sweeps over the robot in this long

@@ -17,6 +17,7 @@
 
 #include <array>
 #include <map>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -94,6 +95,14 @@ struct TrainingBattle {
   std::string prize_sound;
   double chatter_frame_rate{30.0};
   std::string enemy_path{"enepath/choco_es_01_enepath.json"};
+  // Imported stages (a port addition): a grid with these settings
+  // (spawn_route.hpp) keeps the drones, which walk but never jump, on the part
+  // of the stage's own route they can walk. A stage without a route has
+  // them roam its player spawns, each leg planned over the grid, spawns
+  // closer than spawn_route_merge being one. Falls back to enemy_path when
+  // neither gives a route.
+  std::optional<NavTuning> spawn_route;
+  float spawn_route_merge{3.0F};
   TrainingRobot player;
   Vec3 player_start{0.0F, 0.0F, 40.0F};
   float player_heading{};

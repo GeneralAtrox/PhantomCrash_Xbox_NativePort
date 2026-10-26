@@ -148,6 +148,19 @@ struct SlaiRumbleBalance {
   int robots_max{6}; // the rumble manager's cap (0x222070)
 };
 
+// How a rumble's battle is laid out (port choices; the "battle" block).
+struct SlaiBattleRules {
+  // Drones roam the stage's own player spawns, planned over the navigation
+  // grid, rather than the training ground's route (TrainingBattle).
+  bool spawn_route{true};
+  float spawn_merge{3.0F}; // units: spawns closer than this are one
+  // Stand-ins stuck this long hop, then move on (BattleSettings
+  // drone_unstick_seconds); 0 never.
+  float unstick_seconds{0.0F};
+  float hop_seconds{0.3F};
+  int hops{2};
+};
+
 // data/world/slai_rumble.json.
 struct SlaiRumbleWorld {
   std::vector<SlaiRumbleCity> cities; // by column
@@ -159,6 +172,7 @@ struct SlaiRumbleWorld {
   std::vector<SlaiStatusRule> status_rules; // by regulation
   SlaiRumbleLadder ladder;
   SlaiRumbleBalance balance;
+  SlaiBattleRules battle;
   int start_city{};
 };
 

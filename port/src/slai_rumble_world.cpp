@@ -86,6 +86,23 @@ SlaiRumbleBalance balance_from(const JsonValue &value) {
   return balance;
 }
 
+SlaiBattleRules battle_from(const JsonValue &value) {
+  SlaiBattleRules battle;
+  battle.spawn_route = value.boolean_or("spawn_route", battle.spawn_route);
+  battle.spawn_merge = static_cast<float>(value.number_or("spawn_merge", battle.spawn_merge));
+  battle.unstick_seconds =
+      static_cast<float>(value.number_or("unstick_seconds", battle.unstick_seconds));
+  battle.hop_seconds = static_cast<float>(value.number_or("hop_seconds", battle.hop_seconds));
+  battle.hops = static_cast<int>(value.number_or("hops", battle.hops));
+  if (battle.unstick_seconds < 0.0F || battle.hop_seconds < 0.0F || battle.hops < 0) {
+    throw std::runtime_error("unstick_seconds, hop_seconds and hops must not be negative");
+  }
+  if (battle.spawn_merge < 0.0F) {
+    throw std::runtime_error("spawn_merge must not be negative");
+  }
+  return battle;
+}
+
 } // namespace
 
 SlaiRumbleWorld parse_slai_rumble_world(const JsonValue &document) {
@@ -116,6 +133,9 @@ SlaiRumbleWorld parse_slai_rumble_world(const JsonValue &document) {
   if (const auto *balance = document.find("balance")) {
     world.balance = balance_from(*balance);
   }
+  if (const auto *battle = document.find("battle")) {
+    world.battle = battle_from(*battle);
+  }
   return world;
 }
 
@@ -136,9 +156,9 @@ std::optional<SlaiRumbleData> load_slai_rumble(const DataRoots &roots) {
     throw std::runtime_error(std::string(slai_rumble_world_file) + ": " + error.what());
   }
   try {
-    data.rota = parse_slai_rota(roots.document(slai_rota_file),
-                                static_cast<int>(data.table.cities.size()),
-                                data.table.schedule_days);
+    data.rota =
+        parse_slai_rota(roots.document(slai_rota_file), static_cast<int>(data.table.cities.size()),
+                        data.table.schedule_days);
   } catch (const std::exception &error) {
     throw std::runtime_error(std::string(slai_rota_file) + ": " + error.what());
   }

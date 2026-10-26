@@ -26,6 +26,43 @@ def _save(path: Path, value) -> None:
     path.write_text(json.dumps(value, indent=2, allow_nan=False) + "\n", encoding="utf-8")
 
 
+# A lid must span at least this share of the floor's extent (x by z).
+LID_SHARE = 0.5
+
+
+def move_lids(collision: dict) -> int:
+    """Moves an arena lid from the floor to the walls, facing down; returns
+    the triangles moved. Port reading: Germany, Hong Kong and Las Vegas each
+    have one flat quad over the whole arena above every other standing
+    surface (port heights 100, 74.3 and 108.1). As floor it carried robots
+    onto it, since the port stands a robot on the floor above its feet; it
+    caps the arena, so it is kept as a ceiling. Repeatable."""
+    floor = collision["floor"]
+    if len(floor) < 2:
+        return 0
+    triangles = np.array([t["points"] for t in floor], dtype=float)
+    heights = triangles[:, :, 1]
+    top = heights.max()
+    lid = (heights.min(axis=1) > top - 1e-3)
+    if lid.all() or not lid.any():
+        return 0
+
+    def extent(group):
+        flat = group[:, :, [0, 2]].reshape(-1, 2)
+        return float(np.prod(flat.max(axis=0) - flat.min(axis=0)))
+
+    if extent(triangles[lid]) < LID_SHARE * extent(triangles[~lid]):
+        return 0
+    moved = [t for t, on in zip(floor, lid) if on]
+    for t in moved:
+        t["points"] = [t["points"][0], t["points"][2], t["points"][1]]
+    collision["floor"] = [t for t, on in zip(floor, lid) if not on]
+    collision["walls"].extend(moved)
+    extras = collision.setdefault("extras", {})
+    extras["ceiling_triangles"] = extras.get("ceiling_triangles", 0) + len(moved)
+    return len(moved)
+
+
 def _collision(disc, files) -> dict:
     walls, floor = [], []
     for file in files:
@@ -45,11 +82,13 @@ def _collision(disc, files) -> dict:
                     normal = -normal / length
                     record = {"points": tri.tolist(), "surface": 0}
                     (floor if normal[1] > 0.5 else walls).append(record)
-    return {"walls": walls, "floor": floor,
+    collision = {"walls": walls, "floor": floor,
             "extras": {"source_hit_models": [{"source": f.name, "package_offset": f.package} for f in files],
                        "coordinate_conversion": [0.1, -0.1, 0.1],
                        "coordinate_space": "glTF model space; native stage registration pending",
                        "surface_classification": "native adapter from triangle normal; source IDs unavailable"}}
+    move_lids(collision)
+    return collision
 
 
 def _lighting(data: bytes) -> dict:

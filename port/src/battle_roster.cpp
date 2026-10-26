@@ -5,6 +5,7 @@
 #include "phantomcrash/robot_combat.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <stdexcept>
 #include <utility>
 
@@ -39,6 +40,7 @@ void Battle::respawn(Combatant &drone) {
   drone.lost = {};
   drone.push = {};
   drone.last_ground.reset();
+  drone.headway = {};
   drone.invulnerable = 0.0F;
   drone.shield = 0.0F;
   drone.shield_glow = 0.0F;
@@ -171,6 +173,48 @@ void Battle::take_out(const int index) {
   robot.camouflaged = false;
   robot.push = {};
   robot.respawn_left = settings_.drone_respawn_seconds;
+}
+
+bool Battle::unstick(Combatant &drone, const Vec3 target, const float distance,
+                     const float seconds) {
+  // Coming nearer by less than this (units) is no headway.
+  constexpr float headway_step = 0.25F;
+  Combatant::Headway &h = drone.headway;
+  if (settings_.drone_unstick_seconds <= 0.0F) {
+    return false;
+  }
+  if (std::hypot(target.x - h.target.x, target.z - h.target.z) > headway_step) {
+    h = {.target = target, .best = distance};
+  }
+  if (distance < h.best - headway_step) {
+    h.best = distance;
+    h.seconds = 0.0F;
+  } else {
+    h.seconds += seconds;
+  }
+  if (h.hop_left > 0.0F) {
+    h.hop_left -= seconds;
+    return true;
+  }
+  if (h.seconds < settings_.drone_unstick_seconds) {
+    return false;
+  }
+  h.seconds = 0.0F;
+  if (h.hops < settings_.drone_hops) {
+    ++h.hops;
+    h.hop_left = settings_.drone_hop_seconds;
+    return true;
+  }
+  // Hops did not free it: on to a segment after this one, or another entry.
+  h.hops = 0;
+  const int segment = drone.path.segment();
+  const std::vector<int> &next = path_.segments[static_cast<std::size_t>(segment)].next;
+  const std::vector<int> entries = path_.entries();
+  const std::vector<int> &choices = next.empty() ? entries : next;
+  if (!choices.empty()) {
+    drone.path.join(path_, choices[random_() % choices.size()], drone.mover.position());
+  }
+  return false;
 }
 
 } // namespace phantomcrash
