@@ -312,6 +312,9 @@ def register_parts(image: Path, assets: Path, data: Path, mods: Path) -> dict:
         catalogue[key] = preview[key]
     from .body_banks import register_body_banks
     body_banks = register_body_banks(mods, imported, catalogue, manifest)
+    from .weapon_balance import balance_weapons, restore_source
+    restore_source(parts, stats)
+    save(mods / "slai/weapon_balance.json", balance_weapons(parts, base_parts))
     for name, value in (("tables/parts.json", parts), ("robots/catalogue.json", catalogue),
                         ("robots/skeletons.json", skeletons), ("robots/weapon_mounts.json", mounts),
                         ("data/ui/robot_preview.json", preview)):

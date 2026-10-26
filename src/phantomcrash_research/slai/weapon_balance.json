@@ -1,0 +1,16 @@
+{
+ "notes": [
+  "Balance pass for the S.L.A.I. weapons, a port adaptation (weapon_balance.py). S.L.A.I.'s tables use their own scale: its weapons hit two to five times harder (splash up to a hundred times), weigh about two and a half times as much and cost about twenty times as much as Phantom Crash's. Each imported weapon is scaled to Phantom Crash's weapons of the same table and weapon kind, so it sits among them while keeping its rank within S.L.A.I.'s.",
+  "Each group sums its measure fields (damage is direct plus splash) and compares the median of Phantom Crash's weapons with S.L.A.I.'s at each level in levels; the ratio, blended between the two levels, scales every curve in the group, so a weapon keeps its share of direct and splash damage and both the starting value and the growth follow Phantom Crash's. per_second groups measure value x rounds x 60 / fire_frames for rate_kinds (beams and melee by the hit). A group with cap_to_strongest (damage; a dear or heavy weapon is no stronger for it) then lowers any weapon still above the strongest Phantom Crash weapon of its kind to it, by the group's measure and by each field's single hit: S.L.A.I.'s fuel-air and rocket weapons have splash far past anything in Phantom Crash, and one hit of it would take most of a body's armour.",
+  "fire_frames, rounds, ammo, recharge, splash radius and flight stay S.L.A.I.'s: they make each weapon what it is. A kind with fewer than min_samples Phantom Crash weapons that have the group is measured against all the table's that do. The source values stay in slai/source_stats.json; each weapon records its factors in slai_balance. enabled false installs S.L.A.I.'s values unchanged."
+ ],
+ "enabled": true,
+ "levels": [0, 99],
+ "rate_kinds": [0, 1, 2, 3],
+ "min_samples": 3,
+ "groups": {
+  "damage": {"measure": ["damage", "blast_damage"], "per_second": true, "cap_to_strongest": true, "scalars": ["damage_min"], "round": 0},
+  "weight": {"measure": ["weight"], "round": 2},
+  "price": {"measure": ["price"], "round": 0}
+ }
+}

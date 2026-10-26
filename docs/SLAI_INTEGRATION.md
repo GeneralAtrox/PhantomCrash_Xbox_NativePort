@@ -676,6 +676,34 @@ simulation or a finished balance pass. Acceleration, grip, braking and
 steering multipliers are editable native values in
 `src/phantomcrash_research/slai/wheels.json` and generated per-part movement data.
 
+### Weapon balance pass
+
+S.L.A.I.'s weapons are unique to it (none shares a name with a Phantom Crash
+weapon) and come in at S.L.A.I.'s scale: two to five times the damage, splash
+up to a hundred times (FAE5 "Daisy Bell" 67,500, Raketenkanone6/1 35,000,
+against Phantom Crash's largest, 600), about two and a half times the weight
+and twenty times the price. Registration therefore scales each imported weapon
+to Phantom Crash's weapons of the same table and weapon kind
+(`src/phantomcrash_research/slai/weapon_balance.py`, rules in
+`weapon_balance.json`):
+
+- Damage: direct plus splash a second (a hit for beams and melee) at levels 0
+  and 99, median against median; one factor for both, so each weapon keeps its
+  share of splash and its rank among S.L.A.I.'s. No weapon ends above the
+  strongest Phantom Crash weapon of its kind, a second or a hit.
+- Weight and price: the same median match, uncapped, so dear and heavy weapons
+  stay so.
+- Fire interval, rounds, ammo, recharge, splash radius and flight stay
+  S.L.A.I.'s.
+
+The pass starts from `slai/source_stats.json` each time, so it can be run again
+on an installed pack without reinstalling:
+`python -m phantomcrash_research.cli balance-slai-weapons --assets
+artifacts/europe/assets --output artifacts/slai/assets`. Each weapon records its
+factors in `slai_balance`, and the pack's `slai/weapon_balance.json` lists them
+by kind. Bodies and legs are not part of this pass: S.L.A.I.'s body armour is
+still about 1.8 times Phantom Crash's and leg armour about 2.2 times.
+
 ## Commands and verification
 
 Build the standard port with `pwsh -File scripts/build-port.ps1`. Generate

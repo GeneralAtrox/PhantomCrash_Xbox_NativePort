@@ -170,6 +170,14 @@ def _command_register_slai_assets(arguments: argparse.Namespace) -> int:
     return 0
 
 
+def _command_balance_slai_weapons(arguments: argparse.Namespace) -> int:
+    from .slai.weapon_balance import rebalance_pack
+
+    result = rebalance_pack(Path(arguments.assets), Path(arguments.output))
+    print(json.dumps({"restored_weapons": result["restored_weapons"]}))
+    return 0
+
+
 def _command_register_slai_talk(arguments: argparse.Namespace) -> int:
     from .slai.talk_register import register_talk
 
@@ -290,6 +298,11 @@ def build_parser() -> argparse.ArgumentParser:
     native.add_argument("--data", default=str(REPOSITORY_ROOT / "data"))
     native.add_argument("--output", default=str(DEFAULT_MODS))
     native.set_defaults(handler=_command_register_slai_assets)
+    balance = commands.add_parser("balance-slai-weapons",
+                                  help="Scale an installed pack's S.L.A.I. weapons to Phantom Crash's")
+    balance.add_argument("--assets", default=str(DEFAULT_ASSETS))
+    balance.add_argument("--output", default=str(DEFAULT_MODS))
+    balance.set_defaults(handler=_command_balance_slai_weapons)
     talk = commands.add_parser("register-slai-talk",
                                help="Convert S.L.A.I.'s talk scenes into an installed asset root")
     talk.add_argument("disc")
