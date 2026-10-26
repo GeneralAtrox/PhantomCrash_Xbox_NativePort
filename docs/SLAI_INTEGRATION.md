@@ -769,8 +769,35 @@ on an installed pack without reinstalling:
 `python -m phantomcrash_research.cli balance-slai-weapons --assets
 artifacts/europe/assets --output artifacts/slai/assets`. Each weapon records its
 factors in `slai_balance`, and the pack's `slai/weapon_balance.json` lists them
-by kind. Bodies and legs are not part of this pass: S.L.A.I.'s body armour is
-still about 1.8 times Phantom Crash's and leg armour about 2.2 times.
+by kind. Bodies and legs have a pass of their own (below).
+
+### Armour balance pass (2026-10-26)
+
+S.L.A.I.'s armour was on its own scale too. Medians against Phantom Crash's
+parts:
+
+| Table | Level 0 | Level 99 |
+|---|---:|---:|
+| Bodies | 29,000 vs 16,000 (1.81x) | 50,000 vs 47,800 (1.05x) |
+| Legs | 4,500 vs 2,000 (2.25x) | 6,500 vs 3,150 (2.06x) |
+
+With the weapons fitted to Phantom Crash's, a S.L.A.I. robot took about twice
+the shots to bring down. Registration now scales the armour curves the same
+way (`src/phantomcrash_research/slai/armour_balance.py`, rules in
+`armour_balance.json`):
+
+- Per table, Phantom Crash's median over S.L.A.I.'s at levels 0 and 99 gives
+  two factors: bodies 0.55 and 0.96, legs 0.44 and 0.48.
+- Every S.L.A.I. body's and legs' armour curve is scaled by those factors,
+  blended between the levels, so each part keeps its rank among S.L.A.I.'s.
+- Each part records its factors in `slai_balance`; the pack's
+  `slai/armour_balance.json` lists them by table.
+- Weight, capacity, price and movement stay as registered. Bodies still
+  weigh 1.4 to 2.0 times Phantom Crash's at the median; leg capacity is
+  already within 12 per cent.
+- Registration builds each part from its source record each run, so
+  re-registering applies the pass again cleanly. Setting `enabled` to false
+  in the rules keeps S.L.A.I.'s own armour.
 
 ### Drone weapon names (2026-10-26)
 

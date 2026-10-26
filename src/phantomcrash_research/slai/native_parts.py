@@ -318,6 +318,8 @@ def register_parts(image: Path, assets: Path, data: Path, mods: Path) -> dict:
     from .weapon_balance import balance_weapons, restore_source
     restore_source(parts, stats)
     save(mods / "slai/weapon_balance.json", balance_weapons(parts, base_parts))
+    from .armour_balance import balance_armour
+    save(mods / "slai/armour_balance.json", balance_armour(parts, base_parts))
     for name, value in (("tables/parts.json", parts), ("robots/catalogue.json", catalogue),
                         ("robots/skeletons.json", skeletons), ("robots/weapon_mounts.json", mounts),
                         ("data/ui/robot_preview.json", preview)):
