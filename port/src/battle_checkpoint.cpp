@@ -31,6 +31,9 @@ std::unique_ptr<Battle> Battle::clone_state() const {
         robot.mover.timings_ = &robot.pose->assembly().timings;
       }
     }
+    if (robot.look_pose) {
+      robot.look_pose = std::make_shared<RobotCombat>(*robot.look_pose);
+    }
   }
   for (auto &shot : copy->armory_.projectiles_) {
     rebind(shot.weapon);

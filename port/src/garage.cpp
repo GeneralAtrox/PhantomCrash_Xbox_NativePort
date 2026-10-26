@@ -52,6 +52,7 @@ StockItem stock_from_json(const JsonValue &value) {
   item.level = integer_or(value, "level", 0);
   item.name = value.string_or("name", "");
   item.hangar = integer_or(value, "hangar", -1);
+  item.look = integer_or(value, "look", -1);
   return item;
 }
 
@@ -88,14 +89,18 @@ void read_stock(const JsonValue &value, const int size, std::map<int, StockItem>
 JsonValue stock_to_json(const std::map<int, StockItem> &stock) {
   JsonValue::Array out;
   for (const auto &[index, item] : stock) {
-    out.push_back(JsonValue{JsonValue::Object{
+    JsonValue::Object entry{
         {"index", number(index)},
         {"kind", JsonValue{std::string{kind_names[static_cast<std::size_t>(item.kind)]}}},
         {"id", number(item.id)},
         {"level", number(item.level)},
         {"name", JsonValue{item.name}},
         {"hangar", number(item.hangar)},
-    }});
+    };
+    if (item.look >= 0) {
+      entry.emplace_back("look", number(item.look));
+    }
+    out.push_back(JsonValue{std::move(entry)});
   }
   return JsonValue{std::move(out)};
 }

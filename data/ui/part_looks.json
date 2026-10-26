@@ -1,0 +1,11 @@
+{
+ "notes": [
+  "Per-part appearance, a port addition (port/include/phantomcrash/part_looks.hpp): a part in the stock can wear the mesh of another part of its kind, chosen with left and right (or a click on the arrows) on ASSEMBLE's list and on Wild Machines' BUY MODULE list; each screen's look_arrows places the arrows, and a screen without them offers no looks. Whole SVs (the dealers, used SVs) are sold as they are.",
+  "Only the drawn robot changes. The part's stats, and the collision radius, stride speeds and motion timings the battle reads, stay the part's own: the battle runs on the robot's own parts and the look follows on a second pose that is only drawn. The stock entry keeps its look (\"look\" in the save, the part id whose mesh it wears).",
+  "One look per distinct mesh, the first part to draw it standing for it. weapons_keep_kind keeps a weapon to looks of its own weapon kind (a blade wears blades); arms_keep_class keeps an arm weapon to its arm class, so its poses still fit. enabled false offers no looks; looks already chosen still show.",
+  "VS mode's saved Scoobees, online and co-op battles draw the parts themselves."
+ ],
+ "enabled": true,
+ "weapons_keep_kind": true,
+ "arms_keep_class": true
+}

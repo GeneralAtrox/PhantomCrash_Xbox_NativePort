@@ -15,6 +15,7 @@
 
 #include <optional>
 #include <string>
+#include <utility>
 
 namespace phantomcrash {
 
@@ -115,6 +116,18 @@ public:
   [[nodiscard]] RobotTotals totals() const;
   [[nodiscard]] RobotTotals totals_with(const ShopGoods &line) const;
 
+  // Per-part appearance (assemble_looks.cpp): the meshes a part may wear,
+  // whether the chosen line offers another, and the line being tried on
+  // (its look turned while the list shows), else null.
+  void set_looks(PartLooks looks) {
+    looks_ = std::move(looks);
+  }
+  [[nodiscard]] bool offers_look(const ShopGoods &line) const;
+  [[nodiscard]] const ShopGoods *tried_on() const;
+  // The hangar as the preview shows it: with the line tried on fitted in
+  // its slot, unless it is fitted here already.
+  [[nodiscard]] Hangar shown_hangar() const;
+
   // The hangar whose Scoobee NAME ENTRY names, leaving for it; -1 otherwise.
   [[nodiscard]] int naming_hangar() const noexcept {
     return naming_hangar_;
@@ -144,6 +157,8 @@ private:
   void list_pointer(InputFrame &input);
   void details_pointer(InputFrame &input) const;
   bool turn_details(const InputFrame &input);
+  bool turn_look(double tick_seconds, const InputFrame &input);
+  void look_pointer(InputFrame &input) const;
   void question_input(double tick_seconds, const InputFrame &input);
   void choose_cell();
   void open_list();
@@ -184,6 +199,8 @@ private:
   int choice_{1};
   std::string help_;
   double help_seconds_{};
+  PartLooks looks_;
+  int tried_on_{-1}; // the stock entry whose look was turned
 };
 
 } // namespace phantomcrash

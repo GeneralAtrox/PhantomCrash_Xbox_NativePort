@@ -90,6 +90,7 @@ void Assemble::list_pointer(InputFrame &input) {
     return;
   }
   shop_list_pointer(input, style, script_.up, script_.down, script_.cancel_buttons);
+  look_pointer(input);
   if (!input.clicked) {
     return;
   }

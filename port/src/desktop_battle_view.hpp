@@ -28,6 +28,9 @@ public:
   // Adds the look of the next battle robot. Throws std::runtime_error when
   // a part is out of range.
   void add(const RobotParts &parts);
+  // As above, the robot wearing `look`'s meshes (part_looks.hpp): the battle
+  // runs on `parts`' pose and this draws a second one that follows it.
+  void add(const RobotParts &parts, const RobotParts &look);
   // Robot `index` looks like `parts` from now on (another robot has come in).
   void replace(std::size_t index, const RobotParts &parts);
   // Loads the models and textures of robots that may come in later, so that
@@ -85,8 +88,12 @@ private:
   void advance_shield(const Battle &battle, float seconds);
 
   struct Visual {
-    RobotAssembly assembly;
+    RobotAssembly assembly; // the drawn robot's
     std::shared_ptr<RobotCombat> combat;
+    // The robot's own parts when it wears a look: the pose the battle runs
+    // on (Combatant::pose), `combat` then being its look_pose.
+    std::optional<RobotAssembly> rules_assembly;
+    std::shared_ptr<RobotCombat> rules;
     std::unique_ptr<RobotVisual> parts;
     Pose pose{};
     int ground_node{-1}; // its flat shadow's node in the shadows' model
@@ -95,6 +102,10 @@ private:
   };
 
   [[nodiscard]] std::unique_ptr<Visual> make_visual(const RobotParts &parts) const;
+  // The assembly the rules read: its own parts'.
+  [[nodiscard]] static const RobotAssembly &rules_assembly(const Visual &visual) {
+    return visual.rules_assembly ? *visual.rules_assembly : visual.assembly;
+  }
   // Marks the robot's items [first, end) as casting a volume, or adds its
   // flat shadow.
   void add_shadow(const Combatant &robot, const Visual &visual, const Mat4 &root, std::size_t first,

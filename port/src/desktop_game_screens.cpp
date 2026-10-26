@@ -4,6 +4,7 @@
 #include "desktop_chip_shop.hpp"
 #include "desktop_dealer.hpp"
 #include "desktop_assemble.hpp"
+#include "phantomcrash/robot_library.hpp"
 #include "desktop_hangar_menu.hpp"
 #include "desktop_module_shop.hpp"
 #include "desktop_tune_shop.hpp"
@@ -52,6 +53,7 @@ GameScreens::GameScreens(TextureCache &textures, const DataRoots &roots, const G
       assemble_(parse_assemble(roots.document("ui/assemble.json"))),
       sv_spec_(parse_sv_spec(roots.document("ui/sv_spec.json"))),
       robot_preview_(parse_robot_preview(roots.document("ui/robot_preview.json"))),
+      part_look_rules_(parse_part_look_rules(roots.document("ui/part_looks.json"))),
       rumbling_(parse_rumbling(roots.document("ui/rumbling.json"))),
       rumbling_rules_(parse_rumbling_rules(roots.document("world/rumbling.json"))),
       part_stats_(load_part_stats(roots)),
@@ -132,6 +134,14 @@ std::unique_ptr<Screen> GameScreens::make_rumbling(const std::string &from,
                                           message_box_, from, frame_, credits_, quest, remembered);
 }
 
+PartLooks GameScreens::part_looks() const {
+  const PreviewWorld world = preview_world();
+  if (world.robots == nullptr || !world.robots->available()) {
+    return {};
+  }
+  return {world.robots->catalogue(), parts_, part_look_rules_};
+}
+
 // ASSEMBLE works on the hangar the hangar's wheel has chosen, coming back
 // to the cell that left it (NAME, SPEC).
 std::unique_ptr<Screen> GameScreens::make_assemble(const std::string &from,
@@ -143,6 +153,7 @@ std::unique_ptr<Screen> GameScreens::make_assemble(const std::string &from,
     }
   }
   Assemble logic(assemble_, quest, parts_, garage_, part_stats_, dealer_cursors_["hangar"], resume);
+  logic.set_looks(part_looks());
   return std::make_unique<AssembleScreen>(textures_, font_, std::move(logic), message_box_, from,
                                           frame_, credits_, quest, preview_world(), robot_preview_);
 }
@@ -272,6 +283,7 @@ std::unique_ptr<Screen> GameScreens::make_module_shop(const ModuleShopScript &sc
     }
   }
   ModuleShop logic(script, quest, parts_, garage_, part_stats_, std::move(lineups));
+  logic.set_looks(part_looks());
   return std::make_unique<ModuleShopScreen>(textures_, font_, std::move(logic), message_box_, from,
                                             frame_, credits_, quest, preview_world(),
                                             robot_preview_);

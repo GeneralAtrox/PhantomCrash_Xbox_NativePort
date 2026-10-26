@@ -57,6 +57,17 @@ void BattleView::add(const RobotParts &parts) {
   visuals_.push_back(make_visual(parts));
 }
 
+void BattleView::add(const RobotParts &parts, const RobotParts &look) {
+  if (look == parts) {
+    add(parts);
+    return;
+  }
+  auto visual = make_visual(look);
+  visual->rules_assembly = assemble_robot(robots_.catalogue(), robots_.skeletons(), parts);
+  visual->rules = std::make_shared<RobotCombat>(robots_, *visual->rules_assembly);
+  visuals_.push_back(std::move(visual));
+}
+
 void BattleView::replace(const std::size_t index, const RobotParts &parts) {
   if (index < visuals_.size()) {
     visuals_[index] = make_visual(parts);
@@ -80,14 +91,14 @@ MovementTuning BattleView::movement(const std::size_t index, const MovementTunin
   if (index >= visuals_.size()) {
     return base;
   }
-  return stride_tuning(robots_, visuals_[index]->assembly, base);
+  return stride_tuning(robots_, rules_assembly(*visuals_[index]), base);
 }
 
 float BattleView::radius(const std::size_t index, const float fallback) const {
-  if (index >= visuals_.size() || visuals_[index]->assembly.radius <= 0.0F) {
+  if (index >= visuals_.size() || rules_assembly(*visuals_[index]).radius <= 0.0F) {
     return fallback;
   }
-  return visuals_[index]->assembly.radius;
+  return rules_assembly(*visuals_[index]).radius;
 }
 
 int BattleView::legs_model(const std::size_t index) const {
@@ -149,13 +160,20 @@ void BattleView::bind(Battle &battle) {
     auto &robot = battle.robot(static_cast<int>(i));
     if (battle.cooperative() && robot.pose) {
       visuals_[i]->combat = robot.pose;
+      visuals_[i]->rules.reset();
+      visuals_[i]->rules_assembly.reset();
     }
-    if (!battle.simulation_poses() && robot.pose != visuals_[i]->combat) {
-      robot.pose = visuals_[i]->combat;
+    const auto &rules = visuals_[i]->rules ? visuals_[i]->rules : visuals_[i]->combat;
+    if (!battle.simulation_poses() && robot.pose != rules) {
+      robot.pose = rules;
+      robot.look_pose = visuals_[i]->rules ? visuals_[i]->combat : nullptr;
       std::array<Vec3, 4> targets;
       targets.fill(robot.aim_origin() +
                    heading_forward(robot.mover.aim_heading()) * robot.pose->aim_distance());
       robot.pose->tick(robot.mover, {}, robot.lost, targets, 0);
+      if (robot.look_pose) {
+        robot.look_pose->tick(robot.mover, {}, robot.lost, targets, 0);
+      }
     }
     // Online confirmed playback ticks older states, then binds the predicted
     // present. Drawing must use that present's skeleton too, or its bodies

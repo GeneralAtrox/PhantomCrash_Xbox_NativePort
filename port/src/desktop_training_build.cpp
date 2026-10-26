@@ -129,7 +129,13 @@ void TrainingScreen::build_battle(const TrainingContext &context) {
         view_->add(coop_looks_.back());
       }
     } else {
-      view_->add(player == script_.robots.end() ? RobotParts{} : player->second);
+      if (player == script_.robots.end()) {
+        view_->add(RobotParts{});
+      } else if (const auto look = script_.looks.find("player"); look != script_.looks.end()) {
+        view_->add(player->second, look->second);
+      } else {
+        view_->add(player->second);
+      }
       for (std::size_t rider = 1; vs_ && rider < setup.riders.size(); ++rider) {
         view_->add(script_.robots.at(setup.riders[rider].name));
       }

@@ -257,6 +257,7 @@ void Assemble::open_list() {
 
 void Assemble::close_list() {
   in_list_ = false;
+  tried_on_ = -1;
   view_ = cell().sides ? AssembleView::sides : AssembleView::grid;
   sides_seconds_ = cell().sides ? cell().sides->seconds : 0.0;
   refresh_help();
@@ -270,6 +271,9 @@ void Assemble::list_input(const double tick_seconds, const InputFrame &input) {
     if (list_.move(step, script_.list.rows)) {
       sound(script_.list_row_sound);
     }
+    return;
+  }
+  if (turn_look(tick_seconds, input)) {
     return;
   }
   if (input.any_pressed(script_.cancel_buttons)) {

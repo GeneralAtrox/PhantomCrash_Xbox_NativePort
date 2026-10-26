@@ -9,6 +9,10 @@
  "cancel": {"buttons": "cancel"},
  "cursor_repeat": {"delay": 0.4, "interval": 0.1},
  "buttons": {"left": "left", "right": "right", "up": "up", "down": "down", "sort_name": "x", "sort_price": "y", "hide_incompatible": "right_thumb", "page_back": "white", "page_next": "black", "page_top": "left_trigger", "page_bottom": "right_trigger"},
+ "look_arrows": {"notes": "A port addition (ui/part_looks.json): left and right in the list turn the chosen part's look, and the robot tries it on; these are the chip shop's browse arrows either side of the robot. Delete look_arrows for the original screen.", "arrows": [
+  {"id": "2918", "image": "textures/scroll/wild_tex/2.png", "rect": [944, 0, 992, 48], "position": [380, 200], "layer": 260, "animation": "pulse"},
+  {"id": "2923", "image": "textures/scroll/wild_tex/2.png", "rect": [800, 360, 848, 408], "position": [580, 200], "layer": 260, "animation": "pulse"}
+ ]},
  "sounds": {"move": "adjust", "row": "cursor", "select": "confirm", "back": "cancel", "exit": "adjust", "list_row": "cursor", "sort": "confirm", "fit": "fit", "question": "", "dismantle": "dismantle", "no": "adjust", "hide": "adjust"},
  "layers": [
   {"id": "966", "image": "textures/scroll/assemble_tex/0.png", "rect": [0, 0, 640, 480], "position": [0, 0], "layer": 1, "extend_edges": "both", "edge_bands": [[0, 72], [376, 480]],

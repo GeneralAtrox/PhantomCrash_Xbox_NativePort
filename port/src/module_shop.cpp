@@ -243,7 +243,7 @@ void ModuleShop::list_input(const double tick_seconds, const InputFrame &input) 
     }
     return;
   }
-  if (turn_details(input)) {
+  if (turn_look(tick_seconds, input) || turn_details(input)) {
     return;
   }
   if (input.any_pressed(script_.cancel_buttons)) {
@@ -297,7 +297,8 @@ void ModuleShop::choose() {
 void ModuleShop::buy() {
   const ShopGoods &line = *chosen();
   if (const auto kind = stock_kind(line.goods.kind)) {
-    quest_.garage.add_stock({*kind, line.goods.id, line.goods.level, line.name, -1});
+    quest_.garage.add_stock(
+        {*kind, line.goods.id, line.goods.level, line.name, -1, chosen_look(line)});
   } else {
     auto &owned =
         line.goods.kind == GoodsKind::paint ? quest_.garage.paints : quest_.garage.emblems;

@@ -5,6 +5,7 @@
 
 #include "phantomcrash/garage_tables.hpp"
 #include "phantomcrash/json_fields.hpp"
+#include "phantomcrash/part_looks.hpp"
 #include "phantomcrash/skeleton.hpp"
 
 #include <algorithm>
@@ -185,10 +186,11 @@ RobotParts PreviewRobot::parts() const {
   return parts;
 }
 
-PreviewRobot preview_robot(const Garage &garage, const Hangar &hangar) {
+PreviewRobot preview_robot(const Garage &garage, const Hangar &hangar,
+                           const RobotCatalogue *catalogue) {
   const auto id = [&](const PartSlot slot) {
     const auto found = garage.stock.find(hangar.part(slot));
-    return found == garage.stock.end() ? -1 : found->second.id;
+    return found == garage.stock.end() ? -1 : worn_part(found->second, catalogue);
   };
   PreviewRobot robot;
   robot.body = id(PartSlot::body);

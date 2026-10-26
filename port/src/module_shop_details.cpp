@@ -12,9 +12,15 @@ bool ModuleShop::has_details() const {
          !detail_stats(table_, parts_, garage_, line->goods).empty();
 }
 
-// Left and right turn the page, while the goods have one.
+// Left and right turn the page, while the goods have one; the page
+// buttons do too, and only they while left and right turn a look.
 bool ModuleShop::turn_details(const InputFrame &input) {
-  if (!(input.any_pressed(script_.left) || input.any_pressed(script_.right)) || !has_details()) {
+  const ShopGoods *line = chosen();
+  Buttons page = script_.page_back | script_.page_next;
+  if (line == nullptr || !offers_look(*line)) {
+    page |= script_.left | script_.right;
+  }
+  if (!input.any_pressed(page) || !has_details()) {
     return false;
   }
   details_page_ = !details_page_;
@@ -32,8 +38,9 @@ void ModuleShop::details_pointer(InputFrame &input) const {
   for (const PopWindow &window : script_.list.details) {
     hit = hit || shop_hit(input, window.sprite);
   }
+  const ShopGoods *line = chosen();
   if (hit) {
-    input.pressed |= script_.right;
+    input.pressed |= line != nullptr && offers_look(*line) ? script_.page_next : script_.right;
   }
 }
 

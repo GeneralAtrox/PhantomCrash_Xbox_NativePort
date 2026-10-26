@@ -153,6 +153,8 @@ private:
   [[nodiscard]] PreviewWorld preview_world() const {
     return preview_world_ ? preview_world_() : PreviewWorld{};
   }
+  // The meshes each part may wear (part_looks.hpp); none without the 3D.
+  [[nodiscard]] PartLooks part_looks() const;
   // The SVs a dealer (0..2) or Wild Machines' used SVs offer on the day.
   [[nodiscard]] std::vector<SvOffer> dealer_lineup(int index, const QuestSave &quest) const;
   [[nodiscard]] std::vector<SvOffer> used_sv_lineup(const QuestSave &quest) const;
@@ -197,6 +199,7 @@ private:
   AssembleScript assemble_;
   SvSpecScript sv_spec_;
   RobotPreviewScript robot_preview_;
+  PartLookRules part_look_rules_;
   std::function<PreviewWorld()> preview_world_;
   RumblingScript rumbling_;
   RumblingRules rumbling_rules_;

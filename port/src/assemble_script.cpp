@@ -243,6 +243,7 @@ AssembleScript parse_assemble(const json::JsonValue &document) {
     script.page_next = buttons_from_json(required(buttons, "page_next"));
     script.page_top = buttons_from_json(required(buttons, "page_top"));
     script.page_bottom = buttons_from_json(required(buttons, "page_bottom"));
+    script.look_arrows = parse_look_arrows(document);
     parse_sounds(required(document, "sounds"), script);
     parse_grid(required(document, "grid"), script);
     script.panel = member(document, "panel", parse_panel);

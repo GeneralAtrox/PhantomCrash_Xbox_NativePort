@@ -103,6 +103,15 @@ const WeaponTuning *weapon_on(const Combatant &robot, const std::size_t slot) {
   return robot.lost[slot] ? nullptr : robot.weapons[slot];
 }
 
+// The next barrel fires, on the pose drawn too.
+void advance_muzzle(Combatant &robot, const std::size_t slot) {
+  for (const auto &pose : {robot.pose, robot.look_pose}) {
+    if (pose) {
+      pose->advance_muzzle(slot);
+    }
+  }
+}
+
 } // namespace
 
 std::vector<Target> Battle::targets() const {
@@ -223,9 +232,7 @@ void Battle::fire_weapons(const int index, const FireControl &fire, const float 
                      muzzle_direction(robot, mount), robot.locks[slot], bodies, 1,
                      static_cast<int>(slot));
         fired(index, slot, *weapon);
-        if (robot.pose) {
-          robot.pose->advance_muzzle(slot);
-        }
+        advance_muzzle(robot, slot);
         robot.queue_left[slot] += missile_round_seconds;
       }
     }
@@ -284,9 +291,7 @@ void Battle::fire_weapons(const int index, const FireControl &fire, const float 
       armory_.fire(*weapon, index, robot.team, muzzle(robot, mount), muzzle_direction(robot, mount),
                    robot.locks[slot], bodies, rounds, static_cast<int>(slot));
     }
-    if (robot.pose) {
-      robot.pose->advance_muzzle(slot);
-    }
+    advance_muzzle(robot, slot);
   }
   if (cheats_.infinite_ammo && robot.piloted) {
     for (Magazine &magazine : robot.magazines) {

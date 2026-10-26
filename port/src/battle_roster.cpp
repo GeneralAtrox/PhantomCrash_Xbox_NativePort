@@ -27,6 +27,9 @@ void Battle::respawn(Combatant &drone) {
   if (drone.pose) {
     drone.pose->reset();
   }
+  if (drone.look_pose) {
+    drone.look_pose->reset();
+  }
   drone.alive = true;
   drone.dying = false;
   drone.death_seconds = 0.0F;
@@ -133,6 +136,7 @@ void Battle::set_identity(const int index, const std::string &name, const int te
     // a freed animation table until its simulation-owned pose is installed.
     robot.mover.set_timings(nullptr);
     robot.pose.reset();
+    robot.look_pose.reset();
   }
   robot.team = team;
   robot.hp = robot.max_hp = hp;

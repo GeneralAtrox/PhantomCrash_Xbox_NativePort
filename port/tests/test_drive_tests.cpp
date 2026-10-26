@@ -119,3 +119,23 @@ TEST_CASE("the ridden robot becomes the training ground's player") {
   CHECK(loadout.body_level == 3);
   CHECK(loadout.weapons.size() == 3);
 }
+
+TEST_CASE("a part's look is drawn on the player; the battle keeps the real parts") {
+  const PartTables parts = tables();
+  Garage garage = owned();
+  const auto entry = [&](const PartSlot slot) -> StockItem & {
+    return garage.stock.at(garage.hangars[1].part(slot));
+  };
+  CHECK(test_drive_training(shipped_training(), shipped_script(), garage, garage.riding, parts)
+            .looks.empty());
+  entry(PartSlot::body).look = 0;
+  entry(PartSlot::left_arm).look = 9; // no such weapon: its own mesh
+  const TrainingScript script =
+      test_drive_training(shipped_training(), shipped_script(), garage, garage.riding, parts);
+  CHECK(script.robots.at("player").body == 2);
+  const RobotParts &look = script.looks.at("player");
+  CHECK(look.body == 0);
+  CHECK(look.legs == 1);
+  CHECK(look.arms[1] == 1);
+  CHECK(look.colour == 7);
+}

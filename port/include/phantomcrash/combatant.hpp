@@ -25,6 +25,9 @@ inline constexpr int weapon_slots = 4;
 
 struct Combatant {
   std::shared_ptr<RobotCombat> pose;
+  // The pose drawn instead when the robot wears a look (part_looks.hpp): it
+  // follows `pose`'s inputs, and nothing the rules read comes from it.
+  std::shared_ptr<RobotCombat> look_pose;
   bool pose_updated{};
   std::string name;
   std::string tag;       // the marker's name tag (its pilot's); empty for none

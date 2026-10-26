@@ -9,6 +9,7 @@ InputFrame ModuleShop::pointer_input(InputFrame input) {
   }
   if (view_ == ModuleShopView::list && list_seconds_ >= script_.list.window.seconds) {
     shop_list_pointer(input, script_.list, script_.up, script_.down, script_.cancel_buttons);
+    look_pointer(input);
     details_pointer(input);
   }
   return input;
