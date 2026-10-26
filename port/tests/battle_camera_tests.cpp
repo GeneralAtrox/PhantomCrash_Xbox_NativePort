@@ -106,6 +106,119 @@ TEST_CASE("an eye height sets the behind view's eye over the feet") {
   CHECK(!parse_source_chase_eye(nullptr).has_value());
 }
 
+TEST_CASE("the S.L.A.I. air view lifts the eye and draws the look point in") {
+  ChaseCameraSettings settings;
+  settings.eye_height = 5.0F;
+  settings.behind = 8.6F;
+  settings.height = 0.5F;
+  settings.look_ahead = 20.0F;
+  settings.air = SourceAirView{2.0F, 0.75F, 0.05F, 4.0F};
+  ChaseCamera camera(settings);
+  const StageCollision stage;
+  const Vec3 start{10.0F, 1.0F, 20.0F};
+  camera.tick(standing(start), stage, tick, true);
+  CHECK(near(camera.target(), start + Vec3{0.0F, 0.5F, -20.0F}));
+
+  // Rising (0x260368): the look offset shrinks 0.05 a tick to 0.75 and the
+  // eye stands 2 higher.
+  CameraSubject rising = standing(start);
+  rising.grounded = false;
+  rising.climb = 3.0F;
+  camera.tick(rising, stage, tick);
+  CHECK(near(camera.target(), start + Vec3{0.0F, 0.5F, -20.0F} * 0.95F));
+  for (int frame = 0; frame < 60; ++frame) {
+    camera.tick(rising, stage, tick);
+  }
+  CHECK(near(camera.target(), start + Vec3{0.0F, 0.375F, -15.0F}));
+  CHECK(near(camera.eye(), start + Vec3{0.0F, 7.0F, 8.6F}));
+
+  // Back on the ground it eases back.
+  camera.tick(standing(start), stage, tick);
+  CHECK(near(camera.target(), start + Vec3{0.0F, 0.5F, -20.0F} * 0.8F));
+
+  // Falling, it waits four ticks off the ground (0x26038c).
+  ChaseCamera falling_camera(settings);
+  falling_camera.tick(standing(start), stage, tick, true);
+  CameraSubject falling = standing(start);
+  falling.grounded = false;
+  falling.climb = -3.0F;
+  for (int frame = 0; frame < 3; ++frame) {
+    falling_camera.tick(falling, stage, tick);
+  }
+  CHECK(near(falling_camera.target(), start + Vec3{0.0F, 0.5F, -20.0F}));
+  falling_camera.tick(falling, stage, tick);
+  CHECK(near(falling_camera.target(), start + Vec3{0.0F, 0.5F, -20.0F} * 0.95F));
+
+  const auto parsed = parse_chase_camera(json::parse(
+      std::string_view{R"({"air": {"rise": 2, "look_scale": 0.75, "ease": 0.05, "updates": 4}})"}));
+  REQUIRE(parsed.air.has_value());
+  CHECK(parsed.air->look_scale == 0.75F);
+  CHECK(parsed.air->updates == 4.0F);
+  CHECK(!parse_chase_camera(json::parse(std::string_view{"{}"})).air.has_value());
+}
+
+TEST_CASE("the S.L.A.I. eye stops off the stage and rises near a wall") {
+  ChaseCameraSettings settings;
+  settings.eye_height = 5.0F;
+  settings.behind = 8.6F;
+  settings.wall = SourceWallView{0.15F, 10.0F, 0.15F, 1.0F / 3.0F, 0.25F, 0.5F, 2.5F};
+  settings.air = SourceAirView{2.0F, 0.75F, 0.05F, 4.0F};
+  ArenaBounds bounds;
+  bounds.half_size = 500.0F;
+  const StageCollision stage = StageCollision::box(bounds, 30.0F);
+  // The sight line from 4.4 up meets the wall at z 500, 3 of its 8.6 out.
+  const float wall_y = 4.4F + 0.6F * 3.0F / 8.6F;
+  const Vec3 feet{200.0F, 0.0F, 497.0F};
+  const auto settle = [&](const CameraSubject &robot) {
+    ChaseCamera camera(settings);
+    camera.tick(robot, stage, tick, true);
+    for (int frame = 0; frame < 120; ++frame) {
+      camera.tick(robot, stage, tick);
+    }
+    return camera.eye();
+  };
+  ChaseCamera snapped(settings);
+  snapped.tick(standing(feet), stage, tick, true);
+  CHECK(near(snapped.eye(), {200.0F, wall_y, 499.85F}));
+  // Each tick the vertical gap closes a ninth and the eye rises a third of
+  // 0.25: it settles 0.75 above the wall point.
+  CHECK(near(settle(standing(feet)), {200.0F, wall_y + 0.75F, 499.85F}));
+  // Legs row 31 rises 0.35.
+  CameraSubject row31 = standing(feet);
+  row31.source_eye = SourceChaseEye{8.6F, 5.0F, std::nullopt, 0.35F};
+  CHECK(near(settle(row31), {200.0F, wall_y + 1.05F, 499.85F}));
+  // In the air 0.5 more, plus 2.5 times the climb a tick; the sight line
+  // starts a leg radius lower and the eye stands 2 higher.
+  CameraSubject airborne = standing(feet);
+  airborne.grounded = false;
+  airborne.climb = 3.0F;
+  const float air_y = settle(airborne).y;
+  CHECK(std::abs(air_y - (4.4F - 1.5F + 4.1F * 3.0F / 8.6F + 3.0F * 1.0F)) < 0.01F);
+
+  // Away from walls the eye just closes a third of its gap; row 33 keeps it
+  // 1.2 above the feet.
+  ChaseCamera open(settings);
+  CameraSubject low = standing({0.0F, 0.0F, 0.0F});
+  low.source_eye = SourceChaseEye{8.6F, 0.5F, 1.2F, std::nullopt};
+  open.tick(low, stage, tick, true);
+  CHECK(near(open.eye(), {0.0F, 1.2F, 8.6F}));
+  open.tick(standing({0.0F, 0.0F, -3.0F}), stage, tick);
+  CHECK(near(open.eye(), {0.0F, 1.2F + 3.8F / 3.0F, 8.6F - 1.0F}));
+
+  const auto parsed = parse_chase_camera(json::parse(std::string_view{
+      R"({"wall": {"margin": 0.15, "reach": 10, "normal_limit": 0.15, "ease": 0.333333,
+          "rise": 0.25, "air_rise": 0.5, "air_climb": 2.5}})"}));
+  REQUIRE(parsed.wall.has_value());
+  CHECK(parsed.wall->reach == 10.0F);
+  CHECK(parsed.wall->air_climb == 2.5F);
+  const auto row =
+      json::parse(std::string_view{R"({"behind": 9, "eye_height": 1, "wall_rise": 0.35})"});
+  const auto eye = parse_source_chase_eye(&row);
+  REQUIRE(eye.has_value());
+  CHECK(eye->wall_rise == 0.35F);
+  CHECK(!eye->min_eye_height.has_value());
+}
+
 TEST_CASE("the behind view rises in the air and keeps off walls") {
   ChaseCamera camera(ChaseCameraSettings{});
   ArenaBounds bounds;

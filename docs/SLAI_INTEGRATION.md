@@ -2492,11 +2492,8 @@ guns pointing at the ground, and the target's armour never dropped.
     lists) brings the eye 0.15 off a surface it meets. The eye then
     closes a third of its gap a frame. Camera `+0xb0` is only the eye
     minus the feet, written after the fact by `0x25b6d0`.
-  - Not carried over: with actor `+0xe4` at or below 0, or `+0xb64` at
-    least 4 times `0x2230c0()`, the view zooms to 0.75 (`+0x4c`/`+0x50`,
-    0.05 a frame) with the eye 2 higher; legs row 33 keeps the eye at
-    least 1.2 above the feet; row 31 changes the ray's wall response.
-    The states behind `+0xe4` and `+0xb64` are not identified.
+  - The air view, the row 33 floor and the row 31 wall rise were left out
+    here; see "Behind view in the air and against walls" below.
 - PCSX2 check: SV 02 (legs row 19, so 9.5 behind and 5.4 up) turned to
   face the open street showed its eye 9.50 behind and 5.40 above the
   feet. A port frame at the same spot and heading frames the street the
@@ -2531,6 +2528,53 @@ guns pointing at the ground, and the target's armour never dropped.
     keep their own camera.
   - Rows range from 7.0 to 10.1 behind and 3.8 to 5.8 above.
 - Installed packs must be re-registered to get the rows.
+
+## Behind view in the air and against walls (2026-10-26)
+
+The rest of camera mode 1 (`0x260070`), read from the disc's program.
+Values are read behind instruction guards in `slai/battle_camera.py`
+(`air_view`, `wall_view`, `chase_rows`) and land in each S.L.A.I. stage's
+`chase_camera.air` and `chase_camera.wall`, and in the leg types'
+`source_chase_camera`.
+
+- Actor fields, identified for this:
+  - `+0xb61`: grounded flag. `+0xb64`: updates since leaving the ground,
+    counted by `0x4eb750` and cleared by `0x4e9e80`. After 4, legs types
+    other than 1, 2, 4, 7, 8 and 9 enter state `0x16`.
+  - `+0xe4`: vertical speed, y down. `+0xc0..c8`: position.
+  - `0x2230c0` and `0x4d7ab0` return the same count, so the threshold is
+    4 updates at the battle's 30 a second.
+- Air view (`0x260344..0x26055c`): off the ground (or camera `+0xf0` set)
+  and either rising (`+0xe4` at or below 0) or 4 updates up:
+  - the eye's source y is 2 less (2 higher);
+  - the look offset is scaled by camera `+0x4c`, which eases 0.05 an update
+    to 0.75, and back to 1 otherwise.
+  - Not carried over: the gp `-0x51c0` branch with `0x20cb00(0x249d50())`,
+    which uses `+0x50` and skips the easing (a mode not identified).
+- Legs row 33 (`0x2605a0`): the eye stays at least 1.2 above the feet.
+- Stage response (`0x2606d0..0x260a98`):
+  1. A ray (`0x4d0d50`, mask `0xf`) from above the feet to the eye. A hit
+     puts the target 0.15 off the surface along its normal.
+  2. The eye closes a third of its gap to the target.
+  3. Only after a hit, with the eye under 10 from the robot across the
+     ground and the normal's y (y down) under 0.15, so not a ceiling:
+     the vertical gap becomes its third, plus 0.25 up (0.35 for legs row
+     31). Off the ground it rises 0.5 more, less 2.5 times the fall speed
+     an update. The eye then closes a third of that.
+  4. A second ray to that eye. A hit sets it a third of the way to 0.15
+     off that surface.
+  - Near a wall the eye therefore settles 0.75 (row 31: 1.05) above the
+    point the sight line meets it.
+  - Not carried over: a further rise of `0.8 (1 - |normal y|)` times the
+    camera's pitch (`+0x44`) above 0. The pitch's sense against the
+    port's is not established.
+- Port: `ChaseCamera` uses `SourceAirView` and `SourceWallView` when the
+  stage gives them. With `wall` set it skips Phantom Crash's 1.0 wall
+  margin, robot clearance and eye sphere, which the original does not
+  have. Rates are per tick at `tick_rate`, scaled to any frame rate.
+- Not checked live: the scripted jump in the capture never left the
+  ground. The behaviour is covered by `battle_camera_tests.cpp`.
+- Installed packs must be re-registered.
 
 ## Stages no longer mirrored (2026-10-26)
 

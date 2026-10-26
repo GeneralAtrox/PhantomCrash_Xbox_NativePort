@@ -75,6 +75,7 @@ CameraSubject TrainingScreen::camera_subject(const std::size_t index) const {
   subject.legs_model = view_ ? view_->legs_model(index) : 0;
   subject.source_eye = view_ ? view_->source_chase_eye(index) : std::nullopt;
   subject.grounded = robot.mover.grounded();
+  subject.climb = robot.mover.velocity().y;
   return subject;
 }
 

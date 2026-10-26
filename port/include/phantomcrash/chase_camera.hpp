@@ -8,6 +8,33 @@
 
 namespace phantomcrash {
 
+// The S.L.A.I. behind view in the air (0x260344..0x26055c): rising, or
+// `updates` ticks off the ground, the eye stands `rise` higher and the look
+// offset eases to `look_scale` of itself, `ease` a tick; then back to 1.
+struct SourceAirView {
+  float rise{};
+  float look_scale{1.0F};
+  float ease{};
+  float updates{};
+};
+
+// The S.L.A.I. behind view against the stage (0x2606d0..0x260a98): a
+// surface on the sight line stops the eye `margin` off it, and the eye closes
+// `ease` of its gap a tick. Hit within `reach` of the robot across the ground,
+// on a surface whose normal points less than `normal_limit` down, the
+// vertical gap becomes its `ease` share plus `rise` (in the air `air_rise`
+// more, plus `air_climb` times the climb a tick) before the eye closes its
+// share; a second sight line to that eye stops it again.
+struct SourceWallView {
+  float margin{};
+  float reach{};
+  float normal_limit{};
+  float ease{};
+  float rise{};
+  float air_rise{};
+  float air_climb{};
+};
+
 // The battle camera's behind view (0x07edfa, ticked by 0x07dd2a): eased
 // after the aim, above and behind the torso, looking past the robot along
 // the aim. Values from data/world/training.json "chase_camera"; the
@@ -34,6 +61,11 @@ struct ChaseCameraSettings {
   // Set, the eye stands this far above the feet rather than `height` above
   // the torso (the S.L.A.I. behind view; unset for Phantom Crash).
   std::optional<float> eye_height;
+  // Set, the S.L.A.I. air view in place of the rise above.
+  std::optional<SourceAirView> air;
+  // Set, the S.L.A.I. stage response in place of the wall margin, the
+  // robot clearance and the eye's sphere.
+  std::optional<SourceWallView> wall;
 };
 
 // A S.L.A.I. legs' behind-view eye: its row of 0x335170 plus (0, -4.5, -12)
@@ -41,9 +73,12 @@ struct ChaseCameraSettings {
 struct SourceChaseEye {
   float behind{};
   float eye_height{};
+  std::optional<float> min_eye_height; // row 33: the eye's least height above the feet
+  std::optional<float> wall_rise;      // row 31: in place of the stage response's rise
 };
 
-// {"behind": 9.5, "eye_height": 5.4}; nullopt without one.
+// {"behind": 9.5, "eye_height": 5.4}, with "min_eye_height" and
+// "wall_rise" where the row has them; nullopt without one.
 [[nodiscard]] std::optional<SourceChaseEye> parse_source_chase_eye(const json::JsonValue *value);
 
 // The fields `value` gives replace those of `base`.
@@ -68,6 +103,7 @@ struct CameraSubject {
   Vec3 torso;          // the torso node (camera +0xa0)
   int legs_model{};    // picks the first-person eye
   bool grounded{true}; // robot +0x252c
+  float climb{};       // its upward speed
   // Its legs' eye, used in place of the settings' in the S.L.A.I. behind
   // view (with eye_height set).
   std::optional<SourceChaseEye> source_eye;
@@ -109,12 +145,18 @@ public:
   [[nodiscard]] Mat4 projection(float aspect) const;
 
 private:
+  // The S.L.A.I. stage response: the eye toward `wanted`.
+  void follow_source(const CameraSubject &subject, const StageCollision &stage, Vec3 wanted,
+                     float ticks, bool snap);
+
   ChaseCameraSettings settings_;
   float yaw_{};
   float pitch_{};
   Vec3 eye_{0.0F, 5.0F, 10.0F};
   Vec3 target_{};
   Vec3 anchor_{};
+  float air_ticks_{};      // ticks since the robot left the ground
+  float look_scale_{1.0F}; // the air view's share of the look offset
   std::optional<CameraShot> shot_;
 };
 

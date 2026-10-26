@@ -56,6 +56,7 @@ void BattleMonitor::tick(const Battle &battle, const float seconds) {
   subject.height = robot.radius;
   subject.torso = subject.position + Vec3{0.0F, robot.radius * 2.0F, 0.0F};
   subject.grounded = robot.mover.grounded();
+  subject.climb = robot.mover.velocity().y;
   camera_.tick(subject, battle.stage(), seconds, snap);
   if (const auto *objects = battle.objects()) {
     for (const auto &object : objects->objects()) {
