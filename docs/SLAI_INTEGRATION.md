@@ -2292,7 +2292,9 @@ guns pointing at the ground, and the target's armour never dropped.
   about 4.2 (a different robot, estimated), and Phantom Crash robots about
   4.4-5. The parts review found S.L.A.I. robots 1.4-1.6 times the Plain
   Holy's height at the same camera (ELINT, MOLNIYA, ARDITO about 2 times).
-  No robot or stage scale was changed.
+  No robot or stage scale was changed. Superseded in part: the camera
+  offset is per robot and the 8.6/5.0 robot was not identified (see
+  "Robot scale against PCSX2").
 - Open: the port draws S.L.A.I. content mirrored left-right compared with
   PCSX2 (container "DELTA" text reads mirrored; layouts match once the
   port frame is flipped). PS2 screen right is +column 0 of the view
@@ -2398,3 +2400,35 @@ guns pointing at the ground, and the target's armour never dropped.
 - Not checked: comparison with the original game, projectile direction,
   walking seen from the side, and dash, jump, turn and damage poses. Arms
   were seen only in the stock robots.
+
+## Robot scale against PCSX2 (2026-10-26)
+
+- Measured in a New York Quick Battle with READY-MADE SV 01 (PT-1,
+  PROTON body on 2Legs) and SV 02 (KHT-1), read from PCSX2 save-state RAM.
+- Robot scale is correct. PT-1's body draw matrix (0.1 scale) puts the
+  body origin 2.70 above the ground and the body from 2.39 to 4.04. The
+  port's PROTON body glTF (`binlink/10502`) drawn through that matrix and
+  the original's view covers PT-1's body in the PCSX2 frame. A port side
+  view at the same stage spawn puts the body top about 4.05 above the
+  ground. Containers, the ship and the tower line up between the two
+  frames at the same camera pose.
+- The chase camera offset is per robot. At rest, camera `+0xb0`/`+0xc0`:
+  PT-1 eye 4.80 behind and 4.90 above the feet; KHT-1 6.23 behind and
+  5.40 above; the earlier 8.6/5.0 measurement was a robot not recorded.
+  The look point is 20 ahead and 0.5 above in every case. The port uses
+  the fixed 8.6/5.0 for every S.L.A.I. robot, so most draw smaller on
+  screen than in the original. The rule that picks the offset (robot
+  size, body or legs table) is not traced; the code writing `+0xb0` is
+  the place to start.
+- The PROTON body faces backwards in the port. In the original the body
+  matrix maps the model's +z (the long end, 2.41) to the robot's back; from
+  behind, PCSX2 shows the body's grey-blue back. The port draws the
+  rounded nose toward the camera and the long end on the guns' side; the
+  original matrix turned half round about y fits the port frame. The
+  likely cause is the port loader's z flip, which guns and shoulder
+  weapons were already turned for but bodies were not. The other nine
+  S.L.A.I. bodies were not compared.
+- PT-1 sets optical camouflage to AUTOMATIC and is invisible at rest until
+  its O.C. power runs out (about 09:44 on the timer); captures before
+  then show no body.
+- Nothing was changed by this check.
