@@ -87,6 +87,9 @@ void TrainingScreen::build_battle(const TrainingContext &context) {
     battle_->set_boss(drone, setup.drone.boss);
     chips.emplace_back(drone, &setup.drone);
   }
+  if (drones) {
+    add_lineup();
+  }
   hud_ = make_battle_hud(textures_, font_, context.roots, screens_, player_index_);
   // Every robot's chip: its lock time and the boxes it locks in without a
   // drawn reticle (0x04e6b8 builds every robot's sight).
@@ -175,6 +178,7 @@ void TrainingScreen::build_battle(const TrainingContext &context) {
     }
     battle_->set_movement(static_cast<int>(index), movement);
   }
+  show_lineup();
 }
 
 } // namespace phantomcrash

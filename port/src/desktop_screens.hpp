@@ -47,6 +47,7 @@ namespace phantomcrash {
 class WorldRenderer;
 class RobotLibrary;
 class GameScreens;
+class SlaiBattleLineup;
 struct PreviewWorld;
 
 // Runs one screen at a time and switches to the one it names when done:
@@ -236,6 +237,8 @@ private:
   // A rumble entered on Rumble S.L.A.I., and its result as its battle ends
   // (desktop_screens_slai.cpp).
   [[nodiscard]] std::unique_ptr<Screen> make_slai_battle();
+  [[nodiscard]] std::shared_ptr<SlaiBattleLineup> make_slai_lineup(const SlaiRumbleData &data,
+                                                                   const SlaiMatch &match);
   void finish_slai_match();
   static constexpr const char *slai_result_route = "slai_result";
   // Hands the battle screen being left to `receipt` (a MatchResultScreen),
@@ -342,7 +345,8 @@ private:
   RumblingBattle rumbling_battle_;
   std::optional<RumblingEntry> active_match_;
   std::optional<RumblingEntry> pending_entry_;
-  std::optional<SlaiCityMatch> slai_match_; // the S.L.A.I. rumble being fought
+  std::optional<SlaiCityMatch> slai_match_;       // the S.L.A.I. rumble being fought
+  std::shared_ptr<SlaiBattleLineup> slai_lineup_; // and its opponents
   std::unique_ptr<Screen> pending_result_;
   std::string clear_route_; // a first clear's screen, in place of RESULT
   // The finale (story/finale.json, tables/finale.json), read as it opens,

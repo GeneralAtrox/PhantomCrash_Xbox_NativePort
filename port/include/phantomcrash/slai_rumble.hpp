@@ -7,6 +7,7 @@
 // PAL SLES-52940; names are researcher-assigned.
 
 #include "phantomcrash/json.hpp"
+#include "phantomcrash/slai_opponent_table.hpp"
 #include "phantomcrash/slai_rota.hpp"
 
 #include <array>
@@ -99,6 +100,8 @@ struct SlaiRumbleTable {
   int finals_stage{};
   std::vector<SlaiFinalRound> finals;              // by finals cleared
   std::vector<std::array<int, 2>> finals_fallback; // by city (0x334a80)
+  // The campaign's opponents; empty in a table converted before they were.
+  SlaiOpponentTable opponents;
 };
 
 // A city's arena: the imported stages (data/world/stages.json) its day and
@@ -161,6 +164,41 @@ struct SlaiBattleRules {
   int hops{2};
 };
 
+// An opponent's AI chip by its level, the last row whose level it reaches
+// (a port choice: S.L.A.I.'s CPU rows are undecoded).
+struct SlaiOpponentChip {
+  int from_level{};
+  int chip{-1}; // tables/parts.json chips
+  int chip_level{};
+};
+
+// How the campaign's opponents take the field (the "opponents" block): what
+// the original's rules (slai_lineup.hpp) leave open.
+struct SlaiOpponentRules {
+  // 0x222a60 lets these body makers into any rumble (the drones').
+  std::vector<int> always_eligible_makers{8, 9};
+  // The story flags set, which 0x256cc0's substitutions test; the port keeps
+  // no S.L.A.I. story, so by default none are.
+  std::vector<int> story_flags;
+  // 0x222f70's unresolved inputs: the rumble manager's session check, and
+  // regulation 30's counter.
+  bool leader_session{true};
+  bool leader_counter{};
+  std::vector<SlaiOpponentChip> chips;
+  // The AI profile (contests.hpp Entrant) of each behaviour value; others
+  // take `profile`.
+  std::vector<std::pair<int, int>> profiles;
+  int profile{4};
+  // Every opponent's paint and sticker, -1 keeping its record's (the
+  // original's 16-region paint is undecoded).
+  int paint{-1};
+  int emblem{-1};
+  // A place emptied by a shootdown draws its next opponent this long after.
+  float arrival_seconds{8.0F};
+  // Shooting a pool drone down sets its pool roster's flag as well.
+  bool pool_flags{};
+};
+
 // data/world/slai_rumble.json.
 struct SlaiRumbleWorld {
   std::vector<SlaiRumbleCity> cities; // by column
@@ -173,6 +211,7 @@ struct SlaiRumbleWorld {
   SlaiRumbleLadder ladder;
   SlaiRumbleBalance balance;
   SlaiBattleRules battle;
+  SlaiOpponentRules opponents;
   int start_city{};
 };
 

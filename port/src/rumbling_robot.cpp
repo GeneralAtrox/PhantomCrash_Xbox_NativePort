@@ -53,45 +53,53 @@ int raised_level(const int level, const QuestSave &quest) {
 RumblingRobot rumbling_robot(const RumblingTables &tables, const QuestSave &quest,
                              const int entrant, const std::string &prefix,
                              const MovementTuning &movement, const int level_offset) {
+  const Entrant *who = tables.contests.entrant(entrant);
+  const RobotRecord *record = who != nullptr ? tables.garage.robot(who->robot) : nullptr;
+  RumblingRobot robot;
+  robot.movement = movement;
+  if (record != nullptr) {
+    robot = record_robot(tables, quest, *record, prefix, movement, level_offset);
+  }
+  robot.entrant = entrant;
+  if (who == nullptr) {
+    return robot;
+  }
+  if (const PilotRecord *pilot = tables.parts.pilot(who->pilot)) {
+    if (!pilot->robot_name.empty()) {
+      robot.name = pilot->robot_name;
+    }
+    robot.tag = pilot->tag;
+  }
+  return robot;
+}
+
+RumblingRobot record_robot(const RumblingTables &tables, const QuestSave &quest,
+                           const RobotRecord &record, const std::string &prefix,
+                           const MovementTuning &movement, const int level_offset) {
   const auto level = [&](int base) {
     return std::clamp(raised_level(base, quest) + std::clamp(level_offset, -99, 99),
                       -part_level_max, part_level_max);
   };
   RumblingRobot robot;
-  robot.entrant = entrant;
   robot.movement = movement;
-  const Entrant *who = tables.contests.entrant(entrant);
-  if (who == nullptr) {
-    return robot;
-  }
-  if (const PilotRecord *pilot = tables.parts.pilot(who->pilot)) {
-    robot.name = pilot->robot_name;
-    robot.tag = pilot->tag;
-  }
-  const RobotRecord *record = tables.garage.robot(who->robot);
-  if (record == nullptr) {
-    return robot;
-  }
-  if (robot.name.empty()) {
-    robot.name = record->name;
-  }
+  robot.name = record.name;
   RobotLoadout &loadout = robot.loadout;
-  if (const auto &chip = record->part(PartSlot::chip)) {
+  if (const auto &chip = record.part(PartSlot::chip)) {
     loadout.chip = chip->id;
     loadout.chip_level = level(chip->level);
   }
-  if (const auto &body = record->part(PartSlot::body)) {
+  if (const auto &body = record.part(PartSlot::body)) {
     loadout.body = robot.look.body = body->id;
     loadout.body_level = level(body->level);
   }
-  if (const auto &legs = record->part(PartSlot::legs)) {
+  if (const auto &legs = record.part(PartSlot::legs)) {
     loadout.legs = robot.look.legs = legs->id;
     loadout.legs_level = level(legs->level);
   }
-  robot.look.colour = record->paint;
-  robot.look.emblem = record->emblem;
+  robot.look.colour = record.paint;
+  robot.look.emblem = record.emblem;
   for (const Mount &mount : mounts) {
-    const auto &part = record->part(mount.part);
+    const auto &part = record.part(mount.part);
     if (!part) {
       continue;
     }
@@ -109,7 +117,7 @@ RumblingRobot rumbling_robot(const RumblingTables &tables, const QuestSave &ques
                               loadout.legs_level, false);
   robot.combat = combat_stats(tables.parts, loadout.chip, loadout.chip_level, loadout.legs,
                               loadout.legs_level);
-  add_module_bonuses(robot.combat, tables.garage, record->modules);
+  add_module_bonuses(robot.combat, tables.garage, record.modules);
   if (const ChipRecord *chip = tables.parts.chip(loadout.chip)) {
     const ChipStats stats = chip_stats(*chip, loadout.chip_level);
     robot.lock_seconds = stats.lock_frames / part_frames_per_second;
@@ -117,7 +125,7 @@ RumblingRobot rumbling_robot(const RumblingTables &tables, const QuestSave &ques
   }
   robot.movement =
       loaded_movement(tables.parts, loadout, load_stats(tables.parts, loadout), movement);
-  const RobotKind kind = robot_kind(tables.parts, tables.rules, *record);
+  const RobotKind kind = robot_kind(tables.parts, tables.rules, record);
   robot.maker = kind.maker;
   robot.legs_type = kind.legs_type;
   return robot;

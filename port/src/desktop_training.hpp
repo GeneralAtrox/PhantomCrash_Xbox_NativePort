@@ -45,6 +45,7 @@
 namespace phantomcrash {
 struct CoopMatch;
 struct TrainingFinale;
+struct TrainingLineup;
 struct TrainingVs;
 namespace online {
 class Presentation;
@@ -89,7 +90,7 @@ struct TrainingContext {
   RankerContest ranker{RankerContest::none};
   int ranker_area{-1};
   std::array<bool, weapon_slots> finale_lost{};
-  bool beginner{}; // BUTTON CONFIG's BEGINNER MODE
+  bool beginner{};           // BUTTON CONFIG's BEGINNER MODE
   ControlOptions controls{}; // its assignments and VIEW CHANGE TYPE
   BattleSounds::PlaybackQuery sound_playing;
   std::function<void()> online_exit;
@@ -255,6 +256,10 @@ private:
   void seat_player(const BattleSettings &settings, float hp);
   void add_live_views();
   void follow_live();
+  // The battle's line-up (desktop_training_lineup.cpp).
+  void add_lineup();
+  void show_lineup();
+  void follow_lineup(float seconds);
   void load_messages(const DataRoots &roots, bool standard_controls);
   void update_message(const InputFrame &input, double tick_seconds);
   void tick_battle(const InputFrame &input, float seconds);
@@ -320,6 +325,7 @@ private:
   float marked_refresh_{}; // seconds until the marked tags are read again
   int live_changes_{};
   std::vector<int> live_entrants_; // drawn as, by battle robot
+  std::shared_ptr<TrainingLineup> lineup_;
   std::unique_ptr<BattleView> view_;
   std::unique_ptr<BattleHud> hud_;
   // Screens after the first, each following its own robot; empty with one
@@ -381,7 +387,7 @@ private:
   // The camera on a boss's defeat (desktop_training_defeat.cpp).
   std::optional<ChaseCamera> defeat_chase_;
   std::optional<CameraViews> defeat_views_;
-  double clock_{};       // seconds of battle: the HUD's mission time and pulses
+  double clock_{}; // seconds of battle: the HUD's mission time and pulses
   int day_{};
   bool standard_controls_{true}; // BUTTON CONFIG's CONTROL TYPE
   bool beginner_{};              // and its BEGINNER MODE

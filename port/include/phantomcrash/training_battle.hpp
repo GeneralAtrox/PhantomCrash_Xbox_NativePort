@@ -17,6 +17,7 @@
 
 #include <array>
 #include <map>
+#include <memory>
 #include <optional>
 #include <string>
 #include <vector>
@@ -71,6 +72,8 @@ struct BattleButtons {
   std::array<std::string, weapon_slots> fire_labels{"RT", "LT", "B", "Y"};
 };
 
+class BattleLineup;
+
 // The "battle" section of data/world/training.json.
 struct TrainingBattle {
   BattleSettings settings;
@@ -108,6 +111,10 @@ struct TrainingBattle {
   float player_heading{};
   TrainingRobot drone;
   int drones{4};
+  // Opponents with robots and AI of their own (battle_lineup.hpp), set by
+  // the screen that starts the battle (S.L.A.I.'s rumbles) beside the drones;
+  // none from the data.
+  std::shared_ptr<BattleLineup> lineup;
   // VS: the players' robots, the first the player's; empty elsewhere. They
   // start out of the gates and fight each other without drones.
   std::vector<TrainingRider> riders;

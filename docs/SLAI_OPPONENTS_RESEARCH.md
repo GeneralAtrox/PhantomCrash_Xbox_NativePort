@@ -280,6 +280,20 @@ part slot to a port part.
 The shipped name for drone weapons is blank. For example, arm 93 → port 123
 and shoulders 94/95 → port 115/116.
 
+The port part numbers here and in the examples below predate two changes
+to the registration: the parts fitted to those Phantom Crash sells, and the
+corrected model-family makers (`native_parts.py` `SOURCE_MAKERS`,
+2026-10-26). Registration now writes the current mapping into
+`tables/slai_rumble.json` "opponents" (`slai/opponent_table.py`); read the
+numbers there, not here.
+
+### In the port
+
+The port fields these line-ups in S.L.A.I.'s rumbles. See
+SLAI_RUMBLE_PLAN.md, "Armed opponents from the original's rosters".
+`slai_lineup.cpp` reimplements the check, the lists and the draw, and is
+tested against this mirror through `slai/lineup_fixture.py`.
+
 ### Example: Tokyo, CLASS FREE, day (match 78)
 
 The match uses regulation 22 with 3..6 robots, pool roster 2, record 114 and

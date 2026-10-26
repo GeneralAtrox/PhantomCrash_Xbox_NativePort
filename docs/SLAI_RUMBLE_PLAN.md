@@ -239,14 +239,56 @@ reports, and which opponents (record, flag) it beat.
   - the score is the shootdowns. The match's leader is beaten when the
     player is standing with at least that many shootdowns.
 - Still to do:
-  - opponent rosters (phase 1b);
+  - opponent rosters (phase 1b; done below);
   - the `SlaiRobot` adapter (maker, legs, special rules);
   - Las Vegas night lighting;
   - the RUMBLING lettering on the wedge art the Club Wired item reuses.
 
+### Armed opponents from the original's rosters (done, 2026-10-26)
+
+- Registration writes an `"opponents"` block into `tables/slai_rumble.json`
+  (`slai/opponent_table.py`, table version 2). It holds:
+  - the 210 rosters, the record 0x7D roster swap, the substitutions and the
+    leader rules;
+  - the 1,805 opponents they name, each with its robot already on the port's
+    imported parts (garage robot format) and what the opponent check reads.
+- `slai_lineup.hpp` reimplements the line-up (`opponent_rules.py` mirrors
+  it):
+  - the opponent check (0x222A60), through the player's entry check, with
+    rental-only binding only the player;
+  - the candidate lists (0x2225A0);
+  - the per-place draw (0x223420): places 1–3 from the rosters, 4–5 from
+    the pool.
+  - `port/tests/slai_lineup_expected.json` (`slai/lineup_fixture.py`) checks
+    48 match and save cases and 144 scripted draws against the disc.
+- The battle (`desktop_screens_slai.cpp`, `slai_battle_lineup.hpp`,
+  `desktop_training_lineup.cpp`) fields the drawn opponents:
+  - each on its own robot, every robot its own team;
+  - fighting with the live RUMBLING's AI (`rumbling.json` live.ai,
+    `robot_ai.json`), at its level as the AI's ability.
+  - A place emptied by a shootdown draws again after `arrival_seconds`. The
+    draw re-reads the records as this battle filled them, as 0x223ED0
+    re-checks after each defeat. This is a port reading: the 20–30
+    shootdown targets need it.
+- Results:
+  - each roster opponent the player shot down sets its record flag;
+  - the leader's clears the record;
+  - the score is still the shootdowns.
+  - Without the opponents block (an older table), the training-drone
+    stand-in remains.
+- Port choices, in `data/world/slai_rumble.json` "opponents":
+  - AI chips by level (Phantom Crash's enemy chips 95…91), since the CPU rows
+    are undecoded;
+  - the AI profile, 4 for every behaviour value;
+  - no story flags set;
+  - the leader's session check passes; regulation 30's counter does not;
+  - default paint, since the 16-region paint is undecoded.
+
 ## Gaps found so far
 
-- **Opponent builds** are undecoded (phase 1b).
+- **Opponent builds** are decoded and fielded (see above). Still undecoded:
+  the CPU row, the behaviour value, the 16-region paint, the emblem, and
+  the story flags behind the substitutions.
 - **No Las Vegas night stage** was imported, although the disc has
   `LASVEGAS_NIGHT.MED` and the matches have Las Vegas night sets. The disc
   has no `NIGHT_LASVEGAS.BG`, so night Las Vegas is the day scene with night

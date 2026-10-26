@@ -103,6 +103,39 @@ SlaiBattleRules battle_from(const JsonValue &value) {
   return battle;
 }
 
+SlaiOpponentRules opponent_rules_from(const JsonValue &value) {
+  SlaiOpponentRules rules;
+  if (const auto *makers = value.find("always_eligible_makers")) {
+    rules.always_eligible_makers = integers(*makers);
+  }
+  if (const auto *flags = value.find("story_flags")) {
+    rules.story_flags = integers(*flags);
+  }
+  rules.leader_session = value.boolean_or("leader_session", rules.leader_session);
+  rules.leader_counter = value.boolean_or("leader_counter", rules.leader_counter);
+  if (const auto *chips = value.find("chips")) {
+    for (const auto &row : chips->array()) {
+      rules.chips.push_back({integer(required(row, "from_level")), integer(required(row, "chip")),
+                             static_cast<int>(row.number_or("chip_level", 0))});
+    }
+  }
+  if (const auto *profiles = value.find("profiles")) {
+    for (const auto &[behaviour, profile] : profiles->object()) {
+      rules.profiles.emplace_back(std::stoi(behaviour), integer(profile));
+    }
+  }
+  rules.profile = static_cast<int>(value.number_or("profile", rules.profile));
+  rules.paint = static_cast<int>(value.number_or("paint", rules.paint));
+  rules.emblem = static_cast<int>(value.number_or("emblem", rules.emblem));
+  rules.arrival_seconds =
+      static_cast<float>(value.number_or("arrival_seconds", rules.arrival_seconds));
+  rules.pool_flags = value.boolean_or("pool_flags", rules.pool_flags);
+  if (rules.arrival_seconds < 0.0F) {
+    throw std::runtime_error("opponents.arrival_seconds must not be negative");
+  }
+  return rules;
+}
+
 } // namespace
 
 SlaiRumbleWorld parse_slai_rumble_world(const JsonValue &document) {
@@ -135,6 +168,9 @@ SlaiRumbleWorld parse_slai_rumble_world(const JsonValue &document) {
   }
   if (const auto *battle = document.find("battle")) {
     world.battle = battle_from(*battle);
+  }
+  if (document.find("opponents") != nullptr) {
+    world.opponents = member(document, "opponents", opponent_rules_from);
   }
   return world;
 }

@@ -97,6 +97,8 @@ struct GarageTables {
 
 // Throws std::runtime_error naming what is malformed.
 [[nodiscard]] GarageTables parse_garage_tables(const json::JsonValue &document);
+// One of its robots (also S.L.A.I.'s opponents, slai_opponent_table.hpp).
+[[nodiscard]] RobotRecord parse_robot_record(const json::JsonValue &value);
 
 // What a part, module, paint or emblem costs (0x0932c7); 0 for one missing.
 [[nodiscard]] std::int64_t part_price(const PartTables &parts, const GarageTables &garage,

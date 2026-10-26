@@ -672,6 +672,11 @@ S.L.A.I.'s computer robots walk a route graph per city, in resource folder
   New York, Tokyo and Hong Kong (the hub's three rows) were each run for 200
   seconds: drones roam the whole stage. The other stages are checked offline
   with the same route pruning.
+- Since 2026-10-26 a table with the opponents block fields the original's
+  line-ups instead (SLAI_RUMBLE_PLAN.md, "Armed opponents from the
+  original's rosters"). Each opponent rides its own robot and is driven by
+  the live RUMBLING's AI over the same pruned route and navigation grid.
+  The drones above remain the stand-in for an older table.
 
 ### Arena lids and stacked floors
 

@@ -23,6 +23,9 @@ add_library(phantomcrash_core
   src/slai_rumble_save.cpp
   src/slai_rumble_table.cpp
   src/slai_rumble_world.cpp
+  src/slai_opponent_table.cpp
+  src/slai_lineup.cpp
+  src/slai_battle_lineup.cpp
   src/slai_anb.cpp
   src/slai_story.cpp
   src/slai_story_save.cpp
@@ -466,6 +469,7 @@ if(BUILD_TESTING)
     tests/slai_cheat_tests.cpp
     tests/slai_leg_mount_tests.cpp
     tests/slai_rumble_table_tests.cpp
+    tests/slai_lineup_tests.cpp
     tests/slai_talk_tests.cpp
     tests/source_suspension_tests.cpp
     tests/source_roll_tests.cpp
@@ -724,6 +728,7 @@ if(PHANTOMCRASH_BUILD_DESKTOP)
     src/desktop_training_camera.cpp
     src/desktop_training_defeat.cpp
     src/desktop_training_live.cpp
+    src/desktop_training_lineup.cpp
     src/desktop_training_split.cpp
     src/desktop_training_finale.cpp
     src/desktop_training_vs.cpp

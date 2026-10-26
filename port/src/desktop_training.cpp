@@ -232,6 +232,7 @@ void TrainingScreen::tick(const InputFrame &incoming, const double tick_seconds)
   if (!coop_match_) {
     follow_live();
   }
+  follow_lineup(seconds);
   if (!online()) {
     tick_effects(tick_seconds);
   }

@@ -62,8 +62,10 @@ class RumbleTableDiscTests(unittest.TestCase):
         cls.rota = schedule(cls.program)
 
     def test_counts_cities_and_display_order(self):
+        # No part registration in this root, so no opponents block.
         self.assertEqual(self.summary, {'rumble_regulations': 32, 'rumble_matches': 157,
-                                        'rumble_city_days': 700})
+                                        'rumble_city_days': 700, 'rumble_opponents': 0})
+        self.assertNotIn('opponents', self.table)
         self.assertEqual([c['name'] for c in self.table['cities']], list(CITIES))
         self.assertEqual(self.table['display_order'], list(DISPLAY_ORDER))
         self.assertEqual(len(self.table['rota']['days']), 100)

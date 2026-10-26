@@ -107,6 +107,10 @@ const RobotRecord *GarageTables::robot(const int index) const {
   return at(robots, index);
 }
 
+RobotRecord parse_robot_record(const JsonValue &value) {
+  return robot_record(value);
+}
+
 GarageTables parse_garage_tables(const JsonValue &document) {
   GarageTables out;
   out.robots = records<RobotRecord>(document, "robots", robot_record);

@@ -68,4 +68,10 @@ struct RumblingRobot {
                                            int entrant, const std::string &prefix,
                                            const MovementTuning &movement, int level_offset = 0);
 
+// A robot record's robot, named as the record is and with no tag (S.L.A.I.'s
+// opponents, slai_battle_lineup.hpp; rumbling_robot names an entrant's).
+[[nodiscard]] RumblingRobot record_robot(const RumblingTables &tables, const QuestSave &quest,
+                                         const RobotRecord &record, const std::string &prefix,
+                                         const MovementTuning &movement, int level_offset = 0);
+
 } // namespace phantomcrash

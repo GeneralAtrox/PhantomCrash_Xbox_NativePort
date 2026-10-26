@@ -193,6 +193,9 @@ SlaiRumbleTable parse_slai_rumble_table(const JsonValue &document) {
     }
   }
   check_rota(table);
+  if (document.find("opponents") != nullptr) {
+    table.opponents = member(document, "opponents", parse_slai_opponents);
+  }
   return table;
 }
 
