@@ -55,7 +55,7 @@ class StickerFrameTests(unittest.TestCase):
         self.assertTrue(np.allclose(local[3], [0.1, -0.1, 0.01]))
 
     def test_roots_are_matched_before_the_node_is_chosen(self):
-        # KHT: the body file's root stands 30 lower than its carrier's.
+        # ZWERG (S4): the body file's root stands 30 lower than its carrier's.
         body = [Node(-1, translation(0, 0, 0)), *BODY[1:]]
         node, frame = sticker_frame(CARRIER, body)
         self.assertEqual(node, 1)

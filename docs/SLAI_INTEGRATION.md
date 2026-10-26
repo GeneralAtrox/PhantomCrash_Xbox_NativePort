@@ -902,6 +902,37 @@ New York rumble rises and lands, the behind camera following it up and
 looking down, and the stand-in drones walk 186 of the stage's 244 route
 segments, where before they could walk none of it.
 
+## Model families and their makers (2026-10-26)
+
+Three S.L.A.I. bodies were named after a different maker from their legs:
+the HARTMAN body carried KHT legs, the KHT body ZWERG legs and the ZWERG
+body HARTMAN legs. The original is consistent and the mistake was ours.
+`native_parts.py` mapped model file families to makers through
+`SOURCE_MAKERS`, which gave families 2, 4 and 5 to HARTMAN, KHT and ZWERG.
+Legs were matched through the makers' resource folders (`FOLDERS`) instead,
+so they were right.
+
+The disc settles it: each `Z/M/<folder><leg type>` package holds one
+family's body beside its legs, and the weapon folders name shapes:
+
+| Folder | Family | Maker | Evidence |
+| --- | --- | --- | --- |
+| HOLY | S3 | CARRO | |
+| PHOTON | S1 | PROTON | |
+| AERON | S5 | HARTMAN | `A_DRILL`, `A_ETC`, Crawler: SV Drill "Sapper", M113 ETC Cannon |
+| BRINEMAN | S2 | KHT | `BOWLER`, `S_4MISSILE`: Single Baller, PRK69-4 "Leshy" |
+| KUBEL | S4 | ZWERG | `A_STUN`, `A_ACID`: EMP Lahmung Faust, Schmelzen Faust |
+
+With the families mapped this way, 51 of the 140 parts take new records:
+the three bodies and the 32 arms and shoulders of families 2, 4 and 5. Their
+names, stats and weapon kinds now all come from the right maker. The melee
+arms are now the blade, spear, pile, stun, drill and acid models (S1A03H,
+S2A03H, S3A03H, S4A03H, S4A08H, S5A03H). Before, the ETC cannon model
+S5A08H was a fist and the acid fist S4A08H a gun. All campaign opponents
+still resolve to port parts, now with the models of their own makers.
+`tests/test_slai_part_makers.py` keeps each family on the maker whose
+folders hold it.
+
 ## Commands and verification
 
 Build the standard port with `pwsh -File scripts/build-port.ps1`. Generate

@@ -20,7 +20,13 @@ from .progression import write_progression
 from .stats import part_name
 from .wheels import _torso, MAKERS
 
-SOURCE_MAKERS = {1: 1, 2: 2, 3: 0, 4: 3, 5: 4, 6: 5, 7: 6, 8: 7, 9: 9, 10: 8}
+# Model file family digit (S<digit>...) -> executable maker. Each maker's
+# resource folders (FOLDERS) hold its body and legs together, and its weapon
+# folders name shapes its weapon records describe: AERON (S5) has HARTMAN's
+# drill and ETC cannon, KUBEL (S4) ZWERG's stun and acid fists, BRINEMAN (S2)
+# KHT's single baller. Families 2, 4 and 5 once mapped to HARTMAN, KHT and
+# ZWERG, naming those bodies and weapons after another maker than their legs.
+SOURCE_MAKERS = {1: 1, 2: 3, 3: 0, 4: 4, 5: 2, 6: 5, 7: 6, 8: 7, 9: 9, 10: 8}
 FOLDERS = {0: "HOLY", 1: "PHOTON", 2: "AERON", 3: "BRINEMAN", 4: "KUBEL"}
 MELEE_KINDS = (6, 7)
 KINDS = {"body": ("bodies", "body_types", "body", 0),

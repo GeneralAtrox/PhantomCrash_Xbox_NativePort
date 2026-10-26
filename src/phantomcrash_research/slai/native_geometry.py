@@ -100,8 +100,9 @@ def nearest_node(nodes, points):
 
 def sticker_frame(carrier, body):
     """The body node a sticker carrier (ST02) lies on, and that node's frame
-    in the carrier's space. The two roots are matched: KHT's body file keeps
-    its root at 0.11 while its carrier's stands at -18.41, the others agree."""
+    in the carrier's space. The two roots are matched: ZWERG's body file (S4)
+    keeps its root at 0.11 while its carrier's stands at -18.41, the others
+    agree."""
     shift = (np.array(world_matrices(body)[0]).reshape(4, 4)[3, :3]
              - np.array(world_matrices(carrier)[0]).reshape(4, 4)[3, :3])
     node = nearest_node(body, world_points(carrier) + shift)
