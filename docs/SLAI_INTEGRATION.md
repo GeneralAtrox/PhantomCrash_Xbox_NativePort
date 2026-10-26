@@ -772,6 +772,27 @@ factors in `slai_balance`, and the pack's `slai/weapon_balance.json` lists them
 by kind. Bodies and legs are not part of this pass: S.L.A.I.'s body armour is
 still about 1.8 times Phantom Crash's and leg armour about 2.2 times.
 
+### Drone weapon names (2026-10-26)
+
+Three weapon records have a blank shipped name. Registration used to show
+them as "S.L.A.I. S.L.A.I. arm_weapons 46" and the like. All 1,887 robot
+rows (0x382390) were checked: only drones carry them.
+
+| Table, name index | Records | Carried by | Kind | Port name |
+|---|---|---|---|---|
+| arm 46 | 46, 93 | DUSTER Body, arm slot 0 | bullet gun | DUSTER Gun |
+| shoulder 46 | 46, 94, 105 | SWEEPER Body, slot 1 | homing missile | SWEEPER Missile |
+| shoulder 47 | 47, 95, 106 | SWEEPER Body, slot 0 | gun | SWEEPER Gun |
+
+- The names are a port choice and live in
+  `src/phantomcrash_research/slai/part_names.json`, by table and name index.
+- `stats.py` uses them when extracting. Registration (`native_parts`)
+  applies them by name index, so packs installed before the names pick
+  them up on re-registration; their `source_stats.json` keeps the old
+  stand-in.
+- A stored delivery schedule keeps its days but now takes the parts'
+  current names.
+
 ## Commands and verification
 
 Build the standard port with `pwsh -File scripts/build-port.ps1`. Generate

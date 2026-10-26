@@ -6,7 +6,7 @@ import pytest
 
 from phantomcrash_research.slai.music import messages, stream_header
 from phantomcrash_research.slai.progression import apply_deliveries, calendar_load, delivery_days, rotating_deliveries
-from phantomcrash_research.slai.stats import _curve
+from phantomcrash_research.slai.stats import TABLES, _curve, blank_part_names, part_name
 
 
 def calendar():
@@ -89,3 +89,14 @@ def test_source_curves_preserve_level_100_and_reject_invalid_records():
     assert _curve(data, 0, "i")["knee"] == 100
     with pytest.raises(ValueError):
         _curve(struct.pack("<3i2b", 1, 2, 3, 101, -1), 0, "i")
+
+
+def test_blank_part_names_are_named_by_table_and_name_index():
+    tables = {key: value for key, value in blank_part_names().items() if key != "notes"}
+    assert tables == {"arm_weapons": {"46": "DUSTER Gun"},
+                      "shoulder_weapons": {"46": "SWEEPER Missile", "47": "SWEEPER Gun"}}
+    assert set(tables) <= set(TABLES)
+    # Packs installed before the names keep the extractor's stand-in; the
+    # name index still finds the port name.
+    assert part_name("arm_weapons", {"name": "S.L.A.I. arm_weapons 46", "name_index": 46}) == "DUSTER Gun"
+    assert part_name("arm_weapons", {"name": "T48 Machine Pistol", "name_index": 3}) == "T48 Machine Pistol"

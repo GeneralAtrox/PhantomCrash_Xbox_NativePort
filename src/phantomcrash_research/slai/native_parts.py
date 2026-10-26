@@ -17,6 +17,7 @@ from .muzzles import decode_muzzles, flash_entry, muzzle_mount
 from .pod import read_pod
 from .program import ProgramData
 from .progression import write_progression
+from .stats import part_name
 from .wheels import _torso, MAKERS
 
 SOURCE_MAKERS = {1: 1, 2: 2, 3: 0, 4: 3, 5: 4, 6: 5, 7: 6, 8: 7, 9: 9, 10: 8}
@@ -200,7 +201,7 @@ def register_parts(image: Path, assets: Path, data: Path, mods: Path) -> dict:
             resource = 10000 + int(entry["source_maker"]) * 500 + "BLAS".index(stem[2]) * 100 + int(stem[3:5]) * 2
             native = copy.deepcopy(template)
             native_curves(native, source)
-            native.update({"index": index, "name": "S.L.A.I. " + source["name"],
+            native.update({"index": index, "name": "S.L.A.I. " + part_name(table, source),
                            "source": source["source"], "slai_model": stem})
             native["model" if category != "body" else "class"] = new_type
             definition = copy.deepcopy(base_catalogue[types][template_type])

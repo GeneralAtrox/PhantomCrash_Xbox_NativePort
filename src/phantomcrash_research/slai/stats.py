@@ -8,6 +8,7 @@ floor. Labels below are ours. Raw originals always accompany adapted parts.
 
 from __future__ import annotations
 
+import json
 import struct
 from pathlib import Path
 
@@ -40,6 +41,18 @@ def _curve(data: bytes, at: int, kind: str) -> dict:
                     (base, mid, top, knee, scale)))
 
 
+def blank_part_names() -> dict:
+    """Port names for records the shipped text leaves blank (part_names.json)."""
+    return json.loads(Path(__file__).with_name("part_names.json").read_text(encoding="utf-8"))
+
+
+def part_name(category: str, record: dict, blank_names: dict | None = None) -> str:
+    """A source record's name: part_names.json's by name index where the
+    shipped text is blank, else the name it was extracted with."""
+    names = (blank_part_names() if blank_names is None else blank_names).get(category, {})
+    return names.get(str(record.get("name_index")), record["name"])
+
+
 def read_stats(disc: SlaiDisc) -> dict:
     offset, size = disc.disc_files()["SLES_529.40"]
     elf = disc._read(offset, size)
@@ -52,6 +65,7 @@ def read_stats(disc: SlaiDisc) -> dict:
             raise ValueError("S.L.A.I. executable revision does not match the researched selectors")
     result = {"source": {"executable": "SLES_529.40", "names": "shipped UK MSG",
                           "field_labels": "researcher assigned", "native_units_verified": False}}
+    blank_names = blank_part_names()
     for category, (va, count, stride, text) in TABLES.items():
         found = disc.find(text)
         if not found:
@@ -68,7 +82,8 @@ def read_stats(disc: SlaiDisc) -> dict:
                 continue
             if name >= len(names):
                 raise ValueError(f"Invalid {category} name index {name}")
-            record = {"index": i, "name": names[name] or f"S.L.A.I. {category} {name}",
+            fallback = blank_names.get(category, {}).get(str(name), f"{category} {name}")
+            record = {"index": i, "name": names[name] or fallback,
                       "name_index": name, "maker": maker,
                       "source": {"address": hex(va + i * stride), "record_size": stride}}
             if category in ("arm_weapons", "shoulder_weapons"):

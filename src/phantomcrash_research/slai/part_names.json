@@ -1,0 +1,7 @@
+{
+ "notes": [
+  "Names for S.L.A.I. part records whose shipped name (UK_*NAME.MSG) is blank, by table and name index; a port choice, read by stats.py. Only the drones carry these, so the original never names them: arm name 46 is carried only by DUSTER Body robots (arm records 46 and 93, a bullet gun like the T48 Machine Pistol), shoulder name 46 only by SWEEPER Body robots in slot 1 (records 46, 94 and 105, a homing missile like the SM26 \"Temporale\") and shoulder name 47 only by SWEEPER Body robots in slot 0 (records 47, 95 and 106, a gun like the M-18 Heavy M.Gun). Checked over all 1,887 robot rows (0x382390)."
+ ],
+ "arm_weapons": {"46": "DUSTER Gun"},
+ "shoulder_weapons": {"46": "SWEEPER Missile", "47": "SWEEPER Gun"}
+}

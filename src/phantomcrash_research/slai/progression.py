@@ -92,6 +92,9 @@ def write_progression(assets: Path, mods: Path, parts: list[dict], schedule: Pat
         deliveries = json.loads(schedule.read_text(encoding="utf-8"))["deliveries"]
         if {(p["category"], p["id"]) for p in deliveries} != {(p["category"], p["id"]) for p in parts}:
             raise ValueError("Delivery schedule does not cover the imported parts")
+        # The schedule keeps its days; the names follow the parts.
+        names = {(p["category"], p["id"]): p["name"] for p in parts}
+        deliveries = [{**p, "name": names[(p["category"], p["id"])]} for p in deliveries]
     else:
         deliveries = rotating_deliveries(rows, parts)
     town, garage = apply_deliveries(town, garage, deliveries)
