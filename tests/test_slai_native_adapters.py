@@ -37,6 +37,10 @@ class NativeAdapterTests(unittest.TestCase):
         # mount turns back.
         self.assertEqual(rig["rotation"], [0, np.pi, 0])
         self.assertEqual(root["children"][1]["children"][0]["rotation"], [0, np.pi, 0])
+        # Both also reflect x: the legs keep the source's right-handed axes,
+        # and the mount hands Phantom Crash bodies back unreflected.
+        self.assertTrue(rig["source_reflect"])
+        self.assertTrue(root["children"][1]["children"][0]["source_reflect"])
         for invalid in (-1, 3):
             with self.assertRaises(ValueError):
                 walking_model(nodes, "paint.png", torso, body_node=invalid)

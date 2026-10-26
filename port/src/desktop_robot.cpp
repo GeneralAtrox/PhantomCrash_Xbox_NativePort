@@ -21,6 +21,13 @@ int load(WorldRenderer &world, const std::string &path) {
   return path.empty() ? -1 : world.model(path);
 }
 
+// A S.L.A.I. part keeps its source's right-handed axes: its frame reflects.
+// A frame from a S.L.A.I. part already does; a Phantom Crash bone or the
+// robot's root reflects its x (in the part's own frame).
+Mat4 source_frame(const Mat4 &frame) {
+  return reflects(frame) ? frame : scaling({-1.0F, 1.0F, 1.0F}) * frame;
+}
+
 } // namespace
 
 RobotVisual::RobotVisual(WorldRenderer &world, const RobotAssembly &assembly) : world_(world) {
@@ -84,7 +91,7 @@ void RobotVisual::add(Part &part, const Pose &pose, const Mat4 &root, std::vecto
                        : part.model == body_ ? source_body_root(pose, root)
                        : p.set[0]            ? p.bones[0]
                                              : root;
-    rigid(*model, mount, weapon_slot, part.node_worlds);
+    rigid(*model, source_frame(mount), weapon_slot, part.node_worlds);
   } else {
     skin_nodes(*model, p, part.first_slot, root, part.node_worlds);
   }
@@ -92,6 +99,10 @@ void RobotVisual::add(Part &part, const Pose &pose, const Mat4 &root, std::vecto
   item.model = part.model;
   item.world = root;
   item.node_worlds = part.node_worlds;
+  // A S.L.A.I. part, or a skin on a S.L.A.I. leg rig (source_reflect).
+  item.reflected = model->rig || std::ranges::any_of(part.node_worlds, [](const Mat4 &world) {
+                     return reflects(world);
+                   });
   item.paint = paint_;
   item.part_paint = part.paint;
   items.push_back(std::move(item));
@@ -132,6 +143,7 @@ void RobotVisual::add_items(const Pose &pose, const Mat4 &root, std::vector<Worl
     if (model->rig) {
       item.world = source_shoulder_world(*model, side, item.world);
       rigid(*model, item.world, static_cast<int>(side) + 2, item.node_worlds);
+      item.reflected = true;
     }
     item.paint = paint_;
     item.part_paint = part.paint;
@@ -253,7 +265,7 @@ std::optional<Mat4> RobotVisual::source_weapon_frame(const Pose &pose, const Mat
     mount = pose[static_cast<std::size_t>(slot) + 1].bones[0];
   }
   Mat4 frame;
-  rigid(*model, mount, slot, unused, node, &frame);
+  rigid(*model, slot < 2 ? source_frame(mount) : mount, slot, unused, node, &frame);
   return frame;
 }
 
@@ -285,9 +297,10 @@ std::optional<Mat4> RobotVisual::source_body_frame(const Pose &pose, const Mat4 
 Mat4 RobotVisual::source_body_root(const Pose &pose, const Mat4 &root) const {
   // The model export leaves a S.L.A.I. body facing the port's +z (its native
   // -z, the front); port robots face -z. Measured against PCSX2: every Quick
-  // Battle robot shows its back to the chase camera.
+  // Battle robot shows its back to the chase camera. The turn and the
+  // reflection give the source's (x, -y, z), as for stages.
   const Mat4 mount = pose[0].set[0] ? pose[0].bones[0] : root;
-  return rotation_y(pi) * mount;
+  return source_frame(rotation_y(pi) * mount);
 }
 
 std::optional<Vec3> RobotVisual::torso(const Pose &pose) const {

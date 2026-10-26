@@ -71,6 +71,7 @@ void DesktopSourceMuzzleFlashes::add_items(std::vector<WorldItem> &items) const 
       WorldItem item;
       item.model = model_;
       item.world = flash.world;
+      item.reflected = reflects(flash.world);
       item.alpha = alpha;
       item.additive = true;
       item.local_light = false;

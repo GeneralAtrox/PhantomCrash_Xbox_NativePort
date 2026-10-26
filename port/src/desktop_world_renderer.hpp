@@ -73,6 +73,9 @@ struct WorldItem {
   bool double_sided{};
   // Some world draws, including the advertising ship, disable distance fog.
   bool fogged{true};
+  // Its world reflects the model (a S.L.A.I. part, desktop_robot.cpp): its
+  // fronts wind counter-clockwise on screen.
+  bool reflected{};
   // The port's dynamic lights fall on it (when they are on). Off for wide
   // see-through effects, whose every pixel would pay for each light's shadow.
   bool local_light{true};
@@ -270,6 +273,11 @@ private:
   Com<ID3D11RasterizerState> layer_cull_back_;
   Com<ID3D11RasterizerState> layer_cull_none_;
   Com<ID3D11RasterizerState> decal_cull_none_; // ground shadows, above the layers
+  // The same for reflected items (WorldItem::reflected): counter-clockwise fronts.
+  Com<ID3D11RasterizerState> reflected_cull_back_;
+  Com<ID3D11RasterizerState> reflected_cull_none_;
+  Com<ID3D11RasterizerState> reflected_layer_cull_back_;
+  Com<ID3D11RasterizerState> reflected_layer_cull_none_;
   Com<ID3D11BlendState> opaque_;
   Com<ID3D11BlendState> alpha_;
   Com<ID3D11BlendState> additive_;
@@ -278,6 +286,7 @@ private:
   Com<ID3D11DepthStencilState> depth_read_;
   Com<ID3D11DepthStencilState> depth_off_;
   Com<ID3D11RasterizerState> volume_raster_;
+  Com<ID3D11RasterizerState> reflected_volume_raster_;
   Com<ID3D11DepthStencilState> volume_depth_;  // counts faces behind the stage
   Com<ID3D11DepthStencilState> clear_stencil_; // the casters: depth as usual, count to 0
   Com<ID3D11DepthStencilState> shadowed_;      // where the count is not 0

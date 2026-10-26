@@ -283,6 +283,9 @@ void visit(const SkeletonNode &node, const Mat4 &parent, Context &context) {
   if (node.body_fit) {
     world = *node.body_fit * world;
   }
+  if (node.source_reflect) {
+    world = scaling({-1.0F, 1.0F, 1.0F}) * world;
+  }
   apply_source_spherical_roll(world, node, context.input.root, context.input.source_roll_frames);
   apply_source_suspension(world, node.source_suspension, context.input.procedural_seconds);
   if (context.part > 0 && node.track >= 0) {
@@ -335,6 +338,7 @@ SkeletonNode parse_node(const json::JsonValue &value, const int depth) {
   node.rotation = vec3_of(value.find("rotation"));
   node.bone = static_cast<int>(value.number_or("bone", -1));
   node.source_model_root = value.boolean_or("source_model_root", false);
+  node.source_reflect = value.boolean_or("source_reflect", false);
   node.source_suspension = parse_source_suspension(value);
   node.source_roll = parse_source_roll(value);
   if (const json::JsonValue *children = value.find("children"); children && children->is_array()) {

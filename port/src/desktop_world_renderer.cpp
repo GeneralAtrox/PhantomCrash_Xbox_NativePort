@@ -115,6 +115,21 @@ void WorldRenderer::create_states() {
   raster.SlopeScaledDepthBias = decal_slope_bias;
   raster.DepthBiasClamp = decal_bias_clamp;
   ok = ok && SUCCEEDED(device_->CreateRasterizerState(&raster, &decal_cull_none_));
+  // A reflected item turns its clockwise fronts counter-clockwise; this also
+  // keeps SV_IsFrontFace, and so the back faces' normals, right.
+  raster.FrontCounterClockwise = TRUE;
+  raster.DepthBias = layer_depth_bias;
+  raster.SlopeScaledDepthBias = layer_slope_bias;
+  raster.DepthBiasClamp = layer_bias_clamp;
+  ok = ok && SUCCEEDED(device_->CreateRasterizerState(&raster, &reflected_layer_cull_none_));
+  raster.CullMode = D3D11_CULL_BACK;
+  ok = ok && SUCCEEDED(device_->CreateRasterizerState(&raster, &reflected_layer_cull_back_));
+  raster.DepthBias = 0;
+  raster.SlopeScaledDepthBias = 0.0F;
+  raster.DepthBiasClamp = 0.0F;
+  ok = ok && SUCCEEDED(device_->CreateRasterizerState(&raster, &reflected_cull_back_));
+  raster.CullMode = D3D11_CULL_NONE;
+  ok = ok && SUCCEEDED(device_->CreateRasterizerState(&raster, &reflected_cull_none_));
 
   // Opaque draws leave the target's alpha at the clear's 1: an opaque
   // material ignores its texture's alpha (robot paints keep 0 in some tiles).

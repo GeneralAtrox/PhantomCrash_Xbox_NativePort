@@ -361,9 +361,14 @@ void WorldRenderer::draw_one(const Draw &draw, const bool sky, const StageLighti
   // Surface layers keep depth testing and writing, but win ties with the base
   // instead of alternating as the eye moves; ground shadows sit above both.
   const bool layer = !sky && !overlay && !depth_prepass && surface_layer(draw);
-  context_->RSSetState(draw.item->ground_shadow ? decal_cull_none_.Get()
-                       : layer ? (both_sides ? layer_cull_none_.Get() : layer_cull_back_.Get())
-                               : (both_sides ? cull_none_.Get() : cull_back_.Get()));
+  const bool reflected = draw.item->reflected;
+  ID3D11RasterizerState *const layered =
+      reflected ? (both_sides ? reflected_layer_cull_none_ : reflected_layer_cull_back_).Get()
+                : (both_sides ? layer_cull_none_ : layer_cull_back_).Get();
+  ID3D11RasterizerState *const plain =
+      reflected ? (both_sides ? reflected_cull_none_ : reflected_cull_back_).Get()
+                : (both_sides ? cull_none_ : cull_back_).Get();
+  context_->RSSetState(draw.item->ground_shadow ? decal_cull_none_.Get() : layer ? layered : plain);
   const bool faded = draw.alpha < 1.0F;
   const bool see_through = material.alpha == AlphaMode::blend || faded || overlay;
   ID3D11BlendState *blend = material.additive || draw.item->additive ? additive_.Get()

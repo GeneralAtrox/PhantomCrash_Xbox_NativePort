@@ -95,8 +95,13 @@ Mat4 source_action_parent_frame(const Mat4 &joint, const unsigned flags, Vec3 of
       }
     }
   } else {
+    // A reflected joint (a S.L.A.I. part) maps the source through the stage's
+    // (x, -y, z) axes; its masked rotation is taken in the model data's
+    // (x, -y, -z) axes and handed back through a z reflection.
+    const Mat4 axes = reflects(joint) ? scaling({1.0F, 1.0F, -1.0F}) : Mat4{};
+    parent = axes;
     if (flags & (8 | 2 | 0x80)) {
-      Mat4 basis = joint;
+      Mat4 basis = joint * axes;
       for (int row = 0; row < 3; ++row) {
         const float length =
             std::sqrt(basis.at(row, 0) * basis.at(row, 0) + basis.at(row, 1) * basis.at(row, 1) +
@@ -116,7 +121,7 @@ Mat4 source_action_parent_frame(const Mat4 &joint, const unsigned flags, Vec3 of
                              : std::atan2(basis.at(2, 0), basis.at(2, 2));
       const float z = c == 0 ? 0 : std::asin(std::clamp(basis.at(0, 1) / c, -1.0F, 1.0F));
       parent = rotation_z((flags & 0x2000) ? z : 0) * rotation_x((flags & 0x800) ? x : 0) *
-               rotation_y((flags & 0x1000) ? y : 0);
+               rotation_y((flags & 0x1000) ? y : 0) * axes;
     }
     if (flags & 0x10) {
       for (int i = 0; i < 4; ++i) {

@@ -67,8 +67,11 @@ bool DesktopSourceProjectiles::add(const Projectile &shot, std::vector<WorldItem
   }
   WorldItem item;
   item.model = rule->draw_model;
-  item.world = scaling({rule->scale, rule->scale, rule->scale}) * projectile_frame(shot.velocity) *
+  // Reflected in x like the robot parts: the model keeps the source's
+  // right-handed axes (desktop_robot.cpp source_frame).
+  item.world = scaling({-rule->scale, rule->scale, rule->scale}) * projectile_frame(shot.velocity) *
                translation(shot.position);
+  item.reflected = true;
   items.push_back(std::move(item));
   return true;
 }

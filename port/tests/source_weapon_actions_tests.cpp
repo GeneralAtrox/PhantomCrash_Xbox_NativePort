@@ -123,6 +123,18 @@ TEST_CASE("source action parent masks normalize joints while frozen smoke inheri
   CHECK(near(transform_point({1, 0, 0}, imported), {11.2F, 20.3F, 29.8F}));
   const auto masked = source_action_parent_frame(joint, 0x380c, {1, 2, 3}, false, .1F);
   CHECK(near(transform_point({}, masked), {13, 22, 29}));
+
+  // A reflected (S.L.A.I.) joint: the full mask keeps its reflection, and an
+  // unmasked parent hands the source's z through the stage's axes.
+  const Mat4 mirrored =
+      scaling({-1, 1, 1}) * rotation_y(std::numbers::pi_v<float> / 2) * translation({10, 20, 30});
+  const auto mirrored_attached = source_action_parent_frame(mirrored, 0x380c, {}, false);
+  CHECK(near(transform_point({1, 0, 0}, mirrored_attached), {10, 20, 31}));
+  CHECK(near(transform_point({0, 0, 1}, mirrored_attached), transform_point({0, 0, 1}, mirrored)));
+  const auto unmasked = source_action_parent_frame(mirrored, 0x4, {}, false);
+  CHECK(near(transform_point({0, 0, 1}, unmasked), {10, 20, 29}));
+  CHECK(near(transform_point({0, 0, 1}, source_action_parent_frame(joint, 0x4, {}, false)),
+             {10, 20, 31}));
 }
 
 TEST_CASE("source particle world travel retains mesh scale only for full frame attachments") {

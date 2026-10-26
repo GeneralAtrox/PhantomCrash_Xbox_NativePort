@@ -47,6 +47,9 @@ struct SkeletonNode {
   std::optional<SourceRollControl> source_roll;
   std::vector<SkeletonNode> children;
   bool source_model_root{}; // control zero of the imported leg model, including non-drawing nodes
+  // Reflects x before its own transform: a S.L.A.I. leg rig keeps its
+  // source's right-handed axes (native_geometry.SOURCE_FACING).
+  bool source_reflect{};
   // A port adapter placed before the node's own transform (body_fit.hpp).
   std::optional<Mat4> body_fit;
 };

@@ -93,6 +93,15 @@ struct Mat4 {
   return out;
 }
 
+// Whether the basis is a reflection (a negative determinant): a S.L.A.I.
+// part keeps its source's right-handed axes.
+[[nodiscard]] inline bool reflects(const Mat4 &m) {
+  const Vec3 x{m.at(0, 0), m.at(0, 1), m.at(0, 2)};
+  const Vec3 y{m.at(1, 0), m.at(1, 1), m.at(1, 2)};
+  const Vec3 z{m.at(2, 0), m.at(2, 1), m.at(2, 2)};
+  return dot(x, cross(y, z)) < 0.0F;
+}
+
 // Rotation matrix of a unit quaternion (x, y, z, w) about the origin, for
 // row vectors in the same handedness the quaternion was written in.
 [[nodiscard]] inline Mat4 rotation(const float x, const float y, const float z, const float w) {

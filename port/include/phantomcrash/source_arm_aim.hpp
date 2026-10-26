@@ -60,7 +60,8 @@ void aim_source_weapon(int node, float twist, const ArmAimState &state, const Ma
 // The root frame of a S.L.A.I. shoulder weapon whose model root sits at
 // `root_offset`. Its barrel runs along the model's +z (source -z), but the
 // native shoulder frame faces its aim with -z, so the weapon takes that frame
-// turned half round about y, with its root at `position`.
+// turned half round about y and reflected (the source's right-handed axes),
+// with its root at `position`.
 [[nodiscard]] Mat4 source_shoulder_frame(const Mat4 &native, Vec3 position, Vec3 root_offset);
 
 // The rotation part of `rotation` (row vectors, orthonormal) turned only

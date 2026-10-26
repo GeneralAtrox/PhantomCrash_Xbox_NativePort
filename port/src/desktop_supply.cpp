@@ -104,9 +104,13 @@ void DesktopSupply::add_carrier(const SupplyCarrier &carrier, std::vector<WorldI
     // 0x523540 hides the S.L.A.I. carrier only while parked; 0x524f30
     // draws the wreck, its joints posed and its colour shaded (0x523ac0).
     if (model_ >= 0 && !carrier.parked) {
+      // Reflected in x like the robot parts: the model keeps the source's
+      // right-handed axes (desktop_robot.cpp source_frame).
+      const Mat4 frame = scaling({-1.0F, 1.0F, 1.0F}) * carrier_frame(carrier);
       WorldItem item;
       item.model = model_;
-      item.world = carrier_frame(carrier);
+      item.world = frame;
+      item.reflected = true;
       if (look_.pickups->flight) {
         item.node_worlds = supply_carrier_nodes(carrier_nodes_, *look_.pickups->flight,
                                                 carrier.joints, item.world);
@@ -120,7 +124,8 @@ void DesktopSupply::add_carrier(const SupplyCarrier &carrier, std::vector<WorldI
       if (carrier_light_model_ >= 0 && !carrier.wrecked) {
         WorldItem light;
         light.model = carrier_light_model_;
-        light.world = rotation_y(-carrier.spin) * carrier_frame(carrier);
+        light.world = rotation_y(-carrier.spin) * frame;
+        light.reflected = true;
         items.push_back(std::move(light));
       }
     }
@@ -230,7 +235,8 @@ void DesktopSupply::add_items(const SupplyDrop &drop, std::vector<WorldItem> &it
       item.paint = counter_images_[static_cast<std::size_t>(pickup.kind)];
       const float source_scale = look_.pickups->scale;
       item.world =
-          scaling({source_scale, source_scale, source_scale}) * translation(pickup.position);
+          scaling({-source_scale, source_scale, source_scale}) * translation(pickup.position);
+      item.reflected = true;
       if (look_.pickups->pulse) {
         const auto &pulse = *look_.pickups->pulse;
         const float colour =

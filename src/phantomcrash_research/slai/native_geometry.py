@@ -19,6 +19,10 @@ GLTF = np.array([.1, -.1, .1])
 # port robot faces its -z. A half turn about y faces S.L.A.I. legs forward
 # (PCSX2: a battle robot's body maps native +z to the actor's back).
 SOURCE_FACING = [0., math.pi, 0.]
+# AXES is a rotation, but the source is right-handed and the port left-handed:
+# with the half turn alone a robot is mirrored left-right. The rig root also
+# reflects x (skeleton.cpp source_reflect), giving (x, -y, z) like the stages.
+SOURCE_REFLECT = True
 
 
 def euler(matrix):
@@ -134,9 +138,11 @@ def walking_model(nodes, texture, torso, wheel_nodes=(), suspension=None, rolls=
             body_slots(child)
     body_slots(mount, True)
     mount["translation"] = [0, 0, 0]
-    # The mount turns back, so a body on it keeps the native torso's facing;
-    # the port turns a S.L.A.I. body itself (desktop_robot.cpp).
+    # The mount turns and reflects back, so a body on it keeps the native
+    # torso's facing and hand; the port turns and reflects a S.L.A.I. body
+    # itself (desktop_robot.cpp).
     mount["rotation"] = list(SOURCE_FACING)
+    mount["source_reflect"] = SOURCE_REFLECT
     if not 0 <= body_node < len(nodes):
         raise ValueError("S.L.A.I. leg body attachment is outside its hierarchy")
 
@@ -172,8 +178,8 @@ def walking_model(nodes, texture, torso, wheel_nodes=(), suspension=None, rolls=
         return out
 
     roots = [tree(i) for i, n in enumerate(nodes) if n.parent < 0]
-    skeleton = {"type": 0, "flags": 1, "track": -1, "bone": -1,
-                "translation": [0, 0, 0], "rotation": list(SOURCE_FACING), "children": roots}
+    skeleton = {"type": 0, "flags": 1, "track": -1, "bone": -1, "translation": [0, 0, 0],
+                "rotation": list(SOURCE_FACING), "source_reflect": SOURCE_REFLECT, "children": roots}
     return document(builder, draw_nodes, meshes, texture), skeleton
 
 

@@ -116,6 +116,9 @@ void WorldRenderer::create_shadow_states() {
   raster.DepthClipEnable = FALSE; // far ends past the far plane clamp instead of opening
   raster.MultisampleEnable = TRUE;
   bool ok = SUCCEEDED(device_->CreateRasterizerState(&raster, &volume_raster_));
+  // A reflected caster's faces turn round on screen; its counts must not.
+  raster.FrontCounterClockwise = TRUE;
+  ok = ok && SUCCEEDED(device_->CreateRasterizerState(&raster, &reflected_volume_raster_));
 
   D3D11_DEPTH_STENCIL_DESC depth{};
   depth.DepthEnable = TRUE;
@@ -174,6 +177,7 @@ bool WorldRenderer::render_volumes(const WorldFrame &frame) {
       context_->OMSetBlendState(depth_only_.Get(), nullptr, 0xffffffff);
       context_->OMSetDepthStencilState(volume_depth_.Get(), 0);
     }
+    context_->RSSetState((item.reflected ? reflected_volume_raster_ : volume_raster_).Get());
     ID3D11Buffer *vertices = model.shadow_vertices.Get();
     const UINT stride = sizeof(ShadowVertex);
     const UINT offset = 0;

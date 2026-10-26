@@ -158,6 +158,14 @@ TEST_CASE("source spherical rolling accumulates all axes and replaces the bind b
   CHECK(length(transform_point({0, 1.025F, 0}, world) - origin - Vec3{-1, 0, 0}) < 1e-5F);
   CHECK(length(transform_point({0, 0, 1.025F}, world) - origin - Vec3{0, 1, 0}) < 1e-5F);
   CHECK(world.m == sample().m);
+  // A reflected S.L.A.I. rig keeps its reflection through the rolled basis.
+  sphere.source_reflect = true;
+  const auto mirrored = sample();
+  sphere.source_reflect = false;
+  CHECK(length(transform_point({}, mirrored) - origin) < 1e-5F);
+  CHECK(length(transform_point({1.025F, 0, 0}, mirrored) - origin - Vec3{0, 0, -1}) < 1e-5F);
+  CHECK(length(transform_point({0, 1.025F, 0}, mirrored) - origin - Vec3{1, 0, 0}) < 1e-5F);
+  CHECK(length(transform_point({0, 0, 1.025F}, mirrored) - origin - Vec3{0, 1, 0}) < 1e-5F);
   const auto before_reposition = *state.frames()[1];
   mover.place(mover.position(), source_pi / 2);
   advance(state, sphere, mover);

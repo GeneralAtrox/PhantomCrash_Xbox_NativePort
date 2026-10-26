@@ -162,7 +162,12 @@ void aim_source_arm(const SourceArmAim &aim, const std::size_t side, const ArmAi
     // body's tilt do not reach the arm. The body frame's yaw stands in for
     // the heading and the sum; the slerp at 0x4e7f04 weights the change.
     const Mat4 world = rotation_part(node_world(nodes, row.node, body));
-    turn = turn * heading_frame(body) * transposed(world);
+    // A S.L.A.I. body reflects (desktop_robot.cpp): so does the heading.
+    Mat4 heading = heading_frame(body);
+    if (determinant(world) < 0.0F) {
+      heading = scaling({-1.0F, 1.0F, 1.0F}) * heading;
+    }
+    turn = turn * heading * transposed(world);
   }
   node.local = partial_rotation(turn, weight) * node.local;
 }
@@ -202,6 +207,11 @@ void aim_source_weapon(const int node, const float twist, const ArmAimState &sta
 
 Mat4 source_shoulder_frame(const Mat4 &native, const Vec3 position, const Vec3 root_offset) {
   Mat4 frame = rotation_y(pi) * rotation_part(native);
+  // The weapon keeps its source's right-handed axes (desktop_robot.cpp): a
+  // mount on a Phantom Crash body does not reflect, so the frame does.
+  if (determinant(frame) > 0.0F) {
+    frame = scaling({-1.0F, 1.0F, 1.0F}) * frame;
+  }
   set_row(frame, 3, position);
   return translation(root_offset * -1.0F) * frame;
 }

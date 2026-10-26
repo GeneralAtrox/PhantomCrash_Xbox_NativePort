@@ -73,6 +73,8 @@ TEST_CASE("a S.L.A.I. shoulder weapon's barrel faces the native shoulder aim") {
   // The barrel, the model's +z, runs along the native frame's -z.
   CHECK(near(row_of(frame, 2), row_of(native, 2) * -1.0F));
   CHECK(near(row_of(frame, 1), row_of(native, 1)));
+  // Reflected as well, keeping the source's right-handed axes: x stays.
+  CHECK(near(row_of(frame, 0), row_of(native, 0)));
 }
 
 TEST_CASE("the upper arm pitches by the row's base less the target's elevation") {
@@ -169,6 +171,15 @@ TEST_CASE("a row without keep_rotation sets the arm's world turn to the aim then
   const Mat4 goal = rotation_x(-0.1F) * rotation_y(0.5F);
   const Mat4 half = partial_rotation(goal * transposed(start), 0.5F) * start;
   CHECK(same(nodes[1].local * nodes[0].local * body, half));
+
+  // A S.L.A.I. body reflects (desktop_robot.cpp): the arm's world turn is the
+  // same one mirrored with it, and the change stays a rotation.
+  const Mat4 mirror = scaling({-1.0F, 1.0F, 1.0F});
+  nodes = {parent, arm};
+  aim_source_arm(aim, 0, {1.0F, ahead, position}, mirror * body, nodes);
+  CHECK(same(nodes[1].local * nodes[0].local * mirror * body,
+             rotation_x(-0.2F) * mirror * rotation_y(0.5F)));
+  CHECK(near(row_of(nodes[1].local, 3), Vec3{1.0F, 2.0F, 0.5F}));
 }
 
 TEST_CASE("a weapon's aim node turns its barrel (+z in port axes) at the target with its y up") {

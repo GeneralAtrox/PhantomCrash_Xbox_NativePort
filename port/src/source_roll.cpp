@@ -93,7 +93,10 @@ void apply_source_spherical_roll(Mat4 &world, const SkeletonNode &node, const Ma
     return;
   }
   const auto &scale = node.source_roll->baked_mesh_scale;
-  const Mat4 basis = scaling({1 / scale.x, 1 / scale.y, 1 / scale.z}) * *frame * model_root;
+  // The leg rig reflects (skeleton.cpp source_reflect); the rolled basis
+  // reflects with it, in the actor's frame.
+  const Mat4 root = reflects(world) ? scaling({-1.0F, 1.0F, 1.0F}) * model_root : model_root;
+  const Mat4 basis = scaling({1 / scale.x, 1 / scale.y, 1 / scale.z}) * *frame * root;
   // 0x4e5a30..90 replaces the local basis, then restores the old world position.
   for (int row = 0; row < 3; ++row) {
     for (int column = 0; column < 3; ++column) {

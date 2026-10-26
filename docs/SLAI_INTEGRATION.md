@@ -2546,11 +2546,42 @@ guns pointing at the ground, and the target's armour never dropped.
   - The carrier's heading comes from its movement, so it follows the path.
 - Checked in New York Quick Battle: the hangar's "CAUTION: TOO EXCITING
   TO STOP." reads correctly, and the lighting is unchanged.
-- Not fixed yet: robots and other local models (weapons, projectiles, the
-  carrier, pickups) still use (x, -y, -z) plus a half turn, so they are
-  mirrored on their own. A robot's "ZERO-ONE" sticker reads backwards.
-  This supersedes the "Open: the port draws S.L.A.I. content mirrored"
-  item under "Stage and robot scale" for stages only.
+- Robots and the other local models follow in "Robots no longer
+  mirrored" below. The two sections together supersede the "Open: the
+  port draws S.L.A.I. content mirrored" item under "Stage and robot scale".
 - Installed packs must be re-registered. The repository's old `mods/` pack
   fails `test_registered_stages_collision_fog_and_models_use_the_same_world_units`
   until it is reinstalled.
+
+## Robots no longer mirrored (2026-10-26)
+
+- Every S.L.A.I. model drawn on its own (robot parts, weapons, projectiles,
+  muzzle flashes, the supply carrier and its light, the pickup counters)
+  now keeps the source's right-handed axes: its world frame reflects x in
+  the model's own space, before the frame. `WorldItem::reflected` marks
+  these items, and the renderer draws them with counter-clockwise fronts.
+  This includes the stencil shadow volumes.
+- Robot parts: `desktop_robot.cpp source_frame` reflects a S.L.A.I. part's
+  mount unless the mount already reflects. A S.L.A.I. leg rig reflects
+  through the skeleton's `source_reflect` wrapper flag
+  (`native_geometry.SOURCE_REFLECT`). Its body mount carries the same flag,
+  which cancels the reflection, so Phantom Crash parts on S.L.A.I. legs and
+  S.L.A.I. parts on Phantom Crash legs both come out right. Mixed robots
+  were rendered to check this: PROTON on Phantom Crash legs, a Phantom Crash
+  robot on HARTMAN legs, and HARTMAN with Phantom Crash arms.
+- What derives from the reflected frames:
+  - Muzzle frames, the body frame and the arm aim follow the reflected
+    frames. `aim_source_arm` reflects its heading when the world reflects.
+  - Spherical wheels keep the reflection through the rolled basis
+    (`apply_source_spherical_roll`).
+  - Masked particle parents (`source_action_parent_frame`) decompose a
+    reflected joint in the model data's (x, -y, -z) axes and hand the result
+    back through a z reflection. An unmasked parent now maps the source's z
+    the way the stage does.
+- `math3d.hpp reflects()` is the shared test.
+- Checked by an A/B render of DUSTER (its head eye moved across the centre)
+  and in New York Quick Battle.
+- Still mirrored: the "ZERO-ONE" emblem on the torso. It is the port's
+  emblem decal (`body.emblem_model`), not S.L.A.I. geometry.
+- Installed packs must be re-registered so `skeletons.json` carries
+  `source_reflect`.
