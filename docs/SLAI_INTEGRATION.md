@@ -2503,11 +2503,20 @@ guns pointing at the ground, and the target's armour never dropped.
   same way.
 - Why the Quick Battle readings were shorter: at the spawn every robot's
   eye stopped at x -210.03, 0.15 off a surface at x -210.18 behind it.
-  The port's New York collision has no surface there (its street ends at
-  x -225.6, with an overhang at height 8.17), so at that spawn the port's
-  eye stands at the full row distance. Open: what the original's ray
-  meets there (an invisible boundary or a hit block the port's collision
-  export lacks).
+  That spawn is PS2 feet (-205.21, -1.25, -94.76), facing +x out of the
+  lift in the x -210 boundary wall. Re-checked after the stages were
+  unmirrored (the first look searched z +94.76):
+  - The ray runs through the lift's open doorway (z -89.5 to -100, open
+    below 8.5) and meets the lift's back wall at x -225.5. That is true of
+    `ATARI_NY.PO2`, of the visual hit models (`HIT_POD_NAME` names the
+    `NEWYORK_*.PO2` models themselves) and of the port.
+  - `NY_CAM.PO2`, which the collision export leaves out, holds only the 17
+    fixed-camera markers, not camera walls.
+  - No prop stands there.
+  - Open: the surface at x -210.18 is in none of the stage data. It is
+    probably a runtime object, such as the lift door closing behind the
+    robot. The port draws the lift with its doors open. The port's own
+    spawns no longer stand there.
 - Implementation:
   - `slai/battle_camera.py` reads the rows behind instruction guards
     (`chase_rows`); `native_parts` writes each S.L.A.I. leg type's
