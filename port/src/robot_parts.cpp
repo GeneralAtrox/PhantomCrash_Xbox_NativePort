@@ -56,6 +56,7 @@ ChipRecord chip_record(const json::JsonValue &value) {
   out.outer_value = curve(value, "outer_value");
   out.lock_frames = integer(value, "lock_frames");
   out.chatter = static_cast<int>(value.number_or("chatter", -1));
+  out.slai_type = static_cast<int>(value.number_or("slai_type", 0));
   if (const json::JsonValue *face = value.find("face"); face != nullptr && !face->is_null()) {
     out.face = parse_sprite(*face);
   }

@@ -2,7 +2,8 @@
  "notes": [
   "Colour themes for atlas art (port/include/phantomcrash/image_theme.hpp): a screen names an image as \"<image>#<theme>\". S.L.A.I.'s shops reuse Phantom Crash's screens in their own colours (a port addition; data/ui/shop_variants.json).",
   "Wild Machines' yellow (hues 25-71 degrees, saturation from 0.08) takes the shop's hue; the \"Wild Machines\" lettering on the picture and the music strip is erased, and the shop's logo (installed from the S.L.A.I. disc by shop_art.py) goes on the strip below the ticker, at most twice its size.",
-  "Blood Music recolours only Sonic Amp's green picture (sonic_tex/2, the 640x480 backdrop) and puts its logo where the Sonic Amp script logo was (sonic_tex/0)."
+  "Blood Music recolours only Sonic Amp's green picture (sonic_tex/2, the 640x480 backdrop) and puts its logo where the Sonic Amp script logo was (sonic_tex/0).",
+  "S.L.A.I.'s dealers (dealer_omsk, dealer_ma_fabrik) take Kojima's screen: its yellow takes the maker's colour (Omsk's blue, Ma.Fabrik's orange) and the maker's logo and badge from its MAK sheet (installed by shop_art.py) replace Kojima's, fitted into their atlas places; on the company profile panel (dealer_tex/4) Kojima's logo is erased and the maker's small logo painted in its place."
  ],
  "themes": {
   "the_mechanist": {
@@ -143,6 +144,160 @@
       112
      ],
      "clear": true
+    }
+   ]
+  },
+  "dealer_omsk": {
+   "hues": [
+    [
+     25,
+     71
+    ]
+   ],
+   "min_saturation": 0.08,
+   "hue": 215,
+   "saturation": 0.95,
+   "paste": [
+    {
+     "image": "textures/scroll/dealer_kojima_tex/0.png",
+     "picture": "textures/slai/shops/mak02_1.png",
+     "rect": [
+      44,
+      26,
+      222,
+      242
+     ],
+     "region": [
+      200,
+      480,
+      376,
+      624
+     ],
+     "max_scale": 1,
+     "clear": true
+    },
+    {
+     "image": "textures/scroll/dealer_kojima_tex/0.png",
+     "picture": "textures/slai/shops/mak02_1.png",
+     "rect": [
+      292,
+      13,
+      364,
+      68
+     ],
+     "region": [
+      1920,
+      0,
+      2000,
+      64
+     ],
+     "max_scale": 1,
+     "clear": true
+    },
+    {
+     "image": "textures/scroll/dealer_tex/4.png",
+     "picture": "textures/slai/shops/mak02_1.png",
+     "rect": [
+      275,
+      159,
+      356,
+      254
+     ],
+     "region": [
+      428,
+      111,
+      494,
+      183
+     ],
+     "max_scale": 1
+    }
+   ],
+   "erase": [
+    {
+     "image": "textures/scroll/dealer_tex/4.png",
+     "region": [
+      428,
+      111,
+      494,
+      183
+     ]
+    }
+   ]
+  },
+  "dealer_ma_fabrik": {
+   "hues": [
+    [
+     25,
+     71
+    ]
+   ],
+   "min_saturation": 0.08,
+   "hue": 28,
+   "saturation": 1.0,
+   "paste": [
+    {
+     "image": "textures/scroll/dealer_kojima_tex/0.png",
+     "picture": "textures/slai/shops/mak04_1.png",
+     "rect": [
+      19,
+      20,
+      241,
+      252
+     ],
+     "region": [
+      200,
+      480,
+      376,
+      624
+     ],
+     "max_scale": 1,
+     "clear": true
+    },
+    {
+     "image": "textures/scroll/dealer_kojima_tex/0.png",
+     "picture": "textures/slai/shops/mak04_1.png",
+     "rect": [
+      290,
+      22,
+      363,
+      62
+     ],
+     "region": [
+      1920,
+      0,
+      2000,
+      64
+     ],
+     "max_scale": 1,
+     "clear": true
+    },
+    {
+     "image": "textures/scroll/dealer_tex/4.png",
+     "picture": "textures/slai/shops/mak04_1.png",
+     "rect": [
+      270,
+      164,
+      357,
+      253
+     ],
+     "region": [
+      428,
+      111,
+      494,
+      183
+     ],
+     "max_scale": 1
+    }
+   ],
+   "erase": [
+    {
+     "image": "textures/scroll/dealer_tex/4.png",
+     "region": [
+      428,
+      111,
+      494,
+      183
+     ]
     }
    ]
   }

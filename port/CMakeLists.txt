@@ -14,6 +14,7 @@ add_library(phantomcrash_core
   src/data_roots.cpp
   src/image_theme.cpp
   src/shop_variants.cpp
+  src/slai_shops.cpp
   src/added_chips.cpp
   src/slai_content.cpp
   src/slai_rota.cpp
@@ -476,6 +477,7 @@ if(BUILD_TESTING)
     tests/slai_leg_mount_tests.cpp
     tests/slai_rumble_table_tests.cpp
     tests/slai_lineup_tests.cpp
+    tests/slai_shops_tests.cpp
     tests/slai_talk_tests.cpp
     tests/slai_talk_join_tests.cpp
     tests/slai_story_rules_tests.cpp
@@ -624,6 +626,7 @@ if(PHANTOMCRASH_BUILD_DESKTOP)
     src/desktop_textures_erase.cpp
     src/desktop_texture_load.cpp
     src/desktop_shop_variants.cpp
+    src/desktop_game_shops.cpp
     src/desktop_battle_chatter.cpp
     src/desktop_battle_scene.cpp
     src/desktop_battle_view.cpp

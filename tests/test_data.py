@@ -38,6 +38,9 @@ def png_size(path: Path) -> tuple[int, int]:
 
 
 def resolve(relative: str) -> Path | None:
+    # "<image>#<theme>" is the image drawn in a colour theme (data/ui/themes.json).
+    if "#" in relative:
+        relative = relative.rpartition("#")[0]
     for root in SEARCH_ROOTS:
         candidate = root / relative
         if candidate.is_file():

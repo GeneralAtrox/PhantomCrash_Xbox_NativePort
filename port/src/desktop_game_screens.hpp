@@ -7,6 +7,7 @@
 #include "phantomcrash/data_roots.hpp"
 #include "phantomcrash/slai_rumble.hpp"
 #include "phantomcrash/slai_rumble_hub.hpp"
+#include "phantomcrash/slai_shops.hpp"
 #include "phantomcrash/contests.hpp"
 #include "phantomcrash/glyph_font.hpp"
 #include "phantomcrash/json.hpp"
@@ -121,22 +122,37 @@ public:
   }
 
 private:
-  [[nodiscard]] std::unique_ptr<Screen> make_used_sv(const std::string &from,
+  // A used SV screen: Wild Machines' or one of S.L.A.I.'s, and its stock.
+  struct UsedSvShop {
+    UsedSvScript script;
+    ShopStock stock{ShopStock::phantom_crash};
+  };
+
+  // The shops (desktop_game_shops.cpp).
+  void load_slai_shops(const DataRoots &roots);
+  // Where S.L.A.I.'s shops stand today; nothing without S.L.A.I.'s tables.
+  [[nodiscard]] std::optional<SlaiRotaEntry> slai_place(const QuestSave &quest) const;
+  [[nodiscard]] std::unique_ptr<Screen> make_used_sv(const std::string &name,
+                                                     const UsedSvShop &shop,
+                                                     const std::string &from,
                                                      const QuestSave &quest) const;
-  [[nodiscard]] std::unique_ptr<Screen> make_chip_shop(const std::string &name,
-                                                       const ChipShopScript &script,
-                                                       const std::string &from,
-                                                       const QuestSave &quest) const;
-  [[nodiscard]] std::unique_ptr<Screen> make_module_shop(const ModuleShopScript &script,
-                                                         const std::string &from,
-                                                         const QuestSave &quest) const;
+  [[nodiscard]] std::unique_ptr<Screen>
+  make_chip_shop(const std::string &name, const ChipShopScript &script, const std::string &from,
+                 const QuestSave &quest, ShopStock stock = ShopStock::phantom_crash) const;
+  [[nodiscard]] std::unique_ptr<Screen>
+  make_module_shop(const ModuleShopScript &script, const std::string &from, const QuestSave &quest,
+                   ShopStock stock = ShopStock::phantom_crash) const;
+  [[nodiscard]] std::vector<int> module_lineups(const ModuleShopScript &script,
+                                                const QuestSave &quest, ShopStock stock) const;
+  // The script with its records limited to the stock's (Phantom Crash's
+  // without S.L.A.I.'s, or S.L.A.I.'s).
+  [[nodiscard]] ModuleShopScript stocked(const ModuleShopScript &script, ShopStock stock) const;
   [[nodiscard]] std::unique_ptr<Screen> make_hangar(const std::string &from,
                                                     const QuestSave &quest) const;
   [[nodiscard]] std::unique_ptr<Screen> make_assemble(const std::string &from,
                                                       const QuestSave &quest) const;
-  [[nodiscard]] std::unique_ptr<Screen> make_dealer(const std::string &name, int index,
-                                                    const std::string &from,
-                                                    const QuestSave &quest) const;
+  [[nodiscard]] std::unique_ptr<Screen>
+  make_dealer(const std::string &name, const std::string &from, const QuestSave &quest) const;
   [[nodiscard]] std::unique_ptr<Screen> make_rumbling(const std::string &from,
                                                       const QuestSave &quest) const;
   // S.L.A.I.'s shops (phantomcrash/shop_variants.hpp; desktop_shop_variants.cpp).
@@ -155,9 +171,11 @@ private:
   }
   // The meshes each part may wear (part_looks.hpp); none without the 3D.
   [[nodiscard]] PartLooks part_looks() const;
-  // The SVs a dealer (0..2) or Wild Machines' used SVs offer on the day.
-  [[nodiscard]] std::vector<SvOffer> dealer_lineup(int index, const QuestSave &quest) const;
-  [[nodiscard]] std::vector<SvOffer> used_sv_lineup(const QuestSave &quest) const;
+  // The SVs a dealer or a used SV shop offers on the day.
+  [[nodiscard]] std::vector<SvOffer> dealer_lineup(const std::string &name,
+                                                   const QuestSave &quest) const;
+  [[nodiscard]] std::vector<SvOffer> used_sv_lineup(const UsedSvShop &shop,
+                                                    const QuestSave &quest) const;
   // Where "back" leads: the place before any story event.
   [[nodiscard]] std::string resolve(const std::string &target,
                                     const std::string &place_before) const;
@@ -196,6 +214,12 @@ private:
   std::map<std::string, ModuleShopScript, std::less<>> module_shops_;
   std::map<std::string, ChipShopScript, std::less<>> chip_shops_;
   std::map<std::string, SonicAmpScript, std::less<>> sonic_amps_;
+  // What each variant's shop sells (its "stock"), by screen name.
+  std::map<std::string, ShopStock, std::less<>> shop_stocks_;
+  // The used SV screens, Wild Machines' and the variants', by screen name.
+  std::map<std::string, UsedSvShop, std::less<>> used_sv_shops_;
+  // With S.L.A.I.: what its shops sell, by day and city.
+  std::optional<SlaiShops> slai_shops_;
   TuneShopScript customize_;
   HangarMenuScript hangar_;
   AssembleScript assemble_;

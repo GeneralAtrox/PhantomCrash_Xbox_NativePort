@@ -1,0 +1,65 @@
+{
+ "notes": [
+  "S.L.A.I.'s CHIPs as Phantom Crash CHIP records, a port adaptation (shop_table.py). The two games' CHIPs are different systems: S.L.A.I.'s grow sixteen skills and wear out (life points, repair, data transfer), Phantom Crash's level up. The CPU record (0x3DF340, 556 bytes) gives what maps: the reticle (inner and outer shape and size curves, lock frames, tracking), the weight and the price, and three skill curves that stand for the fight values.",
+  "fields names, for each port curve, the S.L.A.I. curve it comes from (offset into the CPU record and its kind: short, float or int). Per field, the median of the CHIPs Phantom Crash's shops sell over the median of S.L.A.I.'s at each of levels scales every S.L.A.I. CHIP's curve, as armour_balance.json does for bodies and legs, so each keeps its rank among S.L.A.I.'s while the whole sits among Phantom Crash's. The knee of each curve is S.L.A.I.'s own. The weight is a single value (+0x4) made a flat curve. A uniform field (the fight values, which S.L.A.I. grows by level 12 and Phantom Crash by about 50) takes the top level's factor throughout, so its curve keeps rising.",
+  "track maps S.L.A.I.'s tracking float (+0x14, 7.5 to 9.9) linearly onto Phantom Crash's tracking range, rounded. chatter gives each CPU type (+0x6, 2..9) a battle chatter personality (0..4), a port choice; the partner chip in S.L.A.I.'s scenes still follows the type (slai_type). enabled false keeps S.L.A.I.'s own values."
+ ],
+ "enabled": true,
+ "levels": [
+  0,
+  99
+ ],
+ "reference": "sold",
+ "fields": {
+  "inner_value": {
+   "offset": 12,
+   "kind": "short"
+  },
+  "outer_value": {
+   "offset": 26,
+   "kind": "short"
+  },
+  "critical_percent": {
+   "offset": 44,
+   "kind": "float",
+   "uniform": true
+  },
+  "dodge_percent": {
+   "offset": 60,
+   "kind": "float",
+   "uniform": true
+  },
+  "knockdown_resistance": {
+   "offset": 36,
+   "kind": "short",
+   "uniform": true
+  },
+  "price": {
+   "offset": 76,
+   "kind": "int"
+  }
+ },
+ "weight": {
+  "offset": 4
+ },
+ "track": {
+  "from": [
+   7.5,
+   9.9
+  ],
+  "to": [
+   1,
+   3
+  ]
+ },
+ "chatter": {
+  "2": 0,
+  "3": 1,
+  "4": 2,
+  "5": 3,
+  "6": 4,
+  "7": 0,
+  "8": 1,
+  "9": 2
+ }
+}

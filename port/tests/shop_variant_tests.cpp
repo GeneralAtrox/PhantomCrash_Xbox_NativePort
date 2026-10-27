@@ -90,6 +90,9 @@ TEST_CASE("the shipped themes parse") {
   const auto themes = parse_image_themes(shipped().document("ui/themes.json"));
   REQUIRE(themes.contains("the_mechanist"));
   REQUIRE(themes.contains("blood_music"));
+  REQUIRE(themes.contains("dealer_omsk"));
+  CHECK(themes.at("dealer_omsk").paste.size() == 3);
+  CHECK(themes.at("dealer_ma_fabrik").paste.front().clear);
   CHECK(themes.at("the_mechanist").paste.size() == 1);
   CHECK(themes.at("blood_music").recolour.size() == 1);
 }
@@ -97,23 +100,35 @@ TEST_CASE("the shipped themes parse") {
 TEST_CASE("the shipped shop variants compose from the original screens") {
   const auto roots = shipped();
   const auto variants = parse_shop_variants(roots.document(shop_variants_document));
-  REQUIRE(variants.size() == 7);
+  REQUIRE(variants.size() == 12);
   for (const auto &[name, variant] : variants) {
     const auto document = roots.document(variant.document);
     CHECK(document.find("extends") == nullptr);
+    // Each screen leads back to its shop's menu: "<shop>_<screen>".
+    const std::string shop = name.substr(0, name.find("_", name.find("_") + 1));
     switch (variant.kind) {
     case ShopVariantKind::location_menu: {
       const auto menu = parse_location_menu(document, variant.document);
-      CHECK(menu.items.size() == 3);
+      CHECK(menu.items.size() >= 3);
       CHECK(menu.items.back().next == "town_map");
-      CHECK(menu.items.front().next.starts_with(name + "_"));
+      for (std::size_t item = 0; item + 1 < menu.items.size(); ++item) {
+        CHECK(menu.items[item].next.starts_with(name + "_"));
+        CHECK(variants.contains(menu.items[item].next));
+      }
       break;
     }
     case ShopVariantKind::buy_module:
-      CHECK(parse_module_shop(document, ModuleShopMode::buy).stock_from[0] == 16);
+      CHECK(variant.stock.starts_with("slai"));
+      CHECK(parse_module_shop(document, ModuleShopMode::buy).stock_from[0] == 0);
+      CHECK(parse_module_shop(document, ModuleShopMode::buy).exit_to == shop);
       break;
     case ShopVariantKind::sell_module:
-      CHECK(parse_module_shop(document, ModuleShopMode::sell).exit_to == "the_mechanist");
+      CHECK(variant.stock.empty());
+      CHECK(parse_module_shop(document, ModuleShopMode::sell).exit_to == shop);
+      break;
+    case ShopVariantKind::used_sv:
+      CHECK(variant.stock.starts_with("slai"));
+      CHECK(document.string_or("exit_to", "") == shop);
       break;
     case ShopVariantKind::buy_chip:
     case ShopVariantKind::sell_chip:

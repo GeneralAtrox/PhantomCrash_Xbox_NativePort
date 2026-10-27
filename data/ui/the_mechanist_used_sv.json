@@ -1,0 +1,10 @@
+{
+ "notes": [
+  "The Mechanist's USED SV: Wild Machines' used SVs in blue, offering the SVs of S.L.A.I.'s city-day row for the day (+0x38 of 0x422ce0's rows, read by 0x5372d0), without Wild Machines' maker gate. S.L.A.I.'s SVs come with no CHIP; the registration gives them the E-Chip (slai/shop_table.py)."
+ ],
+ "extends": "ui/used_sv.json",
+ "replace_strings": {
+  "textures/scroll/wild_tex/4.png": "textures/scroll/wild_tex/4.png#the_mechanist"
+ },
+ "exit_to": "the_mechanist"
+}

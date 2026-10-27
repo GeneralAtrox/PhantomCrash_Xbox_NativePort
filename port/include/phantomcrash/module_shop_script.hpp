@@ -13,6 +13,7 @@
 #include "phantomcrash/town_screen.hpp"
 
 #include <array>
+#include <limits>
 #include <cstdint>
 #include <map>
 #include <optional>
@@ -96,9 +97,18 @@ struct ModuleShopScript : TownBasics {
   std::vector<Sprite> emblem_swatches;
   double sell_rate{0.5};
   std::optional<ExtraStatsStyle> extra_stats; // none: no extra lines
-  // BUY offers only the records from these ids on, by kind ("stock_from"; a
-  // port addition: S.L.A.I.'s The Mechanist sells only S.L.A.I.'s parts).
+  // BUY offers only the records from stock_from on and before stock_until,
+  // by kind (a port addition: with S.L.A.I.'s content Phantom Crash's shops
+  // sell only its records and S.L.A.I.'s only theirs, GameScreens sets both
+  // from tables/slai_shops.json). A document may set stock_from.
   std::array<int, goods_kind_count> stock_from{};
+  std::array<int, goods_kind_count> stock_until = no_stock_limit();
+
+  [[nodiscard]] static constexpr std::array<int, goods_kind_count> no_stock_limit() {
+    std::array<int, goods_kind_count> out{};
+    out.fill(std::numeric_limits<int>::max());
+    return out;
+  }
 };
 
 // Throws std::runtime_error naming the member at fault.

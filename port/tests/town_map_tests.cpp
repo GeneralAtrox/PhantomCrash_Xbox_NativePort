@@ -55,35 +55,36 @@ TEST_CASE("the town map has its eight places") {
   }
 }
 
-TEST_CASE("with S.L.A.I. the town map has fourteen places, the original eight among them") {
+TEST_CASE("with S.L.A.I. the town map has fifteen places, the original eight among them") {
   const TownMapScript script = shipped(true);
-  REQUIRE(script.places.size() == 14U);
+  REQUIRE(script.places.size() == 15U);
   std::vector<std::string> ids;
   for (const TownPlace &place : script.places) {
     ids.push_back(place.id);
   }
   CHECK((ids == std::vector<std::string>{"garage", "club_wired", "difference_eg", "wild_machines",
                                          "the_mechanist", "plustech", "blood_music", "sonic_amp",
-                                         "ma_fabrik", "ventuno", "omsk", "kojima", "american_stars",
-                                         "battle_school"}));
+                                         "junk_shop", "ma_fabrik", "ventuno", "omsk", "kojima",
+                                         "american_stars", "battle_school"}));
   CHECK(script.places[2].next == "difference_eg");
   CHECK(script.places[6].next == "blood_music");
-  CHECK(script.places[10].next.empty()); // Omsk's dealer is not there yet
+  CHECK(script.places[8].next == "junk_shop");
+  CHECK(script.places[11].next == "dealer_omsk");
   CHECK(!script.places[2].sign);
   TownMapScript none = shipped(true);
-  none.places[13].enabled = false;
-  CHECK(for_content(none, true).places.size() == 13U);
+  none.places[14].enabled = false;
+  CHECK(for_content(none, true).places.size() == 14U);
 }
 
 TEST_CASE("confirming a closed town map place stays on the map") {
   TownMapScript script = shipped(true);
-  CHECK(script.places[13].next == "slai_battle_school");
-  script.places[13].next.clear(); // closed, as before Battle School opened
+  CHECK(script.places[14].next == "slai_battle_school");
+  script.places[14].next.clear(); // closed, as before Battle School opened
   TownMap map(std::move(script), "garage", {});
   run(map, 0.8);
   press(map, button::right);
   run(map, 0.3);
-  REQUIRE(map.place() == 13); // Battle-School
+  REQUIRE(map.place() == 14); // Battle-School
   static_cast<void>(map.take_sounds());
   press(map, button::a);
   CHECK((map.take_sounds() == std::vector<std::string>{"warning"}));

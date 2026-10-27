@@ -58,6 +58,9 @@ struct ChipRecord {
   // robot speaks from (+0x18) and the face its name entry shows (+0x1a).
   int chatter{-1};
   std::optional<Sprite> face;
+  // An S.L.A.I. CHIP's CPU type (2..9), whose partner its scenes show
+  // (slai_talk.json selectors); 0 for others.
+  int slai_type{};
   // The robot's fight (0x092c6c +0x24..+0x2c, read by 0x0988e1).
   LevelCurve critical_percent;     // +0x3c
   LevelCurve dodge_percent;        // +0x4c

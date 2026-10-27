@@ -16,7 +16,7 @@
  "fade_in": 0.5,
  "fade_out": 0.5,
  "exit_to": "club_wired",
- "exits": { "event_48": "pepper_guide", "battle_music": "battle_music", "dealer_american_stars": "dealer_american_stars", "dealer_kojima": "dealer_kojima", "dealer_ventuno": "dealer_ventuno", "wild_machines_buy_chip": "wild_machines_buy_chip", "difference_eg_buy_chip": "difference_eg_buy_chip", "wild_machines_used_sv": "wild_machines_used_sv", "assemble": "assemble" },
+ "exits": { "event_48": "pepper_guide", "battle_music": "battle_music", "dealer_american_stars": "dealer_american_stars", "dealer_kojima": "dealer_kojima", "dealer_ventuno": "dealer_ventuno", "wild_machines_buy_chip": "wild_machines_buy_chip", "difference_eg_buy_chip": "difference_eg_buy_chip", "wild_machines_used_sv": "wild_machines_used_sv", "the_mechanist_used_sv": "the_mechanist_used_sv", "junk_shop_used_sv": "junk_shop_used_sv", "dealer_omsk": "dealer_omsk", "dealer_ma_fabrik": "dealer_ma_fabrik", "assemble": "assemble" },
  "confirm": { "buttons": "confirm" },
  "cancel": { "buttons": "cancel" },
  "cursor_repeat": { "delay": 0.4, "interval": 0.1 },

@@ -520,14 +520,62 @@ carrying its own logo. This is a port addition, all in data:
   erased smoothly from their surroundings, and pictures pasted (the logos).
   Sprite text, shapes and lines keyed by the plain image still apply; the
   plate subtitle has themed entries that read the shop's name.
-- The Mechanist's BUY MODULE offers the day's lineup from S.L.A.I.'s
-  records only (`stock_from`: bodies 16, legs 43, arms 76, shoulders 69,
-  paints 57, emblems 206). Wild Machines still sells both games' parts.
-  Difference EG sells the day's Phantom Crash CHIPs until S.L.A.I.'s CHIPs
-  are imported.
 - The installer step `shop_art.py` converts the language-neutral logo
-  sheets to `textures/slai/shops/` (also `MAK02_1` and `MAK04_1` for the
-  OMSK and S&V Ma.FABRIK dealers, which are not wired yet).
+  sheets to `textures/slai/shops/` (also `MAK02_1` and `MAK04_1`, the
+  Omsk and S&V Ma.Fabrik dealers' logos).
+
+## S.L.A.I.'s shops sell S.L.A.I.'s stock (2026-10-27)
+
+Each shop sells only its own game's records. A variant's `"stock"` in
+`data/ui/shop_variants.json` says which: none (Phantom Crash), `"slai"` or
+`"slai_junk"` (`ShopStock`, `phantomcrash/slai_shops.hpp`).
+
+| Shop | Stock | From |
+|---|---|---|
+| Wild Machines, PC dealers, PC CHIP shops | Phantom Crash's records only | the calendar (`tables/town.json`) |
+| The Mechanist: BUY MODULE, USED SV | S.L.A.I.'s | the city-day row (0x537480, SVs 0x5372d0) |
+| Difference EG: BUY CHIP | S.L.A.I.'s CHIPs | the city-day row (0x51c320) |
+| Junk shop (town spot 0x0F): BUY MODULE, USED SV | S.L.A.I.'s | its junk row (0x51c5a0) |
+| Omsk, S&V Ma.Fabrik dealers | S.L.A.I.'s SVs | the day row's dealer lineups, shop ids 3 and 4 (0x547950) |
+
+- The installer step `shop_table.py` (also `register-slai-shops <disc>`
+  on its own) appends S.L.A.I.'s CHIPs (from its CPU records; the E-Chip
+  is chip 96 and fills the SVs S.L.A.I. sells without a CHIP), its
+  module, CHIP, used SV and dealer lineups to the pack's
+  `tables/parts.json` and `tables/garage.json`, and writes
+  `tables/slai_shops.json`: the day rows, the city-day rows, the junk
+  shop's rows and ten-day cycle, the dealers' profiles (copied from the
+  disc, never committed) and each category's S.L.A.I. record range
+  (`slai_stock`). CHIP balance values S.L.A.I. lacks come from
+  `slai/chip_balance.json`.
+- With the table loaded, every Phantom Crash parts shop stops at each
+  category's first S.L.A.I. record (`stock_until`) and every S.L.A.I.
+  shop keeps to S.L.A.I.'s range (`stock_from`/`stock_until`), so
+  deliveries never mix the games.
+- S.L.A.I.'s shops stand in the player's city when its rota opens one
+  there that day, else in the day's first open city (`slai_shop_place`).
+- The junk shop shows day *n* of a ten-day cycle per city (cycle at
+  0x43A908). Its SV rows 10, 11 and 12 show rows 0, 4 and 7 until the
+  stage ladder reaches 4 (0x51c620; S.L.A.I. sets flag +0xA18 at
+  0x25A7F0).
+- S.L.A.I.'s used SV shops have no maker gate (Wild Machines' gate is
+  Phantom Crash's).
+- Omsk and Ma.Fabrik reuse Kojima's dealer screen recoloured (blue, hue
+  215; orange, hue 28) with their own logos on the screen, the badge and
+  the profile panel. Their town spots now open them; the junk shop is a new
+  place on the map (always open: no S.L.A.I. opening condition is known).
+  The junk shop's SELL MODULE is a port addition.
+- A partner chip whose record names a S.L.A.I. type (`slai_type` 2-9)
+  talks as that partner.
+
+Junk SV prices are high: S.L.A.I.'s parts carry signed levels (-99..99)
+and its price curves have `low_scale` 1, so tuned parts cost more in both
+directions (median about 1.8M NY). This is the original data.
+
+Not imported yet: the Proton, Carro and Hartman dealer lineups, the
+dealers' banner pictures, S.L.A.I.'s options (not the port's modules),
+its paint and sticker prices (table 0x41E090) and the CHIP life and repair
+system.
 
 ## Original shop calendar
 

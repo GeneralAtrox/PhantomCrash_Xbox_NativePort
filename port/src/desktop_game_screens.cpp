@@ -79,6 +79,8 @@ GameScreens::GameScreens(TextureCache &textures, const DataRoots &roots, const G
     garage_ = parse_garage_tables(*garage);
   }
   slai_rumble_ = load_slai_rumble(roots);
+  used_sv_shops_.emplace("wild_machines_used_sv", UsedSvShop{used_sv_, ShopStock::phantom_crash});
+  load_slai_shops(roots);
   if (slai_rumble_) {
     for (const std::string screen : {"slai_rumble", "slai_battle_school"}) {
       if (const std::string document = "ui/" + screen + ".json"; roots.has_document(document)) {
@@ -163,49 +165,6 @@ std::unique_ptr<Screen> GameScreens::make_assemble(const std::string &from,
                                           frame_, credits_, quest, preview_world(), robot_preview_);
 }
 
-// A dealer's offers are its lineup on the day's calendar entry (0x06ce5d).
-std::unique_ptr<Screen> GameScreens::make_dealer(const std::string &name, const int index,
-                                                 const std::string &from,
-                                                 const QuestSave &quest) const {
-  int &remembered = dealer_cursors_[name];
-  const bool resume = from == "name_entry" || from == dealer_.purchase.spec_screen;
-  Dealer logic(dealer_, name, dealer_lineup(index, quest), quest, parts_, garage_, from,
-               resume ? remembered : 0);
-  return std::make_unique<DealerScreen>(textures_, font_, std::move(logic), message_box_, from,
-                                        frame_, credits_, quest, remembered, preview_world(),
-                                        robot_preview_);
-}
-
-// Wild Machines' used SVs are the day's used_svs lineup (0x01ee3d).
-std::unique_ptr<Screen> GameScreens::make_used_sv(const std::string &from,
-                                                  const QuestSave &quest) const {
-  int &remembered = dealer_cursors_["wild_machines_used_sv"];
-  const bool resume = from == "name_entry" || from == used_sv_.purchase.spec_screen;
-  UsedSv logic(used_sv_, used_sv_lineup(quest), quest, parts_, garage_, resume ? remembered : 0);
-  return std::make_unique<UsedSvScreen>(textures_, font_, std::move(logic), message_box_, from,
-                                        frame_, credits_, quest, remembered, preview_world(),
-                                        robot_preview_);
-}
-
-std::vector<SvOffer> GameScreens::dealer_lineup(const int index, const QuestSave &quest) const {
-  int lineup = -1;
-  if (!contests_.calendar.empty() && index >= 0 && index < 3) {
-    const auto days = static_cast<int>(contests_.calendar.size());
-    lineup = contests_.calendar[static_cast<std::size_t>(quest.day % days)]
-                 .dealers[static_cast<std::size_t>(index)];
-  }
-  return dealer_offers(garage_, parts_, lineup, dealer_.price_markup);
-}
-
-std::vector<SvOffer> GameScreens::used_sv_lineup(const QuestSave &quest) const {
-  int lineup = -1;
-  if (!contests_.calendar.empty()) {
-    const auto days = static_cast<int>(contests_.calendar.size());
-    lineup = contests_.calendar[static_cast<std::size_t>(quest.day % days)].used_svs;
-  }
-  return used_sv_offers(used_sv_, garage_, parts_, lineup, quest.won_contests);
-}
-
 // SV SPEC shows the SV the screen that opened it has chosen: a dealer's or
 // the used SVs' offer, KEEP SV's kept Scoobee, or the hangar the hangar's
 // wheel has chosen.
@@ -214,12 +173,12 @@ std::unique_ptr<Screen> GameScreens::make_sv_spec(const std::string &from,
                                                   const QuestSave &quest) const {
   std::optional<std::vector<SvOffer>> offers;
   int chosen = -1;
-  if (const auto dealer = dealer_.dealers.find(from); dealer != dealer_.dealers.end()) {
-    offers = dealer_lineup(dealer->second.index, quest);
+  if (dealer_.dealers.contains(from)) {
+    offers = dealer_lineup(from, quest);
     // Dealer cursors include COMPANY PROFILE before the three SV offers.
     chosen = dealer_cursors_[from] - 1;
-  } else if (from == "wild_machines_used_sv") {
-    offers = used_sv_lineup(quest);
+  } else if (const auto used = used_sv_shops_.find(from); used != used_sv_shops_.end()) {
+    offers = used_sv_lineup(used->second, quest);
     chosen = dealer_cursors_[from];
   }
   SpecRobot robot;
@@ -245,53 +204,6 @@ std::unique_ptr<Screen> GameScreens::make_sv_spec(const std::string &from,
                resolve(sv_spec_.exit_to, place_before));
   return std::make_unique<SvSpecScreen>(textures_, font_, std::move(logic), from, frame_, credits_,
                                         quest, preview_world(), robot_preview_);
-}
-
-// BUY CHIP offers the day's chips lineup (0x01efdf) and the bosses' CHIPs the
-// player has won that day (add_boss_chips), SELL CHIP and
-// PlusTech's UPLIFT the player's CHIPs in stock; both resume at the CHIP chosen after NAME ENTRY.
-std::unique_ptr<Screen> GameScreens::make_chip_shop(const std::string &name,
-                                                    const ChipShopScript &script,
-                                                    const std::string &from,
-                                                    const QuestSave &quest) const {
-  std::vector<ChipOffer> offers;
-  if (script.mode != ChipShopMode::buy) {
-    offers = chips_in_stock(parts_, garage_, quest.garage);
-  } else if (!contests_.calendar.empty()) {
-    const auto days = static_cast<int>(contests_.calendar.size());
-    const int lineup = contests_.calendar[static_cast<std::size_t>(quest.day % days)].chips;
-    offers = chips_for_sale(parts_, garage_, lineup);
-    add_boss_chips(offers, parts_, garage_, contests_, quest.day, quest.won_contests);
-  }
-  int &remembered = dealer_cursors_[name];
-  ChipShop logic(script, std::move(offers), quest, parts_, from == "name_entry" ? remembered : 0);
-  return std::make_unique<ChipShopScreen>(textures_, font_, std::move(logic), message_box_, from,
-                                          frame_, credits_, quest, remembered);
-}
-
-// BUY MODULE offers each category's lineup on the day's calendar entry
-// (0x06d3a1); SELL MODULE the player's own.
-std::unique_ptr<Screen> GameScreens::make_module_shop(const ModuleShopScript &script,
-                                                      const std::string &from,
-                                                      const QuestSave &quest) const {
-  std::vector<int> lineups;
-  if (script.mode == ModuleShopMode::buy && !contests_.calendar.empty()) {
-    const auto days = static_cast<int>(contests_.calendar.size());
-    const auto &day = contests_.calendar[static_cast<std::size_t>(quest.day % days)];
-    lineups.assign(script.categories.size(), -1);
-    // The day names a lineup for each category but EXIT, in the grid's order.
-    for (std::size_t cell = 0; cell < script.categories.size(); ++cell) {
-      if (const auto kind = script.categories[cell].kind) {
-        const auto slot = static_cast<std::size_t>(module_lineup_slot(*kind));
-        lineups[cell] = slot < day.modules.size() ? day.modules[slot] : -1;
-      }
-    }
-  }
-  ModuleShop logic(script, quest, parts_, garage_, part_stats_, std::move(lineups));
-  logic.set_looks(part_looks());
-  return std::make_unique<ModuleShopScreen>(textures_, font_, std::move(logic), message_box_, from,
-                                            frame_, credits_, quest, preview_world(),
-                                            robot_preview_);
 }
 
 // "back" returns to the place a screen was opened from, past any story event.
@@ -335,8 +247,8 @@ std::unique_ptr<Screen> GameScreens::make(const std::string &name, const std::st
     return std::make_unique<SonicAmpScreen>(textures_, font_, sonic_amp_, from, frame_, credits_,
                                             quest);
   }
-  if (name == "wild_machines_used_sv") {
-    return make_used_sv(from, quest);
+  if (const auto used = used_sv_shops_.find(name); used != used_sv_shops_.end()) {
+    return make_used_sv(name, used->second, from, quest);
   }
   if (name == "wild_machines_buy_chip") {
     return make_chip_shop(name, buy_chip_, from, quest);
@@ -383,8 +295,8 @@ std::unique_ptr<Screen> GameScreens::make(const std::string &name, const std::st
   if (auto variant = make_shop_variant(name, from, quest)) {
     return variant;
   }
-  if (const auto look = dealer_.dealers.find(name); look != dealer_.dealers.end()) {
-    return make_dealer(name, look->second.index, from, quest);
+  if (dealer_.dealers.contains(name)) {
+    return make_dealer(name, from, quest);
   }
   if (const auto found = placeholders_.find(name); found != placeholders_.end()) {
     return std::make_unique<PlaceholderScreen>(textures_.renderer(), found->second.label,

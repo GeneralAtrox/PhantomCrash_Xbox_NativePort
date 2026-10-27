@@ -1,0 +1,7 @@
+{
+ "notes": [
+  "The junk shop's BUY and SELL MODULE: The Mechanist's parts shop, its stock the junk row's parts (shop_variants.json, slai_junk)."
+ ],
+ "extends": "ui/the_mechanist_module_shop.json",
+ "exit_to": "junk_shop"
+}

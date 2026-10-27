@@ -8,13 +8,14 @@
 namespace phantomcrash {
 namespace {
 
-constexpr std::array<std::pair<std::string_view, ShopVariantKind>, 6> kind_names{{
+constexpr std::array<std::pair<std::string_view, ShopVariantKind>, 7> kind_names{{
     {"location_menu", ShopVariantKind::location_menu},
     {"buy_module", ShopVariantKind::buy_module},
     {"sell_module", ShopVariantKind::sell_module},
     {"buy_chip", ShopVariantKind::buy_chip},
     {"sell_chip", ShopVariantKind::sell_chip},
     {"sonic_amp", ShopVariantKind::sonic_amp},
+    {"used_sv", ShopVariantKind::used_sv},
 }};
 
 ShopVariantKind kind_named(const std::string &screen, const std::string &name) {
@@ -35,8 +36,9 @@ ShopVariants parse_shop_variants(const json::JsonValue &document) {
     return variants;
   }
   for (const auto &[name, entry] : screens->object()) {
-    variants.emplace(name, ShopVariant{kind_named(name, entry.string_or("kind", "")),
-                                       entry.string_or("document", "")});
+    variants.emplace(name,
+                     ShopVariant{kind_named(name, entry.string_or("kind", "")),
+                                 entry.string_or("document", ""), entry.string_or("stock", "")});
   }
   return variants;
 }

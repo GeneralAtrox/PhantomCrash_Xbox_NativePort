@@ -669,9 +669,31 @@ looks for `<CITY>.MED`, but the disc names them `<CITY>_DAY.MED` and
 means decoding the effect records. For example, `SINJYUKU_NIGHT.MED` holds
 17 records and `EGYPT_NIGHT.MED` holds 10.
 
+## Shop tables (imported 2026-10-27)
+
+`slai/shop_table.py` reads these and writes `tables/slai_shops.json`; the
+port's use is in `docs/SLAI_INTEGRATION.md`.
+
+- **City-day rows.** The rota's +0x28 is the CHIP lineup, +0x2A..+0x36
+  the seven module-shop categories (body, legs, arm, shoulder, option,
+  paint, emblem; options are not the port's modules), +0x38 the used SV
+  row and +0x3A the junk row. 67 CHIP lineups.
+- **Dealers.** The day row's +0 header holds a lineup per shop id; 3 is
+  Omsk and 4 S&V Ma.Fabrik (0x547950). Their profiles are MSG text.
+- **Junk shop (spot 0x0F).** Its row is day `day/10*10 + offset[city] - 1`
+  of a ten-day cycle (offsets 0x43A908, 0x51c5a0). Its SV rows 10, 11 and
+  12 show rows 0, 4 and 7 until save flag +0xA18 is set (0x51c620); 0x25A7F0
+  sets it when the stage ladder reaches 4.
+- **CHIPs.** CPU records give S.L.A.I.'s CHIPs; the first is the E-Chip
+  (regulation special 7). Faces are `2d/s_chip/<family>.png`.
+- **Prices.** Part levels are signed (-99..99) and the price curves'
+  `low_scale` is 1, so a part tuned either way costs more than its base.
+- **Paints and stickers.** Prices are in the table at 0x41E090 (not
+  imported).
+
 ## Open questions (most need runtime checks in PCSX2)
 
-- Which items do the daily shop lineup ids name, and what sets 0x43B91C?
+- What sets 0x43B91C? (The lineup ids are resolved: see Shop tables.)
 - Is `+0xA14` money? What do the regulation's `+0x20` parameter and the 10
   match weights do?
 - What builds sit behind the roster ids (f_256CC0)? This needs ranker and

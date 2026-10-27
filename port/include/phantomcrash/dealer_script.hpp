@@ -23,7 +23,10 @@ namespace phantomcrash {
 // panel and text, the SV name plates by picture and the menu icons by the
 // SV's legs record.
 struct DealerLook {
-  int index{};                  // which of a calendar day's dealer lineups is this dealer's
+  int index{}; // which of a calendar day's dealer lineups is this dealer's
+  // With S.L.A.I.: an S.L.A.I. dealer's shop id (0x547950), whose lineups
+  // (tables/slai_shops.json) it shows instead; -1 for Phantom Crash's.
+  int slai_shop{-1};
   std::vector<Sprite> panorama; // scrolled left, one after the other, wrapping
   Sprite top;
   Sprite bottom;

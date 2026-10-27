@@ -1,19 +1,11 @@
 {
  "notes": [
-  "The Mechanist's BUY and SELL MODULE: Wild Machines' parts shop in blue, offering only S.L.A.I.'s parts (records after Phantom Crash's 16 bodies, 43 legs, 76 arm and 69 shoulder weapons, 57 paints and 206 emblems; the day's lineup as at Wild Machines)."
+  "The Mechanist's BUY and SELL MODULE: Wild Machines' parts shop in blue. Its stock (shop_variants.json, slai) is S.L.A.I.'s parts only, the city-day row's lineups for the day and the city S.L.A.I.'s shops stand in (tables/slai_shops.json; 0x537480)."
  ],
  "extends": "ui/module_shop.json",
  "replace_strings": {
   "textures/scroll/wild_tex/1.png": "textures/scroll/wild_tex/1.png#the_mechanist",
   "textures/scroll/wild_tex/4.png": "textures/scroll/wild_tex/4.png#the_mechanist"
  },
- "exit_to": "the_mechanist",
- "stock_from": {
-  "body": 16,
-  "legs": 43,
-  "arm": 76,
-  "shoulder": 69,
-  "paint": 57,
-  "emblem": 206
- }
+ "exit_to": "the_mechanist"
 }

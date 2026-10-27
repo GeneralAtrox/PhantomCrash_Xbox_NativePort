@@ -98,7 +98,13 @@ std::unique_ptr<Screen> ScreenRunner::make_slai_talk(const std::string &name,
   if (const StockItem *chip = riding_chip(quest_.garage);
       chip != nullptr && chip->id >= 0 && chip->id < static_cast<int>(chips.size())) {
     const ChipRecord &record = chips[static_cast<std::size_t>(chip->id)];
-    partner = slai_story_->partner(record.chatter, record.name);
+    // S.L.A.I.'s own CHIPs carry their CPU type (2..9: script cases 1..8)
+    // and picture; Phantom Crash's stand in by their chatter.
+    if (record.slai_type >= 2 && record.slai_type <= 9 && record.face) {
+      partner = {record.slai_type - 1, record.face->image};
+    } else {
+      partner = slai_story_->partner(record.chatter, record.name);
+    }
     names.partner = placeholder_name(chip->name.empty() ? record.name : chip->name, names.partner);
   }
   auto scene = slai_story_->scene(scene_name, names, partner);

@@ -1,0 +1,7 @@
+{
+ "notes": [
+  "The junk shop's USED SV: The Mechanist's, its stock the junk row's SVs (0x333f70)."
+ ],
+ "extends": "ui/the_mechanist_used_sv.json",
+ "exit_to": "junk_shop"
+}

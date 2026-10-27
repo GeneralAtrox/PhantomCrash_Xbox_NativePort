@@ -190,7 +190,10 @@ void ModuleShop::load_goods() {
     const int lineup = cell < lineups_.size() ? lineups_[cell] : -1;
     auto goods = goods_for_sale(parts_, garage_, kind, lineup);
     const int first = script_.stock_from[static_cast<std::size_t>(kind)];
-    std::erase_if(goods, [first](const ShopGoods &line) { return line.goods.id < first; });
+    const int until = script_.stock_until[static_cast<std::size_t>(kind)];
+    std::erase_if(goods, [first, until](const ShopGoods &line) {
+      return line.goods.id < first || line.goods.id >= until;
+    });
     list_.assign(std::move(goods), false);
   }
 }

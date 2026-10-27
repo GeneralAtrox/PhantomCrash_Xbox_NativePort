@@ -16,6 +16,7 @@ from .native_sound import register_sound
 from .native_particles import register_particles
 from .rumble_table import register_rumble
 from .shop_art import register_shop_art
+from .shop_table import register_shops
 from .talk_register import register_talk
 from .wired_art import register_wired_art
 
@@ -64,11 +65,13 @@ def install(disc: Path, root: Path, converter: Path, report=print) -> None:
         report('Converting talk scenes...', flush=True)
         register_talk(disc, output)
         register_wired_art(disc, output)
+        report("Stocking S.L.A.I.'s shops...", flush=True)
+        register_shops(disc, assets, output)
         report('Converting music...', flush=True)
         convert_music(disc, assets, data, output, converter, report=lambda line: report(line, flush=True))
         for relative in ['tables/parts.json', 'tables/garage.json', 'robots/catalogue.json',
                          'slai/native_parts.json', 'slai/assets/manifest.json',
-                         'tables/slai_rumble.json', 'tables/slai_talk.json',
+                         'tables/slai_rumble.json', 'tables/slai_talk.json', 'tables/slai_shops.json',
                          'font/glyphs.json', 'talk/event/uk/main01t.json']:
             if not (output / relative).is_file():
                 raise ValueError('Incomplete S.L.A.I. conversion: ' + relative)

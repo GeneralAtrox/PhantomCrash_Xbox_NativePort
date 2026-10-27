@@ -5,9 +5,9 @@
   "text_rate: the game's text rate (0x20A920), which paces typing: speed / (60 / rate) glyphs a frame. MAIN01T's glitch leaves it at 2 for the rest of the game, so scenes start at 2; MAIN01T itself starts at the normal 60.",
   "glitched: the town's 500 cells start hidden; MAIN03T opens by restoring what MAIN01T broke.",
   "places: S.L.A.I.'s place names (the event table's place and sub-place) for the port's screens. A story event plays on a move between screens whose places match its row: townmap is the town map, wired the Wired club and the S.L.A.I. rumble hub, tutorial Battle School, battle_return a S.L.A.I. battle (the move into one from the hub, and back out of it) and nextday the result that ends it. moduleshop is the MOD shop and cdedit the CD shop. ending is the return from the battle that wins the final (MAIN72E wants all three finals cleared, in New York), not Phantom Crash's own ending. transport/trans3d (city travel) has no port screen; its three rows repeat any/nextday rows, which play instead.",
-  "junk_shops: the screens that are S.L.A.I.'s junk module shop (town spot 0xF, the junk_module_shop condition, main32k). The port has none yet, so main32k waits.",
+  "junk_shops: the screens that are S.L.A.I.'s junk module shop (town spot 0xF, the junk_module_shop condition, main32k): the port's junk_shop (data/ui/shop_variants.json), which S.L.A.I. draws as its module shop.",
   "music_credits: the first and last music credit (shop.json) that are S.L.A.I. songs; the completion score and rec_music_k count those owned.",
-  "partner: the ridden CHIP talks in the scenes as S.L.A.I.'s partner chip. S.L.A.I. plays a script's case by the chip's CPU type (types 2..9 play cases 1..8; 0 is the Knocker's); Phantom Crash chips have none, so selectors gives each chatter personality (tables/parts.json chips, 0..4) a case, a port choice. pictures gives each chip family its S.L.A.I. chip picture; a chip whose family has none (the prototype and enemy chips) leaves the Knocker."
+  "partner: the ridden CHIP talks in the scenes as S.L.A.I.'s partner chip. S.L.A.I. plays a script's case by the chip's CPU type (types 2..9 play cases 1..8; 0 is the Knocker's); S.L.A.I.'s own CHIPs (tables/parts.json slai_type, from the S.L.A.I. registration) play their type's case with their own picture; Phantom Crash chips have none, so selectors gives each chatter personality (tables/parts.json chips, 0..4) a case, a port choice. pictures gives each chip family its S.L.A.I. chip picture; a chip whose family has none (the prototype and enemy chips) leaves the Knocker."
  ],
  "language": "uk",
  "text_rate": 2,
@@ -19,14 +19,14 @@
   "townmap": ["town_map"],
   "wired": ["club_wired", "slai_rumble"],
   "garage": ["garage"],
-  "moduleshop": ["the_mechanist"],
+  "moduleshop": ["the_mechanist", "junk_shop"],
   "cdedit": ["blood_music"],
   "ending": ["slai_battle", "slai_result"],
   "tutorial": ["slai_battle_school"],
   "battle_return": ["slai_battle"],
   "nextday": ["slai_result"]
  },
- "junk_shops": [],
+ "junk_shops": ["junk_shop"],
  "music_credits": [81, 170],
  "partner": {
   "selectors": [1, 4, 7, 2, 5],

@@ -156,6 +156,7 @@ def _command_register_slai_assets(arguments: argparse.Namespace) -> int:
     from .slai.native_sound import register_sound
     from .slai.native_particles import register_particles
     from .slai.rumble_table import register_rumble
+    from .slai.shop_table import register_shops
     from .slai.talk_register import register_talk
 
     disc, output = Path(arguments.disc), Path(arguments.output)
@@ -166,7 +167,15 @@ def _command_register_slai_assets(arguments: argparse.Namespace) -> int:
     result.update(register_particles(disc, output))
     result.update(register_rumble(disc, output))
     result.update(register_talk(disc, output))
+    result.update(register_shops(disc, Path(arguments.assets), output))
     print(json.dumps(result))
+    return 0
+
+
+def _command_register_slai_shops(arguments: argparse.Namespace) -> int:
+    from .slai.shop_table import register_shops
+
+    print(json.dumps(register_shops(Path(arguments.disc), Path(arguments.assets), Path(arguments.pack))))
     return 0
 
 
@@ -324,6 +333,12 @@ def build_parser() -> argparse.ArgumentParser:
     talk.add_argument("disc")
     talk.add_argument("--output", default=str(DEFAULT_MODS))
     talk.set_defaults(handler=_command_register_slai_talk)
+    shops = commands.add_parser("register-slai-shops",
+                                help="Stock an installed pack's S.L.A.I. shops: its CHIPs, SVs and lineups")
+    shops.add_argument("disc")
+    shops.add_argument("--assets", default=str(REPOSITORY_ROOT / "artifacts" / "europe" / "assets"))
+    shops.add_argument("--pack", default=str(REPOSITORY_ROOT / "artifacts" / "slai" / "assets"))
+    shops.set_defaults(handler=_command_register_slai_shops)
 
     stats_export = commands.add_parser(
         "export-stats", help="Write every part, item and opponent's stats as CSV files"

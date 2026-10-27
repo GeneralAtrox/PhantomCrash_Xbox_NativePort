@@ -113,7 +113,7 @@ TEST_CASE("the town map's eight places stand on land, clear of each other and th
   check_layout(shipped(false));
 }
 
-TEST_CASE("with S.L.A.I. the town map's fourteen places stand on land, clear of each other") {
+TEST_CASE("with S.L.A.I. the town map's fifteen places stand on land, clear of each other") {
   check_layout(shipped(true));
 }
 

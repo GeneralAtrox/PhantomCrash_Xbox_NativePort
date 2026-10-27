@@ -1,7 +1,8 @@
 {
  "notes": [
-  "S.L.A.I.'s shops as Phantom Crash's shop screens under their own names (port/include/phantomcrash/shop_variants.hpp; a port addition). Each document extends the original screen's (DataRoots::document): The Mechanist sells parts and Difference EG CHIPs through Wild Machines' screens, Blood Music sells S.L.A.I.'s songs through Sonic Amp's. The town map opens them by these names.",
-  "Kinds: location_menu, buy_module, sell_module, buy_chip, sell_chip, sonic_amp."
+  "S.L.A.I.'s shops as Phantom Crash's shop screens under their own names (port/include/phantomcrash/shop_variants.hpp; a port addition). Each document extends the original screen's (DataRoots::document): The Mechanist sells parts and used SVs and Difference EG CHIPs through Wild Machines' screens, the junk shop parts and SVs through them too, Blood Music sells S.L.A.I.'s songs through Sonic Amp's. The town map opens them by these names.",
+  "Kinds: location_menu, buy_module, sell_module, buy_chip, sell_chip, sonic_amp, used_sv.",
+  "stock says what a shop sells (phantomcrash/slai_shops.hpp): slai, S.L.A.I.'s records from its city-day row for the day and city (tables/slai_shops.json); slai_junk, the junk shop's row; none, Phantom Crash's own records from its calendar. With S.L.A.I.'s content Phantom Crash's shops leave S.L.A.I.'s records out."
  ],
  "screens": {
   "the_mechanist": {
@@ -10,11 +11,17 @@
   },
   "the_mechanist_buy_module": {
    "kind": "buy_module",
-   "document": "ui/the_mechanist_module_shop.json"
+   "document": "ui/the_mechanist_module_shop.json",
+   "stock": "slai"
   },
   "the_mechanist_sell_module": {
    "kind": "sell_module",
    "document": "ui/the_mechanist_module_shop.json"
+  },
+  "the_mechanist_used_sv": {
+   "kind": "used_sv",
+   "document": "ui/the_mechanist_used_sv.json",
+   "stock": "slai"
   },
   "difference_eg": {
    "kind": "location_menu",
@@ -22,11 +29,30 @@
   },
   "difference_eg_buy_chip": {
    "kind": "buy_chip",
-   "document": "ui/difference_eg_chip_shop.json"
+   "document": "ui/difference_eg_chip_shop.json",
+   "stock": "slai"
   },
   "difference_eg_sell_chip": {
    "kind": "sell_chip",
    "document": "ui/difference_eg_chip_shop.json"
+  },
+  "junk_shop": {
+   "kind": "location_menu",
+   "document": "ui/junk_shop.json"
+  },
+  "junk_shop_buy_module": {
+   "kind": "buy_module",
+   "document": "ui/junk_shop_module_shop.json",
+   "stock": "slai_junk"
+  },
+  "junk_shop_sell_module": {
+   "kind": "sell_module",
+   "document": "ui/junk_shop_module_shop.json"
+  },
+  "junk_shop_used_sv": {
+   "kind": "used_sv",
+   "document": "ui/junk_shop_used_sv.json",
+   "stock": "slai_junk"
   },
   "blood_music": {
    "kind": "sonic_amp",

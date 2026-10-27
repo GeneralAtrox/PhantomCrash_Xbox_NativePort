@@ -37,6 +37,7 @@ double seconds_of(const json::JsonValue &value, const char *key) {
 DealerLook parse_look(const json::JsonValue &value) {
   DealerLook look;
   look.index = integer_of(value, "index");
+  look.slai_shop = static_cast<int>(value.number_or("slai_shop", -1));
   look.panorama = member(value, "panorama", parse_sprites);
   look.top = member(value, "top", parse_sprite);
   look.bottom = member(value, "bottom", parse_sprite);
@@ -51,8 +52,8 @@ DealerLook parse_look(const json::JsonValue &value) {
     look.legs_icons[legs] = parse_shop_icon(icon);
   }
   look.default_icon = member(value, "default_icon", parse_shop_icon);
-  if (look.panorama.empty() || look.index < 0) {
-    throw std::runtime_error("a dealer needs its panorama and an index of 0 or more");
+  if (look.panorama.empty() || (look.index < 0 && look.slai_shop < 0)) {
+    throw std::runtime_error("a dealer needs its panorama and an index or slai_shop of 0 or more");
   }
   return look;
 }

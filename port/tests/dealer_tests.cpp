@@ -74,15 +74,18 @@ Dealer at_buy(const Tables &shared, const std::int64_t money) {
 
 } // namespace
 
-TEST_CASE("dealer.json has the menu, the trade window and the three dealers") {
+TEST_CASE("dealer.json has the menu, the trade window and the five dealers") {
   const DealerScript script = shipped_script();
   CHECK(script.items.size() == 5);
   CHECK(script.items.front().id == "profile");
   CHECK(script.items.back().id == "exit");
   CHECK(script.purchase.actions.size() == 3);
   CHECK(script.purchase.hangars.numbers.size() == garage_hangar_count);
-  CHECK(script.dealers.size() == 3);
+  CHECK(script.dealers.size() == 5);
   CHECK(script.dealers.at("dealer_american_stars").index == 0);
+  CHECK(script.dealers.at("dealer_american_stars").slai_shop == -1);
+  CHECK(script.dealers.at("dealer_omsk").slai_shop == 3);
+  CHECK(script.dealers.at("dealer_ma_fabrik").slai_shop == 4);
   CHECK(script.dealers.at("dealer_kojima").index == 1);
   CHECK(script.dealers.at("dealer_ventuno").index == 2);
   CHECK(script.purchase.messages.count("delivered") == 1);
