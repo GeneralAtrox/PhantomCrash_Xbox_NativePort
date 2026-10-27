@@ -70,7 +70,9 @@ TEST_CASE("with S.L.A.I. the town map has fifteen places, the original eight amo
   CHECK(script.places[6].next == "blood_music");
   CHECK(script.places[8].next == "junk_shop");
   CHECK(script.places[11].next == "dealer_omsk");
-  CHECK(!script.places[2].sign);
+  // S.L.A.I.'s places borrow a Phantom Crash sign in their own theme.
+  REQUIRE(script.places[2].sign);
+  CHECK(script.places[2].sign->image == "textures/scroll/town_map_tex/0.png#sign_difference_eg");
   TownMapScript none = shipped(true);
   none.places[14].enabled = false;
   CHECK(for_content(none, true).places.size() == 14U);
@@ -90,7 +92,7 @@ TEST_CASE("confirming a closed town map place stays on the map") {
   CHECK((map.take_sounds() == std::vector<std::string>{"warning"}));
   run(map, 0.6);
   CHECK(!map.done());
-  CHECK(!map.sign()); // it has no sign of its own
+  CHECK(map.sign()); // still shown while chosen
 }
 
 TEST_CASE("the town map starts on the place it was opened from") {

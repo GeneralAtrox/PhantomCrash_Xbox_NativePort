@@ -102,6 +102,12 @@ TEST_CASE("the shipped themes parse") {
   CHECK(themes.at("dealer_ma_fabrik").paste.front().clear);
   CHECK(themes.at("the_mechanist").paste.size() == 1);
   CHECK(themes.at("junk_shop").paste.empty()); // lettered instead (sprite_text.json)
+  // Town map signs for S.L.A.I.'s places (town_map.json sign).
+  for (const char *place : {"difference_eg", "the_mechanist", "junk_shop", "blood_music", "omsk",
+                            "ma_fabrik", "battle_school"}) {
+    CHECK(themes.contains(std::string("sign_") + place));
+  }
+  CHECK(themes.at("sign_omsk").paste.size() == 1);
   CHECK(themes.at("blood_music").recolour.size() == 1);
 }
 

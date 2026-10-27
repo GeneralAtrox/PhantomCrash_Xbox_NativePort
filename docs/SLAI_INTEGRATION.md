@@ -998,6 +998,19 @@ red), "JUNK SHOP" in place of "THE MECHANIST" under its windows' titles, and
 its name lettered where the logo sat on the menu's strip, as the disc has no
 junk shop logo (`sprite_text.json`).
 
+### Town map signs (2026-10-27)
+
+S.L.A.I.'s places had no sign on the town map. Each now borrows the sign of
+the Phantom Crash place its screens come from, a themed copy of
+`town_map_tex/0` (`themes.json` sign_*): the panel recoloured, its
+lettering erased and the shop's logo fitted in. Difference EG, The
+Mechanist and the junk shop take Wild Machines' sign; Blood Music takes
+Sonic Amp's; Omsk and Ma.Fabrik take Kojima's, with the maker's logo in
+place of Kojima's and the robot kept; Battle School takes Garage's. The junk
+shop and Battle School have no logo on the disc, so their names are
+lettered (`sprite_text.json`). Placement (`town_map.json` sign_at,
+sign_from) keeps each sign off its own label.
+
 ### Before the tutorial (2026-10-27)
 
 Until the tutorial is cleared (S.L.A.I. stage 0), every city's rumble is a

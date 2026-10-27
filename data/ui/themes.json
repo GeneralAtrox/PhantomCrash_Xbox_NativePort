@@ -4,7 +4,8 @@
   "Wild Machines' yellow (hues 25-71 degrees, saturation from 0.08) takes the shop's hue; the \"Wild Machines\" lettering on the picture and the music strip is erased, and the shop's logo (installed from the S.L.A.I. disc by shop_art.py) goes on the strip below the ticker, at most twice its size.",
   "Blood Music recolours only Sonic Amp's green picture (sonic_tex/2, the 640x480 backdrop) and puts its logo where the Sonic Amp script logo was (sonic_tex/0).",
   "S.L.A.I.'s dealers (dealer_omsk, dealer_ma_fabrik) take Kojima's screen: its yellow takes the maker's colour (Omsk's blue, Ma.Fabrik's orange) and the maker's logo and badge from its MAK sheet (installed by shop_art.py) replace Kojima's, fitted into their atlas places; on the company profile panel (dealer_tex/4) Kojima's logo is erased and the maker's small logo painted in its place.",
-  "The junk shop takes The Mechanist's screens in rust red. S.L.A.I. draws it with The Mechanist's logo (MOD_LOGO01) and has none of its own, so the port letters its name on the strip instead and on the windows (sprite_text.json), and the two shops tell apart."
+  "The junk shop takes The Mechanist's screens in rust red. S.L.A.I. draws it with The Mechanist's logo (MOD_LOGO01) and has none of its own, so the port letters its name on the strip instead and on the windows (sprite_text.json), and the two shops tell apart.",
+  "Town map signs (town_map.json sign) for S.L.A.I.'s places, which have none of their own: each borrows the sign of the Phantom Crash place its screens come from, its panel recoloured and its lettering erased (town_map_tex/0), and the shop's logo fitted in. Difference EG, The Mechanist and the junk shop take Wild Machines' sign, Blood Music Sonic Amp's, Omsk and Ma.Fabrik Kojima's (the maker's logo for Kojima's, its robot kept), and Battle School Garage's. The junk shop and Battle School, with no logo on the disc, are lettered (sprite_text.json)."
  ],
  "themes": {
   "the_mechanist": {
@@ -330,6 +331,297 @@
       111,
       494,
       183
+     ]
+    }
+   ]
+  },
+  "sign_difference_eg": {
+   "hues": [
+    [
+     25,
+     71
+    ]
+   ],
+   "min_saturation": 0.08,
+   "hue": 128,
+   "saturation": 0.72,
+   "value": 0.8,
+   "recolour": [
+    {
+     "image": "textures/scroll/town_map_tex/0.png",
+     "region": [
+      0,
+      608,
+      264,
+      712
+     ]
+    }
+   ],
+   "erase": [
+    {
+     "image": "textures/scroll/town_map_tex/0.png",
+     "region": [
+      59,
+      614,
+      236,
+      692
+     ]
+    }
+   ],
+   "paste": [
+    {
+     "image": "textures/scroll/town_map_tex/0.png",
+     "picture": "textures/slai/shops/chi_logo01.png",
+     "rect": [
+      4,
+      23,
+      254,
+      112
+     ],
+     "region": [
+      59,
+      616,
+      236,
+      690
+     ],
+     "max_scale": 1
+    }
+   ]
+  },
+  "sign_the_mechanist": {
+   "hues": [
+    [
+     25,
+     71
+    ]
+   ],
+   "min_saturation": 0.08,
+   "hue": 212,
+   "saturation": 0.95,
+   "value": 0.55,
+   "recolour": [
+    {
+     "image": "textures/scroll/town_map_tex/0.png",
+     "region": [
+      0,
+      608,
+      264,
+      712
+     ]
+    }
+   ],
+   "erase": [
+    {
+     "image": "textures/scroll/town_map_tex/0.png",
+     "region": [
+      59,
+      614,
+      236,
+      692
+     ]
+    }
+   ],
+   "paste": [
+    {
+     "image": "textures/scroll/town_map_tex/0.png",
+     "picture": "textures/slai/shops/mod_logo01.png",
+     "rect": [
+      10,
+      3,
+      244,
+      125
+     ],
+     "region": [
+      59,
+      616,
+      236,
+      690
+     ],
+     "max_scale": 1
+    }
+   ]
+  },
+  "sign_junk_shop": {
+   "hues": [
+    [
+     25,
+     71
+    ]
+   ],
+   "min_saturation": 0.08,
+   "hue": 8,
+   "saturation": 0.8,
+   "value": 0.92,
+   "recolour": [
+    {
+     "image": "textures/scroll/town_map_tex/0.png",
+     "region": [
+      0,
+      608,
+      264,
+      712
+     ]
+    }
+   ],
+   "erase": [
+    {
+     "image": "textures/scroll/town_map_tex/0.png",
+     "region": [
+      59,
+      614,
+      236,
+      692
+     ]
+    }
+   ]
+  },
+  "sign_blood_music": {
+   "hues": [
+    [
+     240,
+     300
+    ]
+   ],
+   "min_saturation": 0.08,
+   "hue": 320,
+   "saturation": 0.9,
+   "value": 0.75,
+   "recolour": [
+    {
+     "image": "textures/scroll/town_map_tex/0.png",
+     "region": [
+      0,
+      480,
+      256,
+      608
+     ]
+    }
+   ],
+   "erase": [
+    {
+     "image": "textures/scroll/town_map_tex/0.png",
+     "region": [
+      22,
+      489,
+      199,
+      564
+     ]
+    }
+   ],
+   "paste": [
+    {
+     "image": "textures/scroll/town_map_tex/0.png",
+     "picture": "textures/slai/shops/cds_logo01.png",
+     "rect": [
+      35,
+      3,
+      210,
+      126
+     ],
+     "region": [
+      22,
+      489,
+      199,
+      564
+     ],
+     "max_scale": 1
+    }
+   ]
+  },
+  "sign_omsk": {
+   "erase": [
+    {
+     "image": "textures/scroll/town_map_tex/0.png",
+     "region": [
+      476,
+      488,
+      553,
+      563
+     ]
+    }
+   ],
+   "paste": [
+    {
+     "image": "textures/scroll/town_map_tex/0.png",
+     "picture": "textures/slai/shops/mak02_1.png",
+     "rect": [
+      44,
+      26,
+      222,
+      242
+     ],
+     "region": [
+      476,
+      488,
+      553,
+      563
+     ],
+     "max_scale": 1
+    }
+   ]
+  },
+  "sign_ma_fabrik": {
+   "erase": [
+    {
+     "image": "textures/scroll/town_map_tex/0.png",
+     "region": [
+      476,
+      488,
+      553,
+      563
+     ]
+    }
+   ],
+   "paste": [
+    {
+     "image": "textures/scroll/town_map_tex/0.png",
+     "picture": "textures/slai/shops/mak04_1.png",
+     "rect": [
+      19,
+      20,
+      241,
+      252
+     ],
+     "region": [
+      476,
+      488,
+      553,
+      563
+     ],
+     "max_scale": 1
+    }
+   ]
+  },
+  "sign_battle_school": {
+   "hues": [
+    [
+     45,
+     100
+    ]
+   ],
+   "min_saturation": 0.08,
+   "hue": 190,
+   "saturation": 0.85,
+   "value": 0.8,
+   "recolour": [
+    {
+     "image": "textures/scroll/town_map_tex/0.png",
+     "region": [
+      640,
+      128,
+      912,
+      256
+     ]
+    }
+   ],
+   "erase": [
+    {
+     "image": "textures/scroll/town_map_tex/0.png",
+     "region": [
+      700,
+      157,
+      889,
+      231
      ]
     }
    ]
