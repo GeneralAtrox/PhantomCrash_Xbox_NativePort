@@ -11,6 +11,7 @@ from .stats import extract_stats
 from .music import convert_music
 from .native_parts import register_parts
 from .native_stages import register_stages
+from .area_maps import register_area_maps
 from .native_cosmetics import register_cosmetics
 from .native_sound import register_sound
 from .native_particles import register_particles
@@ -57,6 +58,7 @@ def install(disc: Path, root: Path, converter: Path, report=print) -> None:
         report('Registering parts, stages, paints, stickers, audio, effects and rumbles...', flush=True)
         register_parts(disc, assets, data, output)
         register_stages(disc, data, output)
+        register_area_maps(data, output)
         register_cosmetics(disc, assets, data, output)
         register_sound(disc, data, output)
         register_particles(disc, output)

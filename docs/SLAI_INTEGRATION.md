@@ -1022,6 +1022,30 @@ regulation_names), and Rumble S.L.A.I. says to clear the tutorial at Battle
 School first when the tutorial is all a day holds (`ui/slai_rumble.json`
 excluded).
 
+### Blueprint maps of the rumble stages (2026-10-27)
+
+RUMBLING's area screen shows each area as white line art built up over four
+frames (`area_situation_tex`, `rumbling.json` areas' `map_frames`), with the
+opponents placed on it by the area's `robot_map`. S.L.A.I. has no such
+drawings, so `slai/area_maps.py` draws them from each rumble stage's
+collision at install (`draw-slai-maps` for a pack installed earlier):
+
+- Lines: the outer edges of floor patches (the ground's outline) and upright
+  walls seen from above (the buildings' footprints). Floor patches under 16
+  square units (props' tops), walls under 0.3 high (kerbs), sloped walls
+  (outlined by their floors) and ground beyond the walls' extent are left out.
+- Frames: the outline at ground height, then walls rising from the ground,
+  then the rest split at its median height, as the originals add detail.
+- Fit: turned and scaled to fill the 376x304 frame, turning as little as a
+  near-best fit allows; drawn at twice that size for sharp scaling.
+- Written to `textures/slai/maps/<stage>.png` (the four frames in a 2x2
+  sheet) and `data/ui/slai_area_maps.json`: per stage the frames as sprites,
+  the `robot_map` the drawing was made with, the player spawns as gates on
+  the screen, and no marks (S.L.A.I.'s counterpart of the H marks is
+  untraced). Night stages share their day stage's layout.
+
+The area screen for S.L.A.I.'s rumbles that shows them is still to come.
+
 ### Body stickers (2026-10-26)
 
 - A S.L.A.I. body's sticker is its ST02 carrier model (`emblem_model`)

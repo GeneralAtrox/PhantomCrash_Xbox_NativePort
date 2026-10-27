@@ -32,7 +32,7 @@ def fake_conversion(tmp_path, monkeypatch, fail=False):
             file.write_text('{}')
     monkeypatch.setattr(installer, 'convert_assets', convert)
     monkeypatch.setattr(installer, 'extract_stats', lambda _: {})
-    for name in ['register_parts', 'register_stages', 'register_cosmetics',
+    for name in ['register_parts', 'register_stages', 'register_area_maps', 'register_cosmetics',
                  'register_sound', 'register_particles', 'register_rumble', 'register_shop_art',
                  'register_wired_art', 'register_talk', 'register_shops',
                  'convert_music']:

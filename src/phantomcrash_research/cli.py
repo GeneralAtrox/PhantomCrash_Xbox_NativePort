@@ -212,6 +212,13 @@ def _command_place_slai_previews(arguments: argparse.Namespace) -> int:
     return 0
 
 
+def _command_draw_slai_maps(arguments: argparse.Namespace) -> int:
+    from .slai.area_maps import register_area_maps
+
+    print(json.dumps(register_area_maps(Path(arguments.data), Path(arguments.pack))))
+    return 0
+
+
 def _command_register_slai_talk(arguments: argparse.Namespace) -> int:
     from .slai.talk_register import register_talk
 
@@ -353,6 +360,11 @@ def build_parser() -> argparse.ArgumentParser:
     previews.add_argument("--assets", default=str(REPOSITORY_ROOT / "artifacts" / "europe" / "assets"))
     previews.add_argument("--pack", default=str(REPOSITORY_ROOT / "artifacts" / "slai" / "assets"))
     previews.set_defaults(handler=_command_place_slai_previews)
+    maps = commands.add_parser("draw-slai-maps",
+                               help="Draw blueprint maps of an installed pack's S.L.A.I. rumble stages")
+    maps.add_argument("--data", default=str(REPOSITORY_ROOT / "data"))
+    maps.add_argument("--pack", default=str(REPOSITORY_ROOT / "artifacts" / "slai" / "assets"))
+    maps.set_defaults(handler=_command_draw_slai_maps)
     talk = commands.add_parser("register-slai-talk",
                                help="Convert S.L.A.I.'s talk scenes into an installed asset root")
     talk.add_argument("disc")
