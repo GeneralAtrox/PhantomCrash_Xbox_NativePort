@@ -15,6 +15,7 @@ from .native_geometry import flat_model, walking_model, motion_bank
 from .native_animation import articulated_model
 from .muzzles import decode_muzzles, flash_entry, muzzle_mount
 from .pod import read_pod
+from .preview_places import base_counts, centre_places
 from .program import ProgramData
 from .progression import write_progression
 from .stats import part_name
@@ -136,6 +137,7 @@ def register_parts(image: Path, assets: Path, data: Path, mods: Path) -> dict:
     base_catalogue, base_skeletons = read(assets / "robots/catalogue.json"), read(assets / "robots/skeletons.json")
     base_parts = read(assets / "tables/parts.json")
     preview = read(data / "ui/robot_preview.json")
+    preview_base = base_counts(preview)
     preview_overlay = mods / "data/ui/robot_preview.json"
     if preview_overlay.exists():
         existing = read(preview_overlay)
@@ -319,6 +321,7 @@ def register_parts(image: Path, assets: Path, data: Path, mods: Path) -> dict:
             upsert(homes, e["type"], first)
     for key in ("body_leg_types", "arm_maker_types", "shoulder_maker_types", "shoulder_mounts"):
         catalogue[key] = preview[key]
+    centre_places(preview, catalogue, imported, [mods, assets], preview_base)
     from .body_banks import register_body_banks
     body_banks = register_body_banks(mods, imported, catalogue, manifest)
     from .weapon_balance import balance_weapons, restore_source

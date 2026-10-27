@@ -204,6 +204,14 @@ def _command_balance_slai_prices(arguments: argparse.Namespace) -> int:
     return 0
 
 
+def _command_place_slai_previews(arguments: argparse.Namespace) -> int:
+    from .slai.preview_places import refit_preview_places
+
+    added = refit_preview_places(Path(arguments.data), Path(arguments.assets), Path(arguments.pack))
+    print(json.dumps({"places_added": added}))
+    return 0
+
+
 def _command_register_slai_talk(arguments: argparse.Namespace) -> int:
     from .slai.talk_register import register_talk
 
@@ -339,6 +347,12 @@ def build_parser() -> argparse.ArgumentParser:
                                  help="Refit an installed pack's S.L.A.I. prices to S.L.A.I.'s own curves")
     prices.add_argument("--output", default=str(DEFAULT_MODS))
     prices.set_defaults(handler=_command_balance_slai_prices)
+    previews = commands.add_parser("place-slai-previews",
+                                   help="Centre an installed pack's S.L.A.I. parts in the shops' part preview")
+    previews.add_argument("--data", default=str(REPOSITORY_ROOT / "data"))
+    previews.add_argument("--assets", default=str(REPOSITORY_ROOT / "artifacts" / "europe" / "assets"))
+    previews.add_argument("--pack", default=str(REPOSITORY_ROOT / "artifacts" / "slai" / "assets"))
+    previews.set_defaults(handler=_command_place_slai_previews)
     talk = commands.add_parser("register-slai-talk",
                                help="Convert S.L.A.I.'s talk scenes into an installed asset root")
     talk.add_argument("disc")
