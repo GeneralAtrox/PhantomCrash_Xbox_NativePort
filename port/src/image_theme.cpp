@@ -223,6 +223,14 @@ ThemedImage split_themed_image(const std::string_view key) {
   return {key.substr(0, mark), key.substr(mark + 1)};
 }
 
+std::uint32_t themed_colour(const ImageTheme &theme, const std::uint32_t rgb) {
+  std::array<std::uint8_t, 4> texel{static_cast<std::uint8_t>(rgb >> 16U),
+                                    static_cast<std::uint8_t>(rgb >> 8U),
+                                    static_cast<std::uint8_t>(rgb), 0xff};
+  recolour_region(theme, {0, 0, 1, 1}, texel.data(), 1, 1, 4);
+  return (std::uint32_t{texel[0]} << 16U) | (std::uint32_t{texel[1]} << 8U) | texel[2];
+}
+
 void apply_image_theme(const ImageTheme &theme, const std::string_view image, std::uint8_t *pixels,
                        const int width, const int height, const int pitch) {
   for (const auto &area : theme.erase) {

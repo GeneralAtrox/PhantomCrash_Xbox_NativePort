@@ -1,6 +1,7 @@
 #pragma once
 
 #include "desktop_textures.hpp"
+#include "phantomcrash/image_theme.hpp"
 #include "phantomcrash/glyph_font.hpp"
 #include "phantomcrash/sprite_text.hpp"
 
@@ -29,7 +30,8 @@ bool draw_sprite_text(TextureCache &textures, const GlyphFont &font, const Sprit
 // found by the sprite's image and rectangle.
 class SpriteText final {
 public:
-  SpriteText(GlyphFont font, const SpriteTextTable &table);
+  // themes (may be null) recolour the lettering a themed atlas borrows.
+  SpriteText(GlyphFont font, const SpriteTextTable &table, const ImageThemes *themes = nullptr);
 
   // Every label on the sprite, in the order listed; empty when none.
   [[nodiscard]] std::span<const SpriteTextStyle> find(const Sprite &sprite) const;
@@ -52,6 +54,9 @@ private:
   // only sprites with that id (art reused under other lettering).
   using Key = std::tuple<std::string, std::array<float, 4>, std::string>;
   std::map<Key, std::vector<SpriteTextStyle>> replacements_;
+  const ImageThemes *themes_{};
+  // A themed atlas's copies of its plain art's lettering, in the theme's colours.
+  mutable std::map<Key, std::vector<SpriteTextStyle>> themed_;
 };
 
 // Gives `textures` the lettering data/ui/sprite_text.json names, drawn in `font`.

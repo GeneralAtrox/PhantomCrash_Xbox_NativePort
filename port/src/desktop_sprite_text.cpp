@@ -300,8 +300,8 @@ bool draw_sprite_text(TextureCache &textures, const GlyphFont &font, const Sprit
   return true;
 }
 
-SpriteText::SpriteText(GlyphFont font, const SpriteTextTable &table)
-    : font_(std::move(font)), shadow_(table.shadow), fonts_(table.fonts) {
+SpriteText::SpriteText(GlyphFont font, const SpriteTextTable &table, const ImageThemes *themes)
+    : font_(std::move(font)), shadow_(table.shadow), fonts_(table.fonts), themes_(themes) {
   for (const auto &replacement : table.replacements) {
     replacements_[{replacement.source.image, replacement.source.rect, replacement.source.id}]
         .push_back(replacement);
@@ -314,7 +314,7 @@ void load_sprite_text(TextureCache &textures, const DataRoots &roots, const Glyp
   }
   try {
     const SpriteTextTable table = parse_sprite_text_table(roots.document("ui/sprite_text.json"));
-    textures.set_sprite_text(std::make_unique<SpriteText>(font, table));
+    textures.set_sprite_text(std::make_unique<SpriteText>(font, table, &textures.image_themes()));
   } catch (const std::exception &error) {
     SDL_Log("ui/sprite_text.json: %s", error.what());
   }
@@ -332,14 +332,38 @@ std::span<const SpriteTextStyle> SpriteText::find(const Sprite &sprite) const {
     return found->second;
   }
   // A themed copy of an atlas (image_theme.hpp) keeps the plain art's
-  // lettering unless the themed name has its own.
+  // lettering unless the themed name has its own, its colours themed as the
+  // art is: the ink, a flat erase fill (a lit plate's), the outline and shadow.
   const auto plain = split_themed_image(sprite.image);
   if (plain.theme.empty()) {
     return {};
   }
   Sprite untinted = sprite;
   untinted.image = std::string(plain.image);
-  return find(untinted);
+  const auto styles = find(untinted);
+  const auto theme =
+      themes_ != nullptr ? themes_->find(plain.theme) : ImageThemes::const_iterator{};
+  if (styles.empty() || themes_ == nullptr || theme == themes_->end()) {
+    return styles;
+  }
+  auto [themed, added] = themed_.try_emplace({sprite.image, sprite.rect, sprite.id});
+  if (added) {
+    themed->second.assign(styles.begin(), styles.end());
+    const auto recolour = [&](auto &colour) {
+      if (colour) {
+        colour = themed_colour(theme->second, *colour);
+      }
+    };
+    for (SpriteTextStyle &style : themed->second) {
+      recolour(style.colour);
+      recolour(style.erase_fill);
+      recolour(style.outline);
+      if (style.shadow) {
+        style.shadow->colour = themed_colour(theme->second, style.shadow->colour);
+      }
+    }
+  }
+  return themed->second;
 }
 
 } // namespace phantomcrash

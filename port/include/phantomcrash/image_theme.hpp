@@ -61,6 +61,10 @@ struct ThemedImage {
 
 [[nodiscard]] ThemedImage split_themed_image(std::string_view key);
 
+// One 0xRRGGBB colour recoloured as the theme recolours a texel of it (the
+// lettering redrawn over themed art, data/ui/sprite_text.json).
+[[nodiscard]] std::uint32_t themed_colour(const ImageTheme &theme, std::uint32_t rgb);
+
 // Erases and recolours RGBA8 pixels loaded from `image` as `theme` says; the
 // pastes are the loader's.
 void apply_image_theme(const ImageTheme &theme, std::string_view image, std::uint8_t *pixels,

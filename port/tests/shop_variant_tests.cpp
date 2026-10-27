@@ -54,6 +54,12 @@ TEST_CASE("a theme recolours matching hues and leaves greys") {
   auto grey = strip(2, {128, 128, 128, 255});
   apply_image_theme(theme, "a.png", grey.data(), 2, 1, 8);
   CHECK(grey[0] == 128 && grey[1] == 128 && grey[2] == 128);
+  // A lettering colour is themed as a texel of it is (a lit plate's erase fill).
+  auto plate = strip(1, {0xff, 0xcc, 0x00, 255});
+  apply_image_theme(theme, "a.png", plate.data(), 1, 1, 4);
+  CHECK(themed_colour(theme, 0xffcc00U) ==
+        ((std::uint32_t{plate[0]} << 16U) | (std::uint32_t{plate[1]} << 8U) | plate[2]));
+  CHECK(themed_colour(theme, 0x808080U) == 0x808080U);
 }
 
 TEST_CASE("a theme recolours only its areas when it names some") {

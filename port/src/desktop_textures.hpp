@@ -90,9 +90,10 @@ public:
   // one ("<image>#<theme>", image_theme.hpp); null when the file is missing
   // (desktop_texture_load.cpp).
   [[nodiscard]] SDL_Surface *load_rgba(const std::string &key);
+  // data/ui/themes.json, read on first use (desktop_texture_load.cpp).
+  [[nodiscard]] const ImageThemes &image_themes();
 
 private:
-  [[nodiscard]] const ImageThemes &image_themes();
   void paste_pictures(const ImageTheme &theme, std::string_view image, SDL_Surface *target);
 
   SDL_Renderer *renderer_{};
