@@ -3,7 +3,8 @@
   "Colour themes for atlas art (port/include/phantomcrash/image_theme.hpp): a screen names an image as \"<image>#<theme>\". S.L.A.I.'s shops reuse Phantom Crash's screens in their own colours (a port addition; data/ui/shop_variants.json).",
   "Wild Machines' yellow (hues 25-71 degrees, saturation from 0.08) takes the shop's hue; the \"Wild Machines\" lettering on the picture and the music strip is erased, and the shop's logo (installed from the S.L.A.I. disc by shop_art.py) goes on the strip below the ticker, at most twice its size.",
   "Blood Music recolours only Sonic Amp's green picture (sonic_tex/2, the 640x480 backdrop) and puts its logo where the Sonic Amp script logo was (sonic_tex/0).",
-  "S.L.A.I.'s dealers (dealer_omsk, dealer_ma_fabrik) take Kojima's screen: its yellow takes the maker's colour (Omsk's blue, Ma.Fabrik's orange) and the maker's logo and badge from its MAK sheet (installed by shop_art.py) replace Kojima's, fitted into their atlas places; on the company profile panel (dealer_tex/4) Kojima's logo is erased and the maker's small logo painted in its place."
+  "S.L.A.I.'s dealers (dealer_omsk, dealer_ma_fabrik) take Kojima's screen: its yellow takes the maker's colour (Omsk's blue, Ma.Fabrik's orange) and the maker's logo and badge from its MAK sheet (installed by shop_art.py) replace Kojima's, fitted into their atlas places; on the company profile panel (dealer_tex/4) Kojima's logo is erased and the maker's small logo painted in its place.",
+  "The junk shop takes The Mechanist's screens in rust red. S.L.A.I. draws it with The Mechanist's logo (MOD_LOGO01) and has none of its own, so the port letters its name on the strip instead and on the windows (sprite_text.json), and the two shops tell apart."
  ],
  "themes": {
   "the_mechanist": {
@@ -55,6 +56,38 @@
      "max_scale": 2
     }
    ]
+  },
+  "junk_shop": {
+   "hues": [
+    [
+     25,
+     71
+    ]
+   ],
+   "min_saturation": 0.08,
+   "hue": 8,
+   "saturation": 0.8,
+   "erase": [
+    {
+     "image": "textures/scroll/wild_tex/0.png",
+     "region": [
+      350,
+      340,
+      610,
+      440
+     ]
+    },
+    {
+     "image": "textures/scroll/wild_tex/0.png",
+     "region": [
+      350,
+      515,
+      610,
+      625
+     ]
+    }
+   ],
+   "value": 0.92
   },
   "difference_eg": {
    "hues": [

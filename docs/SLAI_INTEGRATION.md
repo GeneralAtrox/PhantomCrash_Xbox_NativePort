@@ -989,6 +989,15 @@ as VS mode and the test drive list both games' stages together. No part's
 name matches another's without it. A pack installed earlier keeps the
 prefix until it is installed again.
 
+### The junk shop's own look (2026-10-27)
+
+S.L.A.I. draws its junk shop with The Mechanist's scene and logo
+(MOD_LOGO01), so in the port the two shops looked the same apart from their
+stock. The junk shop now has its own theme (`themes.json` junk_shop, rust
+red), "JUNK SHOP" in place of "THE MECHANIST" under its windows' titles, and
+its name lettered where the logo sat on the menu's strip, as the disc has no
+junk shop logo (`sprite_text.json`).
+
 ### Body stickers (2026-10-26)
 
 - A S.L.A.I. body's sticker is its ST02 carrier model (`emblem_model`)

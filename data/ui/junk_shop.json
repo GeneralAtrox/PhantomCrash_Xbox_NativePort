@@ -1,9 +1,10 @@
 {
  "notes": [
-  "S.L.A.I.'s junk shop (town spot 0x0f): The Mechanist's look, as the original draws it with the module shop's scene (0xb) and logo (MOD_LOGO01), with BUY MODULE and USED SV. It sells the junk row its city's city-day row names on one day of each ten (0x51c5a0, junk.cycle in tables/slai_shops.json); its best SVs stay back until the stage ladder reaches 4 (0x51c620). SELL MODULE is a port addition."
+  "S.L.A.I.'s junk shop (town spot 0x0f): The Mechanist's look, as the original draws it with the module shop's scene (0xb) and logo (MOD_LOGO01), with BUY MODULE and USED SV. It sells the junk row its city's city-day row names on one day of each ten (0x51c5a0, junk.cycle in tables/slai_shops.json); its best SVs stay back until the stage ladder reaches 4 (0x51c620). SELL MODULE is a port addition. The port draws it in its own colour (themes.json junk_shop), so it does not pass for The Mechanist."
  ],
  "extends": "ui/the_mechanist.json",
  "replace_strings": {
+  "textures/scroll/wild_tex/0.png#the_mechanist": "textures/scroll/wild_tex/0.png#junk_shop",
   "the_mechanist_buy_module": "junk_shop_buy_module",
   "the_mechanist_used_sv": "junk_shop_used_sv",
   "the_mechanist_sell_module": "junk_shop_sell_module"

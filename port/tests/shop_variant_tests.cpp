@@ -96,10 +96,12 @@ TEST_CASE("the shipped themes parse") {
   const auto themes = parse_image_themes(shipped().document("ui/themes.json"));
   REQUIRE(themes.contains("the_mechanist"));
   REQUIRE(themes.contains("blood_music"));
+  REQUIRE(themes.contains("junk_shop"));
   REQUIRE(themes.contains("dealer_omsk"));
   CHECK(themes.at("dealer_omsk").paste.size() == 3);
   CHECK(themes.at("dealer_ma_fabrik").paste.front().clear);
   CHECK(themes.at("the_mechanist").paste.size() == 1);
+  CHECK(themes.at("junk_shop").paste.empty()); // lettered instead (sprite_text.json)
   CHECK(themes.at("blood_music").recolour.size() == 1);
 }
 

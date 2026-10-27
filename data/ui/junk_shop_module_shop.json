@@ -1,7 +1,11 @@
 {
  "notes": [
-  "The junk shop's BUY and SELL MODULE: The Mechanist's parts shop, its stock the junk row's parts (shop_variants.json, slai_junk)."
+  "The junk shop's BUY and SELL MODULE: The Mechanist's parts shop, its stock the junk row's parts (shop_variants.json, slai_junk). In the junk shop's colour and name."
  ],
  "extends": "ui/the_mechanist_module_shop.json",
+ "replace_strings": {
+  "textures/scroll/wild_tex/1.png#the_mechanist": "textures/scroll/wild_tex/1.png#junk_shop",
+  "textures/scroll/wild_tex/4.png#the_mechanist": "textures/scroll/wild_tex/4.png#junk_shop"
+ },
  "exit_to": "junk_shop"
 }
