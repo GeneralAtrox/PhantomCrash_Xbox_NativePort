@@ -27,7 +27,7 @@ def register_cosmetics(image, assets, data, mods):
                                          (6, "emblems", sticker_start, len(manifest["stickers"]))):
         garage[key] = garage[key][:start]
         for i in range(count):
-            name = f"S.L.A.I. {'Paint' if category == 5 else 'Sticker'} {i+1:03d}"
+            name = f"{'Paint' if category == 5 else 'Sticker'} {i+1:03d}"
             garage[key].append({"index": start+i, "name": name,
                                 "price": paint_price if category == 5 else sticker_price})
             deliveries.append({"category": category, "id": start+i, "name": name})

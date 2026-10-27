@@ -980,6 +980,15 @@ rows (0x382390) were checked: only drones carry them.
 - A stored delivery schedule keeps its days but now takes the parts'
   current names.
 
+### Part names without the prefix (2026-10-27)
+
+Parts, paints and stickers no longer carry "S.L.A.I. " in their names
+(`native_parts`, `native_cosmetics`): the shops already list S.L.A.I.'s
+goods apart, and the prefix took half of a list row. Stage labels keep it,
+as VS mode and the test drive list both games' stages together. No part's
+name matches another's without it. A pack installed earlier keeps the
+prefix until it is installed again.
+
 ### Body stickers (2026-10-26)
 
 - A S.L.A.I. body's sticker is its ST02 carrier model (`emblem_model`)

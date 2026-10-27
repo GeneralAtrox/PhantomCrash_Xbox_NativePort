@@ -207,7 +207,7 @@ def register_parts(image: Path, assets: Path, data: Path, mods: Path) -> dict:
             resource = 10000 + int(entry["source_maker"]) * 500 + "BLAS".index(stem[2]) * 100 + int(stem[3:5]) * 2
             native = copy.deepcopy(template)
             native_curves(native, source)
-            native.update({"index": index, "name": "S.L.A.I. " + part_name(table, source),
+            native.update({"index": index, "name": part_name(table, source),
                            "source": source["source"], "slai_model": stem})
             native["model" if category != "body" else "class"] = new_type
             definition = copy.deepcopy(base_catalogue[types][template_type])
