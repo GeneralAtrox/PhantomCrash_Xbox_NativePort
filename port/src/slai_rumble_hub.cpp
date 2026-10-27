@@ -52,11 +52,25 @@ SlaiRumbleHub::SlaiRumbleHub(SlaiRumbleHubScript script, const SlaiRumbleData &d
       rows_repeat_(script_.repeat_delay, script_.repeat_interval), popup_(script_.info.growth),
       box_(std::move(box)) {
   for (const SlaiCityMatch &match : slai_day_matches(data_, quest_.day, quest_.slai_rumble)) {
-    if (match.match != slai_no_match && slai_match(data_.table, match.match) != nullptr) {
+    if (match.match != slai_no_match && slai_match(data_.table, match.match) != nullptr &&
+        listed(match)) {
       matches_.push_back(match);
     }
   }
   row_ = matches_.empty() ? exit_row() : 0;
+}
+
+bool SlaiRumbleHub::listed(const SlaiCityMatch &match) const {
+  const int record = slai_match(data_.table, match.match)->save_record;
+  const auto named = [record](const std::vector<int> &list) {
+    return std::ranges::find(list, record) != list.end();
+  };
+  if ((!script_.records.empty() && !named(script_.records)) || named(script_.exclude_records)) {
+    return false;
+  }
+  return !script_.one_per_match ||
+         std::ranges::none_of(
+             matches_, [&match](const SlaiCityMatch &other) { return other.match == match.match; });
 }
 
 const SlaiCityMatch *SlaiRumbleHub::selected() const {

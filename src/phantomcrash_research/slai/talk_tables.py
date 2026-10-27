@@ -86,16 +86,92 @@ ANY_PLACE = 0x32  # place / sub-place values from here on match anything
 EVENT_KINDS = {0: "scene_change", 1: "town", 2: "town_late", 3: "kind_3", 4: "kind_4"}
 EVENT_FLAGS = {1: "talk_background", 2: "skip_load", 8: "reset", 0x40: "freeze_logo",
                0x80: "town_overlay"}
-# Condition functions (0x26A990..0x26AF40) by what they test; unnamed ones
-# keep their address.
+# Condition functions (0x26A990..0x26AF40) by what they test. "defeated"
+# is save + 0x41CC (global + 0x4438), the enemies shot down in all; the
+# tutorial pair tells apart a tutorial cleared on the first day (save +
+# 0x41DC, the days elapsed, still 0) from a later one; "last_battle" reads
+# the battle result's survived byte (global + 0x489D); the collections are
+# save + 0x4220's bitfields (0x258850, 0x258990, 0x2589F0); the junk shop
+# is the module shop entered from town spot 0x0F (0x4E12A0 sets the byte
+# at gp - 0x49D4, which 0x26ACB0 returns).
 CONDITIONS = {
-    0x26A990: "tutorial_cleared_without_4448", 0x26A9D0: "tutorial_cleared_with_4448",
+    0x26A990: "tutorial_cleared_first_day", 0x26A9D0: "tutorial_cleared_later",
     0x26AA10: "tutorial_not_cleared", 0x26AA40: "never",
-    0x26AB90: "money_over_999", 0x26ABE0: "money_over_572", 0x26AC30: "money_over_99",
-    0x26AC80: "completion_score", 0x26AD40: "sponsor_offer_open",
+    0x26AA50: "last_battle_lost", 0x26AA80: "last_battle_survived",
+    0x26AAA0: "last_battle_lost", 0x26AAD0: "all_mods_collected",
+    0x26AB00: "all_decals_collected", 0x26AB30: "all_music_collected",
+    0x26AB60: "defeated_over_4999",
+    0x26AB90: "defeated_over_999", 0x26ABE0: "defeated_over_572", 0x26AC30: "defeated_over_99",
+    0x26AC80: "completion_score", 0x26ACB0: "junk_module_shop",
+    0x26AD40: "sponsor_offer_open",
     0x26ADB0: "sponsor_offer_due", 0x26AE10: "sponsor_current",
     0x26AE60: "sponsor_level_1", 0x26AED0: "sponsor_level_2", 0x26AF40: "sponsor_level_3",
 }
+# The defeated milestones: more than `above` shot down; once the next
+# milestone's completion flag is set, the lower one sets its own instead of
+# playing (0x26AB90, 0x26ABE0, 0x26AC30; 0x26AB60 has no successor).
+DEFEAT_MILESTONES = {
+    "defeated_over_4999": {"above": 4999, "superseded_by": -1, "marks": -1},
+    "defeated_over_999": {"above": 999, "superseded_by": 0x85, "marks": 0x84},
+    "defeated_over_572": {"above": 0x23C, "superseded_by": 0x84, "marks": 0x83},
+    "defeated_over_99": {"above": 99, "superseded_by": 0x83, "marks": 0x82},
+}
+# The sponsors (save + 0x4269 current, + 0x426A previous, + 0x426B the bits
+# of makers that have sponsored, + 0x426C the shot-down streak, + 0x426E why
+# the last one left: 1 wrong body, 2 shot down, 3 low score). Offers come
+# from 0x25A4E0, losses from 0x24A9E0; the conditions 0x26AD40..0x26AF40
+# compare with a row's sponsor argument. Sponsors are numbered 0 Hartman,
+# 1 Proton, 2 Carro, 3 KHT, 4 Zwerg (unlike the regulation table's makers);
+# brands are the body table's +2 (0x3CA320, 0x3C bytes a row), the
+# regulation makers (0 Carro, 1 Proton, 2 Hartman, 3 KHT, 4 Zwerg) and 5..7,
+# which the sponsors take as Proton, KHT and Carro.
+SPONSOR_RULES = {
+    "none": 5,
+    # 0x26ACC0: an offer is due once one of these flags is set.
+    "offer_flags": [0x6B, 0x6F, 0x73, 0x77, 0x7B],
+    # 0x25A4E0: a score above this in a maker's or a body-type rumble
+    # brings that maker's offer.
+    "offer_score_above": 14,
+    "regulation_makers": {"6": 1, "7": 3, "8": 2, "9": 4, "10": 0},
+    # Regulations whose offer comes from the ridden body's brand.
+    "brand_regulations": [11, 12, 13, 14, 16, 17, 18, 19, 20, 21],
+    "brand_makers": {"0": 2, "7": 2, "1": 1, "5": 1, "2": 0, "3": 3, "6": 3, "4": 4},
+    # 0x24A9E0: the sponsor leaves below this score (reason 3), after this
+    # many battles in a row shot down (reason 2), or when the ridden body is
+    # not one of its brands (reason 1). Head-to-head matches (0x222480) and
+    # battles whose result flag + 0x489E is set do not count.
+    "keep_score_below": 10,
+    "streak_limit": 2,
+    "sponsor_brands": {"0": [2], "1": [5, 1], "2": [7, 0], "3": [6, 3], "4": [4]},
+    "head_to_head_matches": [2, 3, 4, 5, 6, 7, 0x2F, 0x35, 0x3B, 0x41, 0x47, 0x4D, 0x53,
+                             0x59, 0x5F, 0x65, 0x6B, 0x71, 0x77, 0x7D, 0x85, 0x86, 0x87,
+                             0x88],
+}
+# 0x24B5A0's completion score, out of 1000 (0x26AC80 needs more than 999):
+# each part's count is capped and scaled to its points; the sum is divided
+# by 10 and rounded. Records count cleared rumble records; collections
+# count bits of save + 0x4220 (0x258A50), sponsors the makers that have
+# sponsored (0x24B7B0).
+COMPLETION_SCORE = {
+    "divisor": 10,
+    "parts": [
+        {"source": "records", "first": 0x30, "count": 56, "points": 0xF50},
+        {"source": "records", "first": 0x68, "count": 7, "points": 700},
+        {"source": "records", "first": 0x1A, "count": 3, "points": 600},
+        {"source": "records", "first": 0x20, "count": 16, "points": 800},
+        {"source": "collections", "count": 238, "points": 0x9C4},
+        {"source": "decals", "count": 229, "points": 500},
+        {"source": "music", "count": 90, "points": 0x1E0},
+        {"source": "sponsors", "count": 5, "points": 500},
+    ],
+}
+# 0x4E8D70, run each night (0x4E8CF0): flag B is set where flag A is,
+# s16 pairs ended by 0, 0.
+OVERNIGHT_FLAGS = 0x5C4160
+# partner_path's offsets (0x271A40): rows {u32 offsets, u16 length, u16
+# horizontal}, s8 offsets, one a frame, from the partner's place (256, 224):
+# up, or right when horizontal.
+PARTNER_PATHS, PARTNER_PATH_COUNT = 0x42DED0, 3
 # Progress thresholds (0x26A570): won ranker records (0x30..0x67), then
 # regional (0x68..0x6E) from 0x39, then finals (0x1A..0x1C) from 0x40.
 THRESHOLD_REGIONAL, THRESHOLD_FINALS = 0x39, 0x40
@@ -199,6 +275,26 @@ def _login_progress(program):
     raise ValueError("login_screen progress curve has no end")
 
 
+def _overnight_flags(program):
+    out = []
+    for at in range(OVERNIGHT_FLAGS, OVERNIGHT_FLAGS + 256, 4):
+        first, then = struct.unpack("<2h", program.read(at, 4, TALK_OVERLAY))
+        if first == 0 and then == 0:
+            return out
+        out.append([first, then])
+    raise ValueError("the overnight flag pairs have no end")
+
+
+def _partner_paths(program):
+    out = []
+    for path in range(PARTNER_PATH_COUNT):
+        pointer, length, horizontal = struct.unpack(
+            "<I2H", program.read(PARTNER_PATHS + 8 * path, 8, TALK_OVERLAY))
+        steps = struct.unpack("<%db" % length, program.read(pointer, length, TALK_OVERLAY))
+        out.append({"horizontal": bool(horizontal), "steps": list(steps)})
+    return out
+
+
 def talk_table(program):
     """Everything tables/slai_talk.json holds."""
     ambient = struct.unpack("<%dH" % AMBIENT_COUNT,
@@ -235,6 +331,11 @@ def talk_table(program):
         "knocker_textures": ["talk/de000/de0000.png" if KNOCKER_TEXTURE_MASK >> f & 1
                              else "talk/de000/de0001.png" for f in range(KNOCKER_FILES)],
         "tutorial_record": TUTORIAL_RECORD,
+        "defeat_milestones": DEFEAT_MILESTONES,
+        "sponsor_rules": SPONSOR_RULES,
+        "completion_score": COMPLETION_SCORE,
+        "overnight_flags": _overnight_flags(program),
+        "partner_paths": _partner_paths(program),
     }
 
 

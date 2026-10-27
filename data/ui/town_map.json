@@ -124,7 +124,7 @@
   {"id": "omsk", "next": "", "help": "【Omsk】...Not open yet.", "slai": true, "name": "OMSK", "bars": "2111311211213111", "label_width": 40, "spot": [1205, 352], "side": -1, "rider": [-48, -78]},
   {"id": "kojima", "next": "dealer_kojima", "help": "{xbe:0x19e0d8}", "help_trail": 54, "name": "KOJIMA", "bars": "1121131121112311211321111", "label_width": 55.5, "spot": [1010, 290], "side": 1, "rider": [13.5, -82.5], "sign": {"image": "textures/scroll/town_map_tex/0.png", "rect": [464, 480, 680, 584], "layer": 259}, "sign_at": [-364.5, -45], "sign_from": [201, 28]},
   {"id": "american_stars", "next": "dealer_american_stars", "help": "{xbe:0x19df38}", "help_trail": 27, "name": "AMERICAN STARS", "bars": "1121311211131121121113211211231121113121121131121121311211", "label_width": 135.5, "spot": [886, 174], "side": 1, "rider": [-48, 16], "sign": {"image": "textures/scroll/town_map_tex/0.png", "rect": [640, 0, 872, 128], "layer": 259}, "sign_at": [-343.5, 16.5], "sign_from": [211, 12]},
-  {"id": "battle_school", "next": "", "help": "【Battle-School】...Not open yet.", "slai": true, "name": "BATTLE-SCHOOL", "bars": "21121131121113121121131121121311211213112", "label_width": 126, "spot": [760, 100], "side": 1, "rider": [-48, 9]}
+  {"id": "battle_school", "next": "slai_battle_school", "help": "【Battle-School】...", "slai": true, "name": "BATTLE-SCHOOL", "bars": "21121131121113121121131121121311211213112", "label_width": 126, "spot": [760, 100], "side": 1, "rider": [-48, 9]}
  ],
  "keep_clear": [
   [-40, -40, 626, 70],

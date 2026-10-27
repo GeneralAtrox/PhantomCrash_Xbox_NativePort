@@ -80,8 +80,12 @@ SlaiRumbleBalance balance_from(const JsonValue &value) {
   balance.charge_entry = value.boolean_or("charge_entry", balance.charge_entry);
   balance.prize_scale = value.number_or("prize_scale", balance.prize_scale);
   balance.robots_max = static_cast<int>(value.number_or("robots_max", balance.robots_max));
-  if (balance.entry_scale < 0.0 || balance.prize_scale < 0.0 || balance.robots_max < 1) {
-    throw std::runtime_error("scales must not be negative and robots_max must be at least 1");
+  balance.score_per_shootdown =
+      static_cast<int>(value.number_or("score_per_shootdown", balance.score_per_shootdown));
+  if (balance.entry_scale < 0.0 || balance.prize_scale < 0.0 || balance.robots_max < 1 ||
+      balance.score_per_shootdown < 0) {
+    throw std::runtime_error("scales and the score must not be negative and robots_max must be "
+                             "at least 1");
   }
   return balance;
 }

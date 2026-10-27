@@ -76,7 +76,10 @@ TEST_CASE("with S.L.A.I. the town map has fourteen places, the original eight am
 }
 
 TEST_CASE("confirming a closed town map place stays on the map") {
-  TownMap map(shipped(true), "garage", {});
+  TownMapScript script = shipped(true);
+  CHECK(script.places[13].next == "slai_battle_school");
+  script.places[13].next.clear(); // closed, as before Battle School opened
+  TownMap map(std::move(script), "garage", {});
   run(map, 0.8);
   press(map, button::right);
   run(map, 0.3);

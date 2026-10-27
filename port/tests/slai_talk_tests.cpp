@@ -152,16 +152,6 @@ TEST_CASE("Only the selector's case runs between case and end_case") {
   CHECK(scene.done());
 }
 
-TEST_CASE("S.L.A.I. story flags round-trip through the save") {
-  SlaiStorySave save;
-  save.flags[0] = true;
-  save.flags[255] = true;
-  save.tutorial_mark = true;
-  CHECK(slai_story_from_json(slai_story_to_json(save)) == save);
-  CHECK(slai_story_from_json(parse(R"({"flags": [3, 999, -1]})")).flags[3]);
-  CHECK(slai_story_from_json(parse("null")) == SlaiStorySave{});
-}
-
 TEST_CASE("The opening's events follow each other on the shared save") {
   const auto roots = DataRoots::configured(PHANTOMCRASH_SOURCE_ROOT, true);
   auto story = SlaiStory::load(roots);
@@ -169,7 +159,7 @@ TEST_CASE("The opening's events follow each other on the shared save") {
   SlaiStorySave save;
   SlaiRumbleSave rumble;
   const auto next = [&](std::string_view kind, std::string_view place, std::string_view sub) {
-    const auto *event = story->next_event(kind, place, sub, {save, rumble, 0});
+    const auto *event = story->next_event(kind, place, sub, {save, rumble});
     return event == nullptr ? std::string{} : event->name;
   };
   const auto play = [&](std::string_view kind, std::string_view place, std::string_view sub) {
@@ -192,6 +182,14 @@ TEST_CASE("The opening's events follow each other on the shared save") {
   CHECK(story->mode("main01t") == SlaiTalkMode::town);
   CHECK(story->mode("main02k") == SlaiTalkMode::talk);
   CHECK(story->places_of("club_wired") == std::vector<std::string>{"wired"});
+  // The later scenes' places (data/story/slai_talk.json).
+  CHECK(story->places_of("slai_rumble") == std::vector<std::string>{"wired"});
+  CHECK(story->places_of("slai_battle_school") == std::vector<std::string>{"tutorial"});
+  CHECK((story->places_of("slai_battle") == std::vector<std::string>{"battle_return", "ending"}));
+  CHECK((story->places_of("slai_result") == std::vector<std::string>{"ending", "nextday"}));
+  CHECK(story->places_of("blood_music") == std::vector<std::string>{"cdedit"});
+  CHECK(story->places_of("the_mechanist") == std::vector<std::string>{"moduleshop"});
+  CHECK(!story->junk_shop("the_mechanist"));
 }
 
 TEST_CASE("The opening and later talk scenes play to their end on the installed data") {

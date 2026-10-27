@@ -87,6 +87,12 @@ struct SlaiRumbleHubScript : TownBasics {
   std::vector<std::string> short_of_money, not_ready, wrong_maker, wrong_legs, special_unmet,
       no_rental;
   std::string battle; // the screen a rumble entered leads to
+  // Which of the day's rumbles the screen lists, by their save record: only
+  // `records` when any are named, never `exclude_records`; with
+  // `one_per_match`, a match the rota offers in several cities only once
+  // (Battle School's tutorial).
+  std::vector<int> records, exclude_records;
+  bool one_per_match{};
 };
 
 // Throws std::runtime_error naming the member at fault.
@@ -160,6 +166,8 @@ private:
   void handle_input(double tick_seconds, InputFrame input);
   // Confirm in the open popup: enter, or say why not.
   void enter();
+  // The script lists this rumble (records, exclude_records, one_per_match).
+  [[nodiscard]] bool listed(const SlaiCityMatch &match) const;
 
   SlaiRumbleHubScript script_;
   const SlaiRumbleData &data_;

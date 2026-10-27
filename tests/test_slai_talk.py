@@ -121,6 +121,21 @@ class TalkDiscTests(unittest.TestCase):
         self.assertEqual(events['bs05k']['condition'], 'tutorial_not_cleared')
         self.assertEqual(events['main05k']['completion_flag'], 5)
 
+    def test_story_rules(self):
+        events = {e['name']: e for e in self.table['events']}
+        self.assertEqual(events['bs03k']['condition'], 'tutorial_cleared_first_day')
+        self.assertEqual(events['rec_data03k']['condition'], 'defeated_over_999')
+        self.assertEqual(events['main32k']['condition'], 'junk_module_shop')
+        self.assertEqual(events['main67k']['condition'], 'last_battle_lost')
+        self.assertEqual(self.table['overnight_flags'][0], [27, 28])
+        self.assertEqual(self.table['overnight_flags'][-1], [123, 124])
+        self.assertEqual(len(self.table['overnight_flags']), 10)
+        paths = self.table['partner_paths']
+        self.assertEqual([len(p['steps']) for p in paths], [25, 10, 7])
+        self.assertEqual(paths[2], {'horizontal': True, 'steps': [1, 3, 1, -1, -3, -1, 0]})
+        points = sum(p['points'] for p in self.table['completion_score']['parts'])
+        self.assertEqual(points, 10000)
+
     def test_characters_news_and_folders(self):
         self.assertEqual(self.table['characters']['2'],
                          {'folder': 'ra000', 'name': 'Embryo', 'chip_icon': 60,

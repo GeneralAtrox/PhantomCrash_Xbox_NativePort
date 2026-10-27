@@ -152,6 +152,11 @@ struct SlaiRumbleBalance {
   bool charge_entry{}; // the original only compares the money (0x259a40)
   double prize_scale{1.0};
   int robots_max{6}; // the rumble manager's cap (0x222070)
+  // The battle's score (result + 0xC, the player's + 0x24) per robot shot
+  // down: a stand-in until what the original counts is traced. The prize
+  // targets (30 a rumbling) and the sponsors (an offer above 14, gone below
+  // 10) are on this scale.
+  int score_per_shootdown{10};
 };
 
 // How a rumble's battle is laid out (port choices; the "battle" block).

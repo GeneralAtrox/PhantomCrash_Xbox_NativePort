@@ -175,7 +175,9 @@ private:
   const std::vector<StoryEvent> &events_;
   ContestTables contests_;
   std::optional<SlaiRumbleData> slai_rumble_;
-  std::optional<SlaiRumbleHubScript> slai_hub_; // ui/slai_rumble.json, with S.L.A.I.
+  // With S.L.A.I.: Rumble S.L.A.I. (ui/slai_rumble.json) and Battle School
+  // (ui/slai_battle_school.json), by screen name.
+  std::map<std::string, SlaiRumbleHubScript, std::less<>> slai_hubs_;
   SleepScript sleep_;
   bool open_contests_{};
   ScheduleScript schedule_;

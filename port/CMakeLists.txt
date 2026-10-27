@@ -30,12 +30,14 @@ add_library(phantomcrash_core
   src/slai_battle_lineup.cpp
   src/slai_anb.cpp
   src/slai_story.cpp
+  src/slai_story_rules.cpp
   src/slai_story_save.cpp
   src/slai_talk_cast.cpp
   src/slai_talk_data.cpp
   src/slai_talk_draw.cpp
   src/slai_talk_effects.cpp
   src/slai_talk_join.cpp
+  src/slai_talk_partner.cpp
   src/slai_talk_scene.cpp
   src/slai_talk_stage.cpp
   src/slai_talk_text.cpp
@@ -476,6 +478,7 @@ if(BUILD_TESTING)
     tests/slai_lineup_tests.cpp
     tests/slai_talk_tests.cpp
     tests/slai_talk_join_tests.cpp
+    tests/slai_story_rules_tests.cpp
     tests/source_suspension_tests.cpp
     tests/source_roll_tests.cpp
     tests/source_steering_tests.cpp

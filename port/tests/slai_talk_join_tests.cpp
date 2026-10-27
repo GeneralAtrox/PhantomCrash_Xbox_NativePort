@@ -1,14 +1,17 @@
 // S.L.A.I. talk scenes' joined cast: badges on the HAVEN petals, the chip
-// and character windows, the partner standing in as the Knocker, and the
-// ambient loops.
+// and character windows, the partner chip (or the Knocker standing in for
+// it), and the ambient loops.
 
 #include "test_support.hpp"
 
 #include "phantomcrash/slai_talk_scene.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <map>
+#include <set>
 #include <string>
+#include <vector>
 
 using namespace phantomcrash;
 
@@ -17,12 +20,13 @@ namespace {
 const std::string lynx_face = "2d/s_chara/sab/sab012.png";
 const std::string david_face = "2d/s_chara/sab/sab013.png";
 const std::string knocker_picture = "talk/de000/de0013.png";
+const std::string partner_picture = "2d/s_chip/dog1.png";
 
-// Every anim, up to the windows' 0x25, shows the talk icon (texture 4) for
+// Every anim, up to the partner's 0x2B, shows the talk icon (texture 4) for
 // two ticks and ends.
 AnbBank short_bank() {
   std::string anims;
-  for (int i = 0; i < 0x26; ++i) {
+  for (int i = 0; i < 0x2C; ++i) {
     anims += (i == 0 ? "" : ",");
     anims += R"([{"op": "frame", "a": 0, "b": 2}, {"op": "end"}])";
   }
@@ -49,6 +53,8 @@ SlaiTalkTable join_table() {
       {event_image_close, {"event_image_close", 0}},
       {partner_in, {"partner_in", 1}},
       {partner_out, {"partner_out", 1}},
+      {partner_path, {"partner_path", 2}},
+      {partner_path_stop, {"partner_path_stop", 0}},
       {ambient_loop, {"ambient_loop", 1}}};
   for (const auto &[op, row] : used) {
     table.opcodes[static_cast<std::size_t>(op)].name = row.first;
@@ -72,6 +78,7 @@ SlaiTalkTable join_table() {
   table.ambient_objects = {0, 1, 3, 4};
   table.knocker_textures.resize(0x14);
   table.knocker_textures[0x13] = knocker_picture;
+  table.partner_paths = {{false, {0, 10, 20}}, {true, {5, -5}}};
   return table;
 }
 
@@ -80,9 +87,11 @@ struct Stage {
   SlaiTalkFont font;
   AnbBank bank = short_bank();
   SlaiTalkScene scene;
-  explicit Stage(std::string_view code)
-      : scene(table, font, slai_talk_script_from_json(json::parse(code), table), SlaiTalkMode::talk,
-              [this](const std::string &) { return &bank; }) {}
+  explicit Stage(std::string_view code, SlaiTalkPartner partner = {})
+      : scene(
+            table, font, slai_talk_script_from_json(json::parse(code), table), SlaiTalkMode::talk,
+            [this](const std::string &) { return &bank; },
+            SlaiTalkSceneOptions{{}, std::move(partner)}) {}
   void run(int frames) {
     for (int i = 0; i < frames; ++i) {
       scene.tick({});
@@ -154,6 +163,42 @@ TEST_CASE("Without a partner chip the partner ops bring the Knocker in and out")
   CHECK(stage.quads(knocker_picture).size() == 1);
   CHECK(!stage.scene.done());
   stage.run(10);
+  CHECK(stage.scene.done());
+}
+
+TEST_CASE("A partner chip comes in with its own picture, walks its path and goes") {
+  // The path takes two passes of three frames; partner_out does not wait
+  // for it.
+  Stage stage(R"({"code": [["partner_in", 0], ["partner_path", 0, 2], ["wait_frames", 8],
+      ["partner_out", 0], ["end"]], "strings": []})",
+              {1, partner_picture});
+  stage.run(1);
+  REQUIRE(stage.quads(partner_picture).size() == 1);
+  CHECK(stage.quads(knocker_picture).empty());
+  const float home = stage.quads(partner_picture)[0].corners[0].y;
+  std::set<float> heights{home};
+  for (int frames = 1; !stage.scene.done() && frames < 60; ++frames) {
+    stage.run(1);
+    for (const auto &quad : stage.quads(partner_picture)) {
+      heights.insert(quad.corners[0].y);
+    }
+  }
+  CHECK(stage.scene.done());
+  // Steps 0, 10 and 20 up from home, evenly.
+  REQUIRE(heights.size() == 3);
+  const std::vector<float> steps(heights.begin(), heights.end());
+  CHECK(steps[2] == home);
+  CHECK(std::abs((steps[2] - steps[1]) - (steps[1] - steps[0])) < 0.001F);
+  CHECK(stage.quads(partner_picture).empty());
+}
+
+TEST_CASE("A partner path with no count walks until partner_path_stop") {
+  Stage stage(R"({"code": [["partner_in", 0], ["partner_path", 1, 0], ["wait_frames", 30],
+      ["partner_path_stop"], ["end"]], "strings": []})",
+              {4, partner_picture});
+  stage.run(25);
+  CHECK(!stage.scene.done());
+  stage.run(20);
   CHECK(stage.scene.done());
 }
 

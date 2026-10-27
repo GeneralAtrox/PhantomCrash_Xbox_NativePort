@@ -1,6 +1,7 @@
 // S.L.A.I.'s story in the screen runner: the talk scene a move between the
 // port's screens plays (docs/SLAI_STORY_PLAN.md), and its screen.
 
+#include "desktop_game_screens.hpp"
 #include "desktop_screens.hpp"
 #include "desktop_slai_talk.hpp"
 
@@ -23,6 +24,16 @@ std::string placeholder_name(const std::string &name, const std::string &fallbac
   return out.empty() ? fallback : out;
 }
 
+// The CHIP fitted in the hangar ridden, or null.
+const StockItem *riding_chip(const Garage &garage) {
+  if (garage.riding < 0 || garage.riding >= static_cast<int>(garage.hangars.size())) {
+    return nullptr;
+  }
+  const Hangar &hangar = garage.hangars[static_cast<std::size_t>(garage.riding)];
+  const auto chip = garage.stock.find(hangar.part(PartSlot::chip));
+  return chip != garage.stock.end() ? &chip->second : nullptr;
+}
+
 } // namespace
 
 std::optional<SlaiStory> ScreenRunner::load_slai_story(const DataRoots &roots) {
@@ -42,7 +53,14 @@ std::optional<SlaiStory> ScreenRunner::load_slai_story(const DataRoots &roots) {
 }
 
 std::string ScreenRunner::slai_story_target(const std::string &source, const std::string &name) {
-  const SlaiStoryContext context{quest_.slai_story, quest_.slai_rumble, quest_.money};
+  slai_story_nights(quest_.slai_story, slai_story_->rules(), quest_.total_days);
+  SlaiStoryContext context{quest_.slai_story, quest_.slai_rumble};
+  const auto [first_song, last_song] = slai_story_->music_credits();
+  context.collections.music =
+      static_cast<int>(std::ranges::count_if(quest_.music.owned, [&](const auto &entry) {
+        return entry.first >= first_song && entry.first <= last_song;
+      }));
+  context.junk_shop = slai_story_->junk_shop(name);
   const auto to = slai_story_->places_of(name);
   const SlaiTalkEvent *event = nullptr;
   if (std::ranges::find(to, town_place) != to.end()) {
@@ -56,6 +74,7 @@ std::string ScreenRunner::slai_story_target(const std::string &source, const std
     }
   }
   if (event == nullptr) {
+    slai_story_->reset(quest_.slai_story);
     return {};
   }
   SlaiStory::complete(*event, quest_.slai_story);
@@ -73,7 +92,16 @@ std::unique_ptr<Screen> ScreenRunner::make_slai_talk(const std::string &name,
   SlaiTalkSceneNames names;
   names.player = placeholder_name(quest_.player_name, names.player);
   names.day = quest_.day + 1;
-  auto scene = slai_story_->scene(scene_name, names);
+  // The ridden CHIP is the partner (VM+0x770, its CPU type in S.L.A.I.).
+  SlaiTalkPartner partner;
+  const auto &chips = game_->part_tables().chips;
+  if (const StockItem *chip = riding_chip(quest_.garage);
+      chip != nullptr && chip->id >= 0 && chip->id < static_cast<int>(chips.size())) {
+    const ChipRecord &record = chips[static_cast<std::size_t>(chip->id)];
+    partner = slai_story_->partner(record.chatter, record.name);
+    names.partner = placeholder_name(chip->name.empty() ? record.name : chip->name, names.partner);
+  }
+  auto scene = slai_story_->scene(scene_name, names, partner);
   if (scene == nullptr) {
     SDL_Log("S.L.A.I. story: no script for %s", scene_name.c_str());
     return nullptr;

@@ -201,9 +201,39 @@ ids are **not decoded yet**. They are the main missing piece for opponents.
 | `+0x168` | tutorial-done byte | Medium |
 | `+0x426F` | 256-bit event flag field (test 0x204E50, set 0x204F20, clear 0x204FC0) | High |
 | `+0x4769` | current city | Medium |
+| `+0x41CC` | enemies shot down in all battles (64-bit) | High |
+| `+0x4269` / `+0x426A` | sponsor / previous sponsor: 0 Hartman, 1 Proton, 2 Carro, 3 KHT, 4 Zwerg, 5 none | High |
+| `+0x426B` | sponsors had, a bit each | High |
+| `+0x426C` | battles shot down in a row | High |
+| `+0x426E` | why the last sponsor left: 1 body, 2 shot down, 3 score | High |
 
-f_24B5A0 builds a completion score from these records; event conditions
-test it against 999.
+Offsets are from the save object (global + 0x26C); the condition functions
+address the same fields from the global (`+0x4438` is `+0x41CC`).
+
+**Completion score (0x24B5A0, High).** Each part's count, capped, scales to
+its points: records 0x30.. (56 → 3920), 0x68.. (7 → 700), 0x1A.. (3 → 600),
+0x20.. (16 → 800), the collections at save + 0x4220 (238 → 2500), decals
+(229 → 500), music (90 → 480) and the sponsors-had bits (5 → 500). The sum
+over 10, rounded half up, is 0..1000; event conditions want more than 999.
+
+**Battle result (global + 0x489C, High for the layout).** [1] the player
+survived, [2] excluded from the sponsor rules (who sets it is not traced),
++0xC the score (the player's battle struct + 0x24, not traced). After a
+battle 0x24A9E0 keeps the previous sponsor, then unless excluded: outside
+the head-to-head matches (2..7, 0x2F, 0x35, ... 0x7D, 0x85..0x88) a score
+under 10 dismisses the sponsor (reason 3) and being shot down raises the
+run, two dismissing it (reason 2); then a previous sponsor whose brands
+(Hartman {2}, Proton {5, 1}, Carro {7, 0}, KHT {6, 3}, Zwerg {4}) lack the
+body's brand (body + 2) dismisses it (reason 1). 0x25A4E0 then offers a
+sponsor on a score over 14: by regulation (6 Proton, 7 KHT, 8 Carro, 9
+Zwerg, 10 Hartman) or, for regulations 11..14 and 16..21, by the body's
+brand (0, 7 Carro; 1, 5 Proton; 2 Hartman; 3, 6 KHT; 4 Zwerg). An offer
+sets the sponsor and its bit and resets the run.
+
+**Nights (0x4E8CF0, 0x4E8D70, High).** A night adds a day (cap 9999) and,
+for the pairs at 0x5C4160, sets the second flag when the first is set:
+(27, 28), (37, 38), (45, 47), (66, 67), (75, 76), (107, 108), (111, 112),
+(115, 116), (119, 120), (123, 124).
 
 ## Story event table
 
@@ -238,11 +268,21 @@ The last 8 rows are not scripts: six point at 8-byte sdata records
 
 The condition functions sit at 0x26A990–0x26AF40. They test:
 
-- tutorial state;
-- money thresholds on `save+0x4438` (>99, >0x23C, >999, >4999);
-- the completion score;
-- sponsor levels at `save+0x44D5`, `+0x44D6` and `+0x44DA`, with flags
-  0x6B/0x6F/0x73/0x77/0x7B.
+- tutorial state, and the days (`save+0x41DC`: first day or later);
+- enemies shot down (`save+0x41CC`, read from the global as `+0x4438`):
+  more than 99, 0x23C, 999 or 4999; a milestone whose successor's flag
+  (0x83, 0x84, 0x85) is set marks its own (0x82, 0x83, 0x84) instead;
+- the last battle survived or lost;
+- the completion score and the three collections;
+- the town spot entered being the junk module shop (spot 0x0F, place map
+  0x4DF8E0);
+- the sponsor fields (global `+0x44D5`, `+0x44D6`, `+0x44DA` are save
+  `+0x4269`, `+0x426A`, `+0x426E`): each needs the sponsor to have just
+  changed; an offer is open or due by the flags 0x6B/0x6F/0x73/0x77/0x7B,
+  a level names the dismissal reason.
+
+When a move plays no row, 0x26A7D0 clears the completion flags of the rows
+flagged 8 (reset), so they may play again.
 
 Setting flags 0x16, 0x23, 0x28, 0x46, 0x4E or 0x61 calls f_256E70, which
 unlocks content (**Medium**).
@@ -254,10 +294,9 @@ clear. The threshold compares one progress count: won ranker records
 (0x30..0x67), plus regional (0x68..0x6E) from 0x39, plus finals from 0x40
 (**Medium**: the ranges are static; treating them as one running count is
 an assumption that holds when records are won in ladder order). The
-tutorial conditions read record 0x18's cleared byte (0x257410) and
-`save+0x4448`; the money conditions the shared NY. The sponsor, completion
-score and unnamed `fn_*` conditions return false until the port has their
-state. Places are S.L.A.I.'s names, mapped to port screens in
+tutorial conditions read record 0x18's cleared byte (0x257410) and the
+days; the other conditions read the story's counts as above
+(`slai_story_rules.cpp`). Places are S.L.A.I.'s names, mapped to port screens in
 `data/story/slai_talk.json` (docs/SLAI_STORY_PLAN.md).
 
 ## Talk scene assets
@@ -356,8 +395,23 @@ table):
   hangar's robot record (0x25A870, stride 0x68) names a part in 0x25A850
   (stride 8, +4 item id), whose item record (0x24D440: 0x3DF340 + id × 0x22C,
   id clamped 0..0x1C3) holds a u16 chip type at +6. Types 2..9 give
-  selectors 1..8; anything else 0. The port has no S.L.A.I. partner chips
-  yet, so its selector is 0.
+  selectors 1..8; anything else 0. The port has no CPU types; it gives
+  each Phantom Crash chatter personality a selector (docs/SLAI_STORY_PLAN.md,
+  "The partner chip").
+- **Partner ops** (**High**, static). With a selector, partner_in
+  (0x270790) skips its argument and plays TAL01 anim 0x29 on object 15
+  (VM+0xA0), holding, clearing flags 0x81; partner_out (0x2708D0) plays 0x2A
+  and hides object 14, the nameplate; their polls (0x270850, 0x2709A0) wait
+  for the anim's end, the second then hiding object 15. knocker_only_pose
+  (0x270AD0) does nothing. partner_path (0x271980) takes a path and a
+  count: count 0 repeats for ever, and path 2's count is in frames
+  ((n + 6) / 7 passes). Its poll (0x271A40) places object 15 at (256 + step,
+  224) on a horizontal path, else (256, 224 - step), object 14 with it while
+  it plays anim 0x2B (else at (256, 224)), one step a frame; at the path's
+  end it finishes when the count runs out. partner_path_stop sets the count
+  to 1. The paths at 0x42DED0 (pointer, length, horizontal) are 25, 10 and
+  7 steps. Outside talk mode the ops drive the town HUD's chip window
+  (0x4E7350 and on) instead. TAL01's texture 4 there is the chip picture.
 
 Opcode names are researcher labels (`EVT_OPCODE_NAMES` in
 `slai/campaign.py`); the wait masks come from the opcode table. **High**
@@ -380,7 +434,7 @@ from them:
 | 17 | portrait | character, expression, chip icon (-1: the character's own) |
 | 1F/20/21/2E/2F | wait_frames, wait_button, say, sync, sync_portrait | waits are the table's blocking masks |
 | 23/24/25/29 | knocker_in/out/pose, knocker_only_pose | the Knocker (see below) |
-| 27/28/2D/49 | partner_in/out, partner_path(_stop) | the partner chip's robot; with case selector 0 (no partner chip) they are the Knocker's ops and the path ops do nothing |
+| 27/28/2D/49 | partner_in/out, partner_path(_stop) | the partner chip (see "Partner ops"); with case selector 0 (no partner chip) they are the Knocker's ops and the path ops do nothing |
 | 2A | ambient_loop | a looped SE and three TAL01 objects (see below) |
 | 2B | glitch | the town break-up and text rate (see below) |
 | 2C | panel_sprites | the panel's seven icons at 0x337C20, alpha ±0x20 over 4 frames |
@@ -530,8 +584,7 @@ match weights, need runtime checks in PCSX2.
 
 - **Script renderer.** A talk-scene renderer for the 74 opcodes: windows,
   portraits with expressions, backgrounds, choices, fades and BGM. About
-  The opening's opcodes and f_4EA860 are decoded; the partner robot,
-  badges, event images and ambient loops remain (see the opcode table).
+  Every opcode is decoded and played by the port (see the opcode table).
 - **Trigger system.** The 154-row trigger system with its ~30 hand-written
   condition functions, the place/sub-place town navigation, and the
   256-bit flag set.

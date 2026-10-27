@@ -91,9 +91,10 @@ SlaiRobot robot_of(const QuestSave &quest) {
 
 SlaiRumbleHub hub_with(const SlaiRumbleData &data, const QuestSave &quest,
                        const std::optional<SlaiRobot> &robot = std::nullopt,
-                       const bool rentals = false) {
+                       const bool rentals = false,
+                       const std::string &file = "ui/slai_rumble.json") {
   const DataRoots roots = shipped();
-  return SlaiRumbleHub(parse_slai_rumble_hub(roots.document("ui/slai_rumble.json")), data, quest,
+  return SlaiRumbleHub(parse_slai_rumble_hub(roots.document(file)), data, quest,
                        robot.value_or(robot_of(quest)), rentals, "club_wired",
                        parse_message_box(roots.document("ui/message_box.json")));
 }
@@ -186,6 +187,22 @@ TEST_CASE("Rumble S.L.A.I. lists today's cities and leaves by EXIT") {
   CHECK(hub.done());
   CHECK(hub.next() == "club_wired");
   CHECK(!hub.entered());
+}
+
+TEST_CASE("Battle School lists each lesson once and Rumble S.L.A.I. leaves them out") {
+  SlaiRumbleData data = hand_made();
+  // Tokyo's match is the tutorial (record 24), and Las Vegas holds it too.
+  data.table.matches[0].save_record = 24;
+  data.table.city_days[6] = {{0, slai_no_match}};
+  const SlaiRumbleHub school =
+      hub_with(data, QuestSave{}, std::nullopt, false, "ui/slai_battle_school.json");
+  REQUIRE(school.matches().size() == 1);
+  CHECK(school.matches()[0].match == 0);
+  CHECK(school.matches()[0].city == 6); // the first in display order
+  CHECK(school.script().exit_to == "town_map");
+  const SlaiRumbleHub rumble = hub_with(data, QuestSave{});
+  REQUIRE(rumble.matches().size() == 1);
+  CHECK(rumble.matches()[0].city == 2);
 }
 
 TEST_CASE("Rumble S.L.A.I. refuses entry short of money or without a ready robot") {

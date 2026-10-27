@@ -174,8 +174,16 @@ std::vector<SlaiTalkQuad> SlaiTalkScene::draw() const {
     }
     return index == static_cast<int>(common_pictures.size()) ? icon_texture_ : std::string{};
   };
+  // The partner's frame shows its chip where TAL01 has the icon.
+  const auto partner = [this, &common](int index) {
+    return index == static_cast<int>(common_pictures.size()) ? partner_texture_ : common(index);
+  };
   for (const auto &object : objects_) {
-    push_object(out, object, common);
+    if (&object - objects_.data() == slai_talk_stage::partner) {
+      push_object(out, object, partner);
+    } else {
+      push_object(out, object, common);
+    }
   }
   push_sprite(out, picture_);
   for (const auto *portrait : {&previous_portrait_, &portrait_}) {

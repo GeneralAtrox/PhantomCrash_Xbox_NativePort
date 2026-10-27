@@ -40,12 +40,20 @@ struct SlaiTalkSceneNames {
   int day{1};
 };
 
+// The partner chip (VM+0x770): which of a script's cases plays (0 the
+// Knocker's, 1..8 a partner's) and the picture the partner ops show.
+struct SlaiTalkPartner {
+  int selector{};
+  std::string texture;
+};
+
 // What a scene starts from (data/slai/talk_scenes.json): the game's text
 // rate, which the opening's glitch leaves at 2 for the rest of the game,
 // and whether the town's cells start hidden (MAIN03T opens by restoring
 // what MAIN01T broke).
 struct SlaiTalkSceneOptions {
   SlaiTalkSceneNames names;
+  SlaiTalkPartner partner;
   int text_rate{2};
   bool glitched{};
 };
@@ -120,8 +128,8 @@ struct SlaiTalkLoop {
 namespace slai_talk_stage {
 inline constexpr int haven_a = 0, haven_b = 1, haven_c = 2, haven_d = 3, haven_e = 4, panel_a = 5,
                      panel_b = 6, panel_c = 7, panel_d = 8, chip_shade = 9, news_frame = 10,
-                     news_anim = 11, panel_e = 12, prompt = 13, nameplate = 14, ambient = 16,
-                     badge_frames = 19;
+                     news_anim = 11, panel_e = 12, prompt = 13, nameplate = 14, partner = 15,
+                     ambient = 16, badge_frames = 19;
 inline constexpr int objects = 0x17;
 inline constexpr int ambient_count = 3, badge_count = 4;
 inline constexpr int petals = 0, focus_glow = 12, lit_petal = 16, dim_petal = 20, ring_1 = 24,
@@ -245,6 +253,11 @@ private:
   void open_character_window(int chip);
   void close_character_window();
 
+  // slai_talk_partner.cpp: the partner chip's ops.
+  bool exec_partner(int op, const std::vector<int> &args);
+  bool poll_partner(int op);
+  bool step_partner_path();
+
   // slai_talk_draw.cpp
   void text_quads(const SlaiTalkText &text, std::vector<SlaiTalkQuad> &out) const;
   void login_quads(std::vector<SlaiTalkQuad> &out) const;
@@ -265,6 +278,10 @@ private:
   // line, 0x40 typing skipped.
   unsigned text_flags_{};
   int selector_{};
+  std::string partner_texture_;
+  // partner_path (VM+0x764..0x76C): the path, the passes left (-1 for
+  // ever) and the step.
+  int partner_path_{}, partner_repeats_{}, partner_step_{};
   // VM + 0x1DD: the open case; while it differs from the selector, only
   // case and end_case ops run (-1: none open).
   int case_value_{-1};

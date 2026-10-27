@@ -240,6 +240,9 @@ private:
   [[nodiscard]] std::shared_ptr<SlaiBattleLineup> make_slai_lineup(const SlaiRumbleData &data,
                                                                    const SlaiMatch &match);
   void finish_slai_match();
+  // Notes the rumble a hub screen enters as the screen moves to its battle,
+  // so a story scene played on the way keeps it.
+  void note_slai_entry(const std::string &target);
   static constexpr const char *slai_result_route = "slai_result";
   // Hands the battle screen being left to `receipt` (a MatchResultScreen),
   // to run the contest's robots behind it.
@@ -347,6 +350,9 @@ private:
   std::optional<RumblingEntry> pending_entry_;
   std::optional<SlaiCityMatch> slai_match_;       // the S.L.A.I. rumble being fought
   std::shared_ptr<SlaiBattleLineup> slai_lineup_; // and its opponents
+  std::optional<SlaiCityMatch> slai_entered_;     // a hub's entry on the way to its battle
+  std::string slai_hub_{"slai_rumble"};           // the hub a S.L.A.I. battle returns to
+  int slai_brand_{slai_any_maker};                // its ridden body's brand (+2)
   std::unique_ptr<Screen> pending_result_;
   std::string clear_route_; // a first clear's screen, in place of RESULT
   // The finale (story/finale.json, tables/finale.json), read as it opens,

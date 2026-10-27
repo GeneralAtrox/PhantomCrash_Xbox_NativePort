@@ -117,16 +117,19 @@ bool SlaiTalkScene::exec_join(int op, const std::vector<int> &args) {
     return true;
   case slai_talk_op::ambient_loop:
     return exec_ambient(arg(0));
-  // The partner chip's case (VM+0x770) is 0 while the port has no partner
-  // chips, and the partner ops are the Knocker's (0x2701A0, 0x270520,
-  // 0x270AD0); partner_path and partner_path_stop then do nothing.
+  // Without a partner chip (VM+0x770 is 0) the partner ops are the
+  // Knocker's (0x2701A0, 0x270520, 0x270AD0) and partner_path and
+  // partner_path_stop do nothing.
   case slai_talk_op::partner_in:
-    return selector_ == 0 && exec_cast(slai_talk_op::knocker_in, args);
+    return selector_ == 0 ? exec_cast(slai_talk_op::knocker_in, args) : exec_partner(op, args);
   case slai_talk_op::partner_out:
-    return selector_ == 0 && exec_cast(slai_talk_op::knocker_out, args);
+    return selector_ == 0 ? exec_cast(slai_talk_op::knocker_out, args) : exec_partner(op, args);
   case slai_talk_op::knocker_only_pose:
     return selector_ == 0 && exec_cast(slai_talk_op::knocker_pose, args);
-  default: // partner_path(_stop) and the unloads: files load as drawn here
+  case slai_talk_op::partner_path:
+  case slai_talk_op::partner_path_stop:
+    return selector_ != 0 && exec_partner(op, args);
+  default: // the unloads: files load as drawn here
     return false;
   }
 }
@@ -177,9 +180,11 @@ bool SlaiTalkScene::poll_join(int op) {
   case slai_talk_op::ambient_loop:
     return poll_ambient();
   case slai_talk_op::partner_in:
-    return poll_cast(slai_talk_op::knocker_in);
+    return selector_ == 0 ? poll_cast(slai_talk_op::knocker_in) : poll_partner(op);
   case slai_talk_op::partner_out:
-    return poll_cast(slai_talk_op::knocker_out);
+    return selector_ == 0 ? poll_cast(slai_talk_op::knocker_out) : poll_partner(op);
+  case slai_talk_op::partner_path:
+    return poll_partner(op);
   case slai_talk_op::knocker_only_pose:
     return poll_cast(slai_talk_op::knocker_pose);
   default:

@@ -80,7 +80,11 @@ GameScreens::GameScreens(TextureCache &textures, const DataRoots &roots, const G
   }
   slai_rumble_ = load_slai_rumble(roots);
   if (slai_rumble_) {
-    slai_hub_ = parse_slai_rumble_hub(roots.document("ui/slai_rumble.json"));
+    for (const std::string screen : {"slai_rumble", "slai_battle_school"}) {
+      if (const std::string document = "ui/" + screen + ".json"; roots.has_document(document)) {
+        slai_hubs_.emplace(screen, parse_slai_rumble_hub(roots.document(document)));
+      }
+    }
   }
   const auto placeholders = roots.document("ui/placeholders.json");
   if (const auto *buttons = placeholders.find("buttons")) {
@@ -309,11 +313,11 @@ std::unique_ptr<Screen> GameScreens::make(const std::string &name, const std::st
                                             resolve(schedule_.exit_to, place_before), frame_,
                                             credits_, quest, message_box_, slai_rumble());
   }
-  if (name == "slai_rumble" && slai_rumble_ && slai_hub_) {
+  if (const auto hub = slai_hubs_.find(name); hub != slai_hubs_.end() && slai_rumble_) {
     const RegulationCheck check = regulation_check();
     return std::make_unique<SlaiRumbleScreen>(
-        textures_, font_, *slai_hub_, *slai_rumble_, from,
-        resolve(slai_hub_->exit_to, place_before), frame_, credits_, quest, message_box_,
+        textures_, font_, hub->second, *slai_rumble_, from,
+        resolve(hub->second.exit_to, place_before), frame_, credits_, quest, message_box_,
         slai_riding_robot(*slai_rumble_, check, quest),
         !slai_rental_robots(slai_rumble_->world, check.rules).empty());
   }

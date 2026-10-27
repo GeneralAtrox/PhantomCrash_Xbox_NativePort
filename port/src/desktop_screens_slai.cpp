@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <exception>
 #include <random>
+#include <utility>
 
 namespace phantomcrash {
 namespace {
@@ -90,23 +91,26 @@ std::shared_ptr<SlaiBattleLineup> ScreenRunner::make_slai_lineup(const SlaiRumbl
 // navigation grid (slai_rumble.json battle). The battle ends when the
 // player leaves it or is shot down.
 std::unique_ptr<Screen> ScreenRunner::make_slai_battle() {
-  const auto *hub = dynamic_cast<const SlaiRumbleScreen *>(screen_.get());
+  note_slai_entry("slai_battle");
   const SlaiRumbleData *data = game_->slai_rumble();
-  if (hub == nullptr || data == nullptr || !hub->entered()) {
+  if (data == nullptr || !slai_entered_) {
     return nullptr;
   }
-  slai_match_ = hub->entered();
+  slai_match_ = std::exchange(slai_entered_, std::nullopt);
   const SlaiMatch *match = slai_match(data->table, slai_match_->match);
   const SlaiRegulation *rule = slai_regulation(data->table, match->regulation);
   slai_pay_entry(quest_, data->world, *rule);
-  if (const RobotRecord *rental = slai_rental(data->world, *rule, game_->regulation_check())) {
+  const RegulationCheck check = game_->regulation_check();
+  if (const RobotRecord *rental = slai_rental(data->world, *rule, check)) {
     Garage lent;
     install_robot(lent, 0, *rental, game_->part_tables(), game_->garage_tables());
     battle_training_ = test_drive_training(training_, test_drive_, lent, 0, game_->part_tables());
+    slai_brand_ = slai_entry_robot(*data, check, lent, lent.hangars[0]).maker;
     SDL_Log("S.L.A.I. rental: %s", rental->name.c_str());
   } else {
     battle_training_ = test_drive_training(training_, test_drive_, quest_.garage,
                                            quest_.garage.riding, game_->part_tables());
+    slai_brand_ = slai_riding_robot(*data, check, quest_).maker;
   }
   const std::string &stage = slai_match_stage(data->world, slai_match_->city, slai_match_->night);
   if (stages_.contains(stage)) {
@@ -144,7 +148,8 @@ std::unique_ptr<Screen> ScreenRunner::make_slai_battle() {
 }
 
 // The opponents the player shot down fill the save's records (the leader's
-// clears the match's); the shootdowns are the score the prize is paid on.
+// clears the match's); the score the prize is paid on counts the shootdowns
+// (balance score_per_shootdown).
 // Against the stand-in drones, a player still standing who shot down as
 // many robots as the match has opponents beat its leader.
 void ScreenRunner::finish_slai_match() {
@@ -157,7 +162,7 @@ void ScreenRunner::finish_slai_match() {
   const MatchSummary summary = battle->match_summary();
   SlaiMatchResult result;
   result.match = slai_match_->match;
-  result.score = summary.shootdowns;
+  result.score = summary.shootdowns * data->world.balance.score_per_shootdown;
   result.city = slai_match_->city;
   const bool standing = summary.outcome != MatchOutcome::retire && summary.armour > 0.0F;
   if (slai_lineup_) {
@@ -166,12 +171,37 @@ void ScreenRunner::finish_slai_match() {
     result.beaten.emplace_back(match->save_record, slai_leader_flag);
   }
   slai_lineup_.reset();
+  if (slai_story_) {
+    SlaiBattleOutcome story;
+    story.match = result.match;
+    story.regulation = match->regulation;
+    story.score = result.score;
+    story.shootdowns = summary.shootdowns;
+    story.survived = summary.armour > 0.0F;
+    story.brand = slai_brand_;
+    slai_story_after_battle(quest_.slai_story, slai_story_->rules(), story);
+    SDL_Log("S.L.A.I. story: defeated=%lld sponsor=%d (was %d) streak=%d",
+            static_cast<long long>(quest_.slai_story.defeated), quest_.slai_story.sponsor,
+            quest_.slai_story.previous_sponsor, quest_.slai_story.shot_down_streak);
+  }
   const SlaiMatchOutcome outcome = slai_finish_match(quest_, *data, result);
-  SDL_Log("S.L.A.I. result: match=%d shootdowns=%d beaten=%zu cleared=%d prize=%lld "
+  SDL_Log("S.L.A.I. result: match=%d score=%d beaten=%zu cleared=%d prize=%lld "
           "stage %d -> %d",
           result.match, result.score, result.beaten.size(), outcome.cleared ? 1 : 0,
           static_cast<long long>(outcome.prize), outcome.stage_before, outcome.stage_after);
   slai_match_.reset();
+}
+
+void ScreenRunner::note_slai_entry(const std::string &target) {
+  if (target != "slai_battle") {
+    return;
+  }
+  if (const auto *hub = dynamic_cast<const SlaiRumbleScreen *>(screen_.get())) {
+    if (const auto entered = hub->entered()) {
+      slai_entered_ = entered;
+      slai_hub_ = name_;
+    }
+  }
 }
 
 } // namespace phantomcrash

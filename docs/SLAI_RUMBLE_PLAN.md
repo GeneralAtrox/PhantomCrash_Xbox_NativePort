@@ -314,6 +314,22 @@ reports, and which opponents (record, flag) it beat.
   every open city of the day: Club Wired stands in for travelling, which
   is untraced.
 
+### Battle School, the score and the story's counts (done, 2026-10-26)
+
+- Battle School (`data/ui/slai_battle_school.json`, the town map's Battle
+  School) is the Rumble S.L.A.I. hub listing only the tutorial matches
+  (records 24 and 25), once each; Rumble S.L.A.I. leaves them out
+  (`records`, `exclude_records` and `one_per_match` in the hub script). The
+  battle returns to the hub it was entered from.
+- The score: shootdowns × `score_per_shootdown` (10, the balance block), an
+  estimate until the original's count (the player's battle struct + 0x24)
+  is traced. The prize targets and the story's sponsor thresholds read it.
+- After each battle the story's counts move (docs/SLAI_STORY_PLAN.md,
+  "Counts and sponsors"): enemies shot down, the result, and the sponsor
+  kept, lost or offered by the ridden body's brand (`SlaiRobot::maker`).
+  A story scene may play between the battle and the hub (`slai_battle` →
+  `slai_result`, S.L.A.I.'s battle_return → nextday).
+
 ## Gaps found so far
 
 - **Opponent builds** are decoded and fielded (see above). Still undecoded,
@@ -326,12 +342,14 @@ reports, and which opponents (record, flag) it beat.
   lighting (SLAI_CAMPAIGN_RESEARCH.md, "Las Vegas night stage"). The other
   cities' MED effect lists are not imported yet.
 - **Unconfirmed meanings:** the 10 match weights, and what the score
-  compared with the regulation's `+0x20` target counts (see Status).
+  compared with the regulation's `+0x20` target counts (see Status; the
+  port's estimate is 10 a shootdown).
 - **Economy:** S.L.A.I.'s prizes (2,000–25,000) enter the same wallet as Phantom
   Crash money. The defaults stay the original's; the knobs sit in
   `slai_rumble.json`.
 - **Current city:** the original allows rumbles only in the current city.
   How the player travels there is not yet traced, so the hub lists every
   open city (see the entry-rules section).
-- **Not started (optional):** the S.L.A.I. shop, sponsors and English
-  briefings.
+- **Not started (optional):** the S.L.A.I. shop and English briefings.
+  Sponsors are kept by the story (docs/SLAI_STORY_PLAN.md); what a sponsor
+  gives the player in S.L.A.I. is not traced.

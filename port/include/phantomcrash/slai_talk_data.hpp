@@ -97,6 +97,13 @@ struct SlaiTalkMeterBar {
   int period{1};
 };
 
+// partner_path's offsets, one a frame, from the partner's place: up, or
+// right when horizontal (0x271A40).
+struct SlaiTalkPath {
+  bool horizontal{};
+  std::vector<int> steps;
+};
+
 struct SlaiTalkTable {
   std::vector<SlaiTalkOpcode> opcodes;
   std::map<int, SlaiTalkCharacter> characters;
@@ -116,6 +123,7 @@ struct SlaiTalkTable {
   std::vector<std::string> knocker_textures;
   std::vector<std::vector<SlaiTalkMeterBar>> voice_meter; // idle, then by VM[0x1AD]
   int tutorial_record{};
+  std::vector<SlaiTalkPath> partner_paths;
 
   [[nodiscard]] int opcode(std::string_view name) const; // -1 when unknown
   [[nodiscard]] const SlaiTalkCharacter *character(int id) const;

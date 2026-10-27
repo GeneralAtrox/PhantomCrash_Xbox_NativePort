@@ -52,7 +52,8 @@ SlaiTalkScene::SlaiTalkScene(const SlaiTalkTable &table, const SlaiTalkFont &fon
                              SlaiTalkScript script, SlaiTalkMode mode, SlaiTalkBankLoader banks,
                              SlaiTalkSceneOptions options)
     : table_(table), font_(font), script_(std::move(script)), mode_(mode), banks_(std::move(banks)),
-      names_(std::move(options.names)) {
+      names_(std::move(options.names)), selector_(options.partner.selector),
+      partner_texture_(std::move(options.partner.texture)) {
   icons_.fill(-1);
   text_rate(options.text_rate);
   // A talk scene opens on black (the scene before faded out); a town

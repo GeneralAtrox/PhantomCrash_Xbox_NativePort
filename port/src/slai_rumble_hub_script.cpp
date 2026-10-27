@@ -117,6 +117,15 @@ SlaiRumbleHubScript parse_slai_rumble_hub(const json::JsonValue &document) {
     script.special_unmet = strings(required(refusals, "special"));
     script.no_rental = strings(required(refusals, "rental"));
     script.battle = required(document, "battle").string();
+    for (const auto &[key, list] : {std::pair{"records", &script.records},
+                                    std::pair{"exclude_records", &script.exclude_records}}) {
+      if (const auto *items = document.find(key)) {
+        for (const auto &item : items->array()) {
+          list->push_back(static_cast<int>(item.number()));
+        }
+      }
+    }
+    script.one_per_match = document.boolean_or("one_per_match", false);
     if (script.row_step[1] <= 0 || script.badges.empty()) {
       throw std::runtime_error("needs a row step above 0 and badges");
     }

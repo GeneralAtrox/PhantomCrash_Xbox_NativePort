@@ -181,6 +181,12 @@ SlaiTalkTable slai_talk_table_from_json(const json::JsonValue &value) {
     }
   }
   table.tutorial_record = integer(value, "tutorial_record");
+  if (const auto *paths = value.find("partner_paths"); paths != nullptr && paths->is_array()) {
+    for (const auto &path : paths->array()) {
+      table.partner_paths.push_back(
+          {path.boolean_or("horizontal", false), integers(path, "steps")});
+    }
+  }
   return table;
 }
 
