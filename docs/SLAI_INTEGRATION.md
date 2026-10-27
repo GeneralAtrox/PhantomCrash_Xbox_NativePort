@@ -576,8 +576,15 @@ Crash's used SVs average 12 and its dealers' 0. A price curve's `low_scale`
 is 1 in both games, so tuning either way costs more. The balance pass had
 fitted S.L.A.I.'s prices to Phantom Crash's at levels 0 and 99, blended
 between. That gave each level of tuning Phantom Crash's steep price, and the
-junk shop's SVs cost 0.5M to 9M NY (median 1.8M). Two port balance changes
-bring them down:
+junk shop's SVs cost 0.5M to 9M NY (median 1.8M). Three port balance
+changes bring them down:
+
+- **Levels are capped at 10 either way.** Phantom Crash's parts shops sell
+  87% of their goods untuned and nearly all the rest 5 or 10 levels either
+  way. `slai/shop_levels.json` (`level_cap`) holds every part S.L.A.I.'s
+  shops sell, loose or on an SV, to -10..10 when the shops are registered
+  (`shop_stock.py`). Goods the cap makes alike are listed once; `null`
+  keeps S.L.A.I.'s levels. Re-run `register-slai-shops` after changing it.
 
 - **Prices keep S.L.A.I.'s own curve.** `source_shape` (in
   `armour_balance.json` and `weapon_balance.json`) scales a price curve by
@@ -600,12 +607,12 @@ bring them down:
 | Shop (NY) | Before | Now |
 |---|---|---|
 | Omsk, Ma.Fabrik dealers | 127k-568k, median 158k | unchanged |
-| The Mechanist, USED SV | 69k-3.8M, median 147k | 69k-2.4M, median 123k |
-| Junk shop, USED SV | 506k-9.0M, median 1.8M | 253k-3.4M, median 585k |
+| The Mechanist, USED SV | 69k-3.8M, median 147k | 69k-1.7M, median 123k |
+| Junk shop, USED SV | 506k-9.0M, median 1.8M | 253k-1.0M, median 417k |
 | *Wild Machines' used SVs (for reference)* | *60k-2.2M, median 511k* | |
 
-Every junk SV row has one SV of 600k NY or less. The dearest SVs are the
-heavily tuned ones in rows 2 to 5.
+What still costs over 1M NY is premium weapons, such as Zwerg's EMP fist
+(688k NY at level 10), not tuning.
 
 Not imported yet: the Proton, Carro and Hartman dealer lineups, the
 dealers' banner pictures, S.L.A.I.'s options (not the port's modules),

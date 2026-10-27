@@ -1,0 +1,7 @@
+{
+ "notes": [
+  "The levels S.L.A.I.'s shops sell their parts and SVs at (shop_stock.py), a port balance choice. S.L.A.I. tunes its shops' parts up to 20 levels either way and its used and junk SVs' up to 60; a part's price climbs steeply with its level, so a part 60 levels heavy or light cost more than it was worth.",
+  "level_cap holds every level S.L.A.I.'s shops sell (The Mechanist, the junk shop, the dealers, their SVs) to -level_cap..level_cap, as Phantom Crash's shops sell theirs: 87% of its parts shop goods untuned, nearly all the rest 5 or 10 either way. Goods the cap makes alike are listed once. null keeps S.L.A.I.'s own levels. CHIPs are sold untuned in both games."
+ ],
+ "level_cap": 10
+}

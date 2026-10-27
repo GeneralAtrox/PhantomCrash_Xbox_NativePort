@@ -33,6 +33,7 @@ from .campaign import CITIES, CITY_DAY_STRIDE, CITY_DAY_TABLE, DAY_STRIDE, DAY_T
 from .opponent_export import OpponentCatalogue
 from .opponent_table import _robot_record
 from .opponents import CPUS, _row
+from .shop_stock import CATEGORIES, Stock, level_cap
 from .weapon_balance import reference, scale_curve, value
 
 TABLE_FILE = "tables/slai_shops.json"
@@ -60,7 +61,6 @@ SV_BRAND_LIMIT = 8  # 0x5372D0 offers a body brand below this (f_255240)
 LOCKED_SV_ROWS = {10: 0, 11: 4, 12: 7}
 UNLOCK_STAGE = 4
 NONE = 0xFFFF
-CATEGORIES = ("body", "leg", "arm", "shoulder", "option", "paint", "emblem")
 # The dealers S.L.A.I. adds to the port's three (0x4E12A0's shop ids; the
 # message file's profiles). Kojima, Ventuno and American Stars stay Phantom
 # Crash's.
@@ -217,39 +217,6 @@ def _balance(sold, others, native, settings):
             chip[field] = scale_curve(chip[field], factors[0], factors[0], digits)
 
 
-class _Stock:
-    """Lineups appended to the garage, each converted once."""
-
-    def __init__(self, garage, convert):
-        self.garage, self.convert = garage, convert
-        self.robots, self.modules, self.svs = {}, {}, {}
-
-    def robot(self, robot_id):
-        if robot_id not in self.robots:
-            self.robots[robot_id] = len(self.garage["robots"])
-            self.garage["robots"].append(self.convert.robot(robot_id))
-        return self.robots[robot_id]
-
-    def module_lineup(self, key, category, items):
-        if category == CATEGORIES.index("option"):
-            return -1  # S.L.A.I.'s options are not the port's modules
-        if key not in self.modules:
-            lineup = []
-            for sid, level in items:
-                port = self.convert.item(category, sid)
-                if port is not None:
-                    lineup.append({"id": port, "level": level})
-            self.modules[key] = len(self.garage["module_lineups"])
-            self.garage["module_lineups"].append(lineup)
-        return self.modules[key]
-
-    def sv_lineup(self, key, robots):
-        if key not in self.svs:
-            self.svs[key] = len(self.garage["used_sv_lineups"])
-            self.garage["used_sv_lineups"].append([self.robot(r) for r in robots])
-        return self.svs[key]
-
-
 def _sellable(catalogue, robot_id):
     build = catalogue.build(robot_id)
     return build["body"] is not None and build["body"]["maker"] < SV_BRAND_LIMIT
@@ -289,7 +256,7 @@ def shop_tables(disc, assets, pack):
     chips = _chips(program, disc, settings, base_parts, bases["chips"])
     parts["chips"].extend(chips)
     convert = _Converter(catalogue, base_garage, garage, bases["chips"])
-    stock = _Stock(garage, convert)
+    stock = Stock(garage, convert, level_cap())
 
     chip_rows = _rows(program, CHIP_LINEUPS, "<20H", TOWN)
     module_rows = _rows(program, MODULE_LINEUPS, "<28h", TOWN)

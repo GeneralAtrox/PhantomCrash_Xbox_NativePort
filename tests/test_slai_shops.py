@@ -62,3 +62,44 @@ def test_installed_junk_and_dealers():
     assert {name: dealer['shop'] for name, dealer in table['dealers'].items()} == {
         'dealer_omsk': 3, 'dealer_ma_fabrik': 4}
     assert all(len(dealer['profile']) == 11 for dealer in table['dealers'].values())
+
+
+class _Convert:
+    """Ids pass through; robot 7 is tuned 60 heavy and 25 light."""
+
+    def item(self, category, sid):
+        return sid
+
+    def robot(self, robot_id):
+        return {"parts": {"body": {"id": 1, "level": 60}, "legs": {"id": 2, "level": -25},
+                          "left_arm": None, "chip": {"id": 96, "level": 0}}}
+
+
+def test_stock_holds_levels_to_the_cap():
+    from phantomcrash_research.slai.shop_stock import Stock, level_cap
+
+    assert level_cap() == 10
+    garage = {"robots": [], "module_lineups": [], "used_sv_lineups": []}
+    stock = Stock(garage, _Convert(), 10)
+    lineup = stock.module_lineup("k", 0, [(5, 0), (5, 15), (5, 20), (6, -3)])
+    # 15 and 20 both become 10, listed once.
+    assert garage["module_lineups"][lineup] == [
+        {"id": 5, "level": 0}, {"id": 5, "level": 10}, {"id": 6, "level": -3}]
+    robot = garage["robots"][stock.robot(7)]["parts"]
+    assert (robot["body"]["level"], robot["legs"]["level"], robot["left_arm"]) == (10, -10, None)
+    uncapped = Stock({"robots": [], "module_lineups": []}, _Convert())
+    assert uncapped.convert.robot(7)["parts"]["body"]["level"] == 60
+    assert uncapped.level(60) == 60
+
+
+@pytest.mark.private_inputs(SHOPS)
+def test_installed_shop_levels_keep_to_the_cap():
+    from phantomcrash_research.slai.shop_stock import level_cap
+
+    cap = level_cap()
+    table, garage = _read('tables/slai_shops.json'), _read('tables/garage.json')
+    bases = table['bases']
+    for lineup in garage['module_lineups'][bases['module_lineups']:]:
+        assert all(abs(entry['level']) <= cap for entry in lineup)
+    for robot in garage['robots'][bases['robots']:]:
+        assert all(abs(part['level']) <= cap for part in robot['parts'].values() if part)
