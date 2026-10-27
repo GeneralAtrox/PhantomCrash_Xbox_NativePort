@@ -150,3 +150,18 @@ TEST_CASE("without the money Wild Machines says so") {
   CHECK(!logic.purchase().open());
   CHECK(logic.quest().money == 100);
 }
+
+TEST_CASE("a used SV shop's markup scales its SVs' prices, truncated") {
+  Tables shared = tables();
+  shared.parts.bodies[0].price.base = 1001.0F;
+  UsedSvScript script = shipped_script();
+  CHECK(script.price_markup == 1.0F);
+  CHECK(used_sv_offers(script, shared.garage, shared.parts, 0, {})[0].price == 1001);
+  script.price_markup = 0.5F;
+  CHECK(used_sv_offers(script, shared.garage, shared.parts, 0, {})[0].price == 500);
+  // S.L.A.I.'s junk shop sells at half; less would pay to buy and sell off.
+  const auto junk = parse_used_sv(
+      DataRoots::shipped(PHANTOMCRASH_SOURCE_ROOT).document("ui/junk_shop_used_sv.json"));
+  CHECK(junk.price_markup == 0.5F);
+  CHECK(junk.exit_to == "junk_shop");
+}

@@ -147,6 +147,8 @@ def balance_weapons(parts: dict, base_parts: dict, settings: dict | None = None)
                 if found is None:
                     continue
                 pair = list(found[0])
+                if group.get("source_shape"):
+                    pair[1:] = [pair[0]] * (len(pair) - 1)
                 if group.get("cap_to_strongest"):
                     for at, level in enumerate(levels):
                         own = metric(record, group, level, settings)

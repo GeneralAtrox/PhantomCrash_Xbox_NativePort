@@ -26,7 +26,10 @@ std::vector<SvOffer> used_sv_offers(const UsedSvScript &script, const GarageTabl
       maker = parts.bodies[static_cast<std::size_t>(body->id)].maker;
     }
     if (maker < script.gated_maker || unlocked) {
-      offers.push_back({*robot, -1, robot_price(parts, garage, *robot), maker});
+      // Truncated after the multiply, as the dealers' markup is.
+      const double price = static_cast<double>(robot_price(parts, garage, *robot)) *
+                           static_cast<double>(script.price_markup);
+      offers.push_back({*robot, -1, static_cast<std::int64_t>(price), maker});
     }
   }
   return offers;

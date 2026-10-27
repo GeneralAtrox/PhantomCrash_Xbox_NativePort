@@ -86,6 +86,10 @@ UsedSvScript parse_used_sv(const json::JsonValue &document) {
     const auto &gate = required(document, "maker_gate");
     script.gated_maker = integer_of(gate, "from_maker");
     script.unlock_contest = integer_of(gate, "contest");
+    script.price_markup = static_cast<float>(document.number_or("price_markup", 1.0));
+    if (script.price_markup < 0.0F) {
+      throw std::runtime_error("price_markup is negative");
+    }
     script.help_style = member(document, "help", parse_ticker);
     for (const auto &[id, text] : required(document, "help_text").object()) {
       script.help[id] = text.string();

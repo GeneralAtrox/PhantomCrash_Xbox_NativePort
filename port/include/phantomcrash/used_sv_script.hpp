@@ -57,6 +57,9 @@ struct UsedSvScript : TownBasics {
   // is won (0x05f750, 0x096f64).
   int gated_maker{3};
   int unlock_contest{49};
+  // An SV costs its parts' total times this (Wild Machines' 1; a port
+  // addition for S.L.A.I.'s junk shop).
+  float price_markup{1.0F};
 
   TickerStyle help_style;
   std::map<std::string, std::string> help; // "sv" and "exit"

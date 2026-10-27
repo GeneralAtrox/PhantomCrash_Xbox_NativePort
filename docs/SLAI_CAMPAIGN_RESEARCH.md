@@ -688,6 +688,8 @@ port's use is in `docs/SLAI_INTEGRATION.md`.
   (regulation special 7). Faces are `2d/s_chip/<family>.png`.
 - **Prices.** Part levels are signed (-99..99) and the price curves'
   `low_scale` is 1, so a part tuned either way costs more than its base.
+  S.L.A.I.'s own curves climb far less steeply than Phantom Crash's: at
+  level 99 a body costs 45 times its level-0 price, against 241 times.
 - **Paints and stickers.** Prices are in the table at 0x41E090 (not
   imported).
 

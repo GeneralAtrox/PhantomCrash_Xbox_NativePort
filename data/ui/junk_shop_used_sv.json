@@ -1,7 +1,9 @@
 {
  "notes": [
-  "The junk shop's USED SV: The Mechanist's, its stock the junk row's SVs (0x333f70)."
+  "The junk shop's USED SV: The Mechanist's, its stock the junk row's SVs (0x333f70).",
+  "price_markup (a port balance choice): the junk shop sells its SVs for half their parts' total. Its SVs are tuned up to 60 levels either way and would cost up to 6.9M NY at full price. Half is the least it can ask: the shops buy parts, CHIPs, paints and emblems back for half their price (module_shop.json and chip_shop.json sell_rate), so a lower markup would pay to buy an SV and sell it off."
  ],
  "extends": "ui/the_mechanist_used_sv.json",
- "exit_to": "junk_shop"
+ "exit_to": "junk_shop",
+ "price_markup": 0.5
 }

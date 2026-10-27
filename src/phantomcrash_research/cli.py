@@ -197,6 +197,13 @@ def _command_balance_slai_weapons(arguments: argparse.Namespace) -> int:
     return 0
 
 
+def _command_balance_slai_prices(arguments: argparse.Namespace) -> int:
+    from .slai.price_shape import reshape_pack
+
+    print(json.dumps(reshape_pack(Path(arguments.output))))
+    return 0
+
+
 def _command_register_slai_talk(arguments: argparse.Namespace) -> int:
     from .slai.talk_register import register_talk
 
@@ -328,6 +335,10 @@ def build_parser() -> argparse.ArgumentParser:
     balance.add_argument("--assets", default=str(DEFAULT_ASSETS))
     balance.add_argument("--output", default=str(DEFAULT_MODS))
     balance.set_defaults(handler=_command_balance_slai_weapons)
+    prices = commands.add_parser("balance-slai-prices",
+                                 help="Refit an installed pack's S.L.A.I. prices to S.L.A.I.'s own curves")
+    prices.add_argument("--output", default=str(DEFAULT_MODS))
+    prices.set_defaults(handler=_command_balance_slai_prices)
     talk = commands.add_parser("register-slai-talk",
                                help="Convert S.L.A.I.'s talk scenes into an installed asset root")
     talk.add_argument("disc")

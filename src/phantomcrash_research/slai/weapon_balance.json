@@ -2,7 +2,8 @@
  "notes": [
   "Balance pass for the S.L.A.I. weapons, a port adaptation (weapon_balance.py). S.L.A.I.'s tables use their own scale: its weapons hit two to five times harder (splash up to a hundred times), weigh about two and a half times as much and cost about twenty times as much as Phantom Crash's. Each imported weapon is scaled to Phantom Crash's weapons of the same table and weapon kind, so it sits among them while keeping its rank within S.L.A.I.'s.",
   "Each group sums its measure fields (damage is direct plus splash) and compares the median of Phantom Crash's weapons with S.L.A.I.'s at each level in levels; the ratio, blended between the two levels, scales every curve in the group, so a weapon keeps its share of direct and splash damage and both the starting value and the growth follow Phantom Crash's. per_second groups measure value x rounds x 60 / fire_frames for rate_kinds (beams and melee by the hit). A group with cap_to_strongest (damage; a dear or heavy weapon is no stronger for it) then lowers any weapon still above the strongest Phantom Crash weapon of its kind to it, by the group's measure and by each field's single hit: S.L.A.I.'s fuel-air and rocket weapons have splash far past anything in Phantom Crash, and one hit of it would take most of a body's armour.",
-  "fire_frames, rounds, ammo, recharge, splash radius and flight stay S.L.A.I.'s: they make each weapon what it is. reference sold measures against the weapons Phantom Crash's shops sell (priced at one of levels), not its enemies' own (named 敵, priced 0, whose flat curves skewed the medians by up to 2.8 times). A kind with fewer than min_samples Phantom Crash weapons that have the group is measured against all the table's that do. The source values stay in slai/source_stats.json; each weapon records its factors in slai_balance. enabled false installs S.L.A.I.'s values unchanged."
+  "fire_frames, rounds, ammo, recharge, splash radius and flight stay S.L.A.I.'s: they make each weapon what it is. reference sold measures against the weapons Phantom Crash's shops sell (priced at one of levels), not its enemies' own (named 敵, priced 0, whose flat curves skewed the medians by up to 2.8 times). A kind with fewer than min_samples Phantom Crash weapons that have the group is measured against all the table's that do. The source values stay in slai/source_stats.json; each weapon records its factors in slai_balance. enabled false installs S.L.A.I.'s values unchanged.",
+  "source_shape (price): a price keeps S.L.A.I.'s own curve, scaled by the level-0 factor alone, so an untuned part costs what Phantom Crash's do while tuning costs what S.L.A.I. charges for it relative to the part (at level 99 a fifth of Phantom Crash's for bodies and legs, a third for weapons). Blending to the level-99 factor gave tuned parts Phantom Crash's far steeper price, and S.L.A.I.'s used and junk SVs, tuned up to 60 levels either way, cost up to 9M NY. slai/price_shape.py refits a pack balanced before this (balance-slai-prices)."
  ],
  "enabled": true,
  "levels": [0, 99],
@@ -12,6 +13,6 @@
  "groups": {
   "damage": {"measure": ["damage", "blast_damage"], "per_second": true, "cap_to_strongest": true, "scalars": ["damage_min"], "round": 0},
   "weight": {"measure": ["weight"], "round": 2},
-  "price": {"measure": ["price"], "round": 0}
+  "price": {"measure": ["price"], "round": 0, "source_shape": true}
  }
 }

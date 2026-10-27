@@ -2,10 +2,12 @@
  "notes": [
   "Balance pass for the S.L.A.I. bodies and legs, a port adaptation (armour_balance.py). S.L.A.I.'s tables are on their own scale against the parts Phantom Crash's shops sell: its bodies start about 1.6 times as strong and 1.4 times as heavy, its legs about 1.6 times as strong, 1.4 times as heavy and 1.7 times as able to carry, and both cost about ten times as much at level 0 and twice as much at 99. With the weapons fitted to Phantom Crash's (weapon_balance.json) a S.L.A.I. robot took about twice the shots to bring down, and its legs carried twice Phantom Crash's spare load.",
   "Per table and field, the median of Phantom Crash's parts over the median of S.L.A.I.'s at each of levels gives a factor; the factors, blended between the two levels, scale every S.L.A.I. part's curve, so each keeps its rank among S.L.A.I.'s while the table as a whole sits among Phantom Crash's. Weight and capacity are scaled alike, so a robot's spare load (capacity less body and legs) and its load factor match Phantom Crash's. Each part records its factors in slai_balance.",
-  "reference sold measures against the parts the shops sell (priced at one of levels), not the enemies' own (named 敵, priced 0, with flat or falling curves). fields names the curves scaled per table; movement (speed, jump, turn, dodge) stays as registered. enabled false keeps S.L.A.I.'s own values."
+  "reference sold measures against the parts the shops sell (priced at one of levels), not the enemies' own (named 敵, priced 0, with flat or falling curves). fields names the curves scaled per table; movement (speed, jump, turn, dodge) stays as registered. enabled false keeps S.L.A.I.'s own values.",
+  "source_shape (price): a price keeps S.L.A.I.'s own curve, scaled by the level-0 factor alone, so an untuned part costs what Phantom Crash's do while tuning costs what S.L.A.I. charges for it relative to the part (at level 99 a fifth of Phantom Crash's for bodies and legs, a third for weapons). Blending to the level-99 factor gave tuned parts Phantom Crash's far steeper price, and S.L.A.I.'s used and junk SVs, tuned up to 60 levels either way, cost up to 9M NY. slai/price_shape.py refits a pack balanced before this (balance-slai-prices)."
  ],
  "enabled": true,
  "levels": [0, 99],
  "reference": "sold",
+ "source_shape": ["price"],
  "tables": {"bodies": ["armour", "weight", "price"], "legs": ["armour", "weight", "capacity", "price"]}
 }

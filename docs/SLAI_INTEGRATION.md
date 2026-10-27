@@ -568,9 +568,44 @@ Each shop sells only its own game's records. A variant's `"stock"` in
 - A partner chip whose record names a S.L.A.I. type (`slai_type` 2-9)
   talks as that partner.
 
-Junk SV prices are high: S.L.A.I.'s parts carry signed levels (-99..99)
-and its price curves have `low_scale` 1, so tuned parts cost more in both
-directions (median about 1.8M NY). This is the original data.
+### SV prices (2026-10-27)
+
+S.L.A.I. sells SVs tuned far harder than Phantom Crash does: the junk
+shop's parts average 17 levels from 0 and reach 60 either way. Phantom
+Crash's used SVs average 12 and its dealers' 0. A price curve's `low_scale`
+is 1 in both games, so tuning either way costs more. The balance pass had
+fitted S.L.A.I.'s prices to Phantom Crash's at levels 0 and 99, blended
+between. That gave each level of tuning Phantom Crash's steep price, and the
+junk shop's SVs cost 0.5M to 9M NY (median 1.8M). Two port balance changes
+bring them down:
+
+- **Prices keep S.L.A.I.'s own curve.** `source_shape` (in
+  `armour_balance.json` and `weapon_balance.json`) scales a price curve by
+  its level-0 factor throughout. An untuned part costs what it did, so the
+  dealers' SVs do too. Tuning costs S.L.A.I.'s share of the part's price:
+  at level 99, a fifth of Phantom Crash's for bodies and legs, and about a
+  third for weapons. Part prices, tune-ups and sale values follow, as they
+  all read the curve. A pack installed before this is refitted in place
+  from each part's recorded factors:
+
+  ```bash
+  python -m phantomcrash_research.cli balance-slai-prices --output artifacts/slai/assets
+  ```
+
+- **The junk shop sells at half.** `price_markup` 0.5 in
+  `ui/junk_shop_used_sv.json` (UsedSvScript, default 1). Half is the floor:
+  the shops buy parts, CHIPs, paints and emblems back at half their price,
+  so selling an SV off returns at most what it cost.
+
+| Shop (NY) | Before | Now |
+|---|---|---|
+| Omsk, Ma.Fabrik dealers | 127k-568k, median 158k | unchanged |
+| The Mechanist, USED SV | 69k-3.8M, median 147k | 69k-2.4M, median 123k |
+| Junk shop, USED SV | 506k-9.0M, median 1.8M | 253k-3.4M, median 585k |
+| *Wild Machines' used SVs (for reference)* | *60k-2.2M, median 511k* | |
+
+Every junk SV row has one SV of 600k NY or less. The dearest SVs are the
+heavily tuned ones in rows 2 to 5.
 
 Not imported yet: the Proton, Carro and Hartman dealer lineups, the
 dealers' banner pictures, S.L.A.I.'s options (not the port's modules),

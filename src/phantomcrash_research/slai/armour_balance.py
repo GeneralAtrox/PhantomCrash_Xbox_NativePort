@@ -55,6 +55,8 @@ def balance_armour(parts: dict, base_parts: dict, settings: dict | None = None) 
             pair = factors(native, imported, field, levels)
             if pair is None:
                 continue
+            if field in settings.get("source_shape", []):
+                pair = [pair[0]] * len(pair)
             report.setdefault(table, {})[field] = [round(f, 4) for f in pair]
             for record in _curves(imported, field):
                 record[field] = scale_curve(record[field], *pair, 0)
