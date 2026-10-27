@@ -6,6 +6,7 @@
 #include "phantomcrash/menu_screen.hpp"
 
 #include <algorithm>
+#include <cstdlib>
 #include <stdexcept>
 
 namespace phantomcrash {
@@ -95,6 +96,7 @@ TuneMeter parse_meter(const json::JsonValue &value) {
   meter.marker_step = number_of(value, "marker_step");
   meter.price = member(value, "price", parse_number_style);
   meter.poor_colour = parse_colour(required(value, "poor_colour").string());
+  meter.refund_colour = parse_colour(value.string_or("refund_colour", "#80dfff"));
   meter.layer = integer_of(value, "layer");
   meter.help = required(value, "help").string();
   return meter;
@@ -183,6 +185,19 @@ std::int64_t tune_price(const PartTables &parts, const GarageTables &garage, con
     return to + from - 2 * zero;
   }
   return to > from ? to - from : from - to;
+}
+
+std::int64_t refunded_tune_price(const PartTables &parts, const GarageTables &garage,
+                                 const Goods &goods, const int level, const std::int64_t paid) {
+  const bool crosses = goods.level * level < 0;
+  if (!crosses && std::abs(level) >= std::abs(goods.level)) {
+    return tune_price(parts, garage, goods, level);
+  }
+  const Goods lower{goods.kind, goods.id, crosses ? 0 : level};
+  const std::int64_t back =
+      std::min(tune_price(parts, garage, goods, lower.level),
+               std::max<std::int64_t>(0, paid - goods_price(parts, garage, lower)));
+  return (crosses ? tune_price(parts, garage, lower, level) : 0) - back;
 }
 
 } // namespace phantomcrash

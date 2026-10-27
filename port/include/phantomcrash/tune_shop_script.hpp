@@ -58,6 +58,8 @@ struct TuneMeter {
   float marker_step{1.0F};
   NumberStyle price;
   std::uint32_t poor_colour{0xff0000};
+  // The price when tuning pays back (Settings > Full Refunds, a port addition).
+  std::uint32_t refund_colour{0x80dfff};
   int layer{};
   std::string help;
 };
@@ -110,5 +112,12 @@ struct TuneShopScript : TownBasics {
 // way to level 0 and on from it.
 [[nodiscard]] std::int64_t tune_price(const PartTables &parts, const GarageTables &garage,
                                       const Goods &goods, int level);
+// A tune-up with Settings > Full Refunds (a port addition); negative is
+// money back. The way toward level 0 pays back its price, up to what the
+// part cost (`paid`) above its price at the level it comes down to, so
+// tuning 0 to 10 and back to 5 costs what 0 to 5 does; the way out from
+// level 0 costs as tune_price.
+[[nodiscard]] std::int64_t refunded_tune_price(const PartTables &parts, const GarageTables &garage,
+                                               const Goods &goods, int level, std::int64_t paid);
 
 } // namespace phantomcrash

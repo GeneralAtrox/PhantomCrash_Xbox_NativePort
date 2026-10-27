@@ -620,7 +620,11 @@ changes bring them down:
   price (so the junk shop's half-price SVs refund half), and every tune-up
   and uplift on top. A part never bought (a new game's, a prize, a cheat's)
   and a paint or emblem refund their whole price. Nothing resells at a
-  profit. The switch reaches the shops as they open.
+  profit. Tuning back toward level 0 pays back too (`refunded_tune_price`,
+  the meter's price in `refund_colour`): the step's price difference, up to
+  what the part cost above its price at the new level, so tuning 0 to 10
+  and back to 5 costs what 0 to 5 does, and a part bought tuned never comes
+  back below its untuned price. The switch reaches the shops as they open.
 
 | Shop (NY) | Before | Now |
 |---|---|---|

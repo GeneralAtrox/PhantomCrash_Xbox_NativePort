@@ -38,7 +38,16 @@ Goods TuneShop::tuned() const {
 
 std::int64_t TuneShop::price() const {
   const ShopGoods *line = chosen();
-  return line != nullptr ? tune_price(parts_, garage_, line->goods, level_) : 0;
+  if (line == nullptr) {
+    return 0;
+  }
+  if (!full_refunds_) {
+    return tune_price(parts_, garage_, line->goods, level_);
+  }
+  const auto item = quest_.garage.stock.find(line->stock);
+  const std::int64_t paid =
+      item != quest_.garage.stock.end() ? item->second.paid.value_or(line->price) : line->price;
+  return refunded_tune_price(parts_, garage_, line->goods, level_, paid);
 }
 
 std::optional<LoadStats> TuneShop::fitted_load() const {
@@ -275,7 +284,7 @@ void TuneShop::tune() {
   ShopGoods &line = *list_.chosen();
   StockItem &item = quest_.garage.stock[line.stock];
   const std::int64_t cost = price();
-  quest_.money -= cost;
+  quest_.money = std::min(quest_.money - cost, money_limit);
   item.paid = item.paid.value_or(line.price) + cost;
   line.goods.level = level_;
   line.price = goods_price(parts_, garage_, line.goods);

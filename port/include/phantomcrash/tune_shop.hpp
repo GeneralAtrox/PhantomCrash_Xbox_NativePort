@@ -79,7 +79,11 @@ public:
     return level_;
   }
   [[nodiscard]] Goods tuned() const;
+  // Negative is money back (Settings > Full Refunds, refunded_tune_price).
   [[nodiscard]] std::int64_t price() const;
+  void set_full_refunds(const bool on) noexcept {
+    full_refunds_ = on;
+  }
   // The chosen part's robot with the part at the level chosen; none for a
   // part not fitted.
   [[nodiscard]] std::optional<LoadStats> fitted_load() const;
@@ -129,6 +133,7 @@ private:
   double list_seconds_{};
   double meter_seconds_{};
   int level_{};
+  bool full_refunds_{};
   std::string message_;
   After after_{After::list};
   int choice_{1};

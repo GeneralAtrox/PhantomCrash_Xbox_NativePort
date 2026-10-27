@@ -135,6 +135,26 @@ TEST_CASE("a part bought tuned costs a share of the tune-up; the tune-up stays w
         goods_price(shop.parts, shop.garage, five));
 }
 
+TEST_CASE("with full refunds, tuning back toward 0 pays back up to what the part cost") {
+  Shop shop;
+  shop.garage.tuned_share = 0.5; // 1000 + 100 a level on the curve; half of that bought tuned
+  const Goods ten{GoodsKind::arm, 0, 10};
+  const auto refunded = [&](const Goods &goods, const int level, const std::int64_t paid) {
+    return refunded_tune_price(shop.parts, shop.garage, goods, level, paid);
+  };
+  // Bought untuned (1000) and tuned to 10 (1000 more): back to 5 pays 500
+  // back, leaving it at what tuning 0 to 5 costs.
+  CHECK(refunded(ten, 5, 2000) == -500);
+  CHECK(refunded(ten, 12, 2000) == tune_price(shop.parts, shop.garage, ten, 12));
+  CHECK(refunded(ten, -3, 2000) == 300 - 1000); // down to 0, then on to -3
+  // Bought tuned (1500), it never comes back below its price untuned.
+  CHECK(refunded(ten, 0, 1500) == -500);
+  CHECK(refunded(ten, 5, 1500) == -(1500 - 1250));
+  // Up and back down again comes out even.
+  const Goods five{GoodsKind::arm, 0, 5};
+  CHECK(refunded(five, 10, 1250) + refunded(ten, 5, 1250 + 500) == 0);
+}
+
 TEST_CASE("the icons do not wrap; cancel jumps to EXIT and EXIT leaves") {
   const Shop shop;
   TuneShop logic = opened(shop, 0);

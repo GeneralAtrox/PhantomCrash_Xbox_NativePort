@@ -7,6 +7,7 @@
 
 #include <cmath>
 #include <cstdlib>
+#include <cstdlib>
 #include <utility>
 
 namespace phantomcrash {
@@ -215,8 +216,10 @@ void TuneShopScreen::draw_meter(DrawList &list) const {
   const std::int64_t cost = logic_.price();
   if (cost > logic_.quest().money) {
     price.colour = meter.poor_colour;
+  } else if (cost < 0) {
+    price.colour = meter.refund_colour;
   }
-  for (const Sprite &sprite : money_sprites(hud(), price, shown_ny(cost), meter.layer)) {
+  for (const Sprite &sprite : money_sprites(hud(), price, shown_ny(std::abs(cost)), meter.layer)) {
     list.sprite(sprite);
   }
 }

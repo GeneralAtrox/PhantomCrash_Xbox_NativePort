@@ -289,6 +289,7 @@ std::unique_ptr<Screen> GameScreens::make(const std::string &name, const std::st
   }
   if (name == "plustech_customize") {
     TuneShop logic(customize_, quest, parts_, garage_, part_stats_);
+    logic.set_full_refunds(full_refunds_);
     return std::make_unique<TuneShopScreen>(textures_, font_, std::move(logic), message_box_, from,
                                             frame_, credits_, quest, preview_world(),
                                             robot_preview_);
