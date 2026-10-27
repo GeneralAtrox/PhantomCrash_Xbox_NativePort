@@ -99,6 +99,12 @@ TEST_CASE("the town map starts on the place it was opened from") {
   CHECK(town("event_140").place() == 2);
   CHECK(town("dealer_kojima").place() == 6);
   CHECK(town("somewhere_else").place() == 0);
+  // S.L.A.I.'s places have no start_places entries: their own screens find them.
+  const auto slai_town = [](const std::string &from) { return TownMap(shipped(true), from, {}); };
+  CHECK(slai_town("difference_eg").place() == 2);
+  CHECK(slai_town("junk_shop").place() == 8);
+  CHECK(slai_town("dealer_omsk").place() == 11);
+  CHECK(slai_town("wild_machines").place() == 3);
 }
 
 TEST_CASE("the town map's cursor steps round the places and waits for the rider") {

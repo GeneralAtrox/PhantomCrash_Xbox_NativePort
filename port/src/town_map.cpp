@@ -34,12 +34,16 @@ TownMap::TownMap(TownMapScript script, const std::string &from, QuestSave quest)
     : script_(std::move(script)), quest_(std::move(quest)),
       fade_(script_.fade_in, script_.fade_out),
       repeat_(script_.repeat_delay, script_.repeat_interval) {
-  if (const auto start = script_.start_places.find(from); start != script_.start_places.end()) {
-    const auto found = std::ranges::find_if(
-        script_.places, [&](const TownPlace &place) { return place.id == start->second; });
-    if (found != script_.places.end()) {
-      place_ = static_cast<int>(found - script_.places.begin());
-    }
+  // Back from a place, the cursor starts on it: start_places names it for
+  // screens that are not a place's own (story events), else the place whose
+  // next is the screen left (so S.L.A.I.'s and modded places need no entry).
+  const auto start = script_.start_places.find(from);
+  const auto found = std::ranges::find_if(script_.places, [&](const TownPlace &place) {
+    return start != script_.start_places.end() ? place.id == start->second
+                                               : !from.empty() && place.next == from;
+  });
+  if (found != script_.places.end()) {
+    place_ = static_cast<int>(found - script_.places.begin());
   }
   previous_ = place_;
   // Turned to the start, forward's first step goes to whichever neighbour
