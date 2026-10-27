@@ -132,3 +132,23 @@ TEST_CASE("an SV's price adds up its modules, paint and emblem") {
   tables.emblems[7].price = 3;
   CHECK(robot_price(parts, tables, robot_with_modules({0, 0})) == 1043);
 }
+
+TEST_CASE("a bought SV's parts record their share of what it cost, and keep it saved") {
+  PartTables parts;
+  parts.chips.push_back(ChipRecord{});
+  GarageTables tables;
+  tables.modules.push_back({"TURBO", 1.0F, 500});
+  tables.paints.assign(3, {"PAINT", 40});
+  tables.emblems.assign(8, {"EMBLEM", 3});
+  Garage garage = new_game_garage(garage_new_game_hangars);
+  const RobotRecord robot = robot_with_modules({0, 0});
+  REQUIRE(install_robot(garage, 0, robot, parts, tables, 1043 / 2) >= 0);
+  for (const int module : garage.hangars[0].modules) {
+    CHECK(garage.stock.at(module).paid == 249); // 500 of 1043, of 521
+  }
+  CHECK(garage.stock.at(garage.hangars[0].part(PartSlot::body)).paid == 0);
+
+  REQUIRE(install_robot(garage, 1, robot, parts, tables) >= 0); // not bought
+  CHECK(!garage.stock.at(garage.hangars[1].modules[0]).paid);
+  CHECK(garage_from_json(garage_to_json(garage)) == garage);
+}

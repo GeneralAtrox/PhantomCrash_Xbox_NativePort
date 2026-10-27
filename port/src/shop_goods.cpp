@@ -114,6 +114,15 @@ std::vector<ShopGoods> goods_owned(const PartStatsTable &table, const PartTables
   return goods;
 }
 
+void refund_prices(std::vector<ShopGoods> &goods, const PartTables &parts,
+                   const GarageTables &garage, const Garage &owned) {
+  for (ShopGoods &line : goods) {
+    const auto stock = owned.stock.find(line.stock);
+    const std::int64_t price = goods_price(parts, garage, line.goods);
+    line.price = stock != owned.stock.end() ? stock->second.paid.value_or(price) : price;
+  }
+}
+
 void GoodsList::assign(std::vector<ShopGoods> goods, const bool flip) {
   goods_ = std::move(goods);
   row_ = scroll_ = 0;
@@ -140,13 +149,12 @@ namespace {
 
 // By name (key 0) or price (key 1), in the order `flip` names.
 void order(std::vector<ShopGoods> &goods, const int key, const bool flip) {
-  std::stable_sort(goods.begin(), goods.end(),
-                   [key, flip](const ShopGoods &a, const ShopGoods &b) {
-                     if (key == 0) {
-                       return flip ? a.name < b.name : b.name < a.name;
-                     }
-                     return flip ? b.price < a.price : a.price < b.price;
-                   });
+  std::stable_sort(goods.begin(), goods.end(), [key, flip](const ShopGoods &a, const ShopGoods &b) {
+    if (key == 0) {
+      return flip ? a.name < b.name : b.name < a.name;
+    }
+    return flip ? b.price < a.price : a.price < b.price;
+  });
 }
 
 } // namespace

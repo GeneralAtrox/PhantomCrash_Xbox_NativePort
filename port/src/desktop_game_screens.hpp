@@ -91,6 +91,10 @@ public:
   void set_open_contests(const bool open) noexcept {
     open_contests_ = open;
   }
+  // Settings > Full Refunds: the shops opened next pay back what was paid.
+  void set_full_refunds(const bool on) noexcept {
+    full_refunds_ = on;
+  }
   // The live RUMBLING's robots an area (settings "rumble_robots"; 0 the
   // original's roster size).
   void set_rumble_robots(const int robots) noexcept {
@@ -198,6 +202,7 @@ private:
   std::map<std::string, SlaiRumbleHubScript, std::less<>> slai_hubs_;
   SleepScript sleep_;
   bool open_contests_{};
+  bool full_refunds_{};
   ScheduleScript schedule_;
   RecordsScript records_;
   BattleMusicScript battle_music_;

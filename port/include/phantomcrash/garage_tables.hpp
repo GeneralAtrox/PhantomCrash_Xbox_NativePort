@@ -131,8 +131,10 @@ void add_module_bonuses(CombatStats &combat, const GarageTables &garage,
 
 // Fits a SV into an empty hangar, adding each part and module to the stock
 // (0x01da04): the CHIP's stock entry is named after its record. Returns the
-// CHIP's stock index, or -1 when the stock is too full.
+// CHIP's stock index, or -1 when the stock is too full. `price`, the SV's
+// when bought: each part and module records its share as paid, the share
+// its own price is of robot_price.
 int install_robot(Garage &garage, int hangar, const RobotRecord &robot, const PartTables &parts,
-                  const GarageTables &tables);
+                  const GarageTables &tables, std::optional<std::int64_t> price = std::nullopt);
 
 } // namespace phantomcrash

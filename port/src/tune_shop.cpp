@@ -273,10 +273,13 @@ void TuneShop::meter_input(const double tick_seconds, const InputFrame &input) {
 // off.
 void TuneShop::tune() {
   ShopGoods &line = *list_.chosen();
-  quest_.money -= price();
+  StockItem &item = quest_.garage.stock[line.stock];
+  const std::int64_t cost = price();
+  quest_.money -= cost;
+  item.paid = item.paid.value_or(line.price) + cost;
   line.goods.level = level_;
   line.price = goods_price(parts_, garage_, line.goods);
-  quest_.garage.stock[line.stock].level = level_;
+  item.level = level_;
   sound(script_.trade_sound);
   std::string said = "tuned";
   if (line.goods.kind == GoodsKind::body && line.hangar >= 0) {

@@ -167,6 +167,8 @@ public:
   void set_skip_conversations(bool skip) noexcept {
     skip_conversations_ = skip;
   }
+  // Settings > Full Refunds, for the shops opened next.
+  void set_full_refunds(bool on);
   void cheat(const CheatRequest &request);
   // Go to Day's entries: each calendar day and the rankers' contests on it.
   [[nodiscard]] std::vector<std::string> cheat_days() const;

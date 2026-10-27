@@ -193,6 +193,9 @@ struct Settings {
   bool frame_counter{};
   bool pause_unfocused{true};
   bool skip_conversations{}; // story conversations never play (their scenes still count as seen)
+  // The shops pay back what the goods cost (StockItem::paid), not
+  // sell_rate of their price; off, as the original. A port addition.
+  bool full_refunds{};
   bool experimental_coop{true};
   bool slai_enabled{};
   // The separate files older builds kept for each content mode

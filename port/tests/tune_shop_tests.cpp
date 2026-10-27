@@ -162,7 +162,8 @@ TEST_CASE("an arm weapon tuned heavier, paid for and kept at its new level") {
   CHECK(logic.chosen()->name == "GUN-A"); // by name
   tap(logic, script.down);
   REQUIRE(logic.chosen()->name == "GUN-B");
-  CHECK(logic.chosen()->side == 1); // the second of the pair of arm slots
+  const std::int64_t worth = logic.chosen()->price; // never bought: its price
+  CHECK(logic.chosen()->side == 1);                 // the second of the pair of arm slots
   tap(logic, script.confirm_buttons);
   REQUIRE(logic.view() == TuneShopView::meter);
   CHECK(logic.help_text() == script.meter.help);
@@ -180,6 +181,7 @@ TEST_CASE("an arm weapon tuned heavier, paid for and kept at its new level") {
   CHECK(logic.message() == "tuned");
   CHECK(logic.quest().money == 4700);
   CHECK(logic.quest().garage.stock.at(2).level == 8);
+  CHECK(logic.quest().garage.stock.at(2).paid == worth + 300); // for Full Refunds
   tap(logic, script.confirm_buttons);
   CHECK(logic.view() == TuneShopView::list);
   CHECK(logic.chosen()->goods.level == 8);

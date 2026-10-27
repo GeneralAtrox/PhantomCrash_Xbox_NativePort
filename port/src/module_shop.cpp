@@ -184,8 +184,11 @@ void ModuleShop::load_goods() {
   const auto cell = static_cast<std::size_t>(category());
   const GoodsKind kind = *script_.categories[cell].kind;
   if (script_.mode != ModuleShopMode::buy) {
-    list_.assign(goods_owned(table_, parts_, garage_, quest_.garage, kind, script_.sell_rate),
-                 true);
+    auto goods = goods_owned(table_, parts_, garage_, quest_.garage, kind, script_.sell_rate);
+    if (full_refunds_) {
+      refund_prices(goods, parts_, garage_, quest_.garage);
+    }
+    list_.assign(std::move(goods), true);
   } else {
     const int lineup = cell < lineups_.size() ? lineups_[cell] : -1;
     auto goods = goods_for_sale(parts_, garage_, kind, lineup);
@@ -301,7 +304,7 @@ void ModuleShop::buy() {
   const ShopGoods &line = *chosen();
   if (const auto kind = stock_kind(line.goods.kind)) {
     quest_.garage.add_stock(
-        {*kind, line.goods.id, line.goods.level, line.name, -1, chosen_look(line)});
+        {*kind, line.goods.id, line.goods.level, line.name, -1, chosen_look(line), line.price});
   } else {
     auto &owned =
         line.goods.kind == GoodsKind::paint ? quest_.garage.paints : quest_.garage.emblems;

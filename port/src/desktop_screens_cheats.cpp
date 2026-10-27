@@ -1,6 +1,7 @@
 // Tools > Cheats on the running game (docs/CHEATS.md): the switches reach
 // the quest and the battle every tick; a one-off change waits for the next
-// screen, so no screen's own copy of the quest writes over it.
+// screen, so no screen's own copy of the quest writes over it. Settings >
+// Full Refunds, a rule switch like open contests, reaches the shops here too.
 
 #include "desktop_game_screens.hpp"
 #include "desktop_screens.hpp"
@@ -20,6 +21,10 @@ void ScreenRunner::set_cheats(const CheatOptions &cheats) {
   if (richer && !cooperative()) {
     quest_.money = money_limit;
   }
+}
+
+void ScreenRunner::set_full_refunds(const bool on) {
+  game_->set_full_refunds(on);
 }
 
 void ScreenRunner::cheat(const CheatRequest &request) {

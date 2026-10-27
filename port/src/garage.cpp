@@ -53,6 +53,9 @@ StockItem stock_from_json(const JsonValue &value) {
   item.name = value.string_or("name", "");
   item.hangar = integer_or(value, "hangar", -1);
   item.look = integer_or(value, "look", -1);
+  if (const auto *paid = value.find("paid"); paid != nullptr && paid->is_number()) {
+    item.paid = std::max<std::int64_t>(0, static_cast<std::int64_t>(paid->number()));
+  }
   return item;
 }
 
@@ -99,6 +102,9 @@ JsonValue stock_to_json(const std::map<int, StockItem> &stock) {
     };
     if (item.look >= 0) {
       entry.emplace_back("look", number(item.look));
+    }
+    if (item.paid) {
+      entry.emplace_back("paid", JsonValue{*item.paid});
     }
     out.push_back(JsonValue{std::move(entry)});
   }

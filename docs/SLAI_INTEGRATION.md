@@ -612,6 +612,15 @@ changes bring them down:
   shops pay back sell_rate of the same price, so nothing resells at a
   profit. Tune-ups, CHIP uplifts and repairs still cost the whole curve
   (`part_list_price`).
+- **Settings > Full Refunds When Selling**, an option beside them
+  (`full_refunds` in the settings file, off by default, as the original): the shops pay back what the goods
+  cost instead of sell_rate of their price, so trying parts costs nothing.
+  Each stock entry records what was paid for it (`StockItem::paid`, saved as
+  `paid`): its price in the parts or CHIP shop, its share of a bought SV's
+  price (so the junk shop's half-price SVs refund half), and every tune-up
+  and uplift on top. A part never bought (a new game's, a prize, a cheat's)
+  and a paint or emblem refund their whole price. Nothing resells at a
+  profit. The switch reaches the shops as they open.
 
 | Shop (NY) | Before | Now |
 |---|---|---|

@@ -172,6 +172,7 @@ Settings settings_from_json(const json::JsonValue &value) {
   settings.frame_counter = value.boolean_or("frame_counter", settings.frame_counter);
   settings.pause_unfocused = value.boolean_or("pause_unfocused", settings.pause_unfocused);
   settings.skip_conversations = value.boolean_or("skip_conversations", settings.skip_conversations);
+  settings.full_refunds = value.boolean_or("full_refunds", settings.full_refunds);
   settings.experimental_coop = value.boolean_or("experimental_coop", settings.experimental_coop);
   settings.slai_enabled = value.boolean_or("slai_enabled", false);
   settings.content_profiles_merged = value.boolean_or("content_profiles_merged", false);
@@ -273,6 +274,7 @@ json::JsonValue settings_to_json(const Settings &settings) {
       {"frame_counter", JsonValue{settings.frame_counter}},
       {"pause_unfocused", JsonValue{settings.pause_unfocused}},
       {"skip_conversations", JsonValue{settings.skip_conversations}},
+      {"full_refunds", JsonValue{settings.full_refunds}},
       {"experimental_coop", JsonValue{settings.experimental_coop}},
       {"slai_enabled", JsonValue{settings.slai_enabled}},
       {"content_profiles_merged", JsonValue{settings.content_profiles_merged}},

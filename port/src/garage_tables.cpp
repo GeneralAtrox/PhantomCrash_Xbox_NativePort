@@ -258,10 +258,21 @@ void add_module_bonuses(CombatStats &combat, const GarageTables &garage,
 }
 
 int install_robot(Garage &garage, const int hangar, const RobotRecord &robot,
-                  const PartTables &parts, const GarageTables &tables) {
+                  const PartTables &parts, const GarageTables &tables,
+                  const std::optional<std::int64_t> price) {
   if (hangar < 0 || hangar >= garage_hangar_count || robot.stock_needed() > garage.free_stock()) {
     return -1;
   }
+  const std::int64_t listed = robot_price(parts, tables, robot);
+  const auto paid = [&](const PartKind kind, const int id,
+                        const int level) -> std::optional<std::int64_t> {
+    if (!price || listed <= 0) {
+      return std::nullopt;
+    }
+    const auto share = static_cast<double>(*price) / static_cast<double>(listed);
+    return static_cast<std::int64_t>(
+        static_cast<double>(part_price(parts, tables, kind, id, level)) * share);
+  };
   Hangar &bay = garage.hangars[static_cast<std::size_t>(hangar)];
   bay.parts.fill(-1);
   bay.modules.clear();
@@ -270,11 +281,13 @@ int install_robot(Garage &garage, const int hangar, const RobotRecord &robot,
       const PartKind kind = slot_kind(static_cast<PartSlot>(slot));
       const std::string name =
           kind == PartKind::chip ? part_name(parts, tables, kind, part->id) : std::string{};
-      bay.parts[slot] = garage.add_stock({kind, part->id, part->level, name, hangar});
+      bay.parts[slot] = garage.add_stock(
+          {kind, part->id, part->level, name, hangar, -1, paid(kind, part->id, part->level)});
     }
   }
   for (const int module : robot.modules) {
-    bay.modules.push_back(garage.add_stock({PartKind::module, module, 0, {}, hangar}));
+    bay.modules.push_back(garage.add_stock(
+        {PartKind::module, module, 0, {}, hangar, -1, paid(PartKind::module, module, 0)}));
   }
   bay.name = robot.name;
   bay.paint = robot.paint;

@@ -112,6 +112,10 @@ public:
     looks_ = std::move(looks);
   }
   [[nodiscard]] bool offers_look(const ShopGoods &line) const;
+  // Settings > Full Refunds: selling pays back what the goods cost.
+  void set_full_refunds(const bool on) noexcept {
+    full_refunds_ = on;
+  }
   [[nodiscard]] int shown_part(const ShopGoods &line) const;
 
   [[nodiscard]] const std::string &message() const noexcept {
@@ -175,6 +179,7 @@ private:
   std::string help_;
   double help_seconds_{};
   PartLooks looks_;
+  bool full_refunds_{};
   std::map<std::pair<GoodsKind, int>, int> looks_chosen_; // by goods kind and part
 };
 

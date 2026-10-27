@@ -192,6 +192,13 @@ TEST_CASE("the day's lineup and the player's goods") {
   CHECK(bodies[1].stock >= 0);
   CHECK(goods_owned(shop.table, shop.parts, shop.garage, owned, GoodsKind::paint, 0.5).size() ==
         0); // paint 4 has no entry; the ground colour is never sold
+
+  // Settings > Full Refunds: what was paid, or the whole price.
+  owned.stock.at(bodies[0].stock).paid = 2000;
+  auto refunds = goods_owned(shop.table, shop.parts, shop.garage, owned, GoodsKind::body, 0.5);
+  refund_prices(refunds, shop.parts, shop.garage, owned);
+  CHECK(refunds[0].price == 2000);
+  CHECK(refunds[1].price == goods_price(shop.parts, shop.garage, refunds[1].goods));
 }
 
 TEST_CASE("the grid wraps, cancel jumps to EXIT and EXIT leaves") {

@@ -30,6 +30,7 @@ struct SettingsMenu::Impl {
   static constexpr UINT slai_command = 0x7209;
   static constexpr UINT skip_conversations_command = 0x7208;
   static constexpr UINT save_location_command = 0x720a;
+  static constexpr UINT full_refunds_command = 0x720b;
   static constexpr UINT first_level_command = 0x7300;
   static constexpr UINT last_level_command = 0x73ff;
 
@@ -62,6 +63,7 @@ struct SettingsMenu::Impl {
     check(pause_unfocused_command, settings.pause_unfocused);
     check(slai_command, settings.slai_enabled);
     check(skip_conversations_command, settings.skip_conversations);
+    check(full_refunds_command, settings.full_refunds);
     if (coop) {
       coop->refresh();
     }
@@ -104,6 +106,9 @@ struct SettingsMenu::Impl {
       break;
     case skip_conversations_command:
       settings.skip_conversations = !settings.skip_conversations;
+      break;
+    case full_refunds_command:
+      settings.full_refunds = !settings.full_refunds;
       break;
     case controls_command:
       edit_host_controls(window, settings.host_controls);
@@ -236,6 +241,8 @@ SettingsMenu::SettingsMenu(void *native_window, const Settings &initial)
                    L"&Pause When Unfocused") ||
       !AppendMenuW(state.menu, MF_STRING, Impl::skip_conversations_command,
                    L"&Skip Story Conversations") ||
+      !AppendMenuW(state.menu, MF_STRING, Impl::full_refunds_command,
+                   L"&Full Refunds When Selling") ||
       !AppendMenuW(state.menu, MF_STRING, Impl::save_location_command, L"Save &Data Location...")) {
     throw std::runtime_error("Unable to fill the Settings menu");
   }

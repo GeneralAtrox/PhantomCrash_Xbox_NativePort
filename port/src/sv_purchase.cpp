@@ -235,7 +235,8 @@ void SvPurchase::hangar_input(const double tick_seconds, const InputFrame &input
     return;
   }
   // 0x3a2fe, 0x25126: fits the SV (its CHIP named after its record), pays.
-  const int chip = install_robot(quest.garage, hangar_, offer_.robot, *parts_, *garage_);
+  const int chip =
+      install_robot(quest.garage, hangar_, offer_.robot, *parts_, *garage_, offer_.price);
   if (chip < 0) {
     say("no_stock", PurchaseView::closed);
     return;

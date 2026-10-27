@@ -74,9 +74,11 @@ void ChipShop::level_input(const double tick_seconds, const InputFrame &input) {
 // 0x032ca8: paid for (sys 27), the CHIP's level in the stock is raised.
 void ChipShop::uplift_chosen() {
   ChipOffer &offer = offers_[static_cast<std::size_t>(cursor_)];
-  quest_.money -= uplift_price();
+  const std::int64_t cost = uplift_price();
+  quest_.money -= cost;
   if (const auto item = quest_.garage.stock.find(offer.stock); item != quest_.garage.stock.end()) {
     item->second.level = level_;
+    item->second.paid = item->second.paid.value_or(offer.price) + cost;
   }
   if (const ChipRecord *chip = record(offer)) {
     // As chips_in_stock prices it (part_price).

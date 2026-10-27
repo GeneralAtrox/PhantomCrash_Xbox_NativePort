@@ -135,8 +135,15 @@ std::unique_ptr<Screen> GameScreens::make_chip_shop(const std::string &name,
     offers = chips_for_sale(parts_, garage_, lineup);
     add_boss_chips(offers, parts_, garage_, contests_, quest.day, quest.won_contests);
   }
+  ChipShopScript terms = script;
+  if (full_refunds_ && script.mode == ChipShopMode::sell) {
+    terms.sell_rate = 1.0; // Settings > Full Refunds: what each CHIP cost
+    for (ChipOffer &offer : offers) {
+      offer.price = quest.garage.stock.at(offer.stock).paid.value_or(offer.price);
+    }
+  }
   int &remembered = dealer_cursors_[name];
-  ChipShop logic(script, std::move(offers), quest, parts_, from == "name_entry" ? remembered : 0);
+  ChipShop logic(terms, std::move(offers), quest, parts_, from == "name_entry" ? remembered : 0);
   logic.set_tuned_share(garage_.tuned_share);
   return std::make_unique<ChipShopScreen>(textures_, font_, std::move(logic), message_box_, from,
                                           frame_, credits_, quest, remembered);
@@ -211,6 +218,7 @@ std::unique_ptr<Screen> GameScreens::make_module_shop(const ModuleShopScript &sc
   }
   ModuleShop logic(stocked(script, stock), quest, parts_, garage_, part_stats_, std::move(lineups));
   logic.set_looks(part_looks());
+  logic.set_full_refunds(full_refunds_);
   return std::make_unique<ModuleShopScreen>(textures_, font_, std::move(logic), message_box_, from,
                                             frame_, credits_, quest, preview_world(),
                                             robot_preview_);

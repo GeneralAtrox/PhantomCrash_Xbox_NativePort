@@ -43,6 +43,11 @@ goods_for_sale(const PartTables &parts, const GarageTables &garage, GoodsKind ki
                                                  const PartTables &parts,
                                                  const GarageTables &garage, const Garage &owned,
                                                  GoodsKind kind, double sell_rate);
+// The player's goods at a full refund (Settings > Full Refunds): what was
+// paid for each stock entry (StockItem::paid), the whole price of one never
+// bought and of a paint or emblem.
+void refund_prices(std::vector<ShopGoods> &goods, const PartTables &parts,
+                   const GarageTables &garage, const Garage &owned);
 
 // A shop's goods list (0x06d1cd with 0x01733d's order): the goods, the row
 // chosen on screen and the first row shown, and how they are sorted.
