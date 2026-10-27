@@ -174,6 +174,14 @@ std::int64_t goods_price(const PartTables &parts, const GarageTables &garage, co
   return entry != nullptr ? entry->price : 0;
 }
 
+std::int64_t goods_list_price(const PartTables &parts, const GarageTables &garage,
+                              const Goods &goods) {
+  if (const auto kind = stock_kind(goods.kind)) {
+    return part_list_price(parts, garage, *kind, goods.id, goods.level);
+  }
+  return goods_price(parts, garage, goods);
+}
+
 bool reduces_lasers(const GarageTables &garage, const Goods &goods) {
   const ModuleRecord *module =
       goods.kind == GoodsKind::module ? at(garage.modules, goods.id) : nullptr;
@@ -209,6 +217,10 @@ PartStatsTable parse_part_stats(const json::JsonValue &document) {
     table.display_rate = static_cast<float>(document.number_or("display_rate", table.display_rate));
     if (table.battle_rate <= 0.0F || table.display_rate <= 0.0F) {
       throw std::runtime_error("the rates must be above 0");
+    }
+    table.tuned_share = document.number_or("tuned_share", table.tuned_share);
+    if (table.tuned_share < 0.0 || table.tuned_share > 1.0) {
+      throw std::runtime_error("tuned_share must be from 0 to 1");
     }
     if (const json::JsonValue *full = document.find("full_price")) {
       for (const json::JsonValue &module : full->array()) {

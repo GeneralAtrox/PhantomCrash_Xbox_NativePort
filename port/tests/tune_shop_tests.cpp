@@ -116,6 +116,25 @@ TEST_CASE("a tune-up costs the difference, through level 0 when it crosses it") 
   CHECK(tune_price(shop.parts, shop.garage, five, -3) == 800);
 }
 
+TEST_CASE("a part bought tuned costs a share of the tune-up; the tune-up stays whole") {
+  Shop shop;
+  CHECK(shipped_table().tuned_share == 0.5);
+  shop.garage.tuned_share = 0.5;
+  // 1000 untuned and 1500 on the curve at 5: 1250 to buy, 1500 to tune to.
+  CHECK(part_price(shop.parts, shop.garage, PartKind::arm, 0, 5) == 1250);
+  CHECK(part_price(shop.parts, shop.garage, PartKind::arm, 0, -3) == 1150);
+  CHECK(part_price(shop.parts, shop.garage, PartKind::arm, 0, 0) == 1000);
+  CHECK(part_list_price(shop.parts, shop.garage, PartKind::arm, 0, 5) == 1500);
+  const Goods five{GoodsKind::arm, 0, 5};
+  CHECK(goods_price(shop.parts, shop.garage, five) == 1250);
+  CHECK(tune_price(shop.parts, shop.garage, five, 8) == 300);
+  CHECK(tune_price(shop.parts, shop.garage, {GoodsKind::arm, 0, 0}, 5) == 500);
+  // Untuned plus the tune-up costs more than buying it tuned.
+  CHECK(part_price(shop.parts, shop.garage, PartKind::arm, 0, 0) +
+            tune_price(shop.parts, shop.garage, {GoodsKind::arm, 0, 0}, 5) >
+        goods_price(shop.parts, shop.garage, five));
+}
+
 TEST_CASE("the icons do not wrap; cancel jumps to EXIT and EXIT leaves") {
   const Shop shop;
   TuneShop logic = opened(shop, 0);

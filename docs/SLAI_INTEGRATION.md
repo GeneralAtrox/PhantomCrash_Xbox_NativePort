@@ -576,7 +576,7 @@ Crash's used SVs average 12 and its dealers' 0. A price curve's `low_scale`
 is 1 in both games, so tuning either way costs more. The balance pass had
 fitted S.L.A.I.'s prices to Phantom Crash's at levels 0 and 99, blended
 between. That gave each level of tuning Phantom Crash's steep price, and the
-junk shop's SVs cost 0.5M to 9M NY (median 1.8M). Three port balance
+junk shop's SVs cost 0.5M to 9M NY (median 1.8M). Four port balance
 changes bring them down:
 
 - **Levels are capped at 10 either way.** Phantom Crash's parts shops sell
@@ -604,15 +604,25 @@ changes bring them down:
   the shops buy parts, CHIPs, paints and emblems back at half their price,
   so selling an SV off returns at most what it cost.
 
+- **Tuned goods cost less than tuning them.** `tuned_share` 0.5 in
+  `ui/part_stats.json` (GarageTables, default 1, the original's), for both
+  games' parts: a tuned part costs its untuned price and half of a tune-up
+  to its level, 30 to 45% less than buying it untuned and tuning it at
+  level 10. The shops' goods, SVs' parts and CHIPs are priced so, and the
+  shops pay back sell_rate of the same price, so nothing resells at a
+  profit. Tune-ups, CHIP uplifts and repairs still cost the whole curve
+  (`part_list_price`).
+
 | Shop (NY) | Before | Now |
 |---|---|---|
 | Omsk, Ma.Fabrik dealers | 127k-568k, median 158k | unchanged |
-| The Mechanist, USED SV | 69k-3.8M, median 147k | 69k-1.7M, median 123k |
-| Junk shop, USED SV | 506k-9.0M, median 1.8M | 253k-1.0M, median 417k |
-| *Wild Machines' used SVs (for reference)* | *60k-2.2M, median 511k* | |
+| The Mechanist, USED SV | 69k-3.8M, median 147k | 69k-1.1M, median 101k |
+| Junk shop, USED SV | 506k-9.0M, median 1.8M | 178k-675k, median 297k |
+| Wild Machines, USED SV | 60k-2.2M, median 511k | 60k-1.1M, median 344k |
+| Phantom Crash's dealers | 128k-1.4M, median 197k | 128k-901k, median 197k |
 
-What still costs over 1M NY is premium weapons, such as Zwerg's EMP fist
-(688k NY at level 10), not tuning.
+What still costs over 1M NY is premium weapons, such as Zwerg's EMP fist,
+not tuning.
 
 Not imported yet: the Proton, Carro and Hartman dealer lineups, the
 dealers' banner pictures, S.L.A.I.'s options (not the port's modules),

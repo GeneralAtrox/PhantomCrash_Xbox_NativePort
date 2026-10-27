@@ -43,7 +43,8 @@ MatchReceipt match_receipt(const MatchSummary &match, const std::int64_t money,
   receipt.prize = receipt.gross_prize / (match.rental ? rules.rental_prize_divisor : 1);
   const auto cost = [&](const PartSlot slot, const int level) {
     const auto &part = match.robot.part(slot);
-    return part ? part_price(parts, garage, slot_kind(slot), part->id, level == 0 ? 0 : part->level)
+    return part ? part_list_price(parts, garage, slot_kind(slot), part->id,
+                                  level == 0 ? 0 : part->level)
                 : 0;
   };
   const auto repair = [&](const std::int64_t base, const std::int64_t current) {

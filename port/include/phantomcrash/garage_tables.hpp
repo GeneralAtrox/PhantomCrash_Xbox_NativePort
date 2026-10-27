@@ -91,6 +91,9 @@ struct GarageTables {
   std::vector<std::vector<RobotPart>> module_lineups;
   std::vector<std::vector<int>> used_sv_lineups;
   std::vector<BossChip> boss_chips; // the port's, joined by add_chip_lineups
+  // The share of a tune-up's price a tuned part's price carries
+  // (part_stats.json tuned_share; 1 the original's).
+  double tuned_share{1.0};
 
   [[nodiscard]] const RobotRecord *robot(int index) const;
 };
@@ -100,9 +103,17 @@ struct GarageTables {
 // One of its robots (also S.L.A.I.'s opponents, slai_opponent_table.hpp).
 [[nodiscard]] RobotRecord parse_robot_record(const json::JsonValue &value);
 
-// What a part, module, paint or emblem costs (0x0932c7); 0 for one missing.
+// What a part, module, paint or emblem costs to buy, and is sold for a share
+// of: its untuned price and `tuned_share` of a tune-up to its level (the
+// original's whole curve, 0x0932c7, when the share is 1). 0 for one missing.
 [[nodiscard]] std::int64_t part_price(const PartTables &parts, const GarageTables &garage,
                                       PartKind kind, int id, int level);
+// A tuned part's price from its untuned and its curve's (`listed`) prices.
+[[nodiscard]] std::int64_t tuned_price(std::int64_t untuned, std::int64_t listed, double share);
+// Its price curve's at the level (0x0932c7), which tune-ups and repairs
+// measure.
+[[nodiscard]] std::int64_t part_list_price(const PartTables &parts, const GarageTables &garage,
+                                           PartKind kind, int id, int level);
 // A SV's price at a dealer: all of its parts', modules', paint's and
 // emblem's (0x0392ff).
 [[nodiscard]] std::int64_t robot_price(const PartTables &parts, const GarageTables &garage,

@@ -76,6 +76,10 @@ public:
            const PartTables &parts, int resume_item = 0);
 
   void update(double tick_seconds, const InputFrame &input);
+  // GarageTables::tuned_share, for a CHIP's price once uplifted.
+  void set_tuned_share(const double share) noexcept {
+    tuned_share_ = share;
+  }
 
   [[nodiscard]] const ChipShopScript &script() const noexcept {
     return script_;
@@ -202,6 +206,7 @@ private:
   std::vector<ChipOffer> offers_;
   QuestSave quest_;
   const PartTables &parts_;
+  double tuned_share_{1.0};
   CursorRepeat side_;
   ChipShopView view_{ChipShopView::browse};
   bool in_dialog_{}; // the dialog shows, under any notice

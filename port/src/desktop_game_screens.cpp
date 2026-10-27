@@ -78,6 +78,7 @@ GameScreens::GameScreens(TextureCache &textures, const DataRoots &roots, const G
   if (const auto garage = converted_table(roots, "tables/garage.json")) {
     garage_ = parse_garage_tables(*garage);
   }
+  garage_.tuned_share = part_stats_.tuned_share;
   slai_rumble_ = load_slai_rumble(roots);
   used_sv_shops_.emplace("wild_machines_used_sv", UsedSvShop{used_sv_, ShopStock::phantom_crash});
   load_slai_shops(roots);

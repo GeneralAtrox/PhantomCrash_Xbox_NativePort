@@ -40,9 +40,12 @@ inline constexpr int no_maker = 7;
 [[nodiscard]] int goods_maker(const PartTables &parts, const Goods &goods);
 [[nodiscard]] std::string goods_name(const PartTables &parts, const GarageTables &garage,
                                      const Goods &goods);
-// Its price (0x0932c7); 0 for a record missing.
+// Its price (part_price); 0 for a record missing.
 [[nodiscard]] std::int64_t goods_price(const PartTables &parts, const GarageTables &garage,
                                        const Goods &goods);
+// Its price curve's at its level (part_list_price), which tune-ups measure.
+[[nodiscard]] std::int64_t goods_list_price(const PartTables &parts, const GarageTables &garage,
+                                            const Goods &goods);
 // A module that cuts beam damage shows LASER REDUCTION instead of its O.C
 // times (0x0bb6e8 above 0).
 [[nodiscard]] bool reduces_lasers(const GarageTables &garage, const Goods &goods);
@@ -111,6 +114,7 @@ struct PartStatsTable {
   float battle_rate{30.0F};    // a beam's recharge counts battle ticks
   float display_rate{60.0F};   // a module's O.C times count display frames
   std::vector<int> full_price; // modules bought back at their whole price
+  double tuned_share{1.0};     // GarageTables::tuned_share
   std::array<std::vector<ExtraStat>, goods_kind_count> extras;
   std::array<std::vector<ExtraStat>, goods_kind_count> details; // the second page
   WeaponTypes weapon_types;

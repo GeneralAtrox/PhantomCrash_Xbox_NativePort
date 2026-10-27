@@ -79,7 +79,9 @@ void ChipShop::uplift_chosen() {
     item->second.level = level_;
   }
   if (const ChipRecord *chip = record(offer)) {
-    offer.price = static_cast<std::int64_t>(chip->price.value(level_));
+    // As chips_in_stock prices it (part_price).
+    offer.price = tuned_price(static_cast<std::int64_t>(chip->price.value(0)),
+                              static_cast<std::int64_t>(chip->price.value(level_)), tuned_share_);
   }
   offer.level = level_;
   sound(script_.trade_sound);

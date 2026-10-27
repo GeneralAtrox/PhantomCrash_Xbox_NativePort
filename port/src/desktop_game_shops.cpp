@@ -137,6 +137,7 @@ std::unique_ptr<Screen> GameScreens::make_chip_shop(const std::string &name,
   }
   int &remembered = dealer_cursors_[name];
   ChipShop logic(script, std::move(offers), quest, parts_, from == "name_entry" ? remembered : 0);
+  logic.set_tuned_share(garage_.tuned_share);
   return std::make_unique<ChipShopScreen>(textures_, font_, std::move(logic), message_box_, from,
                                           frame_, credits_, quest, remembered);
 }

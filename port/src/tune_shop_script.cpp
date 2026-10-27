@@ -176,10 +176,10 @@ TuneShopScript parse_tune_shop(const json::JsonValue &document) {
 
 std::int64_t tune_price(const PartTables &parts, const GarageTables &garage, const Goods &goods,
                         const int level) {
-  const std::int64_t from = goods_price(parts, garage, goods);
-  const std::int64_t to = goods_price(parts, garage, {goods.kind, goods.id, level});
+  const std::int64_t from = goods_list_price(parts, garage, goods);
+  const std::int64_t to = goods_list_price(parts, garage, {goods.kind, goods.id, level});
   if (goods.level * level < 0) {
-    const std::int64_t zero = goods_price(parts, garage, {goods.kind, goods.id, 0});
+    const std::int64_t zero = goods_list_price(parts, garage, {goods.kind, goods.id, 0});
     return to + from - 2 * zero;
   }
   return to > from ? to - from : from - to;

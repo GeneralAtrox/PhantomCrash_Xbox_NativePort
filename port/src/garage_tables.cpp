@@ -170,14 +170,28 @@ GarageTables parse_garage_tables(const JsonValue &document) {
   return out;
 }
 
-std::int64_t part_price(const PartTables &parts, const GarageTables &garage, const PartKind kind,
-                        const int id, const int level) {
+std::int64_t part_list_price(const PartTables &parts, const GarageTables &garage,
+                             const PartKind kind, const int id, const int level) {
   if (kind == PartKind::module) {
     const ModuleRecord *module = at(garage.modules, id);
     return module != nullptr ? module->price : 0;
   }
   const LevelCurve *curve = price_curve(parts, kind, id);
   return curve != nullptr ? static_cast<std::int64_t>(curve->value(level)) : 0;
+}
+
+std::int64_t part_price(const PartTables &parts, const GarageTables &garage, const PartKind kind,
+                        const int id, const int level) {
+  const std::int64_t listed = part_list_price(parts, garage, kind, id, level);
+  if (level == 0 || garage.tuned_share == 1.0) {
+    return listed;
+  }
+  return tuned_price(part_list_price(parts, garage, kind, id, 0), listed, garage.tuned_share);
+}
+
+std::int64_t tuned_price(const std::int64_t untuned, const std::int64_t listed,
+                         const double share) {
+  return untuned + static_cast<std::int64_t>(static_cast<double>(listed - untuned) * share);
 }
 
 std::int64_t robot_price(const PartTables &parts, const GarageTables &garage,
