@@ -51,7 +51,11 @@ SlaiRumbleHub::SlaiRumbleHub(SlaiRumbleHubScript script, const SlaiRumbleData &d
       rentals_(rentals), back_(std::move(back)), fade_(script_.fade_in, script_.fade_out),
       rows_repeat_(script_.repeat_delay, script_.repeat_interval), popup_(script_.info.growth),
       box_(std::move(box)) {
-  for (const SlaiCityMatch &match : slai_day_matches(data_, quest_.day, quest_.slai_rumble)) {
+  const SlaiRumbleSave &save = quest_.slai_rumble;
+  const bool lesson =
+      script_.tutorial && !slai_record_cleared(save, data_.world.ladder.tutorial_record);
+  for (const SlaiCityMatch &match :
+       slai_day_matches(data_, quest_.day, save, lesson ? std::optional<int>{0} : std::nullopt)) {
     const SlaiMatch *found =
         match.match != slai_no_match ? slai_match(data_.table, match.match) : nullptr;
     if (found == nullptr) {

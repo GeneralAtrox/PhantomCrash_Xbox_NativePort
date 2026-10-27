@@ -49,6 +49,7 @@ SlaiRumbleData hand_made() {
   }
   table.day_rows.assign(100, {0, 1, 2, 3, 4, 5, 6});
   data.world = parse_slai_rumble_world(shipped().document(slai_rumble_world_file));
+  data.world.ladder.tutorial_required = true; // the table holds stage 0 only
   data.rota.days = {{{2, 0}, {6, 0}, {0, 0}}, {{4, 1}, {5, 1}, {1, 1}}};
   return data;
 }
@@ -225,6 +226,36 @@ TEST_CASE("before the tutorial, Rumble S.L.A.I. sends the player to Battle Schoo
   CHECK(names[0].first == 0);
   CHECK(names[1].first == 1);
   CHECK(names[0].second.starts_with("TUTORIAL"));
+}
+
+TEST_CASE("an optional tutorial opens stage 1's rumbles and stays at Battle School") {
+  SlaiRumbleData data = hand_made();
+  data.world.ladder.tutorial_required = false;
+  // Stage 0 is Tokyo's tutorial (record 24); stage 1 a ranker rumble each.
+  data.table.stages = 2;
+  data.table.matches[0].save_record = 24;
+  for (int city = 0; city < 7; ++city) {
+    SlaiMatch match = data.table.matches[static_cast<std::size_t>(city)];
+    match.id = 7 + city;
+    match.save_record = data.world.ladder.ranker_records[0] + city;
+    data.table.matches.push_back(match);
+    data.table.city_days[static_cast<std::size_t>(city)].push_back({7 + city, slai_no_match});
+  }
+  QuestSave quest;
+  const SlaiRumbleHub rumble = hub_with(data, quest);
+  REQUIRE(rumble.matches().size() == 3);
+  CHECK(rumble.matches()[0].match == 9); // New York's, at stage 1
+  const SlaiRumbleHub school =
+      hub_with(data, quest, std::nullopt, false, "ui/slai_battle_school.json");
+  REQUIRE(school.matches().size() == 1);
+  CHECK(school.matches()[0].match == 0);
+  // A battle moves the stored stage on as stage 1's.
+  CHECK(slai_next_stage(quest.slai_rumble, data.world.ladder) == 1);
+  quest.slai_rumble.records[24].cleared = true;
+  CHECK(hub_with(data, quest, std::nullopt, false, "ui/slai_battle_school.json").matches().empty());
+  // The original's rule keeps every rumble the tutorial until it is cleared.
+  data.world.ladder.tutorial_required = true;
+  CHECK(slai_ladder_stage(SlaiRumbleSave{}, data.world.ladder) == 0);
 }
 
 TEST_CASE("Rumble S.L.A.I. refuses entry short of money or without a ready robot") {

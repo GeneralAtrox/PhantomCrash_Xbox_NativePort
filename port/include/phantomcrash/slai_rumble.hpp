@@ -127,6 +127,10 @@ struct SlaiRumbleLadder {
   int regionals_needed{7};
   std::array<int, 2> finals_records{0x1a, 0x1d};
   int finals_needed{3};
+  // The original's every rumble is the tutorial until its record is cleared;
+  // false schedules a save that has not cleared it as past it (stage 1),
+  // the tutorial staying at Battle School until cleared.
+  bool tutorial_required{true};
 };
 
 // When a record's leader joins (0x2225a0, 0x223ed0; by regulation):

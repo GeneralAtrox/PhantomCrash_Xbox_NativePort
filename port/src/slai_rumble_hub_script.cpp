@@ -129,6 +129,7 @@ SlaiRumbleHubScript parse_slai_rumble_hub(const json::JsonValue &document) {
       }
     }
     script.one_per_match = document.boolean_or("one_per_match", false);
+    script.tutorial = document.boolean_or("tutorial", false);
     if (script.row_step[1] <= 0 || script.badges.empty()) {
       throw std::runtime_error("needs a row step above 0 and badges");
     }

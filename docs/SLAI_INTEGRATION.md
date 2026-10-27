@@ -2985,3 +2985,23 @@ Values are read behind instruction guards in `slai/battle_camera.py`
   correctly. See "Body stickers" below for S.L.A.I. bodies.
 - Installed packs must be re-registered so `skeletons.json` carries
   `source_reflect`.
+
+## The tutorial is optional (2026-10-27)
+
+S.L.A.I. makes the tutorial the first mission: at ladder stage 0 every city's
+rumble is the tutorial (regulations 0 and 1, save records 24 and 25), and the
+stage moves to 1 only once record 24 is cleared. The port makes it optional
+(a port choice; data/world/slai_rumble.json ladder `tutorial_required`,
+false shipped, true for S.L.A.I.'s rule):
+
+- `slai_ladder_stage` schedules a stage-0 save as stage 1, so the rankers'
+  rumbles open from the start, and a battle moves the stored stage on as
+  stage 1's (`slai_next_stage`).
+- Battle School (`ui/slai_battle_school.json` `tutorial`) looks its lessons
+  up at stage 0 while record 24 is uncleared, so the tutorial can still be
+  played at any time; once cleared it holds no lesson.
+- Skipping it loses only the pro-licence scenes MAIN05K/MAIN06K, which wait
+  on the tutorial's clear (story flag 7); the rest of the story runs on rumble
+  progress.
+- The junk shop's SV lineup still reads the stored stage, so it shows the
+  stage-0 lineup until the first battle.

@@ -1,6 +1,6 @@
 {
  "notes": [
-  "Battle School (S.L.A.I.'s town spot 0x0D, the tutorial place 0x1F; docs/SLAI_STORY_PLAN.md, Battle School): Rumble S.L.A.I.'s screen listing only the tutorial rumbles (records: save records 24 and 25, match 0 by day and 1 by night), each match once however many cities the rota offers it in. The original's own Battle School screen is not recreated; this is a port choice. Rumble S.L.A.I. leaves these records out (its exclude_records), so until the tutorial is cleared (stage 0) only Battle School holds a rumble. Its battle returns here; BS01K plays on the way in from the town map, BS03K/BS04K/BS05K after the battle.",
+  "Battle School (S.L.A.I.'s town spot 0x0D, the tutorial place 0x1F; docs/SLAI_STORY_PLAN.md, Battle School): Rumble S.L.A.I.'s screen listing only the tutorial rumbles (records: save records 24 and 25, match 0 by day and 1 by night), each match once however many cities the rota offers it in. The original's own Battle School screen is not recreated; this is a port choice. Rumble S.L.A.I. leaves these records out (its exclude_records), so where the ladder requires the tutorial (world ladder.tutorial_required, S.L.A.I.'s rule) only Battle School holds a rumble until it is cleared. tutorial: the lessons are looked up at the tutorial's stage (0) while its record is uncleared, so they stay here when the port's optional tutorial has moved the save's rumbles past it. Its battle returns here; BS01K plays on the way in from the town map, BS03K/BS04K/BS05K after the battle.",
   "Everything else is Rumble S.L.A.I.'s (extends); exit_to is where EXIT leads."
  ],
  "extends": "ui/slai_rumble.json",
@@ -10,5 +10,6 @@
  ],
  "records": [24, 25],
  "exclude_records": [],
- "one_per_match": true
+ "one_per_match": true,
+ "tutorial": true
 }

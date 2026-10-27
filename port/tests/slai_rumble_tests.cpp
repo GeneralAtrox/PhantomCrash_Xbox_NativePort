@@ -216,8 +216,11 @@ TEST_CASE("S.L.A.I. records set flags, clear on the leader and give the manager'
 }
 
 TEST_CASE("S.L.A.I.'s stage ladder moves one step after a battle") {
-  const auto ladder = world_data().ladder;
+  auto ladder = world_data().ladder;
+  CHECK(!ladder.tutorial_required); // the port's optional tutorial
   SlaiRumbleSave save;
+  CHECK(slai_next_stage(save, ladder) == 1);
+  ladder.tutorial_required = true; // S.L.A.I.'s own rule
   CHECK(slai_next_stage(save, ladder) == 0);
   slai_record_beat(save, ladder.tutorial_record, slai_leader_flag);
   CHECK(slai_next_stage(save, ladder) == 1);

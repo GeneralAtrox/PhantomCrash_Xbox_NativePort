@@ -122,16 +122,21 @@ int slai_scheduled_match(const SlaiRumbleTable &table, const int day, const int 
   return match;
 }
 
+int slai_ladder_stage(const SlaiRumbleSave &save, const SlaiRumbleLadder &ladder) {
+  return save.stage == 0 && !ladder.tutorial_required ? 1 : save.stage;
+}
+
 std::optional<SlaiCityMatch> slai_city_match(const SlaiRumbleData &data, const int day,
-                                             const int city, const SlaiRumbleSave &save) {
+                                             const int city, const SlaiRumbleSave &save,
+                                             const std::optional<int> stage) {
   const auto source = slai_rota_source(data.rota, day, city);
   if (!source) {
     return std::nullopt;
   }
+  const int at = stage.value_or(slai_ladder_stage(save, data.world.ladder));
   SlaiCityMatch found{city, *source};
   for (const bool night : {false, true}) {
-    found.match =
-        slai_scheduled_match(data.table, *source, city, save.stage, night, save.finals_cleared);
+    found.match = slai_scheduled_match(data.table, *source, city, at, night, save.finals_cleared);
     found.night = night;
     if (found.match != slai_no_match) {
       break;
@@ -141,10 +146,11 @@ std::optional<SlaiCityMatch> slai_city_match(const SlaiRumbleData &data, const i
 }
 
 std::vector<SlaiCityMatch> slai_day_matches(const SlaiRumbleData &data, const int day,
-                                            const SlaiRumbleSave &save) {
+                                            const SlaiRumbleSave &save,
+                                            const std::optional<int> stage) {
   std::vector<SlaiCityMatch> result;
   for (const SlaiRotaEntry &entry : slai_rota_day(data.rota, day)) {
-    if (const auto found = slai_city_match(data, day, entry.city, save)) {
+    if (const auto found = slai_city_match(data, day, entry.city, save, stage)) {
       result.push_back(*found);
     }
   }
@@ -157,9 +163,9 @@ std::array<int, 2> slai_todays_matches(const SlaiRumbleData &data, const int day
   if (!source) {
     return {slai_no_match, slai_no_match};
   }
-  return {
-      slai_scheduled_match(data.table, *source, save.city, save.stage, false, save.finals_cleared),
-      slai_scheduled_match(data.table, *source, save.city, save.stage, true, save.finals_cleared)};
+  const int stage = slai_ladder_stage(save, data.world.ladder);
+  return {slai_scheduled_match(data.table, *source, save.city, stage, false, save.finals_cleared),
+          slai_scheduled_match(data.table, *source, save.city, stage, true, save.finals_cleared)};
 }
 
 bool slai_record_cleared(const SlaiRumbleSave &save, const int record) {
@@ -176,7 +182,8 @@ int slai_records_cleared(const SlaiRumbleSave &save, const std::array<int, 2> &r
 }
 
 int slai_next_stage(const SlaiRumbleSave &save, const SlaiRumbleLadder &ladder) {
-  switch (save.stage) {
+  const int stage = slai_ladder_stage(save, ladder);
+  switch (stage) {
   case 0:
     return slai_record_cleared(save, ladder.tutorial_record) ? 1 : 0;
   case 1:
@@ -186,7 +193,7 @@ int slai_next_stage(const SlaiRumbleSave &save, const SlaiRumbleLadder &ladder) 
   case 3:
     return slai_records_cleared(save, ladder.finals_records) >= ladder.finals_needed ? 4 : 3;
   default:
-    return save.stage;
+    return stage;
   }
 }
 

@@ -62,6 +62,7 @@ SlaiRumbleLadder ladder_from(const JsonValue &value) {
   ladder.regionals_needed = integer(required(value, "regionals_needed"));
   ladder.finals_records = member(value, "finals_records", range_of);
   ladder.finals_needed = integer(required(value, "finals_needed"));
+  ladder.tutorial_required = value.boolean_or("tutorial_required", ladder.tutorial_required);
   return ladder;
 }
 

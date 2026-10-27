@@ -32,12 +32,18 @@ struct SlaiCityMatch {
   int match{slai_no_match};
   bool night{};
 };
-// The city's rumble on calendar day `day`, or nothing while it is closed.
+// The stage the save's rumbles are scheduled and its ladder counted at: its
+// own, or past the tutorial when the ladder does not require it.
+[[nodiscard]] int slai_ladder_stage(const SlaiRumbleSave &save, const SlaiRumbleLadder &ladder);
+// The city's rumble on calendar day `day`, or nothing while it is closed;
+// at the save's ladder stage unless `stage` names another.
 [[nodiscard]] std::optional<SlaiCityMatch> slai_city_match(const SlaiRumbleData &data, int day,
-                                                           int city, const SlaiRumbleSave &save);
+                                                           int city, const SlaiRumbleSave &save,
+                                                           std::optional<int> stage = {});
 // The day's open cities' rumbles, in the rota's (display) order.
 [[nodiscard]] std::vector<SlaiCityMatch> slai_day_matches(const SlaiRumbleData &data, int day,
-                                                          const SlaiRumbleSave &save);
+                                                          const SlaiRumbleSave &save,
+                                                          std::optional<int> stage = {});
 // Today's (day, night) matches in the save's city; none while it is closed.
 [[nodiscard]] std::array<int, 2> slai_todays_matches(const SlaiRumbleData &data, int day,
                                                      const SlaiRumbleSave &save);

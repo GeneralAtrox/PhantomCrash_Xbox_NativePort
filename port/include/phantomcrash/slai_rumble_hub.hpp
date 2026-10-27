@@ -96,6 +96,9 @@ struct SlaiRumbleHubScript : TownBasics {
   // (Battle School's tutorial).
   std::vector<int> records, exclude_records;
   bool one_per_match{};
+  // Lists the rumbles of the tutorial's stage (0) while its record is not
+  // cleared, whatever stage the ladder schedules (Battle School).
+  bool tutorial{};
 };
 
 // Throws std::runtime_error naming the member at fault.
