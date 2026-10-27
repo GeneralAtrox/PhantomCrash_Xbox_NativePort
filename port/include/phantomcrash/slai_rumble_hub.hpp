@@ -78,6 +78,9 @@ struct SlaiRumbleHubScript : TownBasics {
   ContestInfoStyle info;
   std::vector<std::string> city_names; // by the table's city column
   std::vector<std::string> closed;     // shown when no city is open
+  // Shown instead when the day's rumbles are all ones exclude_records
+  // leaves to another screen (the tutorial's, Battle School's); none: closed.
+  std::vector<std::string> excluded;
   // A notice when entry is refused (0x259a40's order): the money held is
   // short, the ridden robot is not ready, its body is not the rumble's
   // maker, its legs not of the rumble's classes, or it breaks the rumble's
@@ -124,6 +127,10 @@ public:
   // Today's open cities' rumbles, in display order.
   [[nodiscard]] const std::vector<SlaiCityMatch> &matches() const noexcept {
     return matches_;
+  }
+  // None listed, but some open city holds a rumble exclude_records leaves out.
+  [[nodiscard]] bool only_excluded() const noexcept {
+    return matches_.empty() && excluded_;
   }
   [[nodiscard]] int row() const noexcept {
     return row_;
@@ -176,6 +183,7 @@ private:
   bool rentals_{};
   std::string back_;
   std::vector<SlaiCityMatch> matches_;
+  bool excluded_{};
   ScreenFade fade_;
   CursorRepeat rows_repeat_;
   GrowingPopup popup_;

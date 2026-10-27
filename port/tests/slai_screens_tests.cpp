@@ -205,6 +205,28 @@ TEST_CASE("Battle School lists each lesson once and Rumble S.L.A.I. leaves them 
   CHECK(rumble.matches()[0].city == 2);
 }
 
+TEST_CASE("before the tutorial, Rumble S.L.A.I. sends the player to Battle School") {
+  SlaiRumbleData data = hand_made();
+  // Stage 0: every open city's rumble is the tutorial (record 24).
+  data.table.matches[0].save_record = 24;
+  for (const int city : {2, 6, 0}) {
+    data.table.city_days[static_cast<std::size_t>(city)] = {{0, slai_no_match}};
+  }
+  const SlaiRumbleHub rumble = hub_with(data, QuestSave{});
+  CHECK(rumble.matches().empty());
+  CHECK(rumble.only_excluded());
+  CHECK(!rumble.script().excluded.empty());
+  const SlaiRumbleHub school =
+      hub_with(data, QuestSave{}, std::nullopt, false, "ui/slai_battle_school.json");
+  CHECK(!school.only_excluded());
+  // The tutorial's regulations are named for it, not the disc's "Dummy".
+  const auto &names = data.world.regulation_names;
+  REQUIRE(names.size() == 2);
+  CHECK(names[0].first == 0);
+  CHECK(names[1].first == 1);
+  CHECK(names[0].second.starts_with("TUTORIAL"));
+}
+
 TEST_CASE("Rumble S.L.A.I. refuses entry short of money or without a ready robot") {
   const SlaiRumbleData data = hand_made();
   const std::int64_t needed = slai_entry_requirement(

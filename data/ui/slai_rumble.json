@@ -1,6 +1,6 @@
 {
  "notes": [
-  "exclude_records: the save records whose rumbles this screen does not list (records lists the only ones it does; one_per_match lists a match once). The tutorial rumbles (24, 25) are Battle School's (ui/slai_battle_school.json).",
+  "exclude_records: the save records whose rumbles this screen does not list (records lists the only ones it does; one_per_match lists a match once). The tutorial rumbles (24, 25) are Battle School's (ui/slai_battle_school.json). excluded: shown instead of closed when every open city's rumble is one this screen leaves out (before the tutorial is cleared, all of them are).",
   "Rumble S.L.A.I. (a port screen, not in the original; docs/SLAI_RUMBLE_PLAN.md, Screens): Club Wired's way into S.L.A.I.'s campaign, shown only with S.L.A.I. installed and enabled. It lists the three cities the rota opens today (world/slai_rota.json), each with its rumble at the player's S.L.A.I. stage, on the schedule's art.",
   "rows: row r's top-left is origin + r x step. Each row: the city's plate (plate.box: x on the canvas, y from the row's top) and name (city, in the plate's box), the venue's whole day or night tile (tile, lit under the cursor) with its regulation's badge (badges: the first listing the regulation, else the one listing none; white under the cursor, badge_dim otherwise) and CLEAR once the match's record is cleared, the regulation's name (rule) and, under it, the money entry needs and the prize at the regulation's target score (amounts, in the HUD's money font).",
   "city_art: with S.L.A.I.'s Club Wired city sheets installed (UK_WIR_<CITY>01.PIG, converted at registration to textures/slai/wired/), each row shows the city's emblem fitted in emblem_box and its '<CITY> / DAY' or '<CITY> / NIGHT' label above the regulation, in place of the plate and the city's name; without the sheet the plate is drawn. The rectangles are the sheets' (by the table's city column), padded for the glow and shadow.",
@@ -749,6 +749,9 @@
  ],
  "closed": [
   "No S.L.A.I. city holds a rumble today."
+ ],
+ "excluded": [
+  "Clear the tutorial at Battle School first."
  ],
  "refusals": {
   "money": [

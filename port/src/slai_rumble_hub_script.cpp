@@ -109,6 +109,9 @@ SlaiRumbleHubScript parse_slai_rumble_hub(const json::JsonValue &document) {
     script.info = member(document, "info", parse_contest_info);
     script.city_names = strings(required(document, "city_names"));
     script.closed = strings(required(document, "closed"));
+    if (const auto *excluded = document.find("excluded")) {
+      script.excluded = strings(*excluded);
+    }
     const auto &refusals = required(document, "refusals");
     script.short_of_money = strings(required(refusals, "money"));
     script.not_ready = strings(required(refusals, "not_ready"));

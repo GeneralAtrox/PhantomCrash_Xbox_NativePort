@@ -158,6 +158,11 @@ SlaiRumbleWorld parse_slai_rumble_world(const JsonValue &document) {
   for (const auto &maker : required(document, "makers").array()) {
     world.makers.push_back(maker.string());
   }
+  if (const auto *names = document.find("regulation_names")) {
+    for (const auto &[id, name] : names->object()) {
+      world.regulation_names.emplace_back(std::stoi(id), name.string());
+    }
+  }
   for (const auto &[name, types] : required(document, "leg_classes").object()) {
     world.leg_classes.emplace_back(name, integers(types));
   }
@@ -203,6 +208,13 @@ std::optional<SlaiRumbleData> load_slai_rumble(const DataRoots &roots) {
                         data.table.schedule_days);
   } catch (const std::exception &error) {
     throw std::runtime_error(std::string(slai_rota_file) + ": " + error.what());
+  }
+  for (const auto &[id, name] : data.world.regulation_names) {
+    for (SlaiRegulation &rule : data.table.regulations) {
+      if (rule.id == id) {
+        rule.name = name;
+      }
+    }
   }
   if (data.world.cities.size() != data.table.cities.size()) {
     throw std::runtime_error(std::string(slai_rumble_world_file) +

@@ -998,6 +998,17 @@ red), "JUNK SHOP" in place of "THE MECHANIST" under its windows' titles, and
 its name lettered where the logo sat on the menu's strip, as the disc has no
 junk shop logo (`sprite_text.json`).
 
+### Before the tutorial (2026-10-27)
+
+Until the tutorial is cleared (S.L.A.I. stage 0), every city's rumble is a
+tutorial rumble (match 0 by day, 1 by night), held only at Battle School.
+The disc names their regulations "Dummy", which the schedule showed for
+every S.L.A.I. day, and Rumble S.L.A.I. said no city held a rumble. The
+port now names them "TUTORIAL (Battle School)" (`world/slai_rumble.json`
+regulation_names), and Rumble S.L.A.I. says to clear the tutorial at Battle
+School first when the tutorial is all a day holds (`ui/slai_rumble.json`
+excluded).
+
 ### Body stickers (2026-10-26)
 
 - A S.L.A.I. body's sticker is its ST02 carrier model (`emblem_model`)

@@ -171,7 +171,9 @@ void SlaiRumbleScreen::draw(const Viewport &viewport) {
     }
     if (hub_.matches().empty()) {
       float y = script.rule.box[1] + script.row_origin[1];
-      for (const std::string &line : script.closed) {
+      const auto &lines =
+          hub_.only_excluded() && !script.excluded.empty() ? script.excluded : script.closed;
+      for (const std::string &line : lines) {
         draw_label(list, script.rule, line,
                    {script.row_origin[0], y, script.row_origin[0] + script.rule.box[2],
                     y + script.rule.box[3] - script.rule.box[1]},

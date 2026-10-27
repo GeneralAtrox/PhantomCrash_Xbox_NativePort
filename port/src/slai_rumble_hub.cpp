@@ -52,9 +52,16 @@ SlaiRumbleHub::SlaiRumbleHub(SlaiRumbleHubScript script, const SlaiRumbleData &d
       rows_repeat_(script_.repeat_delay, script_.repeat_interval), popup_(script_.info.growth),
       box_(std::move(box)) {
   for (const SlaiCityMatch &match : slai_day_matches(data_, quest_.day, quest_.slai_rumble)) {
-    if (match.match != slai_no_match && slai_match(data_.table, match.match) != nullptr &&
-        listed(match)) {
+    const SlaiMatch *found =
+        match.match != slai_no_match ? slai_match(data_.table, match.match) : nullptr;
+    if (found == nullptr) {
+      continue;
+    }
+    if (listed(match)) {
       matches_.push_back(match);
+    } else if (std::ranges::find(script_.exclude_records, found->save_record) !=
+               script_.exclude_records.end()) {
+      excluded_ = true;
     }
   }
   row_ = matches_.empty() ? exit_row() : 0;

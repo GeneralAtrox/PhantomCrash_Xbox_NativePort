@@ -222,6 +222,9 @@ struct SlaiRumbleWorld {
   SlaiOpponentRules opponents;
   SlaiEntryRules entry;
   int start_city{};
+  // Names given to regulations in place of the disc's (the tutorial's
+  // "Dummy"), by regulation id.
+  std::vector<std::pair<int, std::string>> regulation_names;
 };
 
 // Throw std::runtime_error naming the member at fault.

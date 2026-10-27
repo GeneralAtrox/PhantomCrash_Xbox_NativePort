@@ -3,6 +3,7 @@
   "S.L.A.I. Rumble (docs/SLAI_RUMBLE_PLAN.md): S.L.A.I.'s Club Wired campaign as arena battles, beside Phantom Crash's calendar. The rota, regulations and matches come from the user's disc in tables/slai_rumble.json; this file holds the port's choices for them. Defaults reproduce the original (PAL SLES-52940 addresses).",
   "cities: by the table's city column (0 Tokyo, 1 Stuttgart, 2 New York, 3 London, 4 Hong Kong, 5 Cairo, 6 Las Vegas), the imported stages (world/stages.json) a day or night match is fought on. The disc has no NIGHT_LASVEGAS.BG and battledvd.bin names only day_lasvegas, so the original fights Las Vegas night matches on the day scene and its lighting (VLIGHT.DAT). LASVEGAS_NIGHT.MED is not lighting: the MED files are the stages' effect lists (0x50a040 loads z_zbattle/effect/<name> from 0x59d580 by save + 0x476a), and both Las Vegas lists are empty. start_city is where a new game stands.",
   "makers: S.L.A.I.'s maker ids (a regulation's +8 and a body's +2): 0 Carro, 1 Proton, 2 Hartman, 3 KHT, 4 Zwerg. The port's imported S.L.A.I. legs keep these ids as their maker.",
+  "regulation_names: names the port gives regulations in place of the disc's (UK_RUMBLETYPENAME.MSG). The tutorial's rumbles, regulations 0 and 1, are named Dummy there; until the tutorial is cleared (stage 0) every city's rumble is one of them, held only at Battle School, and the schedule and Battle School show this name for it.",
   "leg_classes: the S.L.A.I. leg types (0x24d7d0, the legs record + 6 through 0x41ea00) each class allows (0x259a40). A class not named here, such as any, allows every leg type.",
   "entry: how the player's robot answers the entry check (0x259a40; slai_entry_robot.hpp). Imported S.L.A.I. parts answer with their own values (tables/slai_rumble.json parts: a body's maker, legs' leg type, a weapon's class and aim kind). Phantom Crash's parts have none, so these are port choices: leg_types gives the S.L.A.I. leg type of each Phantom Crash legs type (rumbling.json legs_types: 2, 4, 6 legs, rollers on 2, 3, 4, 6 wheels, hover), weapons a class and aim kind by the weapon's HUD kind (melee 6 close range, grenade 3 grenade, missile 1 lock-on; others 0), e_chips the CHIP records that pass as E-Chips. A Phantom Crash body has no S.L.A.I. maker, so a maker's rumble refuses it; optical camouflage is the modules' O.C. time. A rental-only rumble refuses the player's own robot (the original's case 0); the port then lends one of rental_robots (tables/garage.json robots; empty lends RUMBLING's rentals), S.L.A.I.'s own rentals being untraced.",
   "special: what the special rules test (0x259a40): close-range and grenade by the weapon class (+0x134), lock-on by the aim kind (+0x18), E-Chip by the CHIP record. Rental-only rumbles refuse the player's own robot.",
@@ -23,6 +24,7 @@
  ],
  "start_city": 0,
  "makers": ["Carro", "Proton", "Hartman", "KHT", "Zwerg"],
+ "regulation_names": {"0": "TUTORIAL (Battle School)", "1": "TUTORIAL (Battle School)"},
  "leg_classes": {
   "legged": [0, 1, 2],
   "wheeled": [3, 4, 5, 6],
