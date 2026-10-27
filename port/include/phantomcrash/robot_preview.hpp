@@ -101,10 +101,7 @@ struct PreviewRobot {
   bool operator==(const PreviewRobot &) const = default;
 };
 
-// The hangar's parts in the meshes they wear (StockItem::look), their own
-// where `catalogue` has none for a look.
-[[nodiscard]] PreviewRobot preview_robot(const Garage &garage, const Hangar &hangar,
-                                         const RobotCatalogue *catalogue = nullptr);
+[[nodiscard]] PreviewRobot preview_robot(const Garage &garage, const Hangar &hangar);
 // A robot record as a dealer sells it (0x039cc9).
 [[nodiscard]] PreviewRobot preview_record(const RobotRecord &record);
 // One part of `kind` alone (STOCK MODULE, 0x084680).

@@ -5,7 +5,6 @@
 #include "phantomcrash/input.hpp"
 #include "phantomcrash/json.hpp"
 #include "phantomcrash/location_frame.hpp"
-#include "phantomcrash/part_looks.hpp"
 #include "phantomcrash/part_stats.hpp"
 #include "phantomcrash/shop_list_style.hpp"
 #include "phantomcrash/sprite_layer.hpp"
@@ -59,11 +58,6 @@ struct ModuleShopScript : TownBasics {
   ModuleShopMode mode{ModuleShopMode::buy};
   Buttons left{}, right{}, up{}, down{};
   Buttons sort_name{}, sort_price{};
-  // Left and right turn the chosen part's look (a port addition, BUY's
-  // look_arrows; part_looks.hpp); a weapon's details page then turns with
-  // the page buttons, as it does with left and right where none is offered.
-  std::optional<LookArrows> look_arrows;
-  Buttons page_back{}, page_next{};
   std::string jump_sound;
   std::string back_sound;
   std::string trade_sound;

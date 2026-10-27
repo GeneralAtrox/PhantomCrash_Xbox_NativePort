@@ -292,7 +292,7 @@ void ChipShop::trade() {
     return;
   }
   naming_stock_ = quest_.garage.add_stock(
-      {PartKind::chip, offer.chip, offer.level, offer.name, -1, -1, offer.price});
+      {PartKind::chip, offer.chip, offer.level, offer.name, -1, offer.price});
   quest_.money -= offer.price;
   sound(script_.trade_sound);
   show(ChipShopView::notice, "thanks", After::name_chip);

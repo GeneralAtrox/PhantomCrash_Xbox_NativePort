@@ -156,7 +156,6 @@ add_library(phantomcrash_core
   src/rumbling_rules.cpp
   src/rumbling_script.cpp
   src/robot_preview.cpp
-  src/part_looks.cpp
   src/rumble.cpp
   src/rumbling.cpp
   src/rumbling_gates.cpp
@@ -224,7 +223,6 @@ add_library(phantomcrash_core
   src/assemble_script.cpp
   src/assemble_fitting.cpp
   src/assemble.cpp
-  src/assemble_looks.cpp
   src/assemble_list.cpp
   src/assemble_details.cpp
   src/assemble_pointer.cpp
@@ -233,7 +231,6 @@ add_library(phantomcrash_core
   src/test_drive.cpp
   src/robot_totals.cpp
   src/module_shop.cpp
-  src/module_shop_looks.cpp
   src/module_shop_details.cpp
   src/module_shop_pointer.cpp
   src/music_library.cpp
@@ -420,7 +417,6 @@ if(BUILD_TESTING)
     tests/assemble_tests.cpp
     tests/sv_spec_tests.cpp
     tests/test_drive_tests.cpp
-    tests/part_looks_tests.cpp
     tests/rumbling_tests.cpp
     tests/rumbling_live_tests.cpp
     tests/rumbling_progression_tests.cpp

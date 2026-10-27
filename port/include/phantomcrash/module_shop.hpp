@@ -12,9 +12,7 @@
 
 #include <array>
 #include <cstdint>
-#include <map>
 #include <string>
-#include <utility>
 #include <vector>
 
 namespace phantomcrash {
@@ -105,19 +103,10 @@ public:
     return list_seconds_;
   }
 
-  // Per-part appearance while buying (module_shop_looks.cpp): the meshes a
-  // part may wear, whether the chosen goods offer another, and the part
-  // whose mesh they show (their own, or the look chosen for them).
-  void set_looks(PartLooks looks) {
-    looks_ = std::move(looks);
-  }
-  [[nodiscard]] bool offers_look(const ShopGoods &line) const;
   // Settings > Full Refunds: selling pays back what the goods cost.
   void set_full_refunds(const bool on) noexcept {
     full_refunds_ = on;
   }
-  [[nodiscard]] int shown_part(const ShopGoods &line) const;
-
   [[nodiscard]] const std::string &message() const noexcept {
     return message_;
   }
@@ -135,9 +124,6 @@ private:
   InputFrame pointer_input(InputFrame input);
   bool turn_details(const InputFrame &input);
   void details_pointer(InputFrame &input) const;
-  bool turn_look(double tick_seconds, const InputFrame &input);
-  void look_pointer(InputFrame &input) const;
-  [[nodiscard]] int chosen_look(const ShopGoods &line) const;
   enum class After { list, categories };
 
   void grid_input(double tick_seconds, const InputFrame &input);
@@ -178,9 +164,7 @@ private:
   int choice_{1};
   std::string help_;
   double help_seconds_{};
-  PartLooks looks_;
   bool full_refunds_{};
-  std::map<std::pair<GoodsKind, int>, int> looks_chosen_; // by goods kind and part
 };
 
 } // namespace phantomcrash

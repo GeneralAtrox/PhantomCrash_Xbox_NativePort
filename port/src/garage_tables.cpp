@@ -282,12 +282,12 @@ int install_robot(Garage &garage, const int hangar, const RobotRecord &robot,
       const std::string name =
           kind == PartKind::chip ? part_name(parts, tables, kind, part->id) : std::string{};
       bay.parts[slot] = garage.add_stock(
-          {kind, part->id, part->level, name, hangar, -1, paid(kind, part->id, part->level)});
+          {kind, part->id, part->level, name, hangar, paid(kind, part->id, part->level)});
     }
   }
   for (const int module : robot.modules) {
     bay.modules.push_back(garage.add_stock(
-        {PartKind::module, module, 0, {}, hangar, -1, paid(PartKind::module, module, 0)}));
+        {PartKind::module, module, 0, {}, hangar, paid(PartKind::module, module, 0)}));
   }
   bay.name = robot.name;
   bay.paint = robot.paint;

@@ -217,7 +217,6 @@ std::unique_ptr<Screen> GameScreens::make_module_shop(const ModuleShopScript &sc
     lineups = module_lineups(script, quest, stock);
   }
   ModuleShop logic(stocked(script, stock), quest, parts_, garage_, part_stats_, std::move(lineups));
-  logic.set_looks(part_looks());
   logic.set_full_refunds(full_refunds_);
   return std::make_unique<ModuleShopScreen>(textures_, font_, std::move(logic), message_box_, from,
                                             frame_, credits_, quest, preview_world(),

@@ -4,7 +4,6 @@
 #include "phantomcrash/glyph_font.hpp"
 #include "phantomcrash/input.hpp"
 #include "phantomcrash/json.hpp"
-#include "phantomcrash/part_looks.hpp"
 #include "phantomcrash/part_stats.hpp"
 #include "phantomcrash/robot_totals.hpp"
 #include "phantomcrash/shop_list_style.hpp"
@@ -144,9 +143,6 @@ struct AssembleScript : TownBasics {
   // turn the list's page, LT and RT go to its top and bottom line.
   Buttons hide_incompatible{};
   Buttons page_back{}, page_next{}, page_top{}, page_bottom{};
-  // Left and right in the list turn the chosen part's look (a port
-  // addition, part_looks.hpp); none: looks are not offered.
-  std::optional<LookArrows> look_arrows;
   std::string row_sound;
   std::string back_sound;
   std::string exit_sound;

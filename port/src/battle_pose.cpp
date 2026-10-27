@@ -96,10 +96,6 @@ void Battle::pose_robot(const int index, const float seconds) {
   }
   robot.pose->tick(robot.mover, robot.firing, robot.lost, targets, seconds, aim_modes,
                    robot.piloted);
-  if (robot.look_pose) {
-    robot.look_pose->tick(robot.mover, robot.firing, robot.lost, targets, seconds, aim_modes,
-                          robot.piloted);
-  }
 }
 
 Vec3 Battle::muzzle_direction(const Combatant &robot, const WeaponSlot slot) const {

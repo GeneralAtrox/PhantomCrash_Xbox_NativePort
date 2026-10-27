@@ -15,9 +15,8 @@ SvSpecScreen::SvSpecScreen(TextureCache &textures, const GlyphFont &font, SvSpec
       logic_(std::move(logic)), preview_(world, preview, "sv_spec") {
   const SpecRobot &robot = logic_.robot();
   if (robot.hangar >= 0 && robot.hangar < static_cast<int>(robot.garage.hangars.size())) {
-    preview_.show(preview_robot(robot.garage,
-                                robot.garage.hangars[static_cast<std::size_t>(robot.hangar)],
-                                preview_.catalogue()));
+    preview_.show(
+        preview_robot(robot.garage, robot.garage.hangars[static_cast<std::size_t>(robot.hangar)]));
   }
 }
 

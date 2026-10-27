@@ -93,11 +93,6 @@ void RobotPreview::hide() {
   model_.reset();
 }
 
-const RobotCatalogue *RobotPreview::catalogue() const {
-  return world_.robots != nullptr && world_.robots->available() ? &world_.robots->catalogue()
-                                                                : nullptr;
-}
-
 void RobotPreview::place(const PreviewPlacement &place, const bool spins) {
   if (!screen_) {
     return;

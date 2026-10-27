@@ -37,8 +37,6 @@ public:
   // Shows `robot`, building it anew only when it changed.
   void show(const PreviewRobot &robot);
   void hide();
-  // The robots' catalogue, null without the 3D.
-  [[nodiscard]] const RobotCatalogue *catalogue() const;
   // Stands the robot at `place` rather than the screen's (the hangar's
   // wheel, 0x01d8ba); `spins` turns it at the screen's spin from
   // place.yaw, starting over each time it starts to spin.

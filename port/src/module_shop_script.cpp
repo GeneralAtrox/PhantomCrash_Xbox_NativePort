@@ -90,7 +90,6 @@ ShopSidePanel parse_side(const json::JsonValue &value) {
 void parse_mode(const json::JsonValue &mode, ModuleShopScript &script) {
   script.exit_to = mode.string_or("exit_to", script.exit_to);
   script.layers = member(mode, "layers", parse_sprites);
-  script.look_arrows = parse_look_arrows(mode);
   if (mode.find("side") != nullptr) {
     script.side = member(mode, "side", parse_side);
   }
@@ -161,12 +160,6 @@ ModuleShopScript parse_module_shop(const json::JsonValue &document, const Module
     script.down = buttons_from_json(required(buttons, "down"));
     script.sort_name = buttons_from_json(required(buttons, "sort_name"));
     script.sort_price = buttons_from_json(required(buttons, "sort_price"));
-    if (const auto *page = buttons.find("page_back")) {
-      script.page_back = buttons_from_json(*page);
-    }
-    if (const auto *page = buttons.find("page_next")) {
-      script.page_next = buttons_from_json(*page);
-    }
     const auto &sounds = required(document, "sounds");
     script.jump_sound = sounds.string_or("jump", "");
     script.back_sound = sounds.string_or("back", "");

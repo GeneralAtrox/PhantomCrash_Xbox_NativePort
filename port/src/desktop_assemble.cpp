@@ -44,7 +44,7 @@ void AssembleScreen::show_robot() {
     preview_.hide();
     return;
   }
-  preview_.show(preview_robot(garage, logic_.shown_hangar(), preview_.catalogue()));
+  preview_.show(preview_robot(garage, garage.hangars[static_cast<std::size_t>(hangar)]));
 }
 
 void AssembleScreen::tick(const InputFrame &raw_input, const double tick_seconds) {
@@ -224,12 +224,6 @@ void AssembleScreen::draw(const Viewport &viewport) {
     }
     if (logic_.list_open()) {
       draw_list(list);
-    }
-    if (const ShopGoods *line = logic_.chosen();
-        logic_.view() == AssembleView::list && line != nullptr && logic_.offers_look(*line)) {
-      for (const Sprite &arrow : *script.look_arrows) {
-        list.sprite(arrow);
-      }
     }
     notice_.draw(list);
     list.ticker(script.help_style, glyph_run(font_, logic_.help_text()), logic_.help_seconds());

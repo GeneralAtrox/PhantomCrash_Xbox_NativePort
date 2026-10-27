@@ -100,9 +100,6 @@ struct TrainingScript {
   std::string return_to;
   std::map<std::string, TrainingLesson> lessons; // screen name -> lesson
   std::map<std::string, RobotParts> robots;      // "player", "drone", ...
-  // The meshes a robot wears where they differ from its parts (part_looks.hpp);
-  // drawn only, the rules keep `robots`.
-  std::map<std::string, RobotParts> looks;
   TrainingBattle battle;
 };
 

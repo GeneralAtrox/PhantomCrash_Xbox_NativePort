@@ -57,9 +57,6 @@ struct StockItem {
   int level{};
   std::string name;
   int hangar{-1};
-  // The part of the same kind whose mesh it wears (a port addition,
-  // part_looks.hpp); -1 for its own. Its stats stay its own.
-  int look{-1};
   // What the player paid for it, tune-ups and uplifts included (a port
   // addition, for Settings > Full Refunds); unset for one never bought (a
   // new game's, a prize, a cheat's).

@@ -25,15 +25,13 @@ void Battle::tick_death(const int index, const float seconds) {
                                    : robot.death_seconds >= settings_.death_fallback_seconds;
   if (finished && robot.mover.grounded()) {
     if (robot.pose) {
-      // The wreck is drawn: the look it wore.
-      const RobotCombat &drawn = robot.look_pose ? *robot.look_pose : *robot.pose;
       RobotWreck wreck;
-      wreck.assembly = drawn.assembly();
-      wreck.pose = drawn.pose();
+      wreck.assembly = robot.pose->assembly();
+      wreck.pose = robot.pose->pose();
       for (auto &part : wreck.pose) {
         part.contacts.clear();
       }
-      wreck.shoulders = drawn.shoulders();
+      wreck.shoulders = robot.pose->shoulders();
       wreck.root = rotation_y(robot.mover.heading()) * translation(robot.mover.position());
       wreck.lost = robot.lost;
       wreck.centre = robot.aim_origin();

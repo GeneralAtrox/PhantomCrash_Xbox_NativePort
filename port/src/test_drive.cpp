@@ -129,27 +129,14 @@ TrainingScript test_drive_training(const TrainingScript &base, const TestDriveSc
   RobotParts robot;
   robot.colour = bay.paint;
   robot.emblem = bay.emblem;
-  RobotParts look = robot;
-  // A look a part may not wear here (its content off) falls back to its own.
-  const auto worn = [&parts](const StockItem &item) {
-    const std::array<std::size_t, 4> counts{parts.bodies.size(), parts.legs.size(),
-                                            parts.arm_weapons.size(),
-                                            parts.shoulder_weapons.size()};
-    const auto kind = static_cast<std::size_t>(item.kind);
-    const bool known = kind < counts.size() && item.look >= 0 &&
-                       static_cast<std::size_t>(item.look) < counts[kind];
-    return known ? item.look : item.id;
-  };
   TrainingRobot player = base.battle.player;
   player.weapons = {};
   if (const StockItem *body = entry(PartSlot::body)) {
     robot.body = body->id;
-    look.body = worn(*body);
     player.body_level = body->level;
   }
   if (const StockItem *legs = entry(PartSlot::legs)) {
     robot.legs = legs->id;
-    look.legs = worn(*legs);
     player.legs_level = legs->level;
   }
   if (const StockItem *chip = entry(PartSlot::chip)) {
@@ -178,13 +165,8 @@ TrainingScript test_drive_training(const TrainingScript &base, const TestDriveSc
       continue;
     }
     fit_part(robot, slot.part, item->id);
-    fit_part(look, slot.part, worn(*item));
     player.weapons[static_cast<std::size_t>(slot.weapon)] = tuning->name;
     weapons[tuning->name] = std::move(*tuning);
-  }
-  script.looks.erase("player");
-  if (look != robot) {
-    script.looks["player"] = look;
   }
   script.robots["player"] = robot;
   script.battle.player = player;

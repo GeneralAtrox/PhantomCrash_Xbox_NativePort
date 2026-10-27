@@ -47,7 +47,7 @@ void ModuleShopScreen::tick(const InputFrame &raw_input, const double tick_secon
   const ShopGoods *chosen = logic_.chosen();
   const auto kind = chosen == nullptr ? std::nullopt : stock_kind(chosen->goods.kind);
   if (kind && *kind != PartKind::chip && *kind != PartKind::module) {
-    preview_.show(preview_part(*kind, logic_.shown_part(*chosen)));
+    preview_.show(preview_part(*kind, chosen->goods.id));
   } else {
     preview_.hide();
   }
@@ -286,11 +286,6 @@ void ModuleShopScreen::draw_list(DrawList &list) const {
     if (logic_.has_details()) {
       for (const Sprite &arrow : script.extra_stats->page_arrows) {
         list.sprite(shifted(arrow, 0.0F, -fit.raise));
-      }
-    }
-    if (line != nullptr && logic_.view() == ModuleShopView::list && logic_.offers_look(*line)) {
-      for (const Sprite &arrow : *script.look_arrows) {
-        list.sprite(arrow);
       }
     }
   }

@@ -79,8 +79,7 @@ void HangarMenuScreen::tick_robots(const double tick_seconds) {
       robot.hide();
       continue;
     }
-    robot.show(
-        preview_robot(garage, garage.hangars[static_cast<std::size_t>(hangar)], robot.catalogue()));
+    robot.show(preview_robot(garage, garage.hangars[static_cast<std::size_t>(hangar)]));
     const float steps = (logic_.card_x(hangar) - cards.centre_x) / cards.step;
     const bool chosen = hangar == logic_.card();
     PreviewPlacement place = home_;
