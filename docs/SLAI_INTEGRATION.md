@@ -3040,8 +3040,8 @@ list hub (`ui/slai_battle_school.json`).
   The maps file has an empty base in `data/` so the pack's copy can overlay
   it. Pack-only documents are not read.
 - **Gates.** Each stage has four gates (its player spawns). A fourth label
-  (`slai_gate_04`, drawn as text) and a tighter `label_step` fit them in the
-  window. The chosen gate becomes the battle's `start_spawn`.
+  (`slai_gate_04`, drawn as text) and labels drawn at 34x28, 44 apart (RUMBLING's
+  are 40x32, 59 apart), fit them in the window with a clear gap. The chosen gate becomes the battle's `start_spawn`.
 - **Sub-menu choices:**
   - ENTRY, SV RENTAL and the refusals follow Rumble S.L.A.I.
   - SELECT SV opens the hangar, whose `slai_area_select` origin comes back

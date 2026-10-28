@@ -14,13 +14,13 @@
  "routes": {"select_sv": "hangar", "battle": "slai_battle"},
  "gates": {
   "labels": [
-   {"id": "893", "image": "textures/scroll/area_situation_tex/0.png", "rect": [1664, 848, 1704, 880], "position": [0, 193], "layer": 261, "colour": "#808080"},
-   {"id": "894", "image": "textures/scroll/area_situation_tex/0.png", "rect": [1704, 848, 1744, 880], "position": [0, 193], "layer": 261, "colour": "#808080"},
-   {"id": "895", "image": "textures/scroll/area_situation_tex/0.png", "rect": [1744, 848, 1784, 880], "position": [0, 193], "layer": 261, "colour": "#808080"},
-   {"id": "slai_gate_04", "image": "textures/scroll/area_situation_tex/0.png", "rect": [1744, 848, 1784, 880], "position": [0, 193], "layer": 261, "colour": "#808080"}
+   {"id": "893", "image": "textures/scroll/area_situation_tex/0.png", "rect": [1664, 848, 1704, 880], "position": [0, 195], "size": [34, 28], "layer": 261, "colour": "#808080"},
+   {"id": "894", "image": "textures/scroll/area_situation_tex/0.png", "rect": [1704, 848, 1744, 880], "position": [0, 195], "size": [34, 28], "layer": 261, "colour": "#808080"},
+   {"id": "895", "image": "textures/scroll/area_situation_tex/0.png", "rect": [1744, 848, 1784, 880], "position": [0, 195], "size": [34, 28], "layer": 261, "colour": "#808080"},
+   {"id": "slai_gate_04", "image": "textures/scroll/area_situation_tex/0.png", "rect": [1744, 848, 1784, 880], "position": [0, 195], "size": [34, 28], "layer": 261, "colour": "#808080"}
   ],
-  "label_x": {"2": 121, "3": 98, "4": 75},
-  "label_step": 46
+  "label_x": {"2": 125, "3": 103, "4": 81},
+  "label_step": 44
  },
  "slai": {
   "maps": "ui/slai_area_maps.json",
