@@ -63,6 +63,9 @@ std::unique_ptr<Screen> ScreenRunner::make_battle(const std::string &name) {
       if (stages_.contains(chosen)) {
         battle_training_.stage = chosen;
       }
+      if (chosen.starts_with("slai_")) {
+        walk_slai_stage_route();
+      }
     }
     return make_training(battle_training_, test_drive_.lesson);
   }

@@ -242,6 +242,9 @@ private:
   [[nodiscard]] std::shared_ptr<SlaiBattleLineup> make_slai_lineup(const SlaiRumbleData &data,
                                                                    const SlaiMatch &match);
   void finish_slai_match();
+  // Drones on a S.L.A.I. stage walk its own route, or roam its spawns
+  // (slai_rumble.json battle), not the training ground's.
+  void walk_slai_stage_route();
   // Notes the rumble a hub screen enters as the screen moves to its battle,
   // so a story scene played on the way keeps it.
   void note_slai_entry(const std::string &target);

@@ -83,6 +83,25 @@ std::shared_ptr<SlaiBattleLineup> ScreenRunner::make_slai_lineup(const SlaiRumbl
                                             settings.movement, std::random_device{}());
 }
 
+void ScreenRunner::walk_slai_stage_route() {
+  const auto chosen = stages_.find(battle_training_.stage);
+  if (chosen != stages_.end() && !chosen->second.enemy_path.empty()) {
+    battle_training_.battle.enemy_path = chosen->second.enemy_path;
+  }
+  const SlaiRumbleData *data = game_->slai_rumble();
+  if (data == nullptr) {
+    return;
+  }
+  BattleSettings &settings = battle_training_.battle.settings;
+  settings.drone_unstick_seconds = data->world.battle.unstick_seconds;
+  settings.drone_hop_seconds = data->world.battle.hop_seconds;
+  settings.drone_hops = data->world.battle.hops;
+  if (data->world.battle.spawn_route) {
+    battle_training_.battle.spawn_route = slai_route_grid(roots_);
+    battle_training_.battle.spawn_route_merge = data->world.battle.spawn_merge;
+  }
+}
+
 // The ridden robot as TEST DRIVE fits it, or in a rental-only rumble a
 // rental in a garage of its own (as RUMBLING's), against the match's opponents
 // (make_slai_lineup), or, without them, training drones, one fewer than the
@@ -122,18 +141,7 @@ std::unique_ptr<Screen> ScreenRunner::make_slai_battle() {
             battle_training_.stage.c_str());
   }
   battle_training_.battle.drones = slai_opponents(data->world, *match);
-  const auto chosen = stages_.find(battle_training_.stage);
-  if (chosen != stages_.end() && !chosen->second.enemy_path.empty()) {
-    battle_training_.battle.enemy_path = chosen->second.enemy_path;
-  }
-  BattleSettings &settings = battle_training_.battle.settings;
-  settings.drone_unstick_seconds = data->world.battle.unstick_seconds;
-  settings.drone_hop_seconds = data->world.battle.hop_seconds;
-  settings.drone_hops = data->world.battle.hops;
-  if (data->world.battle.spawn_route) {
-    battle_training_.battle.spawn_route = slai_route_grid(roots_);
-    battle_training_.battle.spawn_route_merge = data->world.battle.spawn_merge;
-  }
+  walk_slai_stage_route();
   battle_training_.return_to = slai_result_route;
   slai_lineup_ = make_slai_lineup(*data, *match);
   if (slai_lineup_) {
