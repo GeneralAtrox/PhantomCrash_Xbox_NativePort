@@ -45,7 +45,7 @@ struct ModelMaterial {
   bool double_sided{};
   bool unlit{};
   bool additive{};              // the original's SRCALPHA, ONE blend (batch flag 0x200)
-  bool blend_depth_write{};     // original ordinary model blends still occlude later faces
+  bool blend_depth_write{};     // blends that still occlude later faces (original, or asked)
   Vec3 ambient_colour{1, 1, 1}; // original batch +0x28 -> material Ambient
   float specular_power{};       // original batch +0x40
   bool specular{};              // batch flag 0x40

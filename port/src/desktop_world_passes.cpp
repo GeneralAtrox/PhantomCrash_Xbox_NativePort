@@ -37,12 +37,12 @@ void WorldRenderer::set_frame_constants(const WorldFrame &frame, const Mat4 &vie
 
 // Original second-pass surface layers share vertices/planes with the base
 // mesh (dirt on pavement, choco's helipad): blended, yet writing depth.
+// S.L.A.I.'s soft-alpha stage batches (shadow decals, light pools) too.
 bool WorldRenderer::surface_layer(const Draw &draw) {
   const ModelMaterial &material =
       draw.model->data.materials[static_cast<std::size_t>(draw.draw->material)];
   return !draw.sky_node && !draw.item->optical && !draw.item->additive && draw.alpha == 1.0F &&
-         draw.draw->pass == 1 && material.alpha == AlphaMode::blend && material.original_material &&
-         material.blend_depth_write;
+         draw.draw->pass == 1 && material.alpha == AlphaMode::blend && material.blend_depth_write;
 }
 
 void WorldRenderer::render(const WorldFrame &frame) {

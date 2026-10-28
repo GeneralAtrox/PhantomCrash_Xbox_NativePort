@@ -187,11 +187,10 @@ int WorldRenderer::model(const std::string &asset_path) {
     const ModelData &data = models_.back()->data;
     const auto layers = std::ranges::count_if(data.draws, [&](const ModelDraw &draw) {
       const auto &material = data.materials[static_cast<std::size_t>(draw.material)];
-      return draw.pass == 1 && material.alpha == AlphaMode::blend && material.original_material &&
-             material.blend_depth_write;
+      return draw.pass == 1 && material.alpha == AlphaMode::blend && material.blend_depth_write;
     });
     if (layers > 0) {
-      SDL_Log("Surface layers: %s has %lld original depth-writing overlay batches; "
+      SDL_Log("Surface layers: %s has %lld depth-writing overlay batches; "
               "D24 bias=%d slope=%.1f clamp=%.9f",
               asset_path.c_str(), static_cast<long long>(layers), layer_depth_bias,
               layer_slope_bias, layer_bias_clamp);

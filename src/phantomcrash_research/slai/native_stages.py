@@ -90,6 +90,41 @@ def merge_model(target, source, prefix, texture_paths):
     return [node["name"] for node in target["nodes"][starts["nodes"]:]] if source.get("meshes") else []
 
 
+def blend_soft_materials(document: dict, folder: Path) -> int:
+    """Blend the stage's materials whose texture has partial alpha.
+
+    The PS2 draws every stage batch with alpha blending and its own alpha
+    test, so shadow decals, light pools and the sky's sun glow fade through
+    their texture's alpha. The source materials carry no blend flag, and a
+    glTF MASK draws those texels opaque; a texture holding only clear and
+    opaque texels looks the same either way and keeps MASK. Blended batches
+    still write depth (and the port draws them after the opaque ones,
+    sorted), as the alpha-tested GS draw does."""
+    from PIL import Image
+    soft = {}
+    changed = 0
+    for material in document.get("materials", []):
+        binding = material.get("pbrMetallicRoughness", {}).get("baseColorTexture")
+        if not binding:
+            continue
+        uri = document["images"][document["textures"][binding["index"]]["source"]]["uri"]
+        if uri not in soft:
+            with Image.open(folder / uri) as picture:
+                alpha = np.asarray(picture.convert("RGBA"))[..., 3]
+            soft[uri] = bool(((alpha > 0) & (alpha < 255)).any())
+        if soft[uri]:
+            material["alphaMode"] = "BLEND"
+            material.pop("alphaCutoff", None)
+            material.setdefault("extras", {})["blend_depth_write"] = True
+            changed += 1
+    blended = {i for i, m in enumerate(document.get("materials", [])) if m.get("alphaMode") == "BLEND"}
+    for mesh in document.get("meshes", []):
+        for primitive in mesh["primitives"]:
+            if primitive.get("material") in blended:
+                primitive.setdefault("extras", {}).setdefault("phantomcrash", {})["pass"] = 1
+    return changed
+
+
 def register_stages(image: Path, data: Path, mods: Path) -> dict:
     root = mods / "slai/assets"
     manifest = json.loads((root / "manifest.json").read_text(encoding="utf-8"))
@@ -192,6 +227,7 @@ def register_stages(image: Path, data: Path, mods: Path) -> dict:
         for k in list(target):
             if isinstance(target[k], list) and not target[k]:
                 del target[k]
+        blend_soft_materials(target, mods / "models/slai")
         save(mods / f"models/slai/{name}.gltf", target)
         save(mods / f"collision/slai/{name}.json", collision)
         label = stage_label(stage["source"])

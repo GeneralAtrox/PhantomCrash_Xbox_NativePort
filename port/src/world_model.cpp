@@ -151,8 +151,10 @@ private:
       entry.additive = (flags & batch_additive) != 0;
       // 0x0b3240 retains ZWRITEENABLE for ordinary model draws, including
       // alpha-blended second-pass batches. Additive effects do not write it.
-      // Keep standard glTF transparency for models without original metadata.
-      entry.blend_depth_write = source_flags >= 0 && !entry.additive;
+      // Keep standard glTF transparency for models without original metadata,
+      // unless the material asks for it (S.L.A.I.'s alpha-tested GS blends).
+      entry.blend_depth_write =
+          (source_flags >= 0 || metadata.boolean_or("blend_depth_write", false)) && !entry.additive;
       entry.original_material = source_flags >= 0;
       entry.specular = (flags & 0x40U) != 0;
       entry.specular_power = specular_power(game_extra(metadata, "power", 0.0));
