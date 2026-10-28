@@ -11,7 +11,7 @@ from phantomcrash_research.slai.stage_routes import read_route, route_file
 from phantomcrash_research.slai.stage_spawns import route_spawns
 from phantomcrash_research.slai import stages
 from phantomcrash_research.slai.pod import Batch, Material, Node
-from phantomcrash_research.slai.stages import move_lids
+from phantomcrash_research.slai.stages import move_lids, two_sided
 
 
 def _route(curves, kinds, links, word=0):
@@ -117,6 +117,41 @@ class ArenaLidTests(unittest.TestCase):
                      "walls": []}
         self.assertEqual(move_lids(collision), 0)
         self.assertEqual(len(collision["floor"]), 4)
+
+
+def _facing(triangle):
+    a, b, c = np.array(triangle["points"], dtype=float)
+    normal = np.cross(b - a, c - a)
+    return normal / np.linalg.norm(normal)
+
+
+class TwoSidedTests(unittest.TestCase):
+    def test_a_tunnel_modelled_facing_out_carries_and_walls_from_inside(self):
+        ground = _quad((-50, -50), (50, 50), 10) + _quad((20, 20), (30, 30), 20)  # and a stand
+        # Egypt's tunnel: its floor faces down, its side wall faces away.
+        tunnel = [{"points": [t["points"][0], t["points"][2], t["points"][1]], "surface": 0}
+                  for t in _quad((-5, -50), (5, 50), -10)]
+        side = {"points": [[-5, -10, -50], [-5, 0, -50], [-5, 0, 50]], "surface": 0}
+        collision = {"floor": ground, "walls": tunnel + [side]}
+        self.assertEqual(two_sided(collision), 7)
+        self.assertEqual(len(collision["floor"]), 6)
+        self.assertTrue(all(_facing(t)[1] > 0 for t in collision["floor"]))
+        ceilings = [t for t in collision["walls"] if _facing(t)[1] < -0.5]
+        self.assertEqual(len(ceilings), 6)  # under the ground, stand and tunnel floor
+        sides = sorted(_facing(t)[0] for t in collision["walls"] if abs(_facing(t)[1]) < 0.5)
+        self.assertEqual(sides, [-1, 1])
+        self.assertEqual(two_sided(collision), 0)  # repeatable
+        self.assertEqual(len(collision["walls"]), 8)
+
+    def test_an_arena_lid_stays_a_ceiling_only(self):
+        collision = {"floor": _quad((-50, -50), (50, 50), 0) + _quad((-48, -48), (48, 48), 30),
+                     "walls": []}
+        two_sided(collision)
+        two_sided(collision)
+        heights = sorted(round(t["points"][0][1]) for t in collision["walls"])
+        self.assertEqual(heights, [0, 0, 30, 30])
+        self.assertEqual(len(collision["floor"]), 2)
+        self.assertEqual(collision["extras"]["ceiling_triangles"], 2)
 
 
 if __name__ == "__main__":

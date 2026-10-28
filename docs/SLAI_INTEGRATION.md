@@ -1090,6 +1090,42 @@ New York rumble rises and lands, the behind camera following it up and
 looking down, and the stand-in drones walk 186 of the stage's 244 route
 segments, where before they could walk none of it.
 
+### Two-sided stage collision (2026-10-28)
+
+Egypt's way underground could not be walked. The winding fix assumed each
+hit model is wound one way, but S.L.A.I.'s are not. Egypt's ground faces
+up, but its tunnels and the chamber under the pyramid are solids modelled
+facing out. Their floors and ramps face down, their roofs face up and their
+side walls face away from the inside (the south tunnel's at x 17.8 faces -x,
+at x 31.7 +x).
+
+The port's tests are one-sided: a floor carries only from above, and a wall
+pushes only from its front. So the ramps down were ceilings with no floor
+under them, and the tunnel walls let a robot through from inside. The
+original walks those tunnels, so its hit test cannot depend on facing.
+
+`stages.py` `two_sided` (called by `_collision`, and by
+`register_stage_routes` for packs converted before it) makes the
+collision face both ways:
+
+- a down-facing flat triangle becomes a floor;
+- each floor and each wall gains its reversed copy as a wall, so a floor is
+  also a ceiling from below;
+- an arena lid stays a ceiling only (`move_lids`).
+
+`stage_spawns.py` leaves the ceiling copies out of its body-clearance test.
+Otherwise every route point would be "under" the floor it stands on.
+Egypt grows from 1662 floor and 1740 wall triangles to 1979 and 4825.
+Spawns move slightly on day and night Egypt, England, Hong Kong and the
+practice stage.
+
+A robot now walks all three ways into Egypt's underground:
+
+- down the south ramp at x 24.5;
+- down the east ramp along z 102 (from x 180; at x 196 a solid
+  model block, which the robot cannot enter, stands over the ramp top);
+- down the pit north of the pyramid at (62, 207).
+
 ## Model families and their makers (2026-10-26)
 
 Three S.L.A.I. bodies were named after a different maker from their legs:

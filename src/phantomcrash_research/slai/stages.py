@@ -63,6 +63,67 @@ def move_lids(collision: dict) -> int:
     return len(moved)
 
 
+# A triangle whose normal's y exceeds this is a standing surface (and,
+# from below, a ceiling); steeper ones are walls.
+FLAT_NORMAL_Y = 0.5
+
+
+def _facing_y(points) -> float:
+    a, b, c = np.asarray(points, dtype=float)
+    normal = np.cross(b - a, c - a)
+    length = np.linalg.norm(normal)
+    return float(normal[1] / length) if length > 1e-12 else 0.0
+
+
+def _key(points) -> tuple:
+    """The triangle's corners in their winding, from its least corner."""
+    corners = [tuple(round(float(v), 4) for v in p) for p in points]
+    start = corners.index(min(corners))
+    return tuple(corners[start:] + corners[:start])
+
+
+def two_sided(collision: dict) -> int:
+    """Makes the collision face both ways; returns the triangles added.
+
+    S.L.A.I.'s hit models are not wound consistently: Egypt's ground faces
+    up, but its tunnel (a solid modelled facing out) has a floor and ramp
+    facing down, a roof facing up and side walls facing away from the
+    inside. The original walks that tunnel, so its hit test cannot depend
+    on facing. The port's is one-sided (a floor carries only from above, a
+    wall pushes only from its front), so each flat triangle becomes a floor
+    facing up and a ceiling facing down, and each wall faces both ways. An
+    arena lid stays a ceiling only (move_lids). Repeatable."""
+    floor, walls = collision["floor"], collision["walls"]
+    floor_keys = {_key(t["points"]) for t in floor}
+    kept, lowered = [], 0
+    for t in walls:
+        flipped = [t["points"][0], t["points"][2], t["points"][1]]
+        if _facing_y(t["points"]) < -FLAT_NORMAL_Y and _key(flipped) not in floor_keys:
+            # A standing surface wound down (or a lid, which move_lids
+            # returns to the walls below).
+            floor.append({**t, "points": flipped})
+            floor_keys.add(_key(flipped))
+            lowered += 1
+        else:
+            kept.append(t)
+    collision["walls"] = walls = kept
+    extras = collision.setdefault("extras", {})
+    lids = extras.get("ceiling_triangles", 0)
+    extras["ceiling_triangles"] = max(0, lids - lowered)
+    move_lids(collision)
+    floor, walls = collision["floor"], collision["walls"]
+    wall_keys = {_key(t["points"]) for t in walls}
+    added = 0
+    for t in floor + [t for t in walls if abs(_facing_y(t["points"])) <= FLAT_NORMAL_Y]:
+        flipped = [t["points"][0], t["points"][2], t["points"][1]]
+        if _key(flipped) not in wall_keys:
+            walls.append({**t, "points": flipped})
+            wall_keys.add(_key(flipped))
+            added += 1
+    extras["two_sided"] = True
+    return added
+
+
 def _collision(disc, files) -> dict:
     walls, floor = [], []
     for file in files:
@@ -85,13 +146,13 @@ def _collision(disc, files) -> dict:
                         continue
                     normal = normal / length
                     record = {"points": tri.tolist(), "surface": 0}
-                    (floor if normal[1] > 0.5 else walls).append(record)
+                    (floor if normal[1] > FLAT_NORMAL_Y else walls).append(record)
     collision = {"walls": walls, "floor": floor,
             "extras": {"source_hit_models": [{"source": f.name, "package_offset": f.package} for f in files],
                        "coordinate_conversion": [0.1, -0.1, 0.1],
                        "coordinate_space": "glTF model space; native stage registration pending",
                        "surface_classification": "native adapter from triangle normal; source IDs unavailable"}}
-    move_lids(collision)
+    two_sided(collision)
     return collision
 
 

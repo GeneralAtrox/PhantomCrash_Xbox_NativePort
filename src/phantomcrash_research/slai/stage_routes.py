@@ -29,7 +29,7 @@ from pathlib import Path, PurePosixPath
 from .assets import save
 from .resources import resource_packages
 from .stage_spawns import route_spawns
-from .stages import move_lids
+from .stages import two_sided
 from .world_units import STAGE_AXES
 
 # Stage source city -> PATH file (city table order, 0x10 apart in the name).
@@ -90,7 +90,8 @@ def route_file(source: str) -> str | None:
 def register_stage_routes(disc, data: Path, output: Path) -> dict:
     """Writes each S.L.A.I. stage's route to ``enepath/slai/`` and takes its
     standing starts from the route, so they lie in the arena S.L.A.I.'s
-    robots walk; an older pack's arena lids become ceilings (``move_lids``).
+    robots walk; an older pack's collision is made to face both ways, its
+    arena lids staying ceilings (``two_sided``).
     Repeatable on an installed pack (``output``)."""
     from .program import ProgramData
     from .world_units import world_units
@@ -113,7 +114,7 @@ def register_stage_routes(disc, data: Path, output: Path) -> dict:
         save(output / relative, route)
         stage["enemy_path"] = relative
         collision = json.loads((output / stage["collision"]).read_text(encoding="utf-8"))
-        if move_lids(collision):  # packs converted before move_lids
+        if two_sided(collision):  # packs converted before two_sided or move_lids
             save(output / stage["collision"], collision)
         stage["spawn"], stage["player_spawns"] = route_spawns(
             route, collision["floor"], collision["walls"], **clearance)

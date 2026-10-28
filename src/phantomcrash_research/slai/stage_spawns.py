@@ -33,6 +33,16 @@ def _enclosures(triangles, horizontal, body_height):
     return enclosure
 
 
+def _walls(floor, walls):
+    """The walls, less the ceilings that only turn a floor's underside
+    (two_sided): this clearance test has no facing, so a robot's own floor
+    would block it."""
+    floors = {frozenset(tuple(np.round(p, 4)) for p in t["points"]) for t in floor}
+    kept = [t["points"] for t in walls
+            if frozenset(tuple(np.round(p, 4)) for p in t["points"]) not in floors]
+    return np.array(kept, dtype=float).reshape(-1, 3, 3)
+
+
 def _wall_distance(point, triangles):
     if not len(triangles):
         return float("inf")
@@ -96,7 +106,7 @@ def route_spawns(route, floor, walls=(), *, body_height=4.4, body_radius=1.5,
     as the clearance tests allow; the first is the player's. Still adapter
     starts: S.L.A.I.'s own start table is not recovered."""
     triangles = np.array([t["points"] for t in floor])
-    wall_triangles = np.array([t["points"] for t in walls]) if len(walls) else np.zeros((0, 3, 3))
+    wall_triangles = _walls(floor, walls)
     points = {tuple(p) for s in route["segments"] for p in s["points"]}
     remaining = np.array(sorted(points))
     entries = np.array([s["points"][0] for s in route["segments"] if s["kind"] == 0]).reshape(-1, 3)
@@ -130,7 +140,7 @@ def ground_spawns(floor, walls=(), *, body_height=4.4, body_radius=1.5,
     walls. These are native adapter starts, not recovered original spawn points.
     """
     triangles = np.array([t["points"] for t in floor])
-    wall_triangles = np.array([t["points"] for t in walls])
+    wall_triangles = _walls(floor, walls)
     normals = np.cross(triangles[:, 1]-triangles[:, 0], triangles[:, 2]-triangles[:, 0])
     area = np.linalg.norm(normals, axis=1)
     horizontal = abs(normals[:, 1]) / np.maximum(area, 1e-8) > .95
