@@ -776,6 +776,7 @@ if(PHANTOMCRASH_BUILD_DESKTOP)
     src/desktop_schedule.cpp
     src/desktop_schedule_slai.cpp
     src/desktop_slai_area.cpp
+    src/desktop_model_zoo.cpp
     src/desktop_slai_rumble.cpp
     src/desktop_screens_slai.cpp
     src/desktop_contest_info.cpp

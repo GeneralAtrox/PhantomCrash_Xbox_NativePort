@@ -15,6 +15,7 @@
 #include "desktop_slai_area.hpp"
 #include "desktop_slai_rumble.hpp"
 #include "desktop_sleep.hpp"
+#include "desktop_model_zoo.hpp"
 #include "desktop_sonic_amp.hpp"
 #include "desktop_sv_spec.hpp"
 #include "phantomcrash/added_chips.hpp"
@@ -247,6 +248,9 @@ std::unique_ptr<Screen> GameScreens::make(const std::string &name, const std::st
         resolve(hub->second.exit_to, place_before), frame_, credits_, quest, message_box_,
         slai_riding_robot(*slai_rumble_, check, quest),
         !slai_rental_robots(slai_rumble_->world, check.rules).empty());
+  }
+  if (name == "model_zoo") {
+    return std::make_unique<ModelZooScreen>(textures_.renderer(), preview_world(), parts_, garage_);
   }
   if (name == "records") {
     return std::make_unique<RecordsScreen>(textures_, font_, records_, contests_,
