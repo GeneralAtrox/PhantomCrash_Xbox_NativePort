@@ -13,11 +13,17 @@ ROLL_CALLBACKS = {0x4e5ad0: "0xc10", 0x4e5b60: "0xc14",
 SPHERICAL_CALLBACK = 0x4e5d10
 # Native movement state -> original action. Other states retain the existing
 # filename adapter until their original producers have been traced.
-NATIVE_ACTIONS = {0: 0, 1: 2, 2: 1, 5: 4, 8: 44, 9: 45, 10: 20, 11: 22, 12: 46, 28: 47}
+# Slots 13/14 are the sidestep pair 0x4ecd10 and 0x4ecb60 play (actions 13
+# and 12, one per stick side); walking legs have no action 14, which the
+# filename adapter gave slot 14. S.L.A.I. has no air sidestep of its own, so
+# the port's air dodges (15/16) reuse the same pair.
+NATIVE_ACTIONS = {0: 0, 1: 2, 2: 1, 5: 4, 8: 44, 9: 45, 10: 20, 11: 22, 12: 46,
+                  13: 13, 14: 12, 15: 13, 16: 12, 28: 47}
 ACTION_PROVENANCE = {0: "0x4ea99c", 1: "0x4ea670", 2: "0x4ea754",
                      5: "0x4eac38", 8: "0x4ebc14..20", 9: "0x4ebbf0..bfc",
                      10: "0x4eb59c..5ac", 11: "0x4ef2cc",
-                     12: "0x4e0b18", 28: "0x4ea1c4"}
+                     12: "0x4e0b18", 13: "0x4ecdd0..de0", 14: "0x4ecc20..c30",
+                     15: "port: 0x4ecdd0", 16: "port: 0x4ecc20", 28: "0x4ea1c4"}
 
 
 def decode_motion_resources(program):
@@ -35,6 +41,8 @@ def decode_motion_resources(program):
               0x4ebbd8: 0xc6000e24, 0x4ebbe4: 0x460c0034,
               0x4ebbf0: 0x2405002d, 0x4ebbfc: 0x0c13a528,
               0x4ebc14: 0x2405002c, 0x4ebc20: 0x0c13a528,
+              0x4ecc20: 0x2405000c, 0x4ecc30: 0x0c13a528,
+              0x4ecdd0: 0x2405000d, 0x4ecde0: 0x0c13a528,
               0x1b2a9c: 0x16420004, 0x1b2aa4: 0x0c043aca,
               0x1b56e8: 0x00c23026, 0x1b56ec: 0x0006302b,
               0x19f480: 0x14620005, 0x19f48c: 0x0c043aa0,

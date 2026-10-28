@@ -15,12 +15,16 @@ struct PoseInput;
 // callbacks. Each simulation update feeds its result into the next blend.
 class SourceLegPlayback {
   friend class StateInspector;
+
 public:
   void reset(const SkeletonNode &root);
   void play(int transition_frames, float start_frame = 0, const Motion *motion = nullptr,
             bool loop = true);
   void advance(const MotionSource &source, float seconds, bool original_transition,
                bool loop = true, float speed = 1);
+  // Takes the source's current frame at full weight, ending any transition:
+  // a robot shown standing still, which never steps a control update.
+  void settle(const MotionSource &source, bool original_transition);
   [[nodiscard]] const std::vector<std::optional<Mat4>> &locals() const {
     return locals_;
   }

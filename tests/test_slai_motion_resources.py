@@ -32,6 +32,10 @@ class CompiledProgram:
                      0x4ebbfc: struct.pack('<I', 0x0c13a528),
                      0x4ebc14: struct.pack('<I', 0x2405002c),
                      0x4ebc20: struct.pack('<I', 0x0c13a528),
+                     0x4ecc20: struct.pack('<I', 0x2405000c),
+                     0x4ecc30: struct.pack('<I', 0x0c13a528),
+                     0x4ecdd0: struct.pack('<I', 0x2405000d),
+                     0x4ecde0: struct.pack('<I', 0x0c13a528),
                      0x1b2a9c: struct.pack('<I', 0x16420004),
                      0x1b2aa4: struct.pack('<I', 0x0c043aca),
                      0x1b56e8: struct.pack('<I', 0x00c23026),
@@ -58,7 +62,7 @@ class CompiledProgram:
             self.strings[pointer] = value
             struct.pack_into('<I', row, index*4, pointer)
         numbers = [-1]*59
-        for action, number in {0:1, 1:2, 2:3, 4:5, 20:21, 22:24, 35:37, 36:37,
+        for action, number in {0:1, 1:2, 2:3, 4:5, 12:13, 13:14, 20:21, 22:24, 35:37, 36:37,
                                44:47, 45:48, 46:49, 47:50}.items():
             numbers[action] = number
         struct.pack_into('<59h', row, 12, *numbers)
@@ -90,6 +94,9 @@ class MotionResourcesTests(unittest.TestCase):
         self.assertEqual([names[i] for i in (11,12)], ['S9L01H24','S9L01H49'])
         self.assertEqual(names[10], 'S9L01H21')
         self.assertEqual([names[i] for i in (8,9)], ['S9L01H47','S9L01H48'])
+        # Both dodges are the original sidestep pair, on the ground and in the air.
+        self.assertEqual([names[i] for i in (13,14,15,16)],
+                         ['S9L01H14','S9L01H13','S9L01H14','S9L01H13'])
 
     def test_body_package_matching_uses_the_folder_and_authored_motion_prefix(self):
         resources = decode_motion_resources(CompiledProgram())

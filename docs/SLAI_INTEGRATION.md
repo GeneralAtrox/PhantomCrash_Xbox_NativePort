@@ -43,8 +43,12 @@ Implemented in the native port:
   the legs authored with that package. Sixteen use motion prefixes different
   from their body mesh name, including Photon banks using Holy animations.
   The original 59-action filename tables drive walk, reverse walk, dash,
-  reverse dash and idle selection in both leg and body playback. Other native
-  movement states retain the numbered-filename adapter pending investigation.
+  reverse dash and idle selection in both leg and body playback. The dodges
+  play the sidestep pair 0x4ecd10 and 0x4ecb60 start (actions 13 and 12, one
+  per stick side; the air dodges reuse them, as S.L.A.I. has no air
+  sidestep): walking legs have no action 14, so the numbered-filename adapter
+  left the left dodge without a clip. Other native movement states retain
+  that adapter pending investigation.
   Imported body arm weapons use compiled hand controls (native right/left
   nodes 5/3 for makers 1–8). The drone body has one enabled control, node 2;
   its other arm attachment and both Sweeper arm attachments are disabled in

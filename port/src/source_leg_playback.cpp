@@ -174,6 +174,31 @@ void SourceLegPlayback::advance(const MotionSource &source, const float seconds,
   sample_frame_ = source.frame;
 }
 
+void SourceLegPlayback::settle(const MotionSource &source, const bool original_transition) {
+  if (!original_transition) {
+    advance(source, 0, false);
+    return;
+  }
+  frames_ = frame_ = 0;
+  accumulator_ = 0;
+  for (std::size_t track = 0; track < controls_.size(); ++track) {
+    const auto *node = controls_[track];
+    if (!node) {
+      continue;
+    }
+    const auto *pmt = pmt_track(source.motion, static_cast<int>(track));
+    Mat4 target = pmt && track < cursors_.size() ? cursors_[track].sample(*pmt)
+                                                 : clip_pose(*node, source.motion, source.frame);
+    if (node->source_model_root) {
+      target.at(3, 0) = node->translation.x;
+      target.at(3, 1) = node->translation.y;
+      target.at(3, 2) = -node->translation.z;
+    }
+    locals_[track] = target;
+  }
+  sample_frame_ = source.frame;
+}
+
 std::optional<Mat4> source_leg_transform(const SkeletonNode &node, const PoseInput &input,
                                          const int part) {
   if (part != 0 || !input.source_leg_locals || node.track < 0 ||

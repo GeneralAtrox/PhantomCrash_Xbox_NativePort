@@ -93,6 +93,9 @@ public:
     speed_ = speed;
   }
   void tick(double seconds);
+  // Poses S.L.A.I. legs at the current frame without playing on (a preview
+  // that holds its stand motion's first frame never ticks).
+  void settle();
   void reset_procedural_clock() noexcept {
     procedural_seconds_ = 0;
     source_roll_ = {};

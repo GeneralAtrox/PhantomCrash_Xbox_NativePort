@@ -143,6 +143,12 @@ void RobotAnimator::tick(const double seconds) {
                        speed_);
 }
 
+void RobotAnimator::settle() {
+  if (source_legs()) {
+    source_legs_.settle(source(legs_), source_transition_);
+  }
+}
+
 bool RobotAnimator::finished() const noexcept {
   return !loop_ && frame_ >= timing(motion_).last;
 }

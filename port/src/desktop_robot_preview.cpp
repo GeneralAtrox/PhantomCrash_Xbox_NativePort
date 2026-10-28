@@ -135,6 +135,8 @@ void RobotPreview::tick(const double seconds) {
   }
   if (script_.animate) {
     model_->animator->tick(seconds);
+  } else {
+    model_->animator->settle();
   }
   model_->animator->pose(root, 0.0F, 0.0F, true, model_->pose);
   model_->visual->animate(model_->animator->motion(), model_->animator->frame(),
