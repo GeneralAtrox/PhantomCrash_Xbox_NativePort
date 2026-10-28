@@ -188,9 +188,10 @@ TEST_CASE("Club Wired offers Rumble S.L.A.I. beside RUMBLING when S.L.A.I. is in
       parse_location_menu(shipped_document("ui/club_wired.json"), "club_wired.json");
   REQUIRE(script.items.size() == 7U);
   CHECK(script.items[1].id == "slai_rumble");
-  CHECK(script.items[1].next == "slai_rumble");
+  CHECK(script.items[1].next == "slai_area_select");
   CHECK(script.items[1].label.id == "slai_rumble_label");
   CHECK(script.items[0].label.id == "label");
+  CHECK(LocationMenu(script, "slai_area_select").cursor() == 1);
   CHECK(LocationMenu(script, "slai_rumble").cursor() == 1);
 }
 

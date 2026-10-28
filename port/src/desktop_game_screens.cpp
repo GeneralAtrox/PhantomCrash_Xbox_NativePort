@@ -12,6 +12,7 @@
 #include "desktop_records.hpp"
 #include "desktop_rumbling.hpp"
 #include "desktop_schedule.hpp"
+#include "desktop_slai_area.hpp"
 #include "desktop_slai_rumble.hpp"
 #include "desktop_sleep.hpp"
 #include "desktop_sonic_amp.hpp"
@@ -86,6 +87,10 @@ GameScreens::GameScreens(TextureCache &textures, const DataRoots &roots, const G
         slai_hubs_.emplace(screen, parse_slai_rumble_hub(roots.document(document)));
       }
     }
+    slai_area_ = load_slai_area_select(roots, "ui/slai_area_select.json");
+    if (slai_area_ && roots.has_document(slai_area_->maps)) {
+      slai_area_maps_ = parse_slai_area_maps(roots.document(slai_area_->maps));
+    }
   }
   const auto placeholders = roots.document("ui/placeholders.json");
   if (const auto *buttons = placeholders.find("buttons")) {
@@ -138,6 +143,23 @@ std::unique_ptr<Screen> GameScreens::make_rumbling(const std::string &from,
   Rumbling logic(rumbling_, contests_, regulation_check(), quest, resume);
   return std::make_unique<RumblingScreen>(textures_, font_, std::move(logic), contests_,
                                           message_box_, from, frame_, credits_, quest, remembered);
+}
+
+// S.L.A.I.'s area select comes back from SELECT SV (the hangar) to the
+// area's sub-menu, as RUMBLING does.
+std::unique_ptr<Screen> GameScreens::make_slai_area(const std::string &from,
+                                                    const QuestSave &quest) const {
+  int &remembered = dealer_cursors_["slai_area_select"];
+  std::optional<int> resume;
+  if (from == slai_area_->rumbling.hangar_route) {
+    resume = remembered;
+  }
+  const RegulationCheck check = regulation_check();
+  SlaiAreaSelect logic(*slai_area_, *slai_rumble_, slai_area_maps_, quest,
+                       slai_riding_robot(*slai_rumble_, check, quest),
+                       !slai_rental_robots(slai_rumble_->world, check.rules).empty(), resume);
+  return std::make_unique<SlaiAreaScreen>(textures_, font_, std::move(logic), message_box_, from,
+                                          frame_, credits_, quest, remembered);
 }
 
 // ASSEMBLE works on the hangar the hangar's wheel has chosen, coming back
@@ -214,6 +236,9 @@ std::unique_ptr<Screen> GameScreens::make(const std::string &name, const std::st
     return std::make_unique<ScheduleScreen>(textures_, font_, schedule_, contests_, from,
                                             resolve(schedule_.exit_to, place_before), frame_,
                                             credits_, quest, message_box_, slai_rumble());
+  }
+  if (name == "slai_area_select" && slai_area_ && slai_rumble_) {
+    return make_slai_area(from, quest);
   }
   if (const auto hub = slai_hubs_.find(name); hub != slai_hubs_.end() && slai_rumble_) {
     const RegulationCheck check = regulation_check();

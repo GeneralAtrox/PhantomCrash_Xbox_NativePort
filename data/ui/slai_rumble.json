@@ -519,7 +519,9 @@
      465,
      420,
      489
-    ]
+    ],
+    "blueprint": [177, 71, 497, 258],
+    "venue": [364, 431, 444, 455]
    },
    {
     "image": "textures/slai/wired/stuttgart.png",
@@ -540,7 +542,9 @@
      465,
      446,
      489
-    ]
+    ],
+    "blueprint": [182, 68, 499, 267],
+    "venue": [352, 432, 457, 454]
    },
    {
     "image": "textures/slai/wired/new_york.png",
@@ -561,7 +565,9 @@
      465,
      441,
      489
-    ]
+    ],
+    "blueprint": [180, 68, 508, 266],
+    "venue": [353, 430, 456, 455]
    },
    {
     "image": "textures/slai/wired/london.png",
@@ -582,7 +588,9 @@
      465,
      429,
      489
-    ]
+    ],
+    "blueprint": [181, 67, 489, 266],
+    "venue": [351, 431, 457, 455]
    },
    {
     "image": "textures/slai/wired/hong_kong.png",
@@ -603,7 +611,9 @@
      465,
      449,
      489
-    ]
+    ],
+    "blueprint": [184, 72, 484, 267],
+    "venue": [362, 431, 447, 455]
    },
    {
     "image": "textures/slai/wired/cairo.png",
@@ -624,7 +634,9 @@
      465,
      418,
      489
-    ]
+    ],
+    "blueprint": [181, 70, 490, 262],
+    "venue": [358, 431, 451, 455]
    },
    {
     "image": "textures/slai/wired/las_vegas.png",
@@ -645,7 +657,9 @@
      465,
      444,
      489
-    ]
+    ],
+    "blueprint": [180, 65, 507, 267],
+    "venue": [373, 430, 435, 454]
    }
   ]
  },

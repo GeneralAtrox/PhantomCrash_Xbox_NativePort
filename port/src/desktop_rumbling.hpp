@@ -1,6 +1,7 @@
 #pragma once
 
 #include "desktop_sv_purchase.hpp"
+#include "desktop_rumbling_look.hpp"
 #include "desktop_town_screen.hpp"
 #include "phantomcrash/contests.hpp"
 #include "phantomcrash/rumbling.hpp"
@@ -54,11 +55,11 @@ public:
   }
 
 private:
+  [[nodiscard]] RumblingLook look() const;
   void draw_items(DrawList &list) const;
   void draw_area(DrawList &list, int area, float alpha) const;
   void draw_info(DrawList &list) const;
   void draw_menu(DrawList &list) const;
-  void draw_map(DrawList &list) const;
   void draw_gates(DrawList &list) const;
   // The live RUMBLING (desktop_rumbling_robots.cpp): the opponents out on
   // the map, and the shown one's armour on its card.

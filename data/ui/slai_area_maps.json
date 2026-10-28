@@ -1,0 +1,6 @@
+{
+ "notes": [
+  "S.L.A.I.'s rumble stages' blueprint maps for its area select (ui/slai_area_select.json), by stage name: each stage's map frames, gates and robot map as a RUMBLING area holds them. Installing S.L.A.I. draws them from the stages' collision (draw-slai-maps) into the pack's data/ui/slai_area_maps.json, which is merged over this empty base; without the pack there are none."
+ ],
+ "areas": {}
+}

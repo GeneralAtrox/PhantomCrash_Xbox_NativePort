@@ -353,6 +353,7 @@ private:
   std::optional<SlaiCityMatch> slai_match_;       // the S.L.A.I. rumble being fought
   std::shared_ptr<SlaiBattleLineup> slai_lineup_; // and its opponents
   std::optional<SlaiCityMatch> slai_entered_;     // a hub's entry on the way to its battle
+  int slai_gate_{-1};                             // and the gate chosen for it, if any
   std::string slai_hub_{"slai_rumble"};           // the hub a S.L.A.I. battle returns to
   int slai_brand_{slai_any_maker};                // its ridden body's brand (+2)
   std::unique_ptr<Screen> pending_result_;

@@ -3005,3 +3005,46 @@ false shipped, true for S.L.A.I.'s rule):
   progress.
 - The junk shop's SV lineup still reads the stored stage, so it shows the
   stage-0 lineup until the first battle.
+
+## Rumble S.L.A.I. on RUMBLING's area select (2026-10-28)
+
+Club Wired's Rumble S.L.A.I. now opens `slai_area_select`
+(`data/ui/slai_area_select.json`), which extends `ui/rumbling.json` and is
+driven by `SlaiAreaSelect` (`slai_area_select.hpp`). Battle School keeps the
+list hub (`ui/slai_battle_school.json`).
+
+- **Plates.** All seven cities get RUMBLING's SHINJUKU plate, in the table's
+  display order: four in an upper row at y 337, then three and EXIT on
+  RUMBLING's row. Each plate's name is drawn as text through
+  `sprite_text.json` under the id `slai_area_plate_<column>`. The plates
+  slide in from `plate_slide`, as RUMBLING's do.
+- **Picture.** To make room for the upper row, RUMBLING's picture frame,
+  CLOSED, noise, CLEAR and EXIT's picture and label are drawn at
+  `picture_scale` (0.875) about the frame's corner. The rule is in
+  `slai_area_select_script.cpp`. A city's picture is the blueprint from its
+  Wired sheet. The sheet rects are `city_art.cities[].blueprint` in
+  `ui/slai_rumble.json`, fitted into `picture_box` over the map's grid.
+- **Title.** Where RUMBLING draws the area's logo, a city shows its emblem,
+  its `<CITY> / DAY|NIGHT` label and its venue's name (`venue`, e.g.
+  LIBERTIES).
+- **Closed cities.** A city the rota keeps closed today, or whose rumble
+  Rumble S.L.A.I. leaves out (the tutorial's), shows CLOSED over noise.
+  Its help line is `closed_help`.
+- **Inside.** The inside is RUMBLING's, drawn by the shared
+  `desktop_rumbling_look.cpp`:
+  - the sub-menu over the pack's blueprint of the day's stage
+    (`ui/slai_area_maps.json`);
+  - the gates;
+  - INFORMATION, with Rumble S.L.A.I.'s rule text.
+
+  The maps file has an empty base in `data/` so the pack's copy can overlay
+  it. Pack-only documents are not read.
+- **Gates.** Each stage has four gates (its player spawns). A fourth label
+  (`slai_gate_04`, drawn as text) and a tighter `label_step` fit them in the
+  window. The chosen gate becomes the battle's `start_spawn`.
+- **Sub-menu choices:**
+  - ENTRY, SV RENTAL and the refusals follow Rumble S.L.A.I.
+  - SELECT SV opens the hangar, whose `slai_area_select` origin comes back
+    to the sub-menu.
+  - WIRE HEADS DATA is refused for now. S.L.A.I.'s opponents are only drawn
+    when the battle starts.

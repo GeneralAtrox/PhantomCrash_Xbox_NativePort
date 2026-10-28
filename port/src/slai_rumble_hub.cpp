@@ -9,40 +9,6 @@
 #include <utility>
 
 namespace phantomcrash {
-namespace {
-
-// Every key in the lines replaced by its value.
-std::vector<std::string> filled(std::vector<std::string> lines,
-                                const std::vector<std::pair<std::string, std::string>> &values) {
-  for (const auto &[key, value] : values) {
-    for (std::string &line : lines) {
-      for (auto at = line.find(key); at != std::string::npos; at = line.find(key, at)) {
-        line.replace(at, key.size(), value);
-        at += value.size();
-      }
-    }
-  }
-  return lines;
-}
-
-const std::vector<std::string> &refusal(const SlaiRumbleHubScript &script, const SlaiEntry entry) {
-  switch (entry) {
-  case SlaiEntry::money:
-    return script.short_of_money;
-  case SlaiEntry::maker:
-    return script.wrong_maker;
-  case SlaiEntry::legs:
-    return script.wrong_legs;
-  case SlaiEntry::special:
-    return script.special_unmet;
-  case SlaiEntry::allowed:
-  case SlaiEntry::not_ready:
-    break;
-  }
-  return script.not_ready;
-}
-
-} // namespace
 
 SlaiRumbleHub::SlaiRumbleHub(SlaiRumbleHubScript script, const SlaiRumbleData &data,
                              const QuestSave &quest, SlaiRobot riding, const bool rentals,
@@ -190,18 +156,11 @@ void SlaiRumbleHub::enter() {
                                        : nullptr;
   } else if (const SlaiEntry entry = slai_entry_check(data_.world, *rule, quest_.money, riding_);
              entry != SlaiEntry::allowed) {
-    lines = &refusal(script_, entry);
+    lines = &slai_refusal_lines(script_, entry);
   }
   if (lines != nullptr) {
-    const auto &makers = data_.world.makers;
-    const std::string maker = rule->maker >= 0 && rule->maker < static_cast<int>(makers.size())
-                                  ? makers[static_cast<std::size_t>(rule->maker)]
-                                  : std::string{};
     sounds_.play(script_.refuse_sound);
-    box_.open(MessageBox::Kind::notice,
-              filled(*lines, {{"{entry}", std::to_string(shown_ny(requirement))},
-                              {"{rumble}", rule->name},
-                              {"{maker}", maker}}));
+    box_.open(MessageBox::Kind::notice, slai_refusal_notice(data_, *rule, *lines));
     sounds_.play(box_.style().open_sound);
     return;
   }

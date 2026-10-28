@@ -4,6 +4,7 @@
 
 #include "desktop_game_screens.hpp"
 #include "desktop_screens.hpp"
+#include "desktop_slai_area.hpp"
 #include "desktop_slai_rumble.hpp"
 #include "desktop_training.hpp"
 #include "phantomcrash/slai_battle_lineup.hpp"
@@ -112,6 +113,7 @@ std::unique_ptr<Screen> ScreenRunner::make_slai_battle() {
                                            quest_.garage.riding, game_->part_tables());
     slai_brand_ = slai_riding_robot(*data, check, quest_).maker;
   }
+  battle_training_.battle.start_spawn = std::exchange(slai_gate_, -1);
   const std::string &stage = slai_match_stage(data->world, slai_match_->city, slai_match_->night);
   if (stages_.contains(stage)) {
     battle_training_.stage = stage;
@@ -199,6 +201,13 @@ void ScreenRunner::note_slai_entry(const std::string &target) {
   if (const auto *hub = dynamic_cast<const SlaiRumbleScreen *>(screen_.get())) {
     if (const auto entered = hub->entered()) {
       slai_entered_ = entered;
+      slai_gate_ = -1;
+      slai_hub_ = name_;
+    }
+  } else if (const auto *areas = dynamic_cast<const SlaiAreaScreen *>(screen_.get())) {
+    if (const auto entered = areas->entered()) {
+      slai_entered_ = entered->match;
+      slai_gate_ = entered->gate;
       slai_hub_ = name_;
     }
   }

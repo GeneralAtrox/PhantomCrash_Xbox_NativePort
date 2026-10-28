@@ -52,14 +52,7 @@ RumblingArea parse_area(const json::JsonValue &value) {
   area.item = member(value, "item", parse_sprite);
   area.item_lit = member(value, "item_lit", parse_sprite);
   area.item_from_x = number_of(value, "item_from_x");
-  if (value.find("map_frames") != nullptr) {
-    area.map_frames = member(value, "map_frames", parse_sprites);
-  }
-  area.gates = points_of(value, "gates");
-  area.marks = points_of(value, "marks");
-  if (const json::JsonValue *map = value.find("robot_map")) {
-    area.robot_map = parse_rumbling_map_projection(*map);
-  }
+  parse_rumbling_area_map(value, area);
   return area;
 }
 
@@ -187,6 +180,17 @@ void parse_sounds(const json::JsonValue &sounds, RumblingScript &script) {
 }
 
 } // namespace
+
+void parse_rumbling_area_map(const json::JsonValue &value, RumblingArea &area) {
+  if (value.find("map_frames") != nullptr) {
+    area.map_frames = member(value, "map_frames", parse_sprites);
+  }
+  area.gates = points_of(value, "gates");
+  area.marks = points_of(value, "marks");
+  if (const json::JsonValue *map = value.find("robot_map")) {
+    area.robot_map = parse_rumbling_map_projection(*map);
+  }
+}
 
 RumblingScript parse_rumbling(const json::JsonValue &document) {
   try {

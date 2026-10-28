@@ -17,7 +17,7 @@
  },
  "places": {
   "townmap": ["town_map"],
-  "wired": ["club_wired", "slai_rumble"],
+  "wired": ["club_wired", "slai_rumble", "slai_area_select"],
   "garage": ["garage"],
   "moduleshop": ["the_mechanist", "junk_shop"],
   "cdedit": ["blood_music"],

@@ -18,6 +18,9 @@ add_library(phantomcrash_core
   src/added_chips.cpp
   src/slai_content.cpp
   src/slai_rota.cpp
+  src/slai_area_select.cpp
+  src/slai_area_select_areas.cpp
+  src/slai_area_select_script.cpp
   src/slai_rumble_hub.cpp
   src/slai_rumble_hub_script.cpp
   src/slai_rumble_rules.cpp
@@ -444,6 +447,7 @@ if(BUILD_TESTING)
     tests/slai_rumble_tests.cpp
     tests/slai_entry_robot_tests.cpp
     tests/shop_variant_tests.cpp
+    tests/slai_area_select_tests.cpp
     tests/slai_screens_tests.cpp
   )
   target_link_libraries(phantomcrash_core_tests PRIVATE phantomcrash_core)
@@ -771,10 +775,12 @@ if(PHANTOMCRASH_BUILD_DESKTOP)
     src/desktop_records_trophies.cpp
     src/desktop_schedule.cpp
     src/desktop_schedule_slai.cpp
+    src/desktop_slai_area.cpp
     src/desktop_slai_rumble.cpp
     src/desktop_screens_slai.cpp
     src/desktop_contest_info.cpp
     src/desktop_rumbling.cpp
+    src/desktop_rumbling_look.cpp
     src/desktop_rumbling_robots.cpp
     src/desktop_keep_sv.cpp
     src/desktop_vs_mode.cpp

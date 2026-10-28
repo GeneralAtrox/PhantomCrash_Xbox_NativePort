@@ -164,6 +164,11 @@ std::unique_ptr<Screen> ScreenRunner::make_training(const TrainingScript &script
     if (stage->second.spawn) {
       staged_training_.battle.player_start = *stage->second.spawn;
     }
+    const auto &spawns = stage->second.player_spawns;
+    if (const int start = staged_training_.battle.start_spawn;
+        start >= 0 && start < static_cast<int>(spawns.size())) {
+      staged_training_.battle.player_start = spawns[static_cast<std::size_t>(start)];
+    }
   }
   TrainingContext context{roots_,
                           world_.get(),

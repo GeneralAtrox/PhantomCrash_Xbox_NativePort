@@ -3,9 +3,11 @@
 #include "phantomcrash/slai_rumble_hub.hpp"
 
 #include "phantomcrash/json_fields.hpp"
+#include "phantomcrash/money.hpp"
 
 #include <algorithm>
 #include <stdexcept>
+#include <utility>
 
 namespace phantomcrash {
 namespace {
@@ -64,8 +66,14 @@ void parse_city_art(const json::JsonValue &value, SlaiRumbleHubScript &script) {
   script.art_label_scale = static_cast<float>(value.number_or("label_scale", 1.0));
   script.art_layer = static_cast<int>(value.number_or("layer", script.art_layer));
   for (const auto &city : required(value, "cities").array()) {
-    script.city_art.push_back({required(city, "image").string(), member(city, "emblem", rect4),
-                               member(city, "day", rect4), member(city, "night", rect4)});
+    SlaiCityArt art{required(city, "image").string(), member(city, "emblem", rect4),
+                    member(city, "day", rect4), member(city, "night", rect4)};
+    for (auto [key, rect] : {std::pair{"blueprint", &art.blueprint}, {"venue", &art.venue}}) {
+      if (const auto *listed = city.find(key)) {
+        *rect = rect4(*listed);
+      }
+    }
+    script.city_art.push_back(std::move(art));
   }
 }
 
@@ -149,6 +157,45 @@ const SlaiHubBadge *slai_hub_badge(const SlaiRumbleHubScript &script, const int 
     }
   }
   return fallback;
+}
+
+const std::vector<std::string> &slai_refusal_lines(const SlaiRumbleHubScript &script,
+                                                   const SlaiEntry entry) {
+  switch (entry) {
+  case SlaiEntry::money:
+    return script.short_of_money;
+  case SlaiEntry::maker:
+    return script.wrong_maker;
+  case SlaiEntry::legs:
+    return script.wrong_legs;
+  case SlaiEntry::special:
+    return script.special_unmet;
+  case SlaiEntry::allowed:
+  case SlaiEntry::not_ready:
+    break;
+  }
+  return script.not_ready;
+}
+
+std::vector<std::string> slai_refusal_notice(const SlaiRumbleData &data, const SlaiRegulation &rule,
+                                             std::vector<std::string> lines) {
+  const auto &makers = data.world.makers;
+  const std::string maker = rule.maker >= 0 && rule.maker < static_cast<int>(makers.size())
+                                ? makers[static_cast<std::size_t>(rule.maker)]
+                                : std::string{};
+  const std::pair<std::string, std::string> values[] = {
+      {"{entry}", std::to_string(shown_ny(slai_entry_requirement(data.world, rule)))},
+      {"{rumble}", rule.name},
+      {"{maker}", maker}};
+  for (const auto &[key, value] : values) {
+    for (std::string &line : lines) {
+      for (auto at = line.find(key); at != std::string::npos; at = line.find(key, at)) {
+        line.replace(at, key.size(), value);
+        at += value.size();
+      }
+    }
+  }
+  return lines;
 }
 
 } // namespace phantomcrash

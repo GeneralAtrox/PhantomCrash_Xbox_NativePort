@@ -5,6 +5,7 @@
 #include "desktop_screen.hpp"
 #include "desktop_textures.hpp"
 #include "phantomcrash/data_roots.hpp"
+#include "phantomcrash/slai_area_select_script.hpp"
 #include "phantomcrash/slai_rumble.hpp"
 #include "phantomcrash/slai_rumble_hub.hpp"
 #include "phantomcrash/slai_shops.hpp"
@@ -159,6 +160,8 @@ private:
   make_dealer(const std::string &name, const std::string &from, const QuestSave &quest) const;
   [[nodiscard]] std::unique_ptr<Screen> make_rumbling(const std::string &from,
                                                       const QuestSave &quest) const;
+  [[nodiscard]] std::unique_ptr<Screen> make_slai_area(const std::string &from,
+                                                       const QuestSave &quest) const;
   // S.L.A.I.'s shops (phantomcrash/shop_variants.hpp; desktop_shop_variants.cpp).
   void load_shop_variants(const DataRoots &roots, const BattleHudStyle &hud);
   [[nodiscard]] std::unique_ptr<Screen>
@@ -198,6 +201,10 @@ private:
   // With S.L.A.I.: Rumble S.L.A.I. (ui/slai_rumble.json) and Battle School
   // (ui/slai_battle_school.json), by screen name.
   std::map<std::string, SlaiRumbleHubScript, std::less<>> slai_hubs_;
+  // With S.L.A.I.: its area select (ui/slai_area_select.json) and the
+  // pack's blueprint maps of its stages.
+  std::optional<SlaiAreaSelectScript> slai_area_;
+  SlaiAreaMaps slai_area_maps_;
   SleepScript sleep_;
   bool open_contests_{};
   bool full_refunds_{};

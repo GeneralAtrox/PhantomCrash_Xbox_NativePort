@@ -32,10 +32,12 @@ struct SlaiHubBadge {
 };
 
 // A city's art on its S.L.A.I. Wired sheet: the emblem and the
-// "<CITY> / DAY" and "<CITY> / NIGHT" labels.
+// "<CITY> / DAY" and "<CITY> / NIGHT" labels; the area select's blueprint
+// of its arena and its venue's name (zero when not listed).
 struct SlaiCityArt {
   std::string image;
   TexelRect emblem{}, day{}, night{};
+  TexelRect blueprint{}, venue{};
 };
 
 struct SlaiRumbleHubScript : TownBasics {
@@ -107,6 +109,14 @@ struct SlaiRumbleHubScript : TownBasics {
 // The badge over a rumble's tile: the first listing its regulation, else
 // the catch-all.
 [[nodiscard]] const SlaiHubBadge *slai_hub_badge(const SlaiRumbleHubScript &script, int regulation);
+// The script's notice for why an entry is refused.
+[[nodiscard]] const std::vector<std::string> &slai_refusal_lines(const SlaiRumbleHubScript &script,
+                                                                 SlaiEntry entry);
+// `lines` with {entry} (the money the rumble needs), {rumble} (its
+// regulation's name) and {maker} (the maker it takes) filled in.
+[[nodiscard]] std::vector<std::string> slai_refusal_notice(const SlaiRumbleData &data,
+                                                           const SlaiRegulation &rule,
+                                                           std::vector<std::string> lines);
 
 class SlaiRumbleHub final {
 public:

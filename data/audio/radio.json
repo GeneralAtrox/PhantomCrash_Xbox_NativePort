@@ -8,5 +8,5 @@
  "gap_seconds": 5.0,
  "volume": 1.0,
  "shuffle_on": ["club_wired"],
- "plays_on": ["club_wired", "name_entry", "pepper_guide", "schedule", "records", "slai_rumble"]
+ "plays_on": ["club_wired", "name_entry", "pepper_guide", "schedule", "records", "slai_rumble", "slai_area_select"]
 }

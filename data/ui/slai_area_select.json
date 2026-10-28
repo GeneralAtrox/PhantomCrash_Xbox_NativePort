@@ -1,0 +1,38 @@
+{
+ "notes": [
+  "S.L.A.I.'s area select (a port screen): Club Wired's Rumble S.L.A.I. drawn and driven as RUMBLING's area select (ui/rumbling.json, which this document extends) over S.L.A.I.'s seven cities. Battle School keeps the list (ui/slai_battle_school.json).",
+  "The cities' plates are RUMBLING's SHINJUKU plate, one per city by the table's display order in two rows (slai.plates, then EXIT at slai.exit_plate), each named in sprite_text.json by slai.plate_id plus the city's column. They slide in from slai.plate_slide as RUMBLING's do; left/right move along them in that order.",
+  "To make room for the upper row, RUMBLING's picture frame, CLOSED, noise, CLEAR and EXIT's picture and label are drawn slai.picture_scale times their size about the frame's corner. A city's picture is the blueprint from its Wired sheet (city_art in ui/slai_rumble.json, the hub document) fitted into slai.picture_box over picture_back; its title, where RUMBLING draws the area's logo, is the city's emblem fitted into title.emblem_box, its '<CITY> / DAY' or '/ NIGHT' label and its venue's name, from the title's place and scaled from the sheet. A city the rota keeps closed today, or whose rumble Rumble S.L.A.I. leaves out (the tutorial's), shows CLOSED over noise.",
+  "The info panel shows the rumble's regulation, its class, the money it needs and CLEAR once cleared. confirm on an open city with the money opens RUMBLING's sub-menu over the pack's blueprint of the day's stage (slai.maps, drawn by draw-slai-maps); without the money S.L.A.I.'s short_of_money lines say so. ENTRY checks the ridden robot as Rumble S.L.A.I. does and opens the gates (the stage's four player spawns; the chosen one is where the robot starts), SV RENTAL lends a robot for a rental-only rumble, SELECT SV opens the hangar and comes back here, WIRE HEADS DATA is refused (S.L.A.I.'s opponents are only drawn at the battle's start) and INFORMATION gives the rumble's rules as Rumble S.L.A.I. does.",
+  "Entering pays the entry and leaves for routes.battle; the battle comes back here."
+ ],
+ "extends": "ui/rumbling.json",
+ "select": {"areas": ["shinjuku", "exit"]},
+ "hub": "ui/slai_rumble.json",
+ "music": "keep",
+ "exit_to": "club_wired",
+ "routes": {"select_sv": "hangar", "battle": "slai_battle"},
+ "gates": {
+  "labels": [
+   {"id": "893", "image": "textures/scroll/area_situation_tex/0.png", "rect": [1664, 848, 1704, 880], "position": [0, 193], "layer": 261, "colour": "#808080"},
+   {"id": "894", "image": "textures/scroll/area_situation_tex/0.png", "rect": [1704, 848, 1744, 880], "position": [0, 193], "layer": 261, "colour": "#808080"},
+   {"id": "895", "image": "textures/scroll/area_situation_tex/0.png", "rect": [1744, 848, 1784, 880], "position": [0, 193], "layer": 261, "colour": "#808080"},
+   {"id": "slai_gate_04", "image": "textures/scroll/area_situation_tex/0.png", "rect": [1744, 848, 1784, 880], "position": [0, 193], "layer": 261, "colour": "#808080"}
+  ],
+  "label_x": {"2": 121, "3": 98, "4": 75},
+  "label_step": 46
+ },
+ "slai": {
+  "maps": "ui/slai_area_maps.json",
+  "plates": [[58, 337], [160, 337], [262, 337], [364, 337], [50, 371], [152, 371], [254, 371]],
+  "exit_plate": [356, 371],
+  "plate_slide": -570,
+  "plate_id": "slai_area_plate_",
+  "picture_scale": 0.875,
+  "picture_box": [64.75, 112.75, 253.75, 315.75],
+  "picture_back": {"image": "textures/scroll/area_situation_tex/0.png", "rect": [752, 608, 1120, 904], "position": [64.75, 112.75], "size": [189, 203], "layer": 2},
+  "title": {"emblem_box": [0, 4, 100, 104], "label_at": [104, 22], "label_scale": 0.85, "venue_at": [104, 58], "venue_scale": 1.4, "layer": 258},
+  "help": "Rumble S.L.A.I. in {city}.",
+  "closed_help": "No rumble in {city} today."
+ }
+}

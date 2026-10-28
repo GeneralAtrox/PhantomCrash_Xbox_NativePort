@@ -109,6 +109,9 @@ struct TrainingBattle {
   TrainingRobot player;
   Vec3 player_start{0.0F, 0.0F, 40.0F};
   float player_heading{};
+  // The stage's player spawn the player starts at, as a gate chosen on
+  // S.L.A.I.'s area select; below 0 (or past the spawns), the stage's own.
+  int start_spawn{-1};
   TrainingRobot drone;
   int drones{4};
   // Opponents with robots and AI of their own (battle_lineup.hpp), set by

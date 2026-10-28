@@ -2,6 +2,7 @@
 #include "phantomcrash/money.hpp"
 
 #include "desktop_contest_info.hpp"
+#include "desktop_rumbling_look.hpp"
 #include "desktop_draw_list.hpp"
 #include "desktop_shop_list.hpp"
 
@@ -11,9 +12,6 @@
 
 namespace phantomcrash {
 namespace {
-
-// How far the sub-menu's items trail each other as they come in (0x014edc).
-constexpr float item_stagger = 32.0F;
 
 Sprite shifted(Sprite sprite, const float dx, const float dy = 0.0F) {
   sprite.position = {sprite.position[0] + dx, sprite.position[1] + dy};
@@ -57,30 +55,24 @@ std::vector<std::string> RumblingScreen::take_sounds() {
   return sounds;
 }
 
-// 0x015fce with 0x06c530: the bar and the area items slide in; the chosen
-// item is lit over its own, pulsing while the areas take input. Turning to
-// the sub-menu slides the areas back out; EXIT stays as the sub-menu's BACK.
+RumblingLook RumblingScreen::look() const {
+  RumblingLook look;
+  look.area = logic_.area();
+  look.view = logic_.view();
+  look.items_slide = logic_.items_slide();
+  look.bar_slide = logic_.bar_slide();
+  look.turn = logic_.turn();
+  look.in_menu = logic_.in_menu();
+  look.menu_item = logic_.menu_item();
+  look.menu_seconds = logic_.menu_seconds();
+  look.gate = logic_.gate();
+  look.seconds = logic_.seconds();
+  look.can_choose = [this](const RumblingAction action) { return logic_.can_choose(action); };
+  return look;
+}
+
 void RumblingScreen::draw_items(DrawList &list) const {
-  const RumblingScript &script = logic_.script();
-  const RumblingAreaSelect &style = script.area_select;
-  list.sprite(shifted(style.bar, style.bar_from_x * (1.0F - logic_.bar_slide())));
-  if (logic_.in_menu()) {
-    return;
-  }
-  const float out = std::max(1.0F - logic_.items_slide(), logic_.turn());
-  for (std::size_t index = 0; index < script.areas.size(); ++index) {
-    const RumblingArea &area = script.areas[index];
-    const float away = area.exit ? 1.0F - logic_.items_slide() : out;
-    const float dx = (area.item_from_x - area.item.position[0]) * away;
-    list.sprite(shifted(area.item, dx));
-    if (static_cast<int>(index) == logic_.area()) {
-      Sprite lit = shifted(area.item_lit, dx);
-      if (logic_.view() != RumblingView::areas) {
-        lit.animation = Animation::none;
-      }
-      list.sprite(lit);
-    }
-  }
+  draw_rumbling_items(list, logic_.script(), look());
 }
 
 // 0x015429: the venue's picture (by day or night) in its frame, the area's
@@ -139,94 +131,20 @@ void RumblingScreen::draw_info(DrawList &list) const {
   }
 }
 
-// 0x014edc: the items come in from the left as the screen turns; ENTRY and
-// RENTAL are greyed where they cannot be chosen, the chosen one lit over
-// its own (pulsing while the sub-menu takes input).
 void RumblingScreen::draw_menu(DrawList &list) const {
-  const RumblingMenu &menu = logic_.script().menu;
-  const float away = 1.0F - logic_.turn();
-  for (std::size_t index = 0; index < menu.items.size(); ++index) {
-    const RumblingMenuItem &item = menu.items[index];
-    const bool back = item.action == RumblingAction::back;
-    const float dx = back ? 0.0F : -(menu.item_slide + item_stagger * index) * away;
-    Sprite normal = shifted(item.normal, dx);
-    if (!logic_.can_choose(item.action)) {
-      normal.colour = menu.disabled_colour;
-    }
-    list.sprite(normal);
-    if (static_cast<int>(index) == logic_.menu_item() && logic_.turn() >= 1.0F) {
-      Sprite lit = shifted(item.lit, dx);
-      if (logic_.view() != RumblingView::menu) {
-        lit.animation = Animation::none;
-      }
-      list.sprite(lit);
-    }
-  }
-  draw_map(list);
-}
-
-// 0x014af3 and 0x013bed: the map, the area's drawing building itself up a
-// frame at a time (the frame going cross-faded and tinted), and its H marks.
-void RumblingScreen::draw_map(DrawList &list) const {
+  const RumblingLook shown = look();
   const RumblingScript &script = logic_.script();
-  const RumblingMenu &menu = script.menu;
+  draw_rumbling_menu_items(list, script.menu, shown);
   const RumblingArea &area = script.areas[static_cast<std::size_t>(logic_.area())];
-  list.sprite(menu.map, logic_.turn());
-  if (logic_.turn() < 1.0F || area.map_frames.empty()) {
-    return;
+  if (draw_rumbling_map(list, script.menu, area, shown)) {
+    draw_robots(list);
   }
-  const double steps = logic_.menu_seconds() / std::max(menu.map_frame_seconds, 1e-6);
-  const int last = static_cast<int>(area.map_frames.size()) - 1;
-  const int frame = std::min(static_cast<int>(steps), last);
-  if (frame >= last) {
-    list.sprite(area.map_frames[static_cast<std::size_t>(last)]);
-  } else {
-    const auto along = static_cast<float>(steps - std::floor(steps));
-    if (frame > 0) {
-      Sprite going = area.map_frames[static_cast<std::size_t>(frame - 1)];
-      going.colour = menu.map_fade_colour;
-      list.sprite(going, 1.0F - along);
-    }
-    list.sprite(area.map_frames[static_cast<std::size_t>(frame)], along);
-  }
-  for (const CanvasPoint &mark : area.marks) {
-    list.sprite(placed(menu.mark, mark));
-  }
-  draw_robots(list);
 }
 
-// 0x0150ea and 0x013a84: the gate window, a label for each of the stage's
-// gates (the chosen one yellow), and the gates' marks on the map with a
-// ring turning round the chosen one.
 void RumblingScreen::draw_gates(DrawList &list) const {
   const RumblingScript &script = logic_.script();
-  const RumblingGates &gates = script.gates;
-  const RumblingArea &area = script.areas[static_cast<std::size_t>(logic_.area())];
-  list.sprite(gates.window);
-  for (const Sprite &hint : gates.hint) {
-    list.sprite(hint);
-  }
-  const int count = static_cast<int>(area.gates.size());
-  const auto first = gates.label_x.find(count);
-  const float left = first != gates.label_x.end() ? first->second : gates.window.position[0];
-  for (int gate = 0; gate < count && gate < static_cast<int>(gates.labels.size()); ++gate) {
-    Sprite label = gates.labels[static_cast<std::size_t>(gate)];
-    label.position[0] = left + gates.label_step * static_cast<float>(gate);
-    if (gate == logic_.gate()) {
-      label.colour = gates.chosen_colour;
-      label.layer = gates.chosen_layer;
-    }
-    list.sprite(label);
-    list.sprite(placed(gates.marker, area.gates[static_cast<std::size_t>(gate)]));
-  }
-  if (logic_.gate() < count) {
-    const CanvasPoint &at = area.gates[static_cast<std::size_t>(logic_.gate())];
-    list.sprite(placed(gates.marker_lit, at));
-    Sprite ring = placed(gates.ring, at);
-    ring.angle =
-        std::fmod(static_cast<float>(logic_.seconds()) * gates.ring_degrees_per_second, 360.0F);
-    list.sprite(ring);
-  }
+  draw_rumbling_gates(list, script.gates, script.areas[static_cast<std::size_t>(logic_.area())],
+                      look());
 }
 
 // 0x013f5a: the WIRE HEADS DATA window pops open, then the opponent's

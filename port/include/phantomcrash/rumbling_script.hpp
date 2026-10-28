@@ -150,5 +150,7 @@ struct RumblingScript : TownBasics {
 
 // Throws std::runtime_error naming the member at fault.
 [[nodiscard]] RumblingScript parse_rumbling(const json::JsonValue &document);
+// An area's map: its frames, gates, H marks and robot map, where present.
+void parse_rumbling_area_map(const json::JsonValue &value, RumblingArea &area);
 
 } // namespace phantomcrash
