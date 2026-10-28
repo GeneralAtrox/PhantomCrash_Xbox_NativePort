@@ -1126,6 +1126,35 @@ A robot now walks all three ways into Egypt's underground:
   model block, which the robot cannot enter, stands over the ramp top);
 - down the pit north of the pyramid at (62, 207).
 
+Mirrored transforms were ruled out as the cause. Of every PO2 on the disc
+(341 files, 9462 batches), none has a node whose local or world matrix has
+a negative determinant.
+
+The facing comes from the strips themselves. The PS2's GS does not cull, so
+the source never needed a consistent winding:
+
+- In models with vertex normals, 5709 of 88019 strip triangles wind against
+  their normals. The visual converters re-orient each one from them
+  (`arm_weapon._facing`).
+- Hit models carry no normals (250822 triangles), so nothing records their
+  facing. That is why the collision is made two-sided rather than
+  re-oriented.
+
+The hit models also sit where the visible stages do, once the port's z
+mirror is applied. Measured by area against the visible geometry inside the
+collision's bounds, the floors lie within 0.25 of a visible surface on 91.6%
+of Egypt, 87.5% of England, 94.5% of Hong Kong, 90.9% of New York, 74% of
+German and Tokyo, and 82.3% of the practice stage.
+
+Without the mirror, at most 8% of the collision area lies within 0.5 of the
+visible geometry. The exceptions are the nearly symmetric Las Vegas (21%)
+and practice (84%) stages.
+
+What is left is invisible geometry: boundary walls up to y 200, and a few
+large flats at the boundary tops. Those flats are 54% of Las Vegas's floor
+area but only 18 of its 1071 floor triangles, at y 97–108. German also has
+6 floor triangles at y 12 near x -106 to -73.
+
 ## Model families and their makers (2026-10-26)
 
 Three S.L.A.I. bodies were named after a different maker from their legs:
