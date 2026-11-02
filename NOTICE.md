@@ -3,7 +3,7 @@
 This project contains an original, purpose-built implementation. The following
 projects are used as external tools or technical references:
 
-- [Record of Lodoss War modern port](https://github.com/GeneralAtrox/RecordOfLodossWar_DC_ModernSourcePort), same
+- [Record of Lodoss War modern port](https://github.com/GeneralAtrox/RecordOfLodossWar_DC_NativePort), same
   author: project conventions, and host, frame-pacing and movie-playback code
   reused as the port grows.
 - [xemu](https://github.com/xemu-project/xemu) via the

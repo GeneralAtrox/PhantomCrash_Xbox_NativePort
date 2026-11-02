@@ -12,7 +12,7 @@ robots belong to their owners; Xbox is a trademark of Microsoft.
 ## Requirements
 
 **To play**, download the Windows x64 ZIP from
-[Releases](https://github.com/GeneralAtrox/PhantomCrash_Xbox_ModernSourcePort/releases)
+[Releases](https://github.com/GeneralAtrox/PhantomCrash_Xbox_NativePort/releases)
 and run `Start Game.bat`. You need:
 
 - Windows 10 or newer, with a Direct3D 11 graphics card
