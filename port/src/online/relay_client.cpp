@@ -155,7 +155,7 @@ void RelayClient::handle_peers(const std::span<const std::uint8_t> bytes) {
   }
   status_.observed = read_endpoint(in);
   const auto count = in.u8();
-  std::array<bool, routes_.size()> listed{};
+  std::array<bool, std::tuple_size_v<decltype(routes_)>> listed{};
   for (std::uint8_t entry = 0; entry < count; ++entry) {
     const auto member = in.u8();
     if (member >= routes_.size()) {
