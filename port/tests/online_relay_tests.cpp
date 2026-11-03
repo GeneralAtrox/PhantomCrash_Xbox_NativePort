@@ -69,7 +69,7 @@ TEST_CASE("online relay refuses a different game build through the room's own ha
   options.compatibility[0] = 8;
   Room client(options);
   rig.pump({&host, &client}, 60);
-  CHECK_FALSE(host.participants() == 3);
+  CHECK(!(host.participants() == 3));
   CHECK(client.error().find("different game build") != std::string::npos);
 }
 
@@ -97,7 +97,7 @@ TEST_CASE("online relay upgrades to a direct path and falls back when it dies") 
   host.send(1, second, rig.now);
   rig.pump({&host, &client}, 400);
   const auto messages = client.take_messages();
-  REQUIRE_FALSE(messages.empty());
+  REQUIRE(!(messages.empty()));
   CHECK(messages.back().bytes == std::vector<std::uint8_t>{4, 5, 6});
   CHECK(host.error().empty());
   CHECK(client.error().empty());
