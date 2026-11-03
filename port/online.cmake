@@ -4,7 +4,7 @@ target_sources(phantomcrash_core PRIVATE src/battle_checkpoint.cpp src/robot_che
 add_library(phantomcrash_online STATIC src/online/input.cpp src/online/socket.cpp
   src/online/discovery.cpp src/online/interfaces.cpp
   src/online/prediction.cpp src/online/peer.cpp src/online/room.cpp src/online/room_leave.cpp
-  src/online/input_channel.cpp
+  src/online/input_channel.cpp src/online/relay_client.cpp src/online/relay_server.cpp
   src/online/lobby.cpp src/online/content.cpp src/online/records.cpp src/online/agreement.cpp
   src/online/battle_setup.cpp src/online/state_channel.cpp
   src/online/state_battle.cpp src/online/state_robot.cpp src/online/state_arena.cpp
@@ -21,6 +21,15 @@ else()
   target_compile_options(phantomcrash_online PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 
+# The relay server, buildable with nothing but sockets and a hash.
+add_executable(phantomcrash_relay src/online/relay_server_main.cpp src/online/relay_server.cpp
+  src/online/socket.cpp src/extract/sha256.cpp src/extract/sha256_x86.cpp)
+target_include_directories(phantomcrash_relay PRIVATE include)
+target_compile_features(phantomcrash_relay PRIVATE cxx_std_20)
+if(WIN32)
+  target_link_libraries(phantomcrash_relay PRIVATE ws2_32)
+endif()
+
 if(BUILD_TESTING)
   add_executable(phantomcrash_online_asset_check tests/online_asset_check.cpp)
   target_link_libraries(phantomcrash_online_asset_check PRIVATE phantomcrash_online)
@@ -30,7 +39,7 @@ if(BUILD_TESTING)
     tests/online_battle_tests.cpp tests/online_room_tests.cpp tests/online_wreck_tests.cpp
     tests/online_lobby_tests.cpp tests/online_content_tests.cpp tests/online_startup_tests.cpp
     tests/online_state_tests.cpp tests/online_state_channel_tests.cpp
-    tests/online_input_loss_tests.cpp)
+    tests/online_input_loss_tests.cpp tests/online_relay_tests.cpp)
   target_link_libraries(phantomcrash_online_tests PRIVATE phantomcrash_online)
   add_test(NAME phantomcrash_online_tests COMMAND phantomcrash_online_tests)
   set_tests_properties(phantomcrash_online_tests PROPERTIES TIMEOUT 60)

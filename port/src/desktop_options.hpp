@@ -25,10 +25,14 @@ struct Options {
   bool online_resource_check{};
   // Hidden two-peer online match timed against 144 fps; game seconds measured.
   double online_stress_seconds{};
+  // Hidden two-machine match: "role=host,relay=IP:port,..."; see the check.
+  std::optional<std::string> online_match_check;
   struct Online {
     bool host{};
     std::string address;
     std::uint16_t port{};
+    std::string relay;     // "IP:port" of a relay server; empty plays directly
+    std::string room_code; // with a relay: the room to join
   };
   std::optional<Online> online;
   // Benchmark: run this many seconds in real time, uncapped and without

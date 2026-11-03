@@ -765,6 +765,7 @@ if(PHANTOMCRASH_BUILD_DESKTOP)
     src/desktop_tools.cpp
     src/desktop_online_resource_check.cpp
     src/desktop_online_stress_check.cpp
+    src/desktop_online_match_check.cpp
     src/desktop_sv_spec.cpp
     src/desktop_part_stats.cpp
     src/desktop_extra_stats.cpp

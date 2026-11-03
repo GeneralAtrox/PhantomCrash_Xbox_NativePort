@@ -2,6 +2,7 @@
 
 #include "phantomcrash/online_peer.hpp"
 #include "phantomcrash/online_input.hpp"
+#include "phantomcrash/online_relay.hpp"
 #include <array>
 #include <mutex>
 
@@ -19,6 +20,8 @@ struct RoomOptions {
   Compatibility compatibility{}; // caller's executable/gameplay-content digest
   std::uint8_t capacity{3};
   std::uint32_t seed{1}; // used by host only
+  // Reach the other players by room code instead of `server`; see online_relay.hpp.
+  std::optional<RelayOptions> relay;
 };
 
 struct RoomMessage {
@@ -54,6 +57,9 @@ public:
   [[nodiscard]] bool recovering() const;
   [[nodiscard]] Endpoint local_endpoint() const;
   [[nodiscard]] std::string error() const;
+  // Empty without a relay, and until the relay has answered.
+  [[nodiscard]] std::string room_code() const;
+  [[nodiscard]] std::optional<RelayStatus> relay_status() const;
 
 private:
   struct Peer {
@@ -64,6 +70,8 @@ private:
     bool ready{};
   };
   bool handshake(const Datagram &packet, double now);
+  bool transmit(Endpoint target, std::span<const std::uint8_t> bytes);
+  [[nodiscard]] std::optional<Datagram> next_datagram();
   void send_handshake(Endpoint target, std::uint8_t kind, std::uint8_t slot, std::uint64_t nonce);
   void receive(Peer &peer, std::uint8_t slot, const Datagram &packet, double now);
   [[nodiscard]] std::unique_ptr<ReliablePeer> channel(Endpoint remote);
@@ -76,6 +84,7 @@ private:
   mutable std::recursive_mutex mutex_;
   RoomOptions options_;
   DatagramSocket socket_;
+  std::unique_ptr<RelayClient> relay_;
   std::uint64_t nonce_{}, token_{};
   std::uint8_t local_player_{max_players};
   std::uint8_t membership_{}; // host's participant mask, received by clients

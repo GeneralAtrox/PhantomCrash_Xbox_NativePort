@@ -7,8 +7,7 @@
 #endif
 
 namespace phantomcrash {
-namespace {
-std::filesystem::path executable() {
+std::filesystem::path running_executable() {
 #ifdef _WIN32
   std::wstring path(32768, L'\0');
   const auto count = GetModuleFileNameW(nullptr, path.data(), static_cast<DWORD>(path.size()));
@@ -21,7 +20,6 @@ std::filesystem::path executable() {
   return std::filesystem::canonical("/proc/self/exe");
 #endif
 }
-} // namespace
 
 std::shared_ptr<CoopState> make_coop_state(const Options &options, const Settings &saved,
                                            const std::filesystem::path &preferences,
@@ -38,7 +36,7 @@ std::shared_ptr<CoopState> make_coop_state(const Options &options, const Setting
   coop->online_mode = options.online.has_value();
   coop->online_host = options.online && options.online->host;
   coop->fingerprint = [root, slai = saved.slai_enabled] {
-    return online::content_fingerprint(executable(), root, slai);
+    return online::content_fingerprint(running_executable(), root, slai);
   };
   if (options.online) {
     coop->profiles.fill(std::nullopt);
@@ -46,7 +44,18 @@ std::shared_ptr<CoopState> make_coop_state(const Options &options, const Setting
     online::RoomOptions room;
     room.host = options.online->host;
     room.bind = online::Endpoint::parse("0.0.0.0", room.host ? options.online->port : 0);
-    if (!room.host) {
+    if (!options.online->relay.empty()) {
+      const auto colon = options.online->relay.rfind(':');
+      if (colon == std::string::npos) {
+        throw std::runtime_error("--online-relay requires IPv4:port");
+      }
+      online::RelayOptions relay;
+      relay.server = online::Endpoint::parse(
+          options.online->relay.substr(0, colon),
+          static_cast<std::uint16_t>(std::stoi(options.online->relay.substr(colon + 1))));
+      relay.code = options.online->room_code;
+      room.relay = relay;
+    } else if (!room.host) {
       room.server = online::Endpoint::parse(options.online->address, options.online->port);
     }
     SDL_Log("Online: checking executable, data, all asset roots, mods and model buffers");

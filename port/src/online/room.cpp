@@ -1,4 +1,5 @@
 #include "phantomcrash/online_room.hpp"
+#include "relay_protocol.hpp"
 #include "room_protocol.hpp"
 #include "wire.hpp"
 #include <algorithm>
@@ -17,7 +18,14 @@ std::uint64_t nonce() {
 } // namespace
 
 Room::Room(RoomOptions options)
-    : options_(std::move(options)), socket_(options_.bind), nonce_(nonce()) {
+    : options_(std::move(options)),
+      socket_(options_.bind, options_.relay ? relay_protocol::relay_header : 0), nonce_(nonce()) {
+  if (options_.relay) {
+    relay_ = std::make_unique<RelayClient>(*options_.relay, socket_);
+    if (!options_.host) {
+      options_.server = RelayClient::address_of_member(0); // the relay's first member hosts
+    }
+  }
   if (options_.capacity < 2 || options_.capacity > max_players ||
       (!options_.host && options_.server.port == 0)) {
     throw std::runtime_error("Invalid online room configuration");
@@ -31,7 +39,7 @@ Room::Room(RoomOptions options)
 std::unique_ptr<ReliablePeer> Room::channel(const Endpoint remote) {
   return std::make_unique<ReliablePeer>(
       remote, token_, [this](Endpoint target, std::span<const std::uint8_t> bytes) {
-        return socket_.send(target, bytes);
+        return transmit(target, bytes);
       });
 }
 
@@ -48,7 +56,15 @@ void Room::send_handshake(const Endpoint target, const std::uint8_t kind, const 
   out.u8(options_.capacity);
   out.raw(options_.compatibility);
   const auto bytes = out.take();
-  static_cast<void>(socket_.send(target, bytes));
+  static_cast<void>(transmit(target, bytes));
+}
+
+bool Room::transmit(const Endpoint target, const std::span<const std::uint8_t> bytes) {
+  return relay_ ? relay_->send(target, bytes) : socket_.send(target, bytes);
+}
+
+std::optional<Datagram> Room::next_datagram() {
+  return relay_ ? relay_->receive() : socket_.receive();
 }
 
 bool Room::handshake(const Datagram &packet, const double now) {
@@ -206,6 +222,13 @@ void Room::update(const double now) {
   }
   now_ = now;
   try {
+    if (relay_) {
+      relay_->update(now);
+      if (!relay_->status().error.empty()) {
+        error_ = relay_->status().error;
+        return;
+      }
+    }
     if (!options_.host && (!connected() || recovering())) {
       if (!connected() && now - *started_ >= timeout) {
         error_ = "Could not reach the online host";
@@ -217,7 +240,7 @@ void Room::update(const double now) {
       }
     }
     for (std::size_t count = 0; count < receive_budget; ++count) {
-      auto packet = socket_.receive();
+      auto packet = next_datagram();
       if (!packet) {
         break;
       }
@@ -363,6 +386,16 @@ Endpoint Room::local_endpoint() const {
 std::string Room::error() const {
   const std::lock_guard lock(mutex_);
   return error_;
+}
+
+std::string Room::room_code() const {
+  const std::lock_guard lock(mutex_);
+  return relay_ ? relay_->status().code : std::string{};
+}
+
+std::optional<RelayStatus> Room::relay_status() const {
+  const std::lock_guard lock(mutex_);
+  return relay_ ? std::optional(relay_->status()) : std::nullopt;
 }
 
 } // namespace phantomcrash::online

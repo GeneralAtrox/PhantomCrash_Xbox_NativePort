@@ -11,7 +11,13 @@ Room::~Room() {
   // wait out the drop delay.
   try {
     const std::lock_guard lock(mutex_);
+    const auto leave_relay = [this] {
+      if (relay_) {
+        relay_->leave();
+      }
+    };
     if (!error_.empty() || local_player_ >= max_players) {
+      leave_relay();
       return;
     }
     for (int copy = 0; copy < leaving_copies; ++copy) {
@@ -25,6 +31,7 @@ Room::~Room() {
         }
       }
     }
+    leave_relay();
   } catch (...) {
     // Closing must not fail; the others drop a silent peer anyway.
   }

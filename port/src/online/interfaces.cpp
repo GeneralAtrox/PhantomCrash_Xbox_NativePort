@@ -1,3 +1,4 @@
+#include "phantomcrash/online_relay.hpp"
 #include "phantomcrash/online_socket.hpp"
 #include <algorithm>
 #include <memory>
@@ -13,6 +14,49 @@
 #endif
 
 namespace phantomcrash::online {
+std::vector<std::uint32_t> local_addresses() {
+  std::vector<std::uint32_t> addresses;
+#ifdef _WIN32
+  ULONG size = 16384;
+  std::vector<std::uint8_t> storage(size);
+  auto *adapters = reinterpret_cast<IP_ADAPTER_ADDRESSES *>(storage.data());
+  constexpr ULONG flags =
+      GAA_FLAG_SKIP_ANYCAST | GAA_FLAG_SKIP_MULTICAST | GAA_FLAG_SKIP_DNS_SERVER;
+  auto result = GetAdaptersAddresses(AF_INET, flags, nullptr, adapters, &size);
+  if (result == ERROR_BUFFER_OVERFLOW) {
+    storage.resize(size);
+    adapters = reinterpret_cast<IP_ADAPTER_ADDRESSES *>(storage.data());
+    result = GetAdaptersAddresses(AF_INET, flags, nullptr, adapters, &size);
+  }
+  if (result == NO_ERROR) {
+    for (auto *adapter = adapters; adapter; adapter = adapter->Next) {
+      if (adapter->OperStatus != IfOperStatusUp || adapter->IfType == IF_TYPE_SOFTWARE_LOOPBACK) {
+        continue;
+      }
+      for (auto *entry = adapter->FirstUnicastAddress; entry; entry = entry->Next) {
+        if (entry->Address.lpSockaddr->sa_family == AF_INET) {
+          const auto *address = reinterpret_cast<const sockaddr_in *>(entry->Address.lpSockaddr);
+          addresses.push_back(ntohl(address->sin_addr.s_addr));
+        }
+      }
+    }
+  }
+#else
+  ifaddrs *raw{};
+  if (getifaddrs(&raw) == 0) {
+    const std::unique_ptr<ifaddrs, decltype(&freeifaddrs)> interfaces(raw, freeifaddrs);
+    for (auto *entry = raw; entry; entry = entry->ifa_next) {
+      if (entry->ifa_addr && entry->ifa_addr->sa_family == AF_INET && (entry->ifa_flags & IFF_UP) &&
+          !(entry->ifa_flags & IFF_LOOPBACK)) {
+        addresses.push_back(
+            ntohl(reinterpret_cast<const sockaddr_in *>(entry->ifa_addr)->sin_addr.s_addr));
+      }
+    }
+  }
+#endif
+  return addresses;
+}
+
 std::vector<Endpoint> local_broadcasts(std::uint16_t port) {
   std::vector<Endpoint> targets;
   const auto add = [&](std::uint32_t address) {

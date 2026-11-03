@@ -85,6 +85,7 @@ sockaddr_in address_of(Endpoint endpoint) {
 
 struct DatagramSocket::Impl {
   Socket socket{invalid_socket};
+  std::size_t limit{max_datagram_bytes};
   ~Impl() {
     if (socket != invalid_socket) {
       close_socket(socket);
@@ -112,7 +113,12 @@ std::string Endpoint::text() const {
   return std::string(buffer.data()) + ":" + std::to_string(port);
 }
 
-DatagramSocket::DatagramSocket(const Endpoint bind_to) : impl_(std::make_unique<Impl>()) {
+DatagramSocket::DatagramSocket(const Endpoint bind_to, const std::size_t frame_overhead)
+    : impl_(std::make_unique<Impl>()) {
+  if (frame_overhead > max_frame_overhead) {
+    throw std::runtime_error("Invalid online frame size");
+  }
+  impl_->limit += frame_overhead;
   initialize_network();
   impl_->socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
   if (impl_->socket == invalid_socket) {
@@ -169,7 +175,7 @@ Endpoint DatagramSocket::local() const {
 }
 
 bool DatagramSocket::send(const Endpoint target, std::span<const std::uint8_t> bytes) {
-  if (bytes.empty() || bytes.size() > max_datagram_bytes || target.port == 0) {
+  if (bytes.empty() || bytes.size() > impl_->limit || target.port == 0) {
     throw std::runtime_error("Invalid online datagram size or destination");
   }
   const auto address = address_of(target);
@@ -200,7 +206,7 @@ bool DatagramSocket::wait_readable(const double seconds) const {
 }
 
 std::optional<Datagram> DatagramSocket::receive() {
-  std::array<std::uint8_t, max_datagram_bytes + 1> buffer{};
+  std::array<std::uint8_t, max_datagram_bytes + max_frame_overhead + 1> buffer{};
   sockaddr_in sender{};
   AddressSize size = sizeof(sender);
   const auto count =
@@ -218,7 +224,7 @@ std::optional<Datagram> DatagramSocket::receive() {
 #endif
     fail("receive");
   }
-  if (count == 0 || static_cast<std::size_t>(count) > max_datagram_bytes) {
+  if (count == 0 || static_cast<std::size_t>(count) > impl_->limit) {
     return std::nullopt;
   }
   Datagram result;

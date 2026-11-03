@@ -11,6 +11,8 @@
 namespace phantomcrash::online {
 
 inline constexpr std::size_t max_datagram_bytes = 1200;
+// What a socket may add around a game datagram (the relay's frame).
+inline constexpr std::size_t max_frame_overhead = 16;
 
 struct Endpoint {
   // IPv4 in host byte order; zero binds all interfaces.
@@ -31,7 +33,7 @@ struct Datagram {
 // Nonblocking, one owned socket; no DNS lookup or global socket handles.
 class DatagramSocket final {
 public:
-  explicit DatagramSocket(Endpoint bind_to);
+  explicit DatagramSocket(Endpoint bind_to, std::size_t frame_overhead = 0);
   ~DatagramSocket();
   DatagramSocket(const DatagramSocket &) = delete;
   DatagramSocket &operator=(const DatagramSocket &) = delete;

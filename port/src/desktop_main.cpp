@@ -89,7 +89,8 @@ void apply_fullscreen(DesktopHost &host, SettingsMenu &menu) {
 int run(const Options &options) {
   const auto root = find_root(options);
   const bool smoke = options.smoke_frames > 0 || options.robot_shot ||
-                     options.online_resource_check || options.online_stress_seconds > 0.0;
+                     options.online_resource_check || options.online_stress_seconds > 0.0 ||
+                     options.online_match_check.has_value();
   const bool benchmark = options.benchmark_seconds > 0.0;
   if (!prepare_game_data(root, !smoke && !benchmark)) {
     return 0;
@@ -103,6 +104,9 @@ int run(const Options &options) {
   const auto roots = DataRoots::configured(root, slai);
   if (const auto result = run_desktop_tool(options, roots)) {
     return *result;
+  }
+  if (options.online_match_check) {
+    return check_online_match(*options.online_match_check, roots, root);
   }
   for (const char *document : documents) {
     static_cast<void>(roots.document(document));

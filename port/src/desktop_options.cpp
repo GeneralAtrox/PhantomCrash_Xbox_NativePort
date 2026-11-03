@@ -42,6 +42,7 @@ const char *usage() {
          "[--smoke-test [frames] [--capture <file.bmp>]] [--benchmark [seconds]]\n"
          "[--online-resource-check] [--online-stress-check [seconds]]\n"
          "[--online-host <port> | --online-join <IPv4:port>]\n"
+         "[--online-relay <IPv4:port> --online-room <code>]\n"
          "\n"
          "The root folder holds data/, mods/ and artifacts/europe (the extracted and\n"
          "converted game files). No game files are bundled.\n";
@@ -51,6 +52,7 @@ Options parse_options(const int argc, char **argv) {
   Options options;
   Options::RobotShot robot_shot; // a --robot-view given before --render-robot
   bool robot_view = false;
+  std::string relay_address, room_code;
   for (int index = 1; index < argc; ++index) {
     const std::string_view argument = argv[index];
     if (argument == "--root") {
@@ -142,6 +144,16 @@ Options parse_options(const int argc, char **argv) {
       }
       online.port = static_cast<std::uint16_t>(number);
       options.online = std::move(online);
+    } else if (argument == "--online-relay" || argument == "--online-room") {
+      if (++index >= argc) {
+        throw std::runtime_error("Specify a value after " + argument);
+      }
+      (argument == "--online-relay" ? relay_address : room_code) = argv[index];
+    } else if (argument == "--online-match-check") {
+      if (++index >= argc) {
+        throw std::runtime_error("Specify the match check's settings");
+      }
+      options.online_match_check = argv[index];
     } else if (argument == "--online-resource-check") {
       options.online_resource_check = true;
     } else if (argument == "--online-stress-check") {
@@ -253,6 +265,18 @@ Options parse_options(const int argc, char **argv) {
   if ((!options.presses.empty() || !options.points.empty()) && options.smoke_frames == 0 &&
       options.benchmark_seconds <= 0.0) {
     throw std::runtime_error("--press and --mouse require --smoke-test or --benchmark");
+  }
+  if (!room_code.empty() && !options.online && !relay_address.empty()) {
+    options.online.emplace(); // a room code stands in for --online-join
+  }
+  if (!relay_address.empty()) {
+    if (!options.online || (!options.online->host && room_code.empty())) {
+      throw std::runtime_error("--online-relay needs --online-host <port> or --online-room <code>");
+    }
+    options.online->relay = relay_address;
+    options.online->room_code = room_code;
+  } else if (!room_code.empty()) {
+    throw std::runtime_error("--online-room needs --online-relay <IPv4:port>");
   }
   return options;
 }

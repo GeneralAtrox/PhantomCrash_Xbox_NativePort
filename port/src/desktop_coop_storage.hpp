@@ -8,5 +8,6 @@ namespace phantomcrash {
                                                          const std::filesystem::path &preferences,
                                                          const std::filesystem::path &root,
                                                          bool smoke);
+[[nodiscard]] std::filesystem::path running_executable();
 void copy_coop_profiles(const CoopState &coop, Settings &settings);
 } // namespace phantomcrash
