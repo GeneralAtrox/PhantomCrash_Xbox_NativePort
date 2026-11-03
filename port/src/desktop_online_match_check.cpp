@@ -233,6 +233,18 @@ int check_online_match(const std::string &text, const DataRoots &roots,
   long long ticks = 0;
   bool pumped = false;
   bool agreed_digests = true;
+  // A confirmed state is kept only while a rollback might need it, so read it
+  // while it is current (inputs early) or still held (inputs late).
+  const auto take_checkpoint = [&] {
+    if (session.confirmed_tick() < next_checkpoint) {
+      return;
+    }
+    const auto digest = session.confirmed_digest(next_checkpoint);
+    std::cout << "DIGEST " << next_checkpoint << " " << (digest ? hex(*digest, 16) : "none")
+              << std::endl;
+    agreed_digests &= digest.has_value();
+    next_checkpoint += checkpoint_ticks;
+  };
   for (;;) {
     const double now = now_seconds();
     carry += std::min(now - frame_at, 0.1);
@@ -254,6 +266,7 @@ int check_online_match(const std::string &text, const DataRoots &roots,
         view.reset();
         session.capture({}, {}, std::nullopt, now);
       }
+      take_checkpoint();
       game->advance();
     }
     ticks += due;
@@ -267,13 +280,7 @@ int check_online_match(const std::string &text, const DataRoots &roots,
       last_tick = session.next_tick();
       last_tick_time = now;
     }
-    if (session.confirmed_tick() >= next_checkpoint) {
-      const auto digest = session.confirmed_digest(next_checkpoint);
-      std::cout << "DIGEST " << next_checkpoint << " " << (digest ? hex(*digest, 16) : "none")
-                << std::endl;
-      agreed_digests &= digest.has_value();
-      next_checkpoint += checkpoint_ticks;
-    }
+    take_checkpoint();
     if (now >= next_sample) {
       next_sample += 1.0;
       const double rtt = room.round_trip(static_cast<std::uint8_t>(other)) * 1000.0;
