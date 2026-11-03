@@ -31,6 +31,8 @@ namespace phantomcrash {
 namespace {
 constexpr double frame_seconds = 1.0 / 144.0;
 constexpr double setup_limit = 180.0, overrun_limit = 240.0; // seconds
+// Hashing every content file for the room handshake takes minutes without SHA instructions.
+constexpr double hash_limit = 1200.0;
 constexpr double report_seconds = 10.0, linger_seconds = 5.0;
 constexpr std::uint32_t checkpoint_ticks = 600;
 constexpr double stall_gap = 3.0 * online::tick_seconds; // no new tick for this long
@@ -104,7 +106,7 @@ int check_online_match(const std::string &text, const DataRoots &roots,
   const bool is_host = value("role") == "host";
   const double game_seconds = std::stod(value("seconds", "120"));
   // A hung run must end by itself whichever step it hung in.
-  std::thread([limit = setup_limit + game_seconds + overrun_limit] {
+  std::thread([limit = setup_limit + hash_limit + game_seconds + overrun_limit] {
     std::this_thread::sleep_for(std::chrono::duration<double>(limit));
     std::cout << "FAIL: match check overran" << std::endl;
     std::_Exit(3);
