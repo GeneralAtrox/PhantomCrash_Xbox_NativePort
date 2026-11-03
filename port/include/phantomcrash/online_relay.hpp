@@ -11,10 +11,10 @@ inline constexpr std::uint16_t relay_default_port = 29650;
 
 struct RelayOptions {
   Endpoint server;
-  std::string code;      // empty: open a room, and the relay names it
-  bool relay_only{};     // never try a direct path; other players never see this address
-  double test_loss{};    // test only: this share of game datagrams sent are dropped
-  double test_cut_at{};  // test only: seconds after which direct paths stop working
+  std::string code;     // empty: open a room, and the relay names it
+  bool relay_only{};    // never try a direct path; other players never see this address
+  double test_loss{};   // test only: this share of game datagrams sent are dropped
+  double test_cut_at{}; // test only: seconds after which direct paths stop working
 };
 
 struct RelayStatus {

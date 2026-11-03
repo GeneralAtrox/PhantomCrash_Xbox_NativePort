@@ -1,8 +1,11 @@
 #pragma once
 
+#include "phantomcrash/online_socket.hpp"
+#include "wire.hpp"
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <random>
 
 // The relay's wire format, shared by its client and server. Every datagram opens
 // with `magic` and a kind byte; relay_header bytes precede a forwarded payload.
@@ -44,4 +47,26 @@ constexpr std::uint8_t max_members = 4;
 constexpr std::array<char, 32> code_alphabet{'2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C',
                                              'D', 'E', 'F', 'G', 'H', 'J', 'K', 'L', 'M', 'N', 'P',
                                              'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'};
+
+[[nodiscard]] inline std::uint64_t random_u64() {
+  std::random_device source;
+  return ((static_cast<std::uint64_t>(source()) << 32) | source()) | 1;
+}
+
+inline void open(WireWriter &out, const Kind kind) {
+  out.u32(magic);
+  out.u8(kind);
+}
+
+inline void write_endpoint(WireWriter &out, const Endpoint endpoint) {
+  out.u32(endpoint.address);
+  out.u16(endpoint.port);
+}
+
+[[nodiscard]] inline Endpoint read_endpoint(WireReader &in) {
+  Endpoint endpoint;
+  endpoint.address = in.u32();
+  endpoint.port = in.u16();
+  return endpoint;
+}
 } // namespace phantomcrash::online::relay_protocol

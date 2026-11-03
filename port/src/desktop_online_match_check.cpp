@@ -277,8 +277,8 @@ int check_online_match(const std::string &text, const DataRoots &roots,
       std::cout << std::format(
                        "t={:.0f}s tick={} confirmed={} rollbacks={} rtt={:.1f}ms stalls={} {}",
                        now - play_start, session.next_tick(), session.confirmed_tick(),
-                       session.rollback_count(), room.round_trip(static_cast<std::uint8_t>(other)) * 1000.0,
-                       figures.stalls,
+                       session.rollback_count(),
+                       room.round_trip(static_cast<std::uint8_t>(other)) * 1000.0, figures.stalls,
                        status ? std::format("route={} relayed={} direct={}",
                                             status->direct[other] ? "direct" : "relay",
                                             status->sent_relayed, status->sent_direct)

@@ -4,7 +4,8 @@ target_sources(phantomcrash_core PRIVATE src/battle_checkpoint.cpp src/robot_che
 add_library(phantomcrash_online STATIC src/online/input.cpp src/online/socket.cpp
   src/online/discovery.cpp src/online/interfaces.cpp
   src/online/prediction.cpp src/online/peer.cpp src/online/room.cpp src/online/room_leave.cpp
-  src/online/input_channel.cpp src/online/relay_client.cpp src/online/relay_server.cpp
+  src/online/input_channel.cpp src/online/relay_client.cpp src/online/relay_client_probe.cpp
+  src/online/relay_server.cpp src/online/relay_server_registration.cpp
   src/online/lobby.cpp src/online/content.cpp src/online/records.cpp src/online/agreement.cpp
   src/online/battle_setup.cpp src/online/state_channel.cpp
   src/online/state_battle.cpp src/online/state_robot.cpp src/online/state_arena.cpp
@@ -23,6 +24,7 @@ endif()
 
 # The relay server, buildable with nothing but sockets and a hash.
 add_executable(phantomcrash_relay src/online/relay_server_main.cpp src/online/relay_server.cpp
+  src/online/relay_server_registration.cpp
   src/online/socket.cpp src/extract/sha256.cpp src/extract/sha256_x86.cpp)
 target_include_directories(phantomcrash_relay PRIVATE include)
 target_compile_features(phantomcrash_relay PRIVATE cxx_std_20)
