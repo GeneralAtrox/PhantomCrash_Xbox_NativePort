@@ -110,7 +110,16 @@ int check_online_match(const std::string &text, const DataRoots &roots,
     std::_Exit(3);
   }).detach();
 
+  const auto setup_started = std::chrono::steady_clock::now();
+  const auto progress = [&](const char *step) {
+    std::cout << std::format(
+                     "{} after {:.1f} s", step,
+                     std::chrono::duration<double>(std::chrono::steady_clock::now() - setup_started)
+                         .count())
+              << std::endl;
+  };
   DesktopHost host(false, true, canvas_size);
+  progress("window ready");
   auto resources = std::make_shared<OnlineBattleResources>(host.renderer(), roots);
   const auto &preset = resources->rumbling.quick_rentals.at(0);
   online::BattleSetup setup;
@@ -130,11 +139,13 @@ int check_online_match(const std::string &text, const DataRoots &roots,
   setup.area = setup.players[0]->entry.area;
   setup.contest = setup.players[0]->entry.contest;
   resources.reset();
+  progress("battle data loaded");
 
   online::RoomOptions room_options;
   room_options.host = is_host;
   room_options.bind = {0, static_cast<std::uint16_t>(std::stoi(value("port", "0")))};
   room_options.compatibility = online::content_fingerprint(running_executable(), root, false);
+  progress("content hashed");
   std::cout << "content " << hex(room_options.compatibility, 8) << std::endl;
   if (!value("relay").empty()) {
     online::RelayOptions relay;
