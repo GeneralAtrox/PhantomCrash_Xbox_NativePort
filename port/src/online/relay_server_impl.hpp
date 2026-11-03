@@ -291,6 +291,9 @@ struct RelayServer::Impl {
 
   void sweep() {
     next_sweep = now + 1.0;
+    for (const auto target : options.test_open) {
+      static_cast<void>(socket.send(target, std::array<std::uint8_t, 4>{}));
+    }
     std::vector<Endpoint> silent;
     for (const auto &[who, seat] : seats) {
       if (now - rooms.at(seat.code).members[seat.member].heard >= member_expiry) {

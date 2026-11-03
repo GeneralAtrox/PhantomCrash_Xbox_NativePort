@@ -146,7 +146,7 @@ Options parse_options(const int argc, char **argv) {
       options.online = std::move(online);
     } else if (argument == "--online-relay" || argument == "--online-room") {
       if (++index >= argc) {
-        throw std::runtime_error("Specify a value after " + argument);
+        throw std::runtime_error("Specify a value after " + std::string(argument));
       }
       (argument == "--online-relay" ? relay_address : room_code) = argv[index];
     } else if (argument == "--online-match-check") {

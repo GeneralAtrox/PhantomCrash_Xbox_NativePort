@@ -5,7 +5,7 @@
 #include <string>
 
 // phantomcrash_relay [--port <udp>] [--seconds <limit>] [--max-rooms <count>]
-//                    [--test-loss <share>] [--test-delay-ms <one way>]
+//                    [--test-loss <share>] [--test-delay-ms <one way>] [--test-open <IPv4:port>]...
 // Counts only: it prints no address, code or payload.
 int main(const int argc, char **argv) {
   using namespace phantomcrash::online;
@@ -29,6 +29,11 @@ int main(const int argc, char **argv) {
         options.test_loss = std::stod(value);
       } else if (argument == "--test-delay-ms") {
         options.test_delay = std::stod(value) / 1000.0;
+      } else if (argument == "--test-open") {
+        const auto colon = value.find(':');
+        options.test_open.push_back(
+            Endpoint::parse(value.substr(0, colon),
+                            static_cast<std::uint16_t>(std::stoi(value.substr(colon + 1)))));
       } else {
         throw std::runtime_error("Unknown option " + argument);
       }

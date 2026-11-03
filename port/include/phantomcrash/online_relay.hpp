@@ -82,6 +82,9 @@ struct RelayServerOptions {
   std::size_t member_bytes_per_second{256 * 1024}; // beyond this a member's datagrams drop
   double test_loss{};                              // share of forwarded datagrams dropped
   double test_delay{};                             // seconds added to each forwarded datagram
+  // Test only: sent a small datagram each second, so a firewall on the relay's
+  // own computer admits their replies as it would on an open server.
+  std::vector<Endpoint> test_open;
 };
 
 struct RelayServerStats {
