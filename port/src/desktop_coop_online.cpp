@@ -24,6 +24,10 @@ void CoopScreen::pump_online() {
     }
     state_->online_game->update(transport_time());
     const auto &room = state_->online->room();
+    if (const auto code = room.room_code(); code != logged_room_code_) {
+      logged_room_code_ = code;
+      SDL_Log("Online room code: %s", code.c_str());
+    }
     if (!room.error().empty()) {
       online_error_ = room.error();
       SDL_Log("Online error: %s", online_error_.c_str());

@@ -98,7 +98,7 @@ private:
   std::unique_ptr<online::LanAdvertiser> lan_advertiser_;
   std::optional<std::array<std::optional<QuestSave>, 4>> local_profiles_, local_saved_profiles_;
   int online_slot_{-1};
-  std::string online_error_;
+  std::string online_error_, logged_room_code_;
   // Rollback work is done in frames between logic ticks when there are any,
   // so a tick frame only steps once (desktop_coop_online.cpp).
   bool ticked_{}; // a logic tick ran this frame
