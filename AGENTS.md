@@ -25,6 +25,7 @@ These rules are inherited from the Record of Lodoss War project
 - When the user does ask for subagents: at most 3 at a time, exactly one task
   each, no helper agents of their own, and a fresh agent with a written
   handoff (`docs/AGENT_HANDOFF.md`) rather than resuming a large-context agent.
+- 2026-11-15, the user, for the Phangrade framework move (moving this game onto Phangrade's Core): "You may use helpers." Helpers may do this move's work despite the rule above; the rule itself stands for other work.
 
 ## Context hygiene
 
