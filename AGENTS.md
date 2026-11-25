@@ -14,56 +14,23 @@ These rules are inherited from the Record of Lodoss War project
   are indistinguishable in equivalent play situations. Byte-for-byte
   implementation is unnecessary. Nuance is required functionality, not optional
   polish.
-  Deterministic replay is not a goal. The user reviews visuals and behaviour
-  personally; no automated side-by-side comparison against xemu is required.
-
-## Agent usage
-
-- Do not use subagents for implementation or other longer tasks; the main
-  session does the work directly. Start a subagent only when the user asks for
-  one.
-- When the user does ask for subagents: at most 3 at a time, exactly one task
-  each, no helper agents of their own, and a fresh agent with a written
-  handoff (`docs/AGENT_HANDOFF.md`) rather than resuming a large-context agent.
-- 2026-11-15, the user, for any project: "You may use helpers on any project. We can ignore that rule I added". The rule above no longer applies; helpers may be used. (Kept here for the record.)
-
-## Context hygiene
-
-- Filter command output before it reaches the context: `tail`, `grep`, `wc`,
-  counts or pass/fail summaries. Never print whole build logs, test runs,
-  Ghidra logs or generated JSON/CSV; write large results to a file and read a
-  summary or the failing lines.
-- Search first, then read only the needed line range of a file.
-- Never open extracted assets, generated catalogues or function exports whole;
-  query them with a short script that prints only the fields needed.
-- Stay within the one task. Record unrelated findings in the final report
-  instead of fixing them.
-- Bound every command that can hang with a timeout. Prefer foreground,
-  timeout-bounded commands over background ones.
+  The user reviews visuals and behaviour personally; no automated side-by-side
+  comparison against xemu is required.
 
 ## Code organization
 
-- Keep new or refactored handwritten source and header files at or below 400
-  physical lines. Use normal readable formatting; do not compress statements
-  to satisfy the limit. Generated tables and content data are excluded.
 - Split by responsibility and ownership, not arbitrary line ranges. Moving
   methods into another file alone does not remove their shared-state coupling.
 - Follow `.clang-format` for C++ (Visual Studio's bundled clang-format at
   `C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\Llvm\x64\bin`).
   See `docs/CODE_ORGANIZATION.md`.
 
-## Test-build cleanup
+## Build outputs
 
-- An agent that creates a test build, temporary runtime, capture run, or other
-  generated test output must remove it before the final handoff. This includes
-  agent-created content under `build/`, `research-output/`, `.tmp/`, `tmp/`, and
-  `research-runtime-*` unless the user explicitly asks to retain it.
 - The standard port build (`build/port`), the extraction (`artifacts/`) and the
   Ghidra project created by the xbox-re-tools `analyze-xbe.ps1` /
   `onboard-xbe.ps1` are working outputs, not test output; keep them. The same
   holds for the shared XDK artifacts under `C:\Projects\Xbox\XDK-tools`.
-- Before the final handoff, verify that the agent-created paths were actually
-  removed and report any cleanup failure as a blocker.
 
 ## Modern port requirements
 
